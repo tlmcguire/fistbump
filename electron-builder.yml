@@ -1,0 +1,7 @@
+appId: com.fistbump.app
+productName: fistbump
+files:
+  - app/**/*
+extraResources:
+  - from: bin/${os}-${arch}/
+    to: bin/
