@@ -284,6 +284,8 @@ Key-value store for non-secret preferences. `store/settings.go` returns defaults
 | `ai.selected_model` | empty | Catalog id of the chosen local model |
 | `ai.idle_minutes` | `5` | Minutes of inactivity before `llama-server` is stopped |
 | `jobs.retention_days` | `30` | Jobs not seen for this long are eligible for GC |
+| `ai.remote.base_url` | empty | Remote engine endpoint. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
+| `ai.remote.model` | empty | Remote model name. Not seeded. Same default behavior |
 | `connectors.greenhouse.enabled` | `false` | Opt-in switch for the Greenhouse connector |
 | `connectors.greenhouse.boards` | `[]` | JSON array of custom Greenhouse board tokens |
 | `connectors.greenhouse.categories` | `[]` | JSON array of enabled curated category ids. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
