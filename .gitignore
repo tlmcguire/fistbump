@@ -1,0 +1,5 @@
+node_modules/
+bin/
+*.gguf
+*.db
+.env
