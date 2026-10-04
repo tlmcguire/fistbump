@@ -521,9 +521,8 @@ No em dashes. Plain wording.
 
 ### Open
 
-- **`api.md` vs `schema.md`:** `api.md` predates the final schema and uses earlier table, column, and status names.
-- **Skills route:** `api.md` lists `/v1/resume/skills`, but skills are JSON on `experiences` and `jobs`. Drop the route or derive it.
-- **PDF export path:** export returns bytes and Electron writes the file. Decide whether Electron reports the saved path to fill `applications.exported_pdf_path`.
+- **Persistent Greenhouse index.** Search results are cached in memory only. If latency across many boards is a problem, add an FTS5 table over `jobs`.
+- **Go test for `boards.json`.** Structure is validated by `scripts/verify-greenhouse-boards.js`. A Go test is not written yet.
 
 ## Related docs
 
