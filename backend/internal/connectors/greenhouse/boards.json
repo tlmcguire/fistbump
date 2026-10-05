@@ -23,6 +23,10 @@
           "company": "Flexport"
         },
         {
+          "token": "godaddy",
+          "company": "GoDaddy"
+        },
+        {
           "token": "lucidsoftware",
           "company": "Lucid Software"
         },
@@ -49,6 +53,10 @@
         {
           "token": "toast",
           "company": "Toast"
+        },
+        {
+          "token": "verisign",
+          "company": "Verisign"
         },
         {
           "token": "verkada",
@@ -94,8 +102,20 @@
           "company": "Etched"
         },
         {
+          "token": "feedzai",
+          "company": "Feedzai"
+        },
+        {
+          "token": "focalsystems",
+          "company": "Focal Systems"
+        },
+        {
           "token": "foundry",
           "company": "Foundry"
+        },
+        {
+          "token": "gatherai",
+          "company": "Gather AI"
         },
         {
           "token": "graphcore",
@@ -126,6 +146,10 @@
           "company": "Lightning AI"
         },
         {
+          "token": "lovable",
+          "company": "Lovable"
+        },
+        {
           "token": "nebius",
           "company": "Nebius"
         },
@@ -142,12 +166,28 @@
           "company": "PhysicsX"
         },
         {
+          "token": "polyai",
+          "company": "PolyAI"
+        },
+        {
+          "token": "prolific",
+          "company": "Prolific"
+        },
+        {
           "token": "samainc",
           "company": "Sama"
         },
         {
           "token": "scaleai",
           "company": "Scale AI"
+        },
+        {
+          "token": "scoutai",
+          "company": "Scout AI"
+        },
+        {
+          "token": "shifttechnology",
+          "company": "Shift Technology"
         },
         {
           "token": "snorkelai",
@@ -195,6 +235,10 @@
         {
           "token": "algolia",
           "company": "Algolia"
+        },
+        {
+          "token": "appsflyer",
+          "company": "AppsFlyer"
         },
         {
           "token": "cockroachlabs",
@@ -387,12 +431,28 @@
       "parent": "technical",
       "boards": [
         {
+          "token": "6sense",
+          "company": "6sense"
+        },
+        {
           "token": "airtable",
           "company": "Airtable"
         },
         {
+          "token": "alphasense",
+          "company": "AlphaSense"
+        },
+        {
           "token": "anaplan",
           "company": "Anaplan"
+        },
+        {
+          "token": "apolloio",
+          "company": "Apollo.io"
+        },
+        {
+          "token": "appdirect",
+          "company": "AppDirect"
         },
         {
           "token": "asana",
@@ -403,6 +463,10 @@
           "company": "Attentive"
         },
         {
+          "token": "automatticcareers",
+          "company": "Automattic"
+        },
+        {
           "token": "bandwidth",
           "company": "Bandwidth"
         },
@@ -411,12 +475,32 @@
           "company": "Box"
         },
         {
+          "token": "branchmetrics",
+          "company": "Branch Metrics"
+        },
+        {
           "token": "braze",
           "company": "Braze"
         },
         {
           "token": "calendly",
           "company": "Calendly"
+        },
+        {
+          "token": "celonis",
+          "company": "Celonis"
+        },
+        {
+          "token": "checkr",
+          "company": "Checkr"
+        },
+        {
+          "token": "cognite",
+          "company": "Cognite"
+        },
+        {
+          "token": "colabsoftware",
+          "company": "CoLab Software"
         },
         {
           "token": "commercetools",
@@ -443,6 +527,10 @@
           "company": "Dropbox"
         },
         {
+          "token": "emplifi",
+          "company": "Emplifi"
+        },
+        {
           "token": "intercom",
           "company": "Fin (Intercom)"
         },
@@ -463,6 +551,26 @@
           "company": "Gusto"
         },
         {
+          "token": "highradius",
+          "company": "HighRadius"
+        },
+        {
+          "token": "humaninterest",
+          "company": "Human Interest"
+        },
+        {
+          "token": "inmobi",
+          "company": "InMobi"
+        },
+        {
+          "token": "instawork",
+          "company": "Instawork"
+        },
+        {
+          "token": "ivalua",
+          "company": "Ivalua"
+        },
+        {
           "token": "justworks",
           "company": "Justworks"
         },
@@ -475,24 +583,76 @@
           "company": "Lattice"
         },
         {
+          "token": "lob",
+          "company": "Lob"
+        },
+        {
+          "token": "mattermost",
+          "company": "Mattermost"
+        },
+        {
+          "token": "moloco",
+          "company": "Moloco"
+        },
+        {
+          "token": "netdocuments",
+          "company": "NetDocuments"
+        },
+        {
+          "token": "nextiva",
+          "company": "Nextiva"
+        },
+        {
           "token": "nice",
           "company": "NICE"
+        },
+        {
+          "token": "odeko",
+          "company": "Odeko"
+        },
+        {
+          "token": "pandadoc",
+          "company": "PandaDoc"
         },
         {
           "token": "qualtrics",
           "company": "Qualtrics"
         },
         {
+          "token": "relex",
+          "company": "RELEX Solutions"
+        },
+        {
           "token": "salesloft",
           "company": "Salesloft"
+        },
+        {
+          "token": "scandit",
+          "company": "Scandit"
         },
         {
           "token": "smartsheet",
           "company": "Smartsheet"
         },
         {
+          "token": "staffbase",
+          "company": "Staffbase"
+        },
+        {
+          "token": "submittable",
+          "company": "Submittable"
+        },
+        {
           "token": "twilio",
           "company": "Twilio"
+        },
+        {
+          "token": "unqork",
+          "company": "Unqork"
+        },
+        {
+          "token": "usergems",
+          "company": "UserGems"
         },
         {
           "token": "vonage",
@@ -509,6 +669,18 @@
         {
           "token": "yext",
           "company": "Yext"
+        },
+        {
+          "token": "yotpo",
+          "company": "Yotpo"
+        },
+        {
+          "token": "zenoti",
+          "company": "Zenoti"
+        },
+        {
+          "token": "zerocater",
+          "company": "Zerocater"
         },
         {
           "token": "zoominfo",
@@ -574,6 +746,10 @@
           "company": "Peloton"
         },
         {
+          "token": "picsart",
+          "company": "Picsart"
+        },
+        {
           "token": "pinterest",
           "company": "Pinterest"
         },
@@ -619,6 +795,10 @@
         {
           "token": "bungie",
           "company": "Bungie"
+        },
+        {
+          "token": "dreamgames",
+          "company": "Dream Games"
         },
         {
           "token": "epicgames",
@@ -680,6 +860,10 @@
           "company": "Kodiak"
         },
         {
+          "token": "maymobility",
+          "company": "May Mobility"
+        },
+        {
           "token": "motional",
           "company": "Motional"
         },
@@ -724,6 +908,10 @@
       "id": "cybersecurity",
       "name": "Cybersecurity",
       "boards": [
+        {
+          "token": "align",
+          "company": "A-LIGN"
+        },
         {
           "token": "abnormalsecurity",
           "company": "Abnormal Security"
@@ -841,6 +1029,14 @@
           "company": "Hyperproof"
         },
         {
+          "token": "idme",
+          "company": "ID.me"
+        },
+        {
+          "token": "incode",
+          "company": "Incode"
+        },
+        {
           "token": "island",
           "company": "Island"
         },
@@ -863,6 +1059,10 @@
         {
           "token": "lastpass",
           "company": "LastPass"
+        },
+        {
+          "token": "lookout",
+          "company": "Lookout"
         },
         {
           "token": "nametag",
@@ -903,6 +1103,10 @@
         {
           "token": "safebreach",
           "company": "SafeBreach"
+        },
+        {
+          "token": "saltsecurity",
+          "company": "Salt Security"
         },
         {
           "token": "securityscorecard",
@@ -957,6 +1161,10 @@
           "company": "Veracode"
         },
         {
+          "token": "veriff",
+          "company": "Veriff"
+        },
+        {
           "token": "wizinc",
           "company": "Wiz"
         },
@@ -970,6 +1178,10 @@
       "id": "medical",
       "name": "Medical and healthcare",
       "boards": [
+        {
+          "token": "akidolabs",
+          "company": "Akido"
+        },
         {
           "token": "amaehealth",
           "company": "Amae Health"
@@ -1023,6 +1235,14 @@
           "company": "Collective Health"
         },
         {
+          "token": "daybreakhealth",
+          "company": "Daybreak Health"
+        },
+        {
+          "token": "doctolib",
+          "company": "Doctolib"
+        },
+        {
           "token": "doximity",
           "company": "Doximity"
         },
@@ -1039,12 +1259,20 @@
           "company": "Flatiron Health"
         },
         {
+          "token": "flohealth",
+          "company": "Flo Health"
+        },
+        {
           "token": "freenome",
           "company": "Freenome"
         },
         {
           "token": "garnerhealth",
           "company": "Garner Health"
+        },
+        {
+          "token": "hazel",
+          "company": "Hazel Health"
         },
         {
           "token": "healthjoy",
@@ -1073,6 +1301,10 @@
         {
           "token": "mavenclinic",
           "company": "Maven Clinic"
+        },
+        {
+          "token": "meruhealth",
+          "company": "Meru Health"
         },
         {
           "token": "mochihealth",
@@ -1123,6 +1355,14 @@
           "company": "Outset Medical"
         },
         {
+          "token": "pairteam",
+          "company": "Pair Team"
+        },
+        {
+          "token": "papa",
+          "company": "Papa"
+        },
+        {
           "token": "parsleyhealth",
           "company": "Parsley Health"
         },
@@ -1131,12 +1371,24 @@
           "company": "PathAI"
         },
         {
+          "token": "pelago",
+          "company": "Pelago"
+        },
+        {
           "token": "personalisinc",
           "company": "Personalis"
         },
         {
+          "token": "piramidalinc",
+          "company": "Piramidal"
+        },
+        {
           "token": "qgenda",
           "company": "QGenda"
+        },
+        {
+          "token": "qventus",
+          "company": "Qventus"
         },
         {
           "token": "suki",
@@ -1161,6 +1413,10 @@
         {
           "token": "truveta",
           "company": "Truveta"
+        },
+        {
+          "token": "uniteus",
+          "company": "Unite Us"
         },
         {
           "token": "veracyte",
@@ -1283,6 +1539,10 @@
           "company": "Amylyx"
         },
         {
+          "token": "ansabiotechnologies",
+          "company": "Ansa Biotechnologies"
+        },
+        {
           "token": "beamtherapeutics",
           "company": "Beam Therapeutics"
         },
@@ -1295,8 +1555,16 @@
           "company": "BridgeBio Pharma"
         },
         {
+          "token": "colossalbiosciences",
+          "company": "Colossal Biosciences"
+        },
+        {
           "token": "compasspathways",
           "company": "Compass Pathways"
+        },
+        {
+          "token": "culturebiosciences",
+          "company": "Culture Biosciences"
         },
         {
           "token": "dianthustherapeutics",
@@ -1327,12 +1595,20 @@
           "company": "Erasca"
         },
         {
+          "token": "generalproximity",
+          "company": "General Proximity"
+        },
+        {
           "token": "generatebiomedicines",
           "company": "Generate Biomedicines"
         },
         {
           "token": "gossamerbio",
           "company": "Gossamer Bio"
+        },
+        {
+          "token": "kernalbio",
+          "company": "Kernal Biologics"
         },
         {
           "token": "keros",
@@ -1457,8 +1733,16 @@
           "company": "Antora Energy"
         },
         {
+          "token": "aon3d",
+          "company": "AON3D"
+        },
+        {
           "token": "apptronik",
           "company": "Apptronik"
+        },
+        {
+          "token": "atomicindustriesinc",
+          "company": "Atomic Industries"
         },
         {
           "token": "carbon",
@@ -1563,6 +1847,10 @@
       "name": "Aerospace and defense",
       "boards": [
         {
+          "token": "albedo",
+          "company": "Albedo"
+        },
+        {
           "token": "andurilindustries",
           "company": "Anduril Industries"
         },
@@ -1603,6 +1891,14 @@
           "company": "Helsing"
         },
         {
+          "token": "hubblenetwork",
+          "company": "Hubble Network"
+        },
+        {
+          "token": "inversionspace",
+          "company": "Inversion"
+        },
+        {
           "token": "leolabsinc",
           "company": "LeoLabs"
         },
@@ -1619,8 +1915,16 @@
           "company": "Neros Technologies"
         },
         {
+          "token": "orbitaloperations",
+          "company": "Orbital Operations"
+        },
+        {
           "token": "planetlabs",
           "company": "Planet"
+        },
+        {
+          "token": "regent",
+          "company": "Regent"
         },
         {
           "token": "relativity",
@@ -1633,6 +1937,10 @@
         {
           "token": "sesai",
           "company": "SES"
+        },
+        {
+          "token": "spaceium",
+          "company": "Spaceium"
         },
         {
           "token": "spacex",
@@ -1685,6 +1993,14 @@
           "company": "Akuna Capital"
         },
         {
+          "token": "alloy",
+          "company": "Alloy"
+        },
+        {
+          "token": "alpaca",
+          "company": "Alpaca"
+        },
+        {
           "token": "altruist",
           "company": "Altruist"
         },
@@ -1695,6 +2011,10 @@
         {
           "token": "bankrate",
           "company": "Bankrate"
+        },
+        {
+          "token": "baubap",
+          "company": "Baubap"
         },
         {
           "token": "betterment",
@@ -1709,6 +2029,10 @@
           "company": "BitGo"
         },
         {
+          "token": "bitpanda",
+          "company": "Bitpanda"
+        },
+        {
           "token": "block",
           "company": "Block"
         },
@@ -1719,6 +2043,10 @@
         {
           "token": "brex",
           "company": "Brex"
+        },
+        {
+          "token": "c6bank",
+          "company": "C6 Bank"
         },
         {
           "token": "carta",
@@ -1741,6 +2069,18 @@
           "company": "Current"
         },
         {
+          "token": "digitalcurrencygroup",
+          "company": "Digital Currency Group"
+        },
+        {
+          "token": "drivewealth",
+          "company": "DriveWealth"
+        },
+        {
+          "token": "ebanx",
+          "company": "EBANX"
+        },
+        {
           "token": "enova",
           "company": "Enova International"
         },
@@ -1761,6 +2101,10 @@
           "company": "Gemini"
         },
         {
+          "token": "gocardless",
+          "company": "GoCardless"
+        },
+        {
           "token": "imc",
           "company": "IMC"
         },
@@ -1773,12 +2117,24 @@
           "company": "Jump Trading"
         },
         {
+          "token": "kalshi",
+          "company": "Kalshi"
+        },
+        {
+          "token": "legalist",
+          "company": "Legalist"
+        },
+        {
           "token": "lendingtree",
           "company": "LendingTree"
         },
         {
           "token": "lithic",
           "company": "Lithic"
+        },
+        {
+          "token": "melio",
+          "company": "Melio"
         },
         {
           "token": "mercury",
@@ -1791,6 +2147,14 @@
         {
           "token": "monzo",
           "company": "Monzo"
+        },
+        {
+          "token": "n26",
+          "company": "N26"
+        },
+        {
+          "token": "novacredit",
+          "company": "Nova Credit"
         },
         {
           "token": "oportun",
@@ -1809,6 +2173,14 @@
           "company": "Point72"
         },
         {
+          "token": "prodigal",
+          "company": "Prodigal"
+        },
+        {
+          "token": "prospa",
+          "company": "Prospa"
+        },
+        {
           "token": "ripple",
           "company": "Ripple"
         },
@@ -1817,8 +2189,16 @@
           "company": "Robinhood"
         },
         {
+          "token": "smartasset",
+          "company": "SmartAsset"
+        },
+        {
           "token": "sofi",
           "company": "SoFi"
+        },
+        {
+          "token": "solarisbank",
+          "company": "Solaris"
         },
         {
           "token": "step",
@@ -1827,6 +2207,10 @@
         {
           "token": "stripe",
           "company": "Stripe"
+        },
+        {
+          "token": "truelayer",
+          "company": "TrueLayer"
         },
         {
           "token": "upstart",
@@ -1839,6 +2223,10 @@
         {
           "token": "virtu",
           "company": "Virtu Financial"
+        },
+        {
+          "token": "xendit",
+          "company": "Xendit"
         }
       ]
     },
@@ -1873,8 +2261,16 @@
           "company": "Antora Energy"
         },
         {
+          "token": "carbonchain",
+          "company": "CarbonChain"
+        },
+        {
           "token": "chargepoint",
           "company": "ChargePoint"
+        },
+        {
+          "token": "eqtcorporation",
+          "company": "EQT"
         },
         {
           "token": "fervoenergy",
@@ -1885,12 +2281,20 @@
           "company": "Kairos Power"
         },
         {
+          "token": "niraenergy",
+          "company": "Nira Energy"
+        },
+        {
           "token": "oklo",
           "company": "Oklo"
         },
         {
           "token": "redwoodmaterials",
           "company": "Redwood Materials"
+        },
+        {
+          "token": "remoracarbon",
+          "company": "Remora"
         },
         {
           "token": "rondoenergy",
@@ -1911,6 +2315,10 @@
       "name": "Education",
       "boards": [
         {
+          "token": "ageoflearninginc",
+          "company": "Age of Learning"
+        },
+        {
           "token": "coursera",
           "company": "Coursera"
         },
@@ -1929,6 +2337,10 @@
         {
           "token": "generalassembly",
           "company": "General Assembly"
+        },
+        {
+          "token": "givecampus",
+          "company": "GiveCampus"
         },
         {
           "token": "guild",
@@ -1987,6 +2399,14 @@
         {
           "token": "bitmovin",
           "company": "Bitmovin"
+        },
+        {
+          "token": "distrokid",
+          "company": "DistroKid"
+        },
+        {
+          "token": "laika",
+          "company": "LAIKA"
         },
         {
           "token": "roku",
@@ -2069,6 +2489,10 @@
           "company": "DonorsChoose"
         },
         {
+          "token": "enveritas",
+          "company": "Enveritas"
+        },
+        {
           "token": "givedirectly",
           "company": "GiveDirectly"
         },
@@ -2079,6 +2503,14 @@
         {
           "token": "mozilla",
           "company": "Mozilla"
+        },
+        {
+          "token": "recidiviz",
+          "company": "Recidiviz"
+        },
+        {
+          "token": "sirum",
+          "company": "SIRUM"
         },
         {
           "token": "wikimedia",
@@ -2113,6 +2545,10 @@
           "company": "AG1"
         },
         {
+          "token": "carvana",
+          "company": "Carvana"
+        },
+        {
           "token": "coupang",
           "company": "Coupang"
         },
@@ -2137,8 +2573,28 @@
           "company": "Glossier"
         },
         {
+          "token": "goatgroup",
+          "company": "GOAT Group"
+        },
+        {
+          "token": "grover",
+          "company": "Grover"
+        },
+        {
+          "token": "gymshark",
+          "company": "Gymshark"
+        },
+        {
           "token": "harrys",
           "company": "Harry's"
+        },
+        {
+          "token": "hasbro",
+          "company": "Hasbro"
+        },
+        {
+          "token": "mirakl",
+          "company": "Mirakl"
         },
         {
           "token": "offerup",
@@ -2147,6 +2603,14 @@
         {
           "token": "olipop",
           "company": "OLIPOP"
+        },
+        {
+          "token": "postscript",
+          "company": "Postscript"
+        },
+        {
+          "token": "quince",
+          "company": "Quince"
         },
         {
           "token": "rebag",
@@ -2204,6 +2668,10 @@
       "id": "transportation_logistics",
       "name": "Transportation and logistics",
       "boards": [
+        {
+          "token": "bringg",
+          "company": "Bringg"
+        },
         {
           "token": "cabify",
           "company": "Cabify"
@@ -2295,6 +2763,10 @@
           "company": "Pacaso"
         },
         {
+          "token": "quintoandar",
+          "company": "QuintoAndar"
+        },
+        {
           "token": "roofstock",
           "company": "Roofstock"
         },
@@ -2305,6 +2777,10 @@
         {
           "token": "turbotenant",
           "company": "TurboTenant"
+        },
+        {
+          "token": "vts",
+          "company": "VTS"
         }
       ]
     },
