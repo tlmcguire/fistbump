@@ -38,6 +38,7 @@ JSON field names match column names in [schema.md](schema.md). The "DB" column l
 | 409 | `conflict` | State forbids the action (pending suggestions, job with applications) |
 | 422 | `validation_failed` | Well-formed but invalid fields |
 | 500 | `internal` | Unexpected error (panic recovery also lands here) |
+| 501 | `not_implemented` | The route is planned and registered but not built yet |
 | 502 | `upstream_error` | A remote API or connector failed |
 | 503 | `ai_unavailable` | The requested engine cannot run (only when the caller forced one) |
 
