@@ -37,7 +37,7 @@ flowchart TB
     M -->|"HTTP 127.0.0.1:port<br/>Bearer token"| API
     Local -->|child process| LS["llama-server<br/>GGUF model"]
     Remote -.->|opt-in| RA["Remote OpenAI-compatible API"]
-    Conn -.->|opt-in| GH["Greenhouse"]
+    Conn -.->|user-initiated| GH["Greenhouse"]
 ```
 
 ## App lifecycle
@@ -137,7 +137,7 @@ A single module, `cmd/fistbump-core`, with everything under `internal/`. Every `
 | `analyze` | Deterministic skill-gap comparison of posting vs. master resume |
 | `diff` | Bullet-level diff generation for the diff view |
 | `ai` | Provider abstraction, model catalog and downloads (below) |
-| `connectors` | Opt-in job imports behind one `FetchPostings(query)` interface; Greenhouse first |
+| `connectors` | Job search and imports behind one `FetchPostings(query)` interface; Greenhouse first |
 | `pdf` | PDF export (gofpdf/maroto) |
 
 ### Process contract
@@ -194,30 +194,31 @@ flowchart LR
 - **Interface:** each connector implements `FetchPostings(query) ([]Posting, error)` and returns a normalized `Posting`. Downstream code treats imported and pasted postings the same.
 - **Greenhouse (iteration 1):** public job board API, no login. Iteration 1 proves one round trip: fetch a board, filter locally, import a posting, run skill-gap analysis. Saved responses in `testdata/api/` keep tests offline.
 - **Re-import:** a known posting (matched by `source` and `external_id`) gets a new `searched_at`. Postings not seen again are removed by GC.
-- **Network policy:** requests happen only when the user starts an import. Each connector can be disabled in settings.
+- **Network policy:** connectors are on by default but never search on their own. Requests happen only when the user presses Search or saves a posting, never when job search opens. Each connector can be disabled in settings.
 - **Later candidates:** Lever, Ashby, and USAJOBS (official API, free key). Not committed for the course timeline.
 
 ### Searching Greenhouse
 
-The Greenhouse job board API has no search. `GET /v1/boards/{board}/jobs` returns every open posting for one company board, and `?content=true` includes the description. Search is implemented locally.
+The Greenhouse job board API has no search. `GET /v1/boards/{board}/jobs` returns every open posting for one company board (title, location, id, no description), and `GET /v1/boards/{board}/jobs/{id}` returns one posting with its description. Search is implemented locally in two stages.
 
 ```mermaid
 flowchart LR
-    Boards["Custom boards + enabled<br/>curated categories"] --> Fetch["Fetch each board<br/>(concurrent, capped)"]
-    Fetch --> Cache["In-memory cache<br/>(short TTL)"]
-    Cache --> Filter["Filter<br/>title, location, work mode"]
-    Filter --> Rank["Rank<br/>resume skills vs posting keywords"]
+    Boards["All curated boards<br/>+ custom boards"] --> List["List each board<br/>(24 concurrent, no content)"]
+    List --> Cache["Listing cache<br/>memory + data/cache, 6 h"]
+    Cache --> Filter["Title, location,<br/>work mode filters"]
+    Filter --> Detail["Fetch descriptions<br/>for top 40 titles"]
+    Detail --> Rank["Rank: title fit, resume skills,<br/>home location, company variety"]
     Rank --> Results[Results]
-    Results -->|user selects| Import[("jobs table")]
+    Results -->|user saves| Import[("jobs table")]
 ```
 
-- **Board set.** The boards searched are the union of the user's custom tokens (`connectors.greenhouse.boards`) and the boards in enabled curated categories (`connectors.greenhouse.categories`), de-duplicated by token. A request can override both with an explicit `boards` or `categories` list.
-- **Custom boards.** A custom board is a token The token is the path segment in `boards.greenhouse.io/<token>`. Greenhouse provides no directory of boards. Adding a token validates it with one request, and a 404 rejects it.
-- **Fetch.** Boards are fetched concurrently with a concurrency cap, per-request timeout, and response size cap. Results are cached in memory with a short TTL, so repeated searches do not re-fetch.
-- **Filter.** Case-insensitive matching on title, department, location, and work mode. Terms default to `profile.target_positions` and `profile.preferred_mode`. Explicit terms in the request override them.
-- **Rank.** Postings are scored by overlap between keywords extracted from the posting (`parser`) and skills in the master resume (`analyze`), the same logic used for skill-gap analysis. Ranking is deterministic and does not call AI.
-- **Persistence.** Search results are not written to the database. Only imported postings are stored, with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. This keeps `jobs` small. A re-import updates the existing row and refreshes `searched_at`.
-- **Limits.** Search covers only the selected boards and categories. Latency scales with board count and size. If a persistent index is needed later, an FTS5 table over `jobs` is the extension point.
+- **Board set.** By default every curated board plus the user's custom tokens (`connectors.greenhouse.boards`), de-duplicated. Listings without descriptions are small (517 boards, about 39,000 postings, 35 MB, roughly 3 s cold), so the user does not pick boards. A request can narrow the set with `categories` (an industry filter) or explicit `boards`.
+- **Keywords.** Request keywords, else `profile.target_positions`, else the title of the most recent experience. Titles are matched by words, not phrases: seniority words are ignored, common synonyms are folded (developer and engineer, front end and frontend), and an exact phrase ranks higher.
+- **Filters.** Location terms match the posting location; remote postings pass a location filter unless the user wants on-site. Remote must be stated in the posting; hybrid and on-site pass when the posting does not say.
+- **Rank.** Descriptions are fetched for the 40 best title matches (5 s per request, 8 s for the stage) and scored by overlap with resume skills. Postings near `profile.home_location` rank higher, postings in other countries lower. No company fills more than 3 of the top slots. Ranking is deterministic and does not call AI.
+- **Cache.** Listings are cached in memory and in `data/cache/greenhouse/` for 6 hours, descriptions in memory for 24 hours. Storage cleanup of `cache` clears both. A board that returns 404 is remembered and reported in `errors`.
+- **Persistence.** Search results are not written to the database. Saving a posting fetches its description if needed and stores it with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. Saving again refreshes `searched_at`.
+- **Network.** Requests carry only public board tokens and job ids. Keywords, filters and the resume stay on the computer, because filtering and ranking are local. See the network policy above.
 
 ### Curated board lists
 
@@ -264,7 +265,7 @@ Bundled lists of company boards, grouped by industry, give users a starting poin
 
 ## Data model
 
-SQLite, migrated from `001_init.sql`. The diagram shows keys and the main columns. [schema.md](schema.md) has every column, constraint, index, and delete rule.
+SQLite, created from `backend/internal/db/migrations/001_init.sql`. The diagram shows keys and the main columns. [schema.md](schema.md) has every column, constraint, index, and delete rule.
 
 ```mermaid
 erDiagram
@@ -458,7 +459,7 @@ Handling:
 - Renderer is sandboxed from Node; only the preload surface is reachable.
 - The backend is bound to loopback and gated by a per-launch bearer token.
 - Secrets are handled as described in "API keys and secrets" above: encrypted by `safeStorage` on disk, memory only in Go, never in SQLite or logs.
-- No network calls happen unless the user opts in: remote AI, model download, or a job connector.
+- No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search or saves a posting.
 - Connectors and the remote provider are the only outbound paths.
 
 ## Build and packaging
@@ -482,16 +483,22 @@ Settled questions. Add entries as questions are answered and remove items from "
 The repo is scaffolded from the planned file tree. Top-level config files are real. Delete a `.gitkeep` when its directory gets real files.
 
 **What is the source of truth for the schema?**
-`backend/internal/db/migrations/001_init.sql`. [schema.md](schema.md) documents it and must change with it.
+The migration files in `backend/internal/db/migrations/`, applied in order. [schema.md](schema.md) documents them and must change with them.
 
 **Does skill-gap analysis use AI?**
 No. `analyze` is deterministic (n-gram and keyword matching) to meet the NFR-3 limit of 1.5 s on any hardware. AI is used only for revisions.
+
+**How is a resume imported?**
+`POST /v1/resume/import` extracts text from a PDF (`resumeparse`, pure Go) or takes pasted text, and returns a draft for review. Extraction removes common word-processor artifacts: overprinted invisible glyphs, a decorative letter some heading fonts append to every run, icon glyphs, and superscripts split onto their own line. Skills a resume lists that no role mentions are stored on the profile, not credited to a job. A rules parser runs first. With a model available, the user can ask the model to read it instead; every value the model returns must appear in the resume text or it is dropped. Nothing is saved until `POST /v1/resume/import/apply`.
+
+**Can model suggestions add claims?**
+They should not. Proposals whose content words mostly do not appear in the resume or the job's skills are dropped, and the rules engine fills items the model skipped. A round where the model contributed nothing is labeled `rules`.
 
 **What happens with no model installed, or when the remote API is down?**
 The `rules` engine (`fallback.go`) produces template-based suggestions. `revisions.engine` records which engine ran.
 
 **What leaves the machine?**
-Three opt-in paths: the configured remote AI provider (it receives the resume and posting text in the revision prompt), model downloads from Hugging Face, and job connectors.
+Three paths, each started by the user: the configured remote AI provider (opt-in; it receives the resume and posting text in the revision prompt), model downloads from Hugging Face, and job search (public board requests only, sent when the user presses Search or saves a posting).
 
 **How is the remote API key protected?**
 `safeStorage` encrypts it on disk. Go holds it in memory only. The renderer can set it but not read it. See "API keys and secrets".
@@ -509,7 +516,7 @@ One line, `PORT=<n>`. Logs go to stderr. See [api.md](api.md).
 No. `applications.job_id` is `ON DELETE RESTRICT`, and GC skips jobs with applications.
 
 **How are Greenhouse listings searched?**
-Greenhouse has no search endpoint. The backend fetches configured boards, then filters and ranks locally. See "Searching Greenhouse".
+Greenhouse has no search endpoint. The backend lists every curated board, filters titles locally, and ranks the best matches against the resume. See "Searching Greenhouse".
 
 **Why are CrowdStrike and Palo Alto Networks missing from the cybersecurity list?**
 Neither has a Greenhouse board. Their tokens return 404 under every variant tried, so they publish on a different applicant tracking system. Users add postings from those employers by pasting the text. The same applies to most large employers in every category.
@@ -522,8 +529,7 @@ No em dashes. Plain wording.
 
 ### Open
 
-- **Persistent Greenhouse index.** Search results are cached in memory only. If latency across many boards is a problem, add an FTS5 table over `jobs`.
-- **Go test for `boards.json`.** Structure is validated by `scripts/verify-greenhouse-boards.js`. A Go test is not written yet.
+- **Persistent Greenhouse index.** Listings are cached as JSON files. If search across more boards gets slow, an FTS5 table is the extension point.
 
 ## Related docs
 
