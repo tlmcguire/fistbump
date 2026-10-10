@@ -194,7 +194,7 @@ flowchart LR
 - **Interface:** each connector implements `FetchPostings(query) ([]Posting, error)` and returns a normalized `Posting`. Downstream code treats imported and pasted postings the same.
 - **Greenhouse (iteration 1):** public job board API, no login. Iteration 1 proves one round trip: fetch a board, filter locally, import a posting, run skill-gap analysis. Saved responses in `testdata/api/` keep tests offline.
 - **Re-import:** a known posting (matched by `source` and `external_id`) gets a new `searched_at`. Postings not seen again are removed by GC.
-- **Network policy:** connectors are on by default but never search on their own. Requests happen only when the user presses Search or saves a posting, never when job search opens. Each connector can be disabled in settings.
+- **Network policy:** job search is always available and has no on/off setting, but it never runs on its own. Requests happen only when the user presses Search, opens a listing, or saves a posting, never when job search opens.
 - **Later candidates:** Lever, Ashby, and USAJOBS (official API, free key). Not committed for the course timeline.
 
 ### Searching Greenhouse
@@ -459,7 +459,7 @@ Handling:
 - Renderer is sandboxed from Node; only the preload surface is reachable.
 - The backend is bound to loopback and gated by a per-launch bearer token.
 - Secrets are handled as described in "API keys and secrets" above: encrypted by `safeStorage` on disk, memory only in Go, never in SQLite or logs.
-- No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search or saves a posting.
+- No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search, opens a listing, or saves a posting.
 - Connectors and the remote provider are the only outbound paths.
 
 ## Build and packaging
@@ -498,7 +498,7 @@ They should not. Proposals whose content words mostly do not appear in the resum
 The `rules` engine (`fallback.go`) produces template-based suggestions. `revisions.engine` records which engine ran.
 
 **What leaves the machine?**
-Three paths, each started by the user: the configured remote AI provider (opt-in; it receives the resume and posting text in the revision prompt), model downloads from Hugging Face, and job search (public board requests only, sent when the user presses Search or saves a posting).
+Three paths, each started by the user: the configured remote AI provider (opt-in; it receives the resume and posting text in the revision prompt), model downloads from Hugging Face, and job search (public board requests only, sent when the user presses Search, opens a listing, or saves a posting).
 
 **How is the remote API key protected?**
 `safeStorage` encrypts it on disk. Go holds it in memory only. The renderer can set it but not read it. See "API keys and secrets".
