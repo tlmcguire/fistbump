@@ -2,7 +2,11 @@ module github.com/tlmcguire/fistbump/backend
 
 go 1.26.0
 
-require modernc.org/sqlite v1.60.1
+require (
+	github.com/go-pdf/fpdf v0.9.0
+	github.com/ledongthuc/pdf v0.0.0-20260907135840-6c8c28e0e8a0
+	modernc.org/sqlite v1.60.1
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -15,3 +19,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+replace github.com/ledongthuc/pdf => ./third_party/ledongthuc-pdf

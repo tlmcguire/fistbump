@@ -11,6 +11,7 @@ Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
 | [docs/architecture.md](docs/architecture.md) | System design, app lifecycle, Greenhouse search strategy, API key handling, file structure, Q&A |
 | [docs/api.md](docs/api.md) | Backend routes, request and response shapes, error format, DB interactions |
 | [docs/schema.md](docs/schema.md) | SQLite tables, relationships, constraints, settings keys |
+| [docs/build-findings.md](docs/build-findings.md) | Differences between the full build and these plans, and open decisions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide |
 
 ## Repository layout
@@ -24,11 +25,40 @@ Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
 
 The full planned tree is in [docs/architecture.md](docs/architecture.md#planned-file-structure).
 
+## Run it
+
+Requires Go 1.26+ and Node 22+ (`npm test` passes a glob to `node --test`, which needs Node 21 or later).
+
+```bash
+npm install
+npm run dev        # builds the Go backend into bin/, then launches Electron
+```
+
+On npm 11+, install scripts are gated. If Electron's binary is missing, run `node node_modules/electron/install.js` (the approval is recorded in `package.json`).
+
+### Local AI (optional)
+
+```bash
+npm run fetch:llama   # downloads llama-server for this platform into bin/<os>-<arch>/
+```
+
+Then download a model in Settings > Local models. A model already in the data directory's `models/` folder is selected automatically. Without a model, suggestions come from the rule-based engine or a configured remote provider.
+
+### Demo searches
+
+Searches in Jobs > Find known to return useful Greenhouse results. Use these for demos, and re-check them before each one, since postings change daily.
+
+| Keywords | Location | Notes |
+|----------|----------|-------|
+| Software Engineer | Charleston, SC | |
+
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `cd backend && go test ./...` | Run Go tests |
+| `npm run dev` | Build the backend and launch the app |
+| `npm test` | JS tests (IPC route table, preload/handler parity) |
+| `npm run test:go` | Go tests |
+| `npm run build:go -- --all` | Cross-compile the backend for every OS and arch |
+| `npm run dist` | Package with electron-builder |
 | `node scripts/verify-greenhouse-boards.js` | Validate the Greenhouse board lists against the live API (`--offline` checks structure only) |
-
-`npm run dev`, `npm run build:go`, and `npm test` are defined in `package.json`. The scripts they call are not implemented yet.

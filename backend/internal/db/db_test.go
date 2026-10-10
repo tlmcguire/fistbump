@@ -70,7 +70,7 @@ func TestSettingsDefaults(t *testing.T) {
 		"ai.selected_model":             "",
 		"ai.idle_minutes":               "5",
 		"jobs.retention_days":           "30",
-		"connectors.greenhouse.enabled": "false",
+		"connectors.greenhouse.enabled": "true",
 		"connectors.greenhouse.boards":  "[]",
 	}
 	for k, v := range want {

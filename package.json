@@ -5,12 +5,19 @@
   "main": "app/main/main.js",
   "private": true,
   "scripts": {
-    "dev": "electron .",
+    "dev": "node scripts/build-go.js && electron .",
+    "start": "electron .",
     "build:go": "node scripts/build-go.js",
-    "test": "echo \"no tests yet\""
+    "fetch:llama": "node scripts/fetch-llama-server.js",
+    "dist": "node scripts/build-go.js && electron-builder",
+    "test": "node --test \"app/tests/**/*.test.js\"",
+    "test:go": "cd backend && go test ./..."
   },
   "devDependencies": {
     "electron": "*",
     "electron-builder": "*"
+  },
+  "allowScripts": {
+    "electron@44.7.0": true
   }
 }

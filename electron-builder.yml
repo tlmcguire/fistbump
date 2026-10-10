@@ -2,6 +2,18 @@ appId: com.fistbump.app
 productName: fistbump
 files:
   - app/**/*
-extraResources:
-  - from: bin/${os}-${arch}/
-    to: bin/
+  - "!app/tests/**"
+# electron-builder's ${os} is mac/win/linux, but bin/ folders use Node's platform names
+# (darwin/win32/linux) to match process.platform in app/main/main.js.
+mac:
+  extraResources:
+    - from: bin/darwin-${arch}/
+      to: bin/
+linux:
+  extraResources:
+    - from: bin/linux-${arch}/
+      to: bin/
+win:
+  extraResources:
+    - from: bin/win32-${arch}/
+      to: bin/
