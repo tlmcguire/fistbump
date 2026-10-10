@@ -8,6 +8,9 @@ CREATE TABLE profile (
   preferred_mode   TEXT CHECK (preferred_mode IN ('Remote','Hybrid','On-site','Any')),
   min_desired_pay  INTEGER,
   clearance_certs  TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(clearance_certs)),
+  summary          TEXT,
+  skills           TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(skills)),
+  links            TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(links)),
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
@@ -70,11 +73,14 @@ CREATE TABLE jobs (
   requirements     TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(requirements)),
   close_date       TEXT,
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-  searched_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  searched_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  archived_at      TEXT,
+  trashed_at       TEXT
 );
 CREATE UNIQUE INDEX idx_jobs_source_external
   ON jobs(source, external_id) WHERE external_id IS NOT NULL;
 CREATE INDEX idx_jobs_searched_at ON jobs(searched_at);
+CREATE INDEX idx_jobs_archived    ON jobs(archived_at);
 
 CREATE TABLE revisions (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,6 +113,7 @@ CREATE TABLE tailored_resumes (
   revision_id    INTEGER REFERENCES revisions(id) ON DELETE SET NULL,
   base_resume_id INTEGER REFERENCES resumes(id) ON DELETE SET NULL,
   content        TEXT NOT NULL,
+  base_content   TEXT,
   created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 
@@ -117,16 +124,17 @@ CREATE TABLE applications (
   base_resume_id      INTEGER REFERENCES resumes(id) ON DELETE SET NULL,
   tailored_resume_id  INTEGER REFERENCES tailored_resumes(id) ON DELETE SET NULL,
   status              TEXT NOT NULL DEFAULT 'Saved'
-                      CHECK (status IN ('Saved','Applied','Interviewing','Offered','Archived')),
+                      CHECK (status IN ('Saved','Applied','Interviewing','Offered','Rejected')),
   date_applied        TEXT,
   next_step_date      TEXT,
   exported_pdf_path   TEXT,
   notes               TEXT,
+  archived_at         TEXT,
   created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX idx_applications_status ON applications(status);
-CREATE INDEX idx_applications_job    ON applications(job_id);
+CREATE UNIQUE INDEX idx_applications_job ON applications(job_id);
 
 CREATE TABLE settings (
   key   TEXT PRIMARY KEY,
@@ -138,5 +146,6 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('ai.selected_model', ''),
   ('ai.idle_minutes', '5'),
   ('jobs.retention_days', '30'),
-  ('connectors.greenhouse.enabled', 'false'),
+  ('jobs.trash_days', '7'),
+  ('connectors.greenhouse.enabled', 'true'),
   ('connectors.greenhouse.boards', '[]');

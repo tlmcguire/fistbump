@@ -70,7 +70,8 @@ func TestSettingsDefaults(t *testing.T) {
 		"ai.selected_model":             "",
 		"ai.idle_minutes":               "5",
 		"jobs.retention_days":           "30",
-		"connectors.greenhouse.enabled": "false",
+		"jobs.trash_days":               "7",
+		"connectors.greenhouse.enabled": "true",
 		"connectors.greenhouse.boards":  "[]",
 	}
 	for k, v := range want {
@@ -132,6 +133,27 @@ func TestApplicationRestrictsJobDelete(t *testing.T) {
 	}
 	mustExec(t, conn, "DELETE FROM applications WHERE id=1")
 	mustExec(t, conn, "DELETE FROM jobs WHERE id=1")
+}
+
+func TestOneApplicationPerJob(t *testing.T) {
+	conn, _ := openTemp(t)
+	mustExec(t, conn, "INSERT INTO profile (full_name) VALUES ('p')")
+	mustExec(t, conn, "INSERT INTO jobs (company_name, position_title) VALUES ('a', 'b')")
+	mustExec(t, conn, "INSERT INTO applications (job_id, profile_id) VALUES (1, 1)")
+	if _, err := conn.Exec("INSERT INTO applications (job_id, profile_id) VALUES (1, 1)"); err == nil {
+		t.Error("second application for the same job accepted")
+	}
+}
+
+func TestApplicationStatuses(t *testing.T) {
+	conn, _ := openTemp(t)
+	mustExec(t, conn, "INSERT INTO profile (full_name) VALUES ('p')")
+	mustExec(t, conn, "INSERT INTO jobs (company_name, position_title) VALUES ('a', 'b')")
+	mustExec(t, conn, "INSERT INTO applications (job_id, profile_id, status) VALUES (1, 1, 'Rejected')")
+	// Archiving is archived_at, not a status.
+	if _, err := conn.Exec("UPDATE applications SET status = 'Archived' WHERE id = 1"); err == nil {
+		t.Error("status 'Archived' accepted")
+	}
 }
 
 func TestJobDeleteCascades(t *testing.T) {
