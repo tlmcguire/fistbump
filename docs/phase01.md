@@ -52,7 +52,7 @@ Notes from a live check of the Greenhouse API (2026-10-10):
 - `updated_at` has a local offset. Convert to UTC, per the API conventions.
 - A missing job returns `404`.
 
-This is the same posting shape search will return in phase 2 (with scores, and `raw_text` only for top results), and search results will open with this route.
+How search results use this route is decided in phase 2 (see below).
 
 ## Files, in build order
 
@@ -94,4 +94,6 @@ Checkpoint: run the binary and fetch a listing with `curl` and the token.
 
 ## Phase 2 preview
 
-Search: `POST /v1/connectors/greenhouse/fetch` returns `{ "postings": [...] }` using the same posting shape. Its second stage (descriptions for the best matches) reuses step 2's single-job fetch, and clicking a result opens this phase's view.
+Search: the backend takes a search request, searches the boards, and returns a list of postings in this phase's shape.
+
+TBD, to decide before phase 2: how a clicked search result gets its description (in the search response, from this phase's route on click, prefetched, or a mix), and how the backend limits requests to Greenhouse while keeping that click fast.
