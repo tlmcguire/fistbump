@@ -302,7 +302,6 @@ Key-value store for non-secret preferences. `store/settings.go` returns defaults
 | `jobs.trash_days` | `7` | Days a trashed job can be restored before GC deletes it. Minimum 1 |
 | `ai.remote.base_url` | empty | Remote engine endpoint. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
 | `ai.remote.model` | empty | Remote model name. Not seeded. Same default behavior |
-| `connectors.greenhouse.enabled` | `true` | Greenhouse job search. On by default, but it never searches on its own: requests go out only when the user presses Search or saves a posting. Can be turned off in Settings |
 | `connectors.greenhouse.boards` | `[]` | JSON array of custom Greenhouse board tokens |
 | `connectors.greenhouse.categories` | `[]` | JSON array of curated category ids for the industries the user is open to (`[]` means all). Pre-selected as the industry filter in job search; the backend does not apply it on its own. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
 

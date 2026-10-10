@@ -258,12 +258,11 @@ One job has at most one application; the database enforces it with a unique inde
 
 ## Connectors (`connectors.go`)
 
-The only routes that can reach a job site. Each call needs the connector enabled. Greenhouse is on by default but never searches on its own: the UI calls `fetch` only when the user presses Search, never when job search opens. Requests carry only public board tokens and job ids; keywords and the resume stay on the computer. The user can turn the connector off with `PUT /v1/connectors/greenhouse` and `{ "enabled": false }`. Imports write `source = 'greenhouse'`, `external_id` (the Greenhouse job id), `listing_url`, `company_name`, `position_title`, `location`, `raw_text`, then run the parser for `description`, the skill lists, and `requirements`.
+The only routes that can reach a job site. Job search is always available; there is no setting to turn it on or off. It never searches on its own: the UI calls `fetch` only when the user presses Search, never when job search opens. Requests carry only public board tokens and job ids; keywords and the resume stay on the computer. Imports write `source = 'greenhouse'`, `external_id` (the Greenhouse job id), `listing_url`, `company_name`, `position_title`, `location`, `raw_text`, then run the parser for `description`, the skill lists, and `requirements`.
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `GET /v1/connectors` | none | `[{ "id": "greenhouse", "name": "Greenhouse", "enabled": true }]` | Reads `settings` (`connectors.greenhouse.enabled`) |
-| `PUT /v1/connectors/{id}` | `{ "enabled": true }` | Connector | UPSERT `settings` |
+| `GET /v1/connectors` | none | `[{ "id": "greenhouse", "name": "Greenhouse" }]` | None |
 | `POST /v1/connectors/{id}/fetch` | `{ "query": { "keywords": ["backend engineer"], "location": "", "work_mode": "", "categories"?: ["cybersecurity"], "boards"?: ["acme"], "limit"?: 100 } }`. With `boards` and `categories` both omitted, every curated board plus `connectors.greenhouse.boards` is searched. Keywords default to `target_positions`, then the latest job title; `work_mode` defaults to `preferred_mode`. | `{ "postings": [{ "external_id", "board", "position_title", "company_name", "listing_url", "location", "work_mode", "updated_at", "raw_text", "score", "title_score", "skill_score" }], "matched", "boards_searched", "boards_total", "postings_scanned", "errors": [{ "board", "message" }], "keywords_used", "work_mode_used" }`. `raw_text` is filled for the top-ranked postings only. Each posting also has `saved_job_id` and `archived` when it is already in `jobs`. `422` when no keywords can be found. | Reads `settings`, `profile`, `experiences`. No writes. Listings cached on disk. |
 | `POST /v1/connectors/{id}/import` | `{ "external_ids": ["123"] }` (required, 1 or more) from a recent search. | `{ "imported": [Job], "refreshed": [Job] }`. `422` for an id not in recent results. | Upsert `jobs` on `(source, external_id)`. Existing rows get a new `searched_at`. |
 | `GET /v1/connectors/greenhouse/postings/{external_id}` | none | One posting from recent search results with `raw_text` filled, for reading in the app. `404` if it is not in recent results. | None. Fetches the description if not cached. |
@@ -272,7 +271,7 @@ The only routes that can reach a job site. Each call needs the connector enabled
 | `POST /v1/connectors/greenhouse/boards` | `{ "board": "acme" }` | `{ "board": "acme", "company": "Acme Inc", "open_postings": 42 }`. `422` if the board does not exist. | Appends to `connectors.greenhouse.boards` in `settings` after validating the token upstream |
 | `DELETE /v1/connectors/greenhouse/boards/{board}` | none | `204` | Removes the token from `connectors.greenhouse.boards` |
 
-Errors: `409` if the connector is disabled, `422` for a bad query, `502` with the upstream status on failure or rate limit. Requests use HTTPS with a timeout and a response size cap.
+Errors: `422` for a bad query, `502` with the upstream status on failure or rate limit. Requests use HTTPS with a timeout and a response size cap.
 
 ## AI (`ai.go`)
 
@@ -319,7 +318,6 @@ The table stores values as text. The API converts them to JSON types.
 | `ai.remote.model` | string | `""` | No |
 | `jobs.retention_days` | integer, at least 1 | `30` | Yes |
 | `jobs.trash_days` | integer, at least 1 | `7` | Yes |
-| `connectors.greenhouse.enabled` | boolean | `true` | Yes |
 | `connectors.greenhouse.boards` | array of strings | `[]` | Yes |
 | `connectors.greenhouse.categories` | array of strings: industries the user is open to, `[]` for all | `[]` | No |
 
@@ -346,7 +344,7 @@ The UI calls with `dry_run: true` first to preview removals.
 | Revisions | 8 |
 | Tailored resumes | 6 |
 | Applications | 9 |
-| Connectors | 9 |
+| Connectors | 8 |
 | AI | 5 |
 | Models | 8 |
 | Settings | 2 |
