@@ -1,6 +1,6 @@
 # Phase 1: Display one Greenhouse job listing
 
-Build on `main` from the plans in [architecture.md](architecture.md), [api.md](api.md) and [schema.md](schema.md). `experiment/full-build` is a reference only; nothing is copied from it as final code.
+Build on `main` from the plans in [architecture.md](architecture.md), [api.md](api.md) and [schema.md](schema.md). `experiment/full-build` is a reference only; nothing is copied from it as final code. Later phases: [roadmap.md](roadmap.md).
 
 ## Goal
 
