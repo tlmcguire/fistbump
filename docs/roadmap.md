@@ -31,7 +31,7 @@ Out of scope for the MVP: everything in [build-findings.md](build-findings.md) s
 ```mermaid
 flowchart LR
     P1["1. Listing view<br/>(in progress)"] --> P2["2. Job search"]
-    P1 --> P3["3. Master resume"]
+    P1 --> P3["3. Master resume<br/>and import"]
     P1 --> P4
     P3 --> P4["4. Saved jobs and<br/>skill-gap analysis"]
     P4 --> P5["5. Tailoring loop<br/>(rules engine)"]
@@ -56,7 +56,7 @@ Proposed dates, written October 10, 2026. D3 is November 10.
 |-------|-------|---------|------------|
 | 1. Listing view | Oct 10 | Oct 14 | |
 | 2. Job search | Oct 14 | Oct 20 | 1 |
-| 3. Master resume | Oct 13 | Oct 20 | 1 |
+| 3. Master resume and import | Oct 13 | Oct 22 (import may land after the core) | 1 |
 | 4. Saved jobs and skill-gap analysis | Oct 19 | Oct 25 | 1, 3 |
 | 5. Tailoring loop | Oct 23 | Oct 30 | 4 |
 | 6. PDF export | Oct 29 | Nov 2 | 5 |
@@ -76,7 +76,8 @@ Every group in [api.md](api.md), and the phase that builds it. Phase 1 registers
 | Resume | All 10 | 3 |
 | Resume import and generation | `GET /v1/resume/preview` | 3 |
 | | `POST /v1/resume/export` | 6 |
-| | `POST /v1/resume/import`, `/import/apply`, `/summary` | After MVP |
+| | `POST /v1/resume/import`, `/import/apply` (rules only) | 3 |
+| | `POST /v1/resume/summary`, and AI reading of imports | After MVP |
 | Saved resumes | All 5 | 3 |
 | Jobs | `parse`, create, list, get, update, delete, `analyze` | 4 |
 | | `archive`, `unarchive` | 7 |
@@ -100,9 +101,10 @@ Routes left for after the MVP keep returning `501`, so the contract does not cha
 
 ## Schema changes
 
-Only one is needed for the MVP:
+Two are needed for the MVP, both on `jobs` in phase 4:
 
-- **`jobs.board`** (phase 4): the Greenhouse board token, so a saved job can be fetched again (see phase 1, "For later"). NULL for pasted and manual jobs.
+- **`jobs.board`**: the Greenhouse board token, so a saved job can be fetched again (see phase 1, "For later"). NULL for pasted and manual jobs.
+- **`jobs.company_url`**: a direct link to the company (its own job page, or its site), so a saved job is not reachable only through Greenhouse (see phase 1, `company_url`).
 
 One more is recommended while it is cheap:
 
@@ -116,12 +118,12 @@ Each phase has its own plan with routes, files in build order, tests, and done c
 
 | Phase | Plan | Delivers |
 |-------|------|----------|
-| 1 | [phase01.md](phase01.md) | Paste a Greenhouse link and see the listing; backend process, API scaffolding, Electron shell |
+| 1 | [phase01.md](phase01.md) | Paste a Greenhouse link and see the listing, with a direct link to the company when known; backend process, API scaffolding, Electron shell |
 | 2 | [phase02.md](phase02.md) | Search every curated Greenhouse board and open ranked results |
-| 3 | [phase03.md](phase03.md) | Build and edit the master resume; saved versions; settings store; view router |
+| 3 | [phase03.md](phase03.md) | Build, edit or import the master resume (wrong formats rejected, hidden PDF text dropped); saved versions; settings store; view router |
 | 4 | [phase04.md](phase04.md) | Save pasted or Greenhouse jobs; parse them; skill-gap analysis under 1.5 s |
 | 5 | [phase05.md](phase05.md) | Generate suggestions (rules engine), review them side by side, build a tailored resume |
-| 6 | [phase06.md](phase06.md) | Export the master or a tailored resume as PDF, with Markdown as the fallback |
+| 6 | [phase06.md](phase06.md) | Export the master or a tailored resume as PDF with no hidden text, with Markdown as the fallback |
 | 7 | [phase07.md](phase07.md) | Track applications by stage; archive jobs and applications |
 | 8 | [phase08.md](phase08.md) | Local model and remote provider behind the rules fallback; encrypted API key |
 | 9 | [phase09.md](phase09.md) | CI, installers for all three platforms, storage cleanup, crash recovery, user guide |

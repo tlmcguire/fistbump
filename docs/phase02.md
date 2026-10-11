@@ -40,7 +40,7 @@ api.md writes this route as `/v1/connectors/{id}/fetch`. Greenhouse is the only 
 { "postings": [{
     "external_id": "5287532008", "board": "backblaze", "company_name": "Backblaze",
     "position_title": "Data Analyst", "location": "Remote - US",
-    "listing_url": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008",
+    "listing_url": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008", "company_url": null,
     "updated_at": "2026-10-06T20:15:10Z", "raw_text": "...",
     "work_mode": "Remote", "score": 0.82, "title_score": 0.9, "skill_score": 0 }],
   "matched": 143,                // postings that passed the filters
@@ -77,7 +77,7 @@ api.md writes this route as `/v1/connectors/{id}/fetch`. Greenhouse is the only 
 ## How search works
 
 1. **Choose boards.** `boards` if given; else every curated board in `boards.json` plus `connectors.greenhouse.boards`, narrowed to `categories` (a parent includes its subsets) when given; else narrowed to boards whose curated company name contains `company`. De-duplicate by token.
-2. **List each board** with `GET /v1/boards/{board}/jobs` (no `content`): id, title, location, `updated_at`, `absolute_url`. At most 24 boards at once.
+2. **List each board** with `GET /v1/boards/{board}/jobs` (no `content`): id, title, location, `updated_at`, `absolute_url`. At most 24 boards at once. `absolute_url` gives each result its `company_url` by phase 1's rules, with no extra request.
 3. **Cache.** Keep each board's listing in memory and in `<data-dir>/cache/greenhouse/<board>.json` with its `ETag` and fetch time. Within 6 hours, use the cache without a request. After that, send `If-None-Match`; a `304` reuses the file. If Greenhouse sends no `ETag`, fall back to the 6 hour expiry alone. A `404` board is remembered for the cache window and reported in `errors`.
 4. **Filter** on title, location and work mode (see `match.go` below).
 5. **Rank** by title fit and location. No company takes more than 3 of the top N.
@@ -123,7 +123,8 @@ References: [os.Rename](https://pkg.go.dev/os#Rename), [sync](https://pkg.go.dev
 
 **Goal:** list one board's postings without descriptions, through the cache.
 
-- `ListBoard(ctx, board) ([]Listing, error)` on phase 1's `Client`. `Listing` holds `ID`, `Title`, `Location`, `UpdatedAt`, `URL`.
+- `ListBoard(ctx, board) ([]Listing, error)` on phase 1's `Client`. `Listing` holds `ID`, `Title`, `Location`, `UpdatedAt`, `AbsoluteURL`.
+- Reuse phase 1's link rules (one function for `listing_url` and `company_url`), so search results and opened listings always agree.
 - Use the cache as described in "How search works". Same timeout, size cap and `User-Agent` as `FetchJob`; boards are larger than one job, so cap at 8 MB.
 - Map `404` to a not-found error and other failures to an upstream error, as in phase 1.
 
@@ -182,7 +183,7 @@ References: [context](https://pkg.go.dev/context), [sort.SliceStable](https://pk
 
 - Tabs: Find and Open link (phase 1). Find is the default tab, and opening it sends nothing.
 - Form: keywords, location, work mode (Any, Remote, Hybrid, On-site), Search button. Disable the button while a search runs; show "Searching N boards" until results arrive.
-- Results: title, company, location, work mode, updated date. Selecting one shows it with phase 1's listing display, from the result's own data. Reload still uses the listing route.
+- Results: title, company, location, work mode, updated date, and a link to the company's site when `company_url` is set. Selecting one shows it with phase 1's listing display, from the result's own data. Reload still uses the listing route.
 - Show the counts ("143 matches from 41,210 postings on 636 boards") and, if `errors` is not empty, a collapsed list of boards that failed.
 - `textContent` only, as in phase 1.
 
