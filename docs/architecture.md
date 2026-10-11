@@ -535,3 +535,4 @@ No em dashes. Plain wording.
 
 - [api.md](api.md): every route, request/response shape, error shape, and the stdout rule
 - [schema.md](schema.md): tables and relationships
+- [roadmap.md](roadmap.md): phases to the MVP, with one plan per phase (`phase01.md` to `phase09.md`)
