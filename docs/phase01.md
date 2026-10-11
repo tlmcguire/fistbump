@@ -48,6 +48,7 @@ How the app returns to a listing it already knows: reloading the view now, re-pu
   "position_title": "AI Workflow Engineer | LATAM",
   "location": "Remote - Argentina; Remote - Colombia",
   "listing_url": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008",
+  "company_url": null,
   "updated_at": "2026-10-06T16:15:10Z",
   "raw_text": "Backblaze is the object storage leader..."
 }
@@ -56,6 +57,14 @@ How the app returns to a listing it already knows: reloading the view now, re-pu
 The frontend keeps `board` and `external_id` and uses the second route for every later request.
 
 The field names match the posting in [api.md](api.md) (`POST /v1/connectors/{id}/fetch`) and, where a column exists, the `jobs` table in [schema.md](schema.md) (`external_id`, `company_name`, `position_title`, `location`, `listing_url`, `raw_text`). `board` and `updated_at` are posting-only: `jobs` has no column for either. `updated_at` is when Greenhouse last changed the posting.
+
+`company_url` is a direct link to the company, so the user is not limited to the Greenhouse listing:
+
+1. The job on the company's own careers site, when Greenhouse's `absolute_url` is not on a `greenhouse.io` host. Example: Stripe's `absolute_url` is `https://stripe.com/jobs/search?gh_jid=8172510`.
+2. Else the company's site from the board's optional `website` in `boards.json`.
+3. Else `null`, and the UI shows only the Greenhouse link.
+
+`listing_url` is always the Greenhouse page, built as `https://job-boards.greenhouse.io/{board}/jobs/{job_id}`, never copied from `absolute_url`, because `absolute_url` may point at the company's site. Phase 4 adds a `jobs.company_url` column so a saved job keeps the link.
 
 | Status | `code` | When |
 |--------|--------|------|
@@ -70,6 +79,7 @@ Notes from a live check of the Greenhouse API (2026-10-10):
 - `company_name` can be a label such as "Backblaze External Website". Use the company name from `boards.json` when the board is listed there, else Greenhouse's value.
 - `updated_at` has a local offset. Convert to UTC, per the API conventions.
 - A missing job returns `404`.
+- `absolute_url` points at the company's own careers site for some boards and at `job-boards.greenhouse.io` for the rest: 17 of the first 60 curated boards used their own site (GoDaddy, Okta, Stripe, Toast among them).
 
 For later: saving a job must store its board token so the tracker can re-pull it. `jobs` has `external_id` and `listing_url` but no board column, and reading the board from `listing_url` breaks when Greenhouse changes its link format.
 
@@ -80,7 +90,7 @@ In phase 2, search returns results with their full data, so opening a result nee
 Progress:
 
 - [ ] 1. `connector.go`
-- [ ] 2. `greenhouse.go`, `boards.go`
+- [ ] 2. `textclean.go`, `greenhouse.go`, `boards.go`
 - [ ] 3. `respond.go`
 - [ ] 4. `server.go`
 - [ ] 5. `connectors.go`
@@ -101,10 +111,14 @@ Each step is testable before the next one depends on it. Files that exist on `ma
 
 **Goal:** one Go type, `Posting`, that every job source returns, so the API and later the database never deal with Greenhouse's own field names.
 
-- Fields match the response above: `ExternalID`, `Board`, `CompanyName`, `PositionTitle`, `Location`, `ListingURL`, `UpdatedAt` (`time.Time`, UTC), `RawText`. JSON tags use the API's snake_case names.
+- Fields match the response above: `ExternalID`, `Board`, `CompanyName`, `PositionTitle`, `Location`, `ListingURL`, `CompanyURL` (`*string`, `null` when unknown), `UpdatedAt` (`time.Time`, UTC), `RawText`. JSON tags use the API's snake_case names.
 - Keep it free of HTTP and database code. Phase 2 adds the search fields api.md lists for postings (`work_mode`, `score`, `title_score`, `skill_score`), and pay once its fields are defined; api.md has no pay field for postings yet.
 
-#### 2. `backend/internal/connectors/greenhouse/greenhouse.go` and `boards.go`
+#### 2. `backend/internal/textclean/textclean.go`, then `backend/internal/connectors/greenhouse/greenhouse.go` and `boards.go`
+
+**`textclean`:** one function every import path shares (Greenhouse postings now; resume imports in phase 3 and pasted postings in phase 4). `StripInvisible(s string) (string, int)` removes invisible characters and returns how many runes it removed: Unicode format characters (category `Cf`, with `unicode.Is(unicode.Cf, r)`), which covers zero-width characters, bidirectional controls and tag characters (U+E0000 to U+E007F). Keep ordinary whitespace and line breaks. Test it in `textclean_test.go`: zero-width spaces between letters, a tag-character run that spells a word, bidirectional controls, and plain text unchanged.
+
+References: [unicode](https://pkg.go.dev/unicode), [Unicode tag characters (Wikipedia)](https://en.wikipedia.org/wiki/Tags_(Unicode_block)).
 
 **Goal:** everything that knows about Greenhouse lives here: reading a pasted link, fetching one job, and turning the response into a `Posting`.
 
@@ -112,9 +126,12 @@ Each step is testable before the next one depends on it. Files that exist on `ma
 - **Fetch one job** (`FetchJob(ctx, board, jobID) (Posting, error)`): `GET https://boards-api.greenhouse.io/v1/boards/{board}/jobs/{job_id}` with Go's `http.Client`. Set a timeout (for example 10 s), cap the response size with `io.LimitReader`, and send a descriptive `User-Agent`. Leave `Accept-Encoding` unset so Go asks for gzip and decompresses it for you. Map Greenhouse `404` to a not-found error and any other failure to an upstream error, so the API can choose the status.
 - **Make the base URL a field** on a client struct (`Client{BaseURL, HTTP}`), so tests can point it at a fake server.
 - **HTML to text:** `content` arrives HTML-escaped (`&lt;p&gt;`). Unescape with `html.UnescapeString`, then walk the HTML with `golang.org/x/net/html` and emit text, with line breaks for block tags (`p`, `li`, `br`, headings) and `- ` before list items. Never return HTML to the renderer. `x/net/html` is maintained by the Go team and is pure Go, so it fits the no-cgo rule.
+- **Hidden text in postings:** a posting can carry text a reader never sees, by accident or to steer automated tools. Skip, with everything inside them: `script`, `style`, `template`, `noscript`, elements with the `hidden` attribute or `aria-hidden="true"`, and elements whose inline `style` has `display:none`, `visibility:hidden`, `font-size:0` (or any size under 1px), `opacity:0`, or a white or transparent `color`. Then remove, with `textclean.StripInvisible` (above), zero-width characters (U+200B to U+200D, U+2060, U+FEFF inside text), Unicode tag characters (U+E0000 to U+E007F), bidirectional controls (U+202A to U+202E, U+2066 to U+2069), and other format characters (Unicode category Cf) except a single leading byte order mark. Count what was dropped; phase 4 reports it when the job is saved.
 - **Company name:** `boards.go` embeds `boards.json` with `go:embed` and looks up the board's curated `company`. Fall back to Greenhouse's `company_name`, which can be a label like "Backblaze External Website".
+- **Links:** build `listing_url` from the board and job id. Set `company_url` by the three rules above: `absolute_url` when its host is not `greenhouse.io` or a subdomain of it (compare `url.URL.Hostname()`, not a substring), else the curated `website`, else `nil`. Accept only `https` links.
+- **`boards.json` `website`:** an optional `website` per board (`"website": "https://www.backblaze.com/company/careers"`), the company's careers page where known, else its home page. Update `scripts/verify-greenhouse-boards.js` to accept the field and check it is an `https` URL. Fill it in over time; boards without it fall back to `null`.
 - **Times:** parse `updated_at` (it has a local offset) and convert to UTC.
-- **Test** (`greenhouse_test.go`): an `httptest.Server` serves a saved real response from `backend/testdata/api/greenhouse_job.json`. Cover: link forms (new host, old host, `gh_jid`-only, not Greenhouse, non-numeric id), success mapping, HTML to text, company name fallback, UTC conversion, upstream `404` and `500`, an oversized body.
+- **Test** (`greenhouse_test.go`): an `httptest.Server` serves a saved real response from `backend/testdata/api/greenhouse_job.json`. Cover: link forms (new host, old host, `gh_jid`-only, not Greenhouse, non-numeric id), success mapping, HTML to text, hidden HTML and invisible characters dropped, company name fallback, UTC conversion, `company_url` from an own-site `absolute_url`, from the curated `website`, and `null`, `listing_url` built from board and id even when `absolute_url` is on the company's site, upstream `404` and `500`, an oversized body.
 
 References: [Greenhouse Job Board API](https://developers.greenhouse.io/job-board.html), [net/url](https://pkg.go.dev/net/url), [html](https://pkg.go.dev/html), [golang.org/x/net/html](https://pkg.go.dev/golang.org/x/net/html), [embed](https://pkg.go.dev/embed), [net/http/httptest](https://pkg.go.dev/net/http/httptest).
 
@@ -218,7 +235,7 @@ References: [BrowserWindow](https://www.electronjs.org/docs/latest/api/browser-w
 - `index.html`: a content security policy that allows only the app's own files (`default-src 'self'`), with no remote scripts or inline scripts.
 - `js/api.js`: wraps `window.api` and turns the error shape into readable messages.
 - `js/app.js`: mounts the view. No router yet.
-- `views/job-parser/job-parser.js`: a field and button to open a link; shows title, company, location, updated date, an "Open on Greenhouse" link, and the description. Set text with `textContent`, never `innerHTML`. Keep `board` and `external_id` and use them for a Reload button. Show errors as written by the backend (for example, the `gh_jid` message).
+- `views/job-parser/job-parser.js`: a field and button to open a link; shows title, company, location, updated date, an "Open on Greenhouse" link, an "Open on <company>'s site" link when `company_url` is set, and the description. Set text with `textContent`, never `innerHTML`. Keep `board` and `external_id` and use them for a Reload button. Show errors as written by the backend (for example, the `gh_jid` message).
 - Styles: optional for phase 1. [architecture.md](architecture.md) plans `styles/base.css` and `styles/components.css`.
 
 References: [Content Security Policy (MDN)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP).
@@ -233,6 +250,7 @@ References: [node:test](https://nodejs.org/api/test.html).
 ## Done when
 
 - Pasting a Greenhouse job link shows the listing in the app, and reloading it uses the board and job id.
+- The listing links to the company's own site when Greenhouse or `boards.json` gives one, as well as to Greenhouse.
 - A closed job, a link that is not a Greenhouse job link, a bad token, and an unreachable Greenhouse each show a clear message.
 - `go test ./...` and `npm test` pass.
 

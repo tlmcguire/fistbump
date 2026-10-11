@@ -134,6 +134,7 @@ References: [OpenAI chat completions API](https://platform.openai.com/docs/api-r
 
 - System message: rewrite one piece of resume text for the job; keep every fact; do not add skills, tools, numbers, titles or employers that are not in the text; return JSON `{"proposed": "..."}`.
 - User message: the job title and company, matched skills, the target's label and original text. Missing skills are not sent, so the model is not tempted to add them.
+- The posting's raw text is never sent. Only parsed fields go into prompts, and the parser runs on text already stripped of hidden HTML (phase 1) and invisible characters (phase 4), so instructions hidden in a posting cannot reach the model.
 - Per section: experience text keeps the same number of lines or fewer; the skills line may only be reordered; the summary is at most 3 sentences.
 - Parse the JSON; on a parse error, try the first `{...}` in the reply; else drop the item.
 

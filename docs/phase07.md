@@ -115,7 +115,7 @@ Progress:
 **Goal:** the tracker table.
 
 - Route `#/tracker`.
-- Columns: company, position, status, date applied, next step, resume (tailored resume name or "Master"), notes. Click a company or position to open the job in the Jobs view.
+- Columns: company, position, status, date applied, next step, resume (tailored resume name or "Master"), notes. Click a company or position to open the job in the Jobs view. A link icon opens the company's own site (`company_url`, phase 4) when known, else the listing, in the system browser.
 - Inline edits: status as a select, dates as `<input type="date">`, notes as a text area that saves on blur. Each edit is one `PUT`; on error, put the old value back and show the message.
 - Filters: status (multi-select), search by company or title, and an Active, Archived, All switch.
 - Select rows with checkboxes for bulk status and bulk archive.

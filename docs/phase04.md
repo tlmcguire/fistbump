@@ -15,7 +15,7 @@ In:
 - The `parser` package: posting text cleanup, skill and requirement extraction, inferred company, title, location and work mode.
 - The `analyze` package: required and preferred skills compared with the master resume, with evidence.
 - The `jobs` store and seven Jobs routes: `parse`, create, list, get, update, delete, `analyze`.
-- Saving a Greenhouse posting as a job, and the `jobs.board` column.
+- Saving a Greenhouse posting as a job, and the `jobs.board` and `jobs.company_url` columns.
 - `skill_score` in phase 2's search ranking.
 - Save, a saved jobs list, and a skill-gap panel in the Jobs view.
 
@@ -26,10 +26,13 @@ Out: job archive and trash (phase 7), pay extraction and non-tech skill dictiona
 Add to `jobs` in `001_init.sql`, on a `feature/` branch with [schema.md](schema.md) and the Job shape in [api.md](api.md) updated in the same change:
 
 ```sql
-board TEXT,  -- Greenhouse board token; NULL for pasted and manual jobs
+board       TEXT,  -- Greenhouse board token; NULL for pasted and manual jobs
+company_url TEXT,  -- direct link to the company (its own job page or site); NULL when unknown
 ```
 
 No database has been released, so this edits the initial schema, as #4 did. `(source, external_id)` is already unique, so saving the same posting twice updates one row.
+
+`company_url` keeps phase 1's direct link to the company, so a saved job is not only reachable through Greenhouse. For Greenhouse jobs it comes from the posting; for pasted and manual jobs the user may enter it. `listing_url` stays the page the job came from (the Greenhouse listing, or the link the user pasted).
 
 ## Routes
 
@@ -67,7 +70,7 @@ api.md describes `POST /v1/connectors/{id}/import` taking `external_ids` from re
 { "imported": [Job], "refreshed": [Job] }
 ```
 
-- Each posting is fetched with phase 1's `FetchJob` (the description cache from phase 2 makes this free for search results), parsed, and upserted on `(source, external_id)` with `source = 'greenhouse'` and `board` set.
+- Each posting is fetched with phase 1's `FetchJob` (the description cache from phase 2 makes this free for search results), parsed, and upserted on `(source, external_id)` with `source = 'greenhouse'`, `board` and `company_url` set.
 - A new row goes in `imported`; an existing row gets new text, skills and `searched_at` and goes in `refreshed`.
 - A posting that returns `404` fails the whole request with `404` and `details.external_id`, so the user knows which one closed. Nothing is written.
 - Update api.md with this shape.
@@ -100,11 +103,11 @@ Progress:
 
 #### 1. `backend/internal/db/migrations/001_init.sql`
 
-Add `board` as above. Update `schema.md` and the Job shape in `api.md`. Update `db_test.go` if it checks columns.
+Add `board` and `company_url` as above. Update `schema.md`, the Job shape in `api.md`, and `POST /v1/jobs` and `PUT /v1/jobs/{id}` to accept `company_url` (an `https` URL, else `422`). Update `db_test.go` if it checks columns.
 
 #### 2. `backend/internal/models/models.go`
 
-- Add `Job` with JSON tags matching api.md, including `board`. Skill lists and `requirements` are `[]string`, never `nil`.
+- Add `Job` with JSON tags matching api.md, including `board` and `company_url`. Skill lists and `requirements` are `[]string`, never `nil`.
 
 #### 3. `backend/internal/parser/skills.go`
 
@@ -121,7 +124,8 @@ References: [regexp](https://pkg.go.dev/regexp), [strings.Fields](https://pkg.go
 
 **Goal:** turn pasted or fetched posting text into the fields api.md's parse route returns.
 
-- `Clean(raw string) string`: normalize line endings and whitespace, remove zero-width characters, collapse runs of blank lines, strip bullets to a consistent `- `.
+- `Clean(raw string) (string, int)`: normalize line endings and whitespace, remove invisible characters with phase 1's `textclean.StripInvisible`, collapse runs of blank lines, strip bullets to a consistent `- `. Returns how many characters were hidden.
+- **Hidden text in postings.** Pasted text has no styling, so invisible characters are what can hide there. Greenhouse postings arrive already cleaned by phase 1's HTML rules. `POST /v1/jobs/parse` and `POST /v1/jobs` report `hidden_text: { "characters": n }` (or `null`) so the UI can say "Hidden text was removed from this posting". Add the field to api.md.
 - **Sections.** Recognize headings by line: required (`requirements`, `qualifications`, `what you bring`, `must have`, `minimum qualifications`) and preferred (`preferred`, `nice to have`, `bonus`, `plus`). Skills found under a required heading go to `req_*`; under a preferred heading to `pref_*`; elsewhere to `req_*` only when no required section exists, so a posting with no headings still yields skills.
 - **Requirements.** Bullet lines under required headings, as written, in order, at most 30.
 - **Description.** The text before the first required or preferred heading, trimmed to 2,000 characters.
@@ -179,24 +183,25 @@ References: [regexp](https://pkg.go.dev/regexp), [strings.Fields](https://pkg.go
 **Goal:** save jobs and see the gap.
 
 - Tabs: Find (phase 2), Open link (phase 1), Paste, Saved.
-- **Paste:** a text area; Preview calls `parse` and shows the inferred fields (editable) and the skill lists; Save calls create.
+- **Paste:** a text area; Preview calls `parse` and shows the inferred fields (editable), optional fields for the listing link and the company's site, and the skill lists; Save calls create.
 - **Save from Greenhouse:** a Save button on the listing display (link view and search results) calls `connectors:import` with the posting's board and id.
-- **Saved:** a list with search by company or title. Selecting a job shows its details and the analysis panel. Delete asks first and shows the `409` message when an application exists.
+- **Saved:** a list with search by company or title. Selecting a job shows its details, links to the company's site (when `company_url` is set) and to the listing, and the analysis panel. Delete asks first and shows the `409` message when an application exists.
 - **Analysis panel:** score as a percentage of required skills; required and preferred groups, each split into matched (with the experience titles that show it) and missing. Run analysis when a saved job opens; it is fast enough to need no button.
 
 ### Tests and tooling
 
 - `backend/testdata/postings/`: 6 to 10 real postings as `.txt` (tech, analyst, one with no headings, one with only a preferred section), each with a `.json` of expected skills and inferred fields.
-- `parser_test.go`: table test over `testdata/postings`; whole-word matching (`go`, `c`, `r`); aliases; section assignment; posting with no headings.
+- `parser_test.go`: table test over `testdata/postings` (include one posting with zero-width and tag characters hiding a skill list, which must not be detected as skills); whole-word matching (`go`, `c`, `r`); aliases; section assignment; posting with no headings.
 - `analyze_test.go`: matched by listed skill, matched by experience text only, missing, certifications count, score with no required skills.
 - `analyze_test.go` latency: a master with 30 experiences of 300 words each and a 10,000 word posting; `parser.Parse` plus `analyze.Run` must finish under 1.5 s (NFR-3). Log the duration so CI shows the margin.
 - `job_test.go` (store): CRUD, filters, upsert new and existing, `ErrConflict` on delete with an application.
-- `api_test.go`: create pasted with inference, `422` when inference fails, analyze without a profile (`409`), import new and refresh, import with a closed posting writes nothing.
+- `api_test.go`: create pasted with inference, `company_url` validation, `422` when inference fails, analyze without a profile (`409`), import new and refresh, import with a closed posting writes nothing.
 - `search_test.go`: with a scorer, a better skill fit moves up.
 
 ## Done when
 
 - Pasting a posting or saving a Greenhouse listing creates a saved job, and saving the same listing again updates it.
+- A saved Greenhouse job keeps its direct company link when the posting had one.
 - Opening a saved job shows matched and missing skills, with the experiences that show each match.
 - The latency test passes.
 - Search results with a profile rank by skill fit.

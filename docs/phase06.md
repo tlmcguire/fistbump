@@ -92,6 +92,7 @@ References: [Inter](https://rsms.me/inter/), [SIL Open Font License](https://ope
 - Links: `LinkString` over the drawn text for URLs (add `https://` when missing) and `mailto:` for emails.
 - Return fpdf's accumulated error (`pdf.Error()`) instead of panicking; recover any panic from the library and return it as an error, so the API can offer Markdown.
 - Set the document title (`SetTitle`) to the filename without extension, and the creator to "FistBump".
+- **No hidden text.** Every character in the file is drawn visibly: dark text on white, at the sizes in "Layout", inside the margins. No white or tiny text, no off-page text, no invisible render mode. Some tools add hidden keywords to get past applicant tracking systems; FistBump never does, and recruiters' systems increasingly flag it.
 
 References: [go-pdf/fpdf](https://pkg.go.dev/github.com/go-pdf/fpdf).
 
@@ -138,12 +139,14 @@ References: [dialog.showSaveDialog](https://www.electronjs.org/docs/latest/api/d
   - A long resume (three pages of experience) produces more than one page and no error.
   - Names and text with `Ł`, `é`, `ñ`, `ü`, and curly quotes render without error. Whether they print correctly is checked by eye in the manual step: reading text back needs a PDF reader library, and the one the full build used garbled UTF-8 text until patched.
   - Empty sections and a resume with only a name do not fail.
+- **No hidden text:** export a resume, then read it back with phase 3's `resumeparse.TextFromPDF`; `Hidden.Words` must be 0 and the text must contain every section heading and entry title. This also checks that exported resumes import cleanly.
 - `api_test.go`: both routes in both formats, headers and filename sanitizing (a company with `/` and `:`), `404`, `422`.
 - Manual: open exported PDFs in Preview (macOS), Edge or Acrobat (Windows) and a Linux viewer; click a link; select and copy text.
 
 ## Done when
 
 - The master resume and a tailored resume export as PDFs that open in each platform's viewer, with accented names printed correctly and links clickable.
+- An exported PDF read back by phase 3's importer has no hidden text.
 - Canceling the save dialog saves nothing and shows no error.
 - A forced PDF failure (for example a test-only font error) offers Markdown, and the Markdown saves.
 - `go test ./...` and `npm test` pass.
