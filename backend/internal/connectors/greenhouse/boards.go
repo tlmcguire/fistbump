@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"sort"
+	"strings"
 )
 
 //go:embed boards.json
@@ -12,6 +13,8 @@ var boardsJSON []byte
 type Board struct {
 	Token   string `json:"token"`
 	Company string `json:"company"`
+	// Website is the company's careers page where known, else its home page. Optional; https only.
+	Website string `json:"website,omitempty"`
 }
 
 type Category struct {
@@ -77,16 +80,29 @@ func BoardsFor(ids []string) []Board {
 	return out
 }
 
-// CompanyFor returns the curated company name for a token, or "".
-func CompanyFor(token string) string {
+// lookup returns the curated entry for a token. Tokens are matched without regard to case,
+// as Greenhouse does.
+func lookup(token string) (Board, bool) {
 	for _, c := range file.Categories {
 		for _, b := range c.Boards {
-			if b.Token == token {
-				return b.Company
+			if strings.EqualFold(b.Token, token) {
+				return b, true
 			}
 		}
 	}
-	return ""
+	return Board{}, false
+}
+
+// CompanyFor returns the curated company name for a token, or "".
+func CompanyFor(token string) string {
+	b, _ := lookup(token)
+	return b.Company
+}
+
+// WebsiteFor returns the curated company website for a token, or "".
+func WebsiteFor(token string) string {
+	b, _ := lookup(token)
+	return b.Website
 }
 
 // Tokens returns every curated token, sorted.
