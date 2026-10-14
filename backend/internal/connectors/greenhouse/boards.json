@@ -8,7 +8,8 @@
       "boards": [
         {
           "token": "backblaze",
-          "company": "Backblaze"
+          "company": "Backblaze",
+          "website": "https://www.backblaze.com/company/careers"
         },
         {
           "token": "purestorage",

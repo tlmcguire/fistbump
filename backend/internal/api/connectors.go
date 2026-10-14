@@ -79,9 +79,9 @@ func (s *Server) writePosting(w http.ResponseWriter, r *http.Request, board, job
 // the user. Any other error is returned unchanged and becomes a 500.
 func greenhouseError(err error) error {
 	switch {
-	case errors.Is(err, greenhouse.ErrNotFound):
+	case errors.Is(err, greenhouse.ErrorNotFound):
 		return notFound("This job is closed or does not exist.")
-	case errors.Is(err, greenhouse.ErrUpstream):
+	case errors.Is(err, greenhouse.ErrorUpstream):
 		return upstreamError("Greenhouse did not respond. Try again.")
 	default:
 		return err

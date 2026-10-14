@@ -216,10 +216,10 @@ func TestGreenhouseErrors(t *testing.T) {
 		wantStatus int
 		wantCode   string
 	}{
-		{"closed job", greenhouse.ErrNotFound, 404, "not_found"},
-		{"closed job, wrapped", fmt.Errorf("fetch backblaze: %w", greenhouse.ErrNotFound), 404, "not_found"},
-		{"upstream failure", greenhouse.ErrUpstream, 502, "upstream_error"},
-		{"upstream failure, wrapped", fmt.Errorf("status 500: %w", greenhouse.ErrUpstream), 502, "upstream_error"},
+		{"closed job", greenhouse.ErrorNotFound, 404, "not_found"},
+		{"closed job, wrapped", fmt.Errorf("fetch backblaze: %w", greenhouse.ErrorNotFound), 404, "not_found"},
+		{"upstream failure", greenhouse.ErrorUpstream, 502, "upstream_error"},
+		{"upstream failure, wrapped", fmt.Errorf("status 500: %w", greenhouse.ErrorUpstream), 502, "upstream_error"},
 		{"unexpected error", errors.New("secret detail"), 500, "internal"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
