@@ -16,6 +16,9 @@ import (
 	"strings"
 	"time"
 
+	xhtml "golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/textclean"
 )
@@ -55,7 +58,7 @@ var (
 // https://job-boards.greenhouse.io/{board}/jobs/{job_id} or the older boards.greenhouse.io host.
 // Separates into a board name and job_id, and adds https:// if needed
 func ParseLink(rawString string) (board, jobID string, err error) {
-	rawString = strings.TrimSpace(raw)
+	rawString = strings.TrimSpace(rawString)
 	if !strings.Contains(rawString, "://") {
 		rawString = "https://" + rawString // a link pasted without its scheme
 	}
@@ -63,7 +66,7 @@ func ParseLink(rawString string) (board, jobID string, err error) {
 	if err != nil || (link.Scheme != "https" && link.Scheme != "http") || link.Hostname() == "" {
 		return "", "", ErrorNotGreenhouse
 	}
-	switch strings.ToLower(u.Hostname()) {
+	switch strings.ToLower(link.Hostname()) {
 	case "job-boards.greenhouse.io", "boards.greenhouse.io":
 	default:
 		if link.Query().Has("gh_jid") {
@@ -73,7 +76,7 @@ func ParseLink(rawString string) (board, jobID string, err error) {
 	}
 	parts := strings.Split(strings.Trim(link.EscapedPath(), "/"), "/")
 	if len(parts) != 3 || parts[1] != "jobs" || !tokenRe.MatchString(parts[0]) || !digits.MatchString(parts[2]) {
-		if u.Query().Has("gh_jid") {
+		if link.Query().Has("gh_jid") {
 			return "", "", ErrorCareersPage
 		}
 		return "", "", ErrorBadLink
@@ -204,7 +207,7 @@ var lineTags = map[atom.Atom]bool{
 func (writer *textWriter) walk(node *xhtml.Node) {
 	switch node.Type {
 	case xhtml.TextNode:
-		writer.text(n.Data)
+		writer.text(node.Data)
 		return
 	case xhtml.ElementNode:
 	case xhtml.DocumentNode:
@@ -222,8 +225,8 @@ func (writer *textWriter) walk(node *xhtml.Node) {
 		writer.builder.WriteString("\n")
 	case node.DataAtom == atom.Li:
 		writer.line()
-		writer.builder.WriteString(strings.Repeat("  ", max(w.listDepth-1, 0)) + "- ")
-		writer.children(n)
+		writer.builder.WriteString(strings.Repeat("  ", max(writer.listDepth-1, 0)) + "- ")
+		writer.children(node)
 		writer.line()
 	case node.DataAtom == atom.Ul || node.DataAtom == atom.Ol:
 		if writer.listDepth == 0 {
@@ -232,14 +235,14 @@ func (writer *textWriter) walk(node *xhtml.Node) {
 			writer.line()
 		}
 		writer.listDepth++
-		writer.children(n)
+		writer.children(node)
 		writer.listDepth--
 		if writer.listDepth == 0 {
 			writer.blank()
 		}
 	case node.DataAtom == atom.Td || node.DataAtom == atom.Th:
 		writer.space()
-		writer.children(n)
+		writer.children(node)
 		writer.space()
 	case node.DataAtom == atom.Pre:
 		writer.blank()
@@ -260,60 +263,60 @@ func (writer *textWriter) walk(node *xhtml.Node) {
 	}
 }
 
-func (w *textWriter) children(n *xhtml.Node) {
+func (writer *textWriter) children(n *xhtml.Node) {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		w.walk(c)
+		writer.walk(c)
 	}
 }
 
 // text writes a text node with HTML whitespace collapsing: runs of spaces, tabs and newlines
 // (and non-breaking spaces) become one space, and no line starts with a space.
-func (w *textWriter) text(s string) {
-	if w.pre > 0 {
-		w.b.WriteString(s)
+func (writer *textWriter) text(s string) {
+	if writer.pre > 0 {
+		writer.builder.WriteString(s)
 		return
 	}
 	for _, r := range s {
 		switch r {
 		case ' ', '\t', '\n', '\r', '\f', '\u00a0':
-			w.space()
+			writer.space()
 		default:
-			w.b.WriteRune(r)
+			writer.builder.WriteRune(r)
 		}
 	}
 }
 
-func (w *textWriter) last() byte {
-	s := w.b.String()
+func (writer *textWriter) last() byte {
+	s := writer.builder.String()
 	if s == "" {
 		return '\n'
 	}
 	return s[len(s)-1]
 }
 
-func (w *textWriter) space() {
-	if c := w.last(); c != ' ' && c != '\n' {
-		w.b.WriteByte(' ')
+func (writer *textWriter) space() {
+	if c := writer.last(); c != ' ' && c != '\n' {
+		writer.builder.WriteByte(' ')
 	}
 }
 
 // line ends the current line if it has text.
-func (w *textWriter) line() {
-	if w.last() != '\n' {
-		w.b.WriteByte('\n')
+func (writer *textWriter) line() {
+	if writer.last() != '\n' {
+		writer.builder.WriteByte('\n')
 	}
 }
 
 // blank ends the current line and leaves one empty line; String collapses extra ones.
-func (w *textWriter) blank() {
-	w.line()
-	w.b.WriteByte('\n')
+func (writer *textWriter) blank() {
+	writer.line()
+	writer.builder.WriteByte('\n')
 }
 
 var manyBlankLines = regexp.MustCompile(`\n{3,}`)
 
-func (w *textWriter) String() string {
-	lines := strings.Split(w.b.String(), "\n")
+func (writer *textWriter) String() string {
+	lines := strings.Split(writer.builder.String(), "\n")
 	for i, l := range lines {
 		lines[i] = strings.TrimRight(l, " \t")
 	}
@@ -466,11 +469,11 @@ func invisibleColor(val string) bool {
 func toPosting(board, jobID string, raw rawJob) (connectors.Posting, error) {
 	var updated time.Time
 	if raw.UpdatedAt != "" {
-		UpdatedTime, err := time.Parse(time.RFC3339, raw.UpdatedAt)
+		parsed, err := time.Parse(time.RFC3339, raw.UpdatedAt)
 		if err != nil {
 			return connectors.Posting{}, fmt.Errorf("%w: updated_at %q: %v", ErrorUpstream, raw.UpdatedAt, err)
 		}
-		UpdatedTime = time.UTC()
+		updated = parsed.UTC()
 	}
 
 	text, hidden := contentText(raw.Content)
@@ -524,7 +527,7 @@ func companyURL(board, absolute string) *string {
 // ensure only https URLs are used; http is not accepted
 func httpsURL(SiteLink string) (*url.URL, bool) {
 	link, err := url.Parse(SiteLink)
-	if err != nil || link.Scheme != "https" || u.Hostname() == "" || link.User != nil {
+	if err != nil || link.Scheme != "https" || link.Hostname() == "" || link.User != nil {
 		return nil, false
 	}
 	return link, true

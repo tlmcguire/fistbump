@@ -14,16 +14,16 @@ import (
 // are kept.
 func StripInvisible(text string) (string, int) {
 	n := 0
-	out := strings.Map(func(runes rune) rune {
-		if invisible(runes) {
+	out := strings.Map(func(r rune) rune {
+		if invisible(r) {
 			n++
 			return -1
 		}
-		return runes
+		return r
 	}, text)
 	return out, n
 }
 
-func invisible(runes rune) bool {
+func invisible(r rune) bool {
 	return unicode.Is(unicode.Cf, r) || r >= 0xE0000 && r <= 0xE007F
 }

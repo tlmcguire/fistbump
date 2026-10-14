@@ -80,20 +80,20 @@ func TestParseLink(t *testing.T) {
 		{"  job-boards.greenhouse.io/figma/jobs/123/  ", "figma", "123", nil},
 		{"https://boards.greenhouse.io/okta/jobs/42", "okta", "42", nil},
 		{"http://BOARDS.Greenhouse.io/okta/jobs/42", "okta", "42", nil},
-		{"https://www.backblaze.com/company/careers?gh_jid=5277815008", "", "", ErrCareersPage},
-		{"https://boards.greenhouse.io/embed/job_app?gh_jid=42", "", "", ErrCareersPage},
-		{"https://www.linkedin.com/jobs/view/123", "", "", ErrNotGreenhouse},
-		{"https://job-boards.greenhouse.io.evil.com/backblaze/jobs/1", "", "", ErrNotGreenhouse},
-		{"https://jobs.lever.co/acme/1234", "", "", ErrNotGreenhouse},
-		{"ftp://boards.greenhouse.io/okta/jobs/42", "", "", ErrNotGreenhouse},
-		{"not a link", "", "", ErrNotGreenhouse},
-		{"", "", "", ErrNotGreenhouse},
-		{"https://job-boards.greenhouse.io/backblaze/jobs/12ab", "", "", ErrBadLink},
-		{"https://job-boards.greenhouse.io/backblaze/jobs/-12", "", "", ErrBadLink},
-		{"https://job-boards.greenhouse.io/backblaze/jobs/", "", "", ErrBadLink},
-		{"https://job-boards.greenhouse.io/backblaze", "", "", ErrBadLink},
-		{"https://job-boards.greenhouse.io/backblaze/jobs/1/apply", "", "", ErrBadLink},
-		{"https://job-boards.greenhouse.io/back%2Fblaze/jobs/1", "", "", ErrBadLink},
+		{"https://www.backblaze.com/company/careers?gh_jid=5277815008", "", "", ErrorCareersPage},
+		{"https://boards.greenhouse.io/embed/job_app?gh_jid=42", "", "", ErrorCareersPage},
+		{"https://www.linkedin.com/jobs/view/123", "", "", ErrorNotGreenhouse},
+		{"https://job-boards.greenhouse.io.evil.com/backblaze/jobs/1", "", "", ErrorNotGreenhouse},
+		{"https://jobs.lever.co/acme/1234", "", "", ErrorNotGreenhouse},
+		{"ftp://boards.greenhouse.io/okta/jobs/42", "", "", ErrorNotGreenhouse},
+		{"not a link", "", "", ErrorNotGreenhouse},
+		{"", "", "", ErrorNotGreenhouse},
+		{"https://job-boards.greenhouse.io/backblaze/jobs/12ab", "", "", ErrorBadLink},
+		{"https://job-boards.greenhouse.io/backblaze/jobs/-12", "", "", ErrorBadLink},
+		{"https://job-boards.greenhouse.io/backblaze/jobs/", "", "", ErrorBadLink},
+		{"https://job-boards.greenhouse.io/backblaze", "", "", ErrorBadLink},
+		{"https://job-boards.greenhouse.io/backblaze/jobs/1/apply", "", "", ErrorBadLink},
+		{"https://job-boards.greenhouse.io/back%2Fblaze/jobs/1", "", "", ErrorBadLink},
 	}
 	for _, c := range cases {
 		board, id, err := ParseLink(c.raw)
@@ -173,8 +173,8 @@ func TestUpdatedAtUTC(t *testing.T) {
 	}
 
 	c, _ = serve(t, http.StatusOK, fixtureWith(t, map[string]any{"updated_at": "last Tuesday"}))
-	if _, err := c.FetchJob(context.Background(), "backblaze", "1"); !errors.Is(err, ErrUpstream) {
-		t.Errorf("bad updated_at: err = %v, want ErrUpstream", err)
+	if _, err := c.FetchJob(context.Background(), "backblaze", "1"); !errors.Is(err, ErrorUpstream) {
+		t.Errorf("bad updated_at: err = %v, want ErrorUpstream", err)
 	}
 }
 
@@ -333,11 +333,11 @@ func TestFetchJobErrors(t *testing.T) {
 		body   []byte
 		want   error
 	}{
-		{"404", http.StatusNotFound, []byte(`{"status":404,"error":"Job not found"}`), ErrNotFound},
-		{"500", http.StatusInternalServerError, []byte(`oops`), ErrUpstream},
-		{"429", http.StatusTooManyRequests, nil, ErrUpstream},
-		{"not JSON", http.StatusOK, []byte(`<html>maintenance</html>`), ErrUpstream},
-		{"oversized", http.StatusOK, append([]byte(`{"title":"`), bytes.Repeat([]byte("a"), maxBody+10)...), ErrUpstream},
+		{"404", http.StatusNotFound, []byte(`{"status":404,"error":"Job not found"}`), ErrorNotFound},
+		{"500", http.StatusInternalServerError, []byte(`oops`), ErrorUpstream},
+		{"429", http.StatusTooManyRequests, nil, ErrorUpstream},
+		{"not JSON", http.StatusOK, []byte(`<html>maintenance</html>`), ErrorUpstream},
+		{"oversized", http.StatusOK, append([]byte(`{"title":"`), bytes.Repeat([]byte("a"), maxBody+10)...), ErrorUpstream},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -346,24 +346,24 @@ func TestFetchJobErrors(t *testing.T) {
 			if !errors.Is(err, c.want) {
 				t.Errorf("err = %v, want %v", err, c.want)
 			}
-			if c.want == ErrUpstream && errors.Is(err, ErrNotFound) {
-				t.Errorf("err = %v is also ErrNotFound", err)
+			if c.want == ErrorUpstream && errors.Is(err, ErrorNotFound) {
+				t.Errorf("err = %v is also ErrorNotFound", err)
 			}
 		})
 	}
 
 	t.Run("unreachable", func(t *testing.T) {
 		cl := &Client{BaseURL: "http://127.0.0.1:1", HTTP: &http.Client{Timeout: time.Second}}
-		if _, err := cl.FetchJob(context.Background(), "backblaze", "1"); !errors.Is(err, ErrUpstream) {
-			t.Errorf("err = %v, want ErrUpstream", err)
+		if _, err := cl.FetchJob(context.Background(), "backblaze", "1"); !errors.Is(err, ErrorUpstream) {
+			t.Errorf("err = %v, want ErrorUpstream", err)
 		}
 	})
 
 	t.Run("bad arguments are not sent", func(t *testing.T) {
 		cl, req := serve(t, http.StatusOK, fixture(t))
 		for _, args := range [][2]string{{"../x", "1"}, {"backblaze", "1/../2"}, {"", "1"}, {"backblaze", ""}} {
-			if _, err := cl.FetchJob(context.Background(), args[0], args[1]); !errors.Is(err, ErrBadLink) {
-				t.Errorf("FetchJob(%q, %q) err = %v, want ErrBadLink", args[0], args[1], err)
+			if _, err := cl.FetchJob(context.Background(), args[0], args[1]); !errors.Is(err, ErrorBadLink) {
+				t.Errorf("FetchJob(%q, %q) err = %v, want ErrorBadLink", args[0], args[1], err)
 			}
 		}
 		if req.URL != nil {
