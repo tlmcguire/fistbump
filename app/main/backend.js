@@ -42,9 +42,8 @@ class Backend extends EventEmitter {
     this.setState('starting');
     this.token = crypto.randomBytes(32).toString('hex');
     this.stderrTail = [];
+    // --llama-server is not passed yet: fistbump-core does not define that flag and exits on it.
     const args = ['--data-dir', this.dataDir];
-    const llama = path.join(this.binDir, process.platform === 'win32' ? 'llama-server.exe' : 'llama-server');
-    if (fs.existsSync(llama)) args.push('--llama-server', llama);
     // Token goes in the environment, not argv, so it is absent from process listings.
     const child = spawn(bin, args, { env: { ...process.env, FISTBUMP_TOKEN: this.token }, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;
