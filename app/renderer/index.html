@@ -1,0 +1,58 @@
+
+<!--This is just a test page for the electron setup-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Job Listing</title>
+        <link rel="stylesheet" href="styles/base.css" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+    </head>
+    <body>
+        <header>
+            <img src="views/graphics/logo.png" alt="FistBump logo" class="logo">
+        </header>
+
+        <main>
+            <h1>Job Listing</h1>
+            <form id="job-form">
+                <label for="job-url">Greenhouse job URL</label>
+                <input id="job-url" type="url" placeholder="Paste job posting URL" required>
+                <button type="submit">Load Listing</button>
+            </form>
+
+            <section id="state-initial" class="state" >
+                <p>Enter a Greenhouse job URL to view it.</p>
+            </section>
+
+            <section id="state-loading" class="state" hidden>
+                <p>Loading job listing...</p>
+            </section>
+
+            <section id="state-success" class="state" hidden>
+                <h2 id ="job-title"></h2>
+                <p id="job-company"></p>
+                <p id="job-location"></p>
+                <p id="job-updated"></p>
+                <a id="job-link" href="#" target="_blank" hidden>Open original posting</a>
+                <a id="company-link" href="#" target="_blank" hidden>Open company website</a>
+                <h3>Description</h3>
+                <p id="job-description"></p>
+                <button id="reload-listing" type="button">Reload Listing</button>
+
+            </section>
+
+            <section id="state-error" class="state" hidden>
+                <h2>Couldn't load listing</h2>
+                <p id="error-message"></p>
+                <button id="try-again" type="button">Try Again</button>
+            </section>
+
+        </main>
+
+        <script src="js/api.js" defer></script>
+        <script src="views/job-parser/job-parser.js" defer></script>
+        <script src="js/app.js" defer></script>
+
+    </body>
+</html>
