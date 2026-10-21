@@ -28,6 +28,14 @@ func unauthorized() *apiError {
 		Message: "Authentication is required",
 	}
 }
+func badRequest(msg string) *apiError {
+	return &apiError{
+		Status:  http.StatusBadRequest,
+		Code:    "bad_request",
+		Message: msg,
+	}
+}
+
 func notFound(msg string) *apiError {
 	return &apiError{
 		Status:  http.StatusNotFound,

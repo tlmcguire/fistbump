@@ -20,10 +20,16 @@ type jobFetcher interface {
 	FetchJob(ctx context.Context, board, jobID string) (connectors.Posting, error)
 }
 
+// jobSearcher is the part of the Greenhouse client the search route uses, so tests can pass a fake.
+type jobSearcher interface {
+	Search(ctx context.Context, q connectors.Query, boards []string) (connectors.SearchResult, error)
+}
+
 // Config is what main.go and tests pass to New. Fields are exported so other packages can set them.
 type Config struct {
 	DB         *sql.DB
 	Greenhouse jobFetcher
+	Searcher   jobSearcher
 	Token      string // per-launch bearer token from FISTBUMP_TOKEN
 	Version    string
 }
@@ -32,6 +38,7 @@ type Config struct {
 type Server struct {
 	db      *sql.DB
 	gh      jobFetcher
+	search  jobSearcher
 	token   string
 	version string
 	handler http.Handler // the mux wrapped in middleware, built once in New
@@ -47,6 +54,8 @@ type route struct {
 func (s *Server) routes() []route {
 	return []route{
 		{"GET /v1/health", s.health},
+		{"GET /v1/connectors", s.connectorList},
+		{"POST /v1/connectors/greenhouse/fetch", s.greenhouseFetch},
 		{"GET /v1/connectors/greenhouse/link", s.greenhouseLink},
 		{"GET /v1/connectors/greenhouse/boards/{board}/jobs/{job_id}", s.greenhouseJob},
 	}
@@ -121,7 +130,6 @@ func unbuiltRoutePatterns() []string {
 		"GET /v1/connectors",
 		"POST /v1/connectors/{id}/fetch",
 		"POST /v1/connectors/{id}/import",
-		"GET /v1/connectors/greenhouse/postings/{external_id}",
 		"GET /v1/connectors/greenhouse/categories",
 		"PUT /v1/connectors/greenhouse/categories/{category}",
 		"POST /v1/connectors/greenhouse/boards",
@@ -159,6 +167,7 @@ func New(cfg Config) *Server {
 	s := &Server{
 		db:      cfg.DB,
 		gh:      cfg.Greenhouse,
+		search:  cfg.Searcher,
 		token:   cfg.Token,
 		version: cfg.Version,
 	}
