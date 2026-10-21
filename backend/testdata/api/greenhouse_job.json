@@ -1,0 +1,75 @@
+{
+  "absolute_url": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008",
+  "data_compliance": [
+    {
+      "type": "gdpr",
+      "requires_consent": false,
+      "requires_processing_consent": false,
+      "requires_retention_consent": false,
+      "retention_period": null,
+      "demographic_data_consent_applies": false
+    }
+  ],
+  "internal_job_id": 4500814008,
+  "location": {
+    "name": "Remote - Argentina; Remote - Colombia ; Remote - Costa Rica ; Remote - Mexico"
+  },
+  "metadata": [
+    {
+      "id": 13073123008,
+      "name": "Critical Role",
+      "value": true,
+      "value_type": "yes_no"
+    }
+  ],
+  "id": 5287532008,
+  "updated_at": "2026-10-14T12:39:58-04:00",
+  "requisition_id": "263",
+  "title": "AI Workflow Engineer | LATAM",
+  "company_name": "Backblaze External Website",
+  "first_published": "2026-07-01T18:01:01-04:00",
+  "language": "en",
+  "application_deadline": null,
+  "content": "&lt;p&gt;Backblaze is the object storage leader in the open cloud movement, fueling customer success with cloud storage built purposefully to unlock budgets, unburden administrators, and unleash innovators. Together with our partners, we\u2019re helping customers break free from the restrictive, overpriced legacy solutions that hold them back, and blaze forward with the full power of the open cloud in their hands.&lt;/p&gt;\n&lt;p&gt;Founded in 2007, we scaled the business with less than $3 million in outside funding until 2021, when we did a traditional IPO on the Nasdaq stock exchange. Today, Backblaze generates over $100m in revenue and is the leading specialized storage cloud - managing over three billion gigabytes of data storage for 500K+ customers in 175+ countries, including businesses, developers, IT professionals, and individuals. &lt;br&gt;&lt;br&gt;But while there is a lot to celebrate in our past, there is almost as much opportunity ahead of us. We are seeking an &lt;strong&gt;AI Workflow Engineer&lt;/strong&gt;!&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;About the Role:&lt;/strong&gt;&lt;/p&gt;\n&lt;p&gt;Backblaze is running a company-wide AI transformation program, and this role is where strategy becomes something you can actually use. As AI Workflow Engineer, you will be the hands-on builder inside the AI Program Office - embedded alongside the Director, AI Enablement, and deployed into non-GTM, non-Engineering business teams to prototype, build, and ship AI-powered workflow solutions that make a measurable difference in how work gets done.&lt;/p&gt;\n&lt;p&gt;This is not a research role or a strategy role. You will spend your time building: prompt architectures, automation flows, lightweight agents, API integrations, and demos that help a business team see - concretely - what AI can do for them. You will move across functions, which means you need to understand how businesses actually operate. The ideal background is someone who started in a business-facing role - finance, operations, marketing, customer success, HR - and developed serious hands-on AI and automation skills on top of that foundation.&lt;/p&gt;\n&lt;p&gt;You will work closely with the Director, AI Enablement, who owns the program management and delivery layer. Your job is to make their scoped solutions real - fast, iteratively, and with enough rigor that what you build can go to production.&lt;/p&gt;\n&lt;h3&gt;&lt;strong&gt;What You Will Do:&lt;/strong&gt;&lt;/h3&gt;\n&lt;p&gt;&lt;strong&gt;Build and Ship AI Workflow Solutions&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Take scoped use cases from the Director, AI Enablement and build working solutions: prompt layers, automation flows, lightweight agents, RAG implementations, and API integrations that connect AI tools to the systems business teams already use&lt;/li&gt;\n&lt;li&gt;Build working prototypes quickly - the goal is to show a team what is possible in days, not weeks, then refine based on what actually lands&lt;/li&gt;\n&lt;li&gt;Translate a documented workflow assessment into a technical design, select the right tools for the job, and own the build through to a deployable solution&lt;/li&gt;\n&lt;li&gt;Maintain solution documentation that is clear enough for handoff, iteration, and audit - not just for engineers, but for the business owner who will live with it&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;strong&gt;Embed in Business Teams&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Spend time inside the functions you are building for - Finance, HR, Legal, Marketing Ops, Customer Success, and others - understanding how the work actually flows before you redesign it&lt;/li&gt;\n&lt;li&gt;Run working sessions with team members to map current-state workflows, surface friction points, and identify where AI creates real leverage versus where it creates noise&lt;/li&gt;\n&lt;li&gt;Build credibility with non-technical stakeholders by showing them working solutions, not decks - and by being honest about what will and will not work&lt;/li&gt;\n&lt;li&gt;Support user acceptance testing and early adoption, troubleshooting issues close to launch and iterating based on real usage&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;strong&gt;Support the AI Program Office&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Build demos and proof-of-concepts that help the Director, AI Enablement make the case for a use case - or disqualify it early before resources are committed&lt;/li&gt;\n&lt;li&gt;Contribute to vendor and tool evaluations with a builder&#39;s perspective: not just whether a tool claims to do something, but whether it actually works in the context of a specific workflow&lt;/li&gt;\n&lt;li&gt;Feed learnings from the build process back into the program - what worked, what did not, what should be standardized across functions&lt;/li&gt;\n&lt;li&gt;Work on tactical quick wins and longer-horizon strategic builds at the same time, switching contexts across active use cases as priorities shift&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;&lt;strong&gt;What Success Looks Like (First 90 Days)&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;You have completed at least one workflow assessment alongside the Director and produced a working prototype from it&lt;/li&gt;\n&lt;li&gt;At least one solution you built is in active use by a business team, with a named owner and feedback loop in place&lt;/li&gt;\n&lt;li&gt;You have worked inside at least two different business functions and understand their core workflows well enough to identify the next use case without being told&lt;/li&gt;\n&lt;li&gt;The Director, AI Enablement trusts you to own the build layer independently - scoping conversations happen together, execution happens with you driving&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;&lt;strong&gt;The Right Fit:&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;2-4 years of experience that includes meaningful time working inside a business-facing function - operations, finance, marketing, customer success, HR, or similar - not just in Engineering or IT&lt;/li&gt;\n&lt;li&gt;Hands-on experience building with AI tools: prompt engineering, automation platforms (Make, Zapier, n8n, or equivalent), API integrations, and at least working familiarity with RAG architectures and agent frameworks&lt;/li&gt;\n&lt;li&gt;Proven ability to take a messy real-world process, understand it from the inside, and build something that makes it faster or better - not just technically cleaner&lt;/li&gt;\n&lt;li&gt;Comfortable working with non-technical stakeholders: you can explain what you are building without jargon, gather requirements without a formal spec, and manage expectations when a prototype needs three more iterations&lt;/li&gt;\n&lt;li&gt;Strong enough with code or no-code tools to get solutions to a deployable state independently - you do not need an engineer to ship your work&lt;/li&gt;\n&lt;li&gt;Able to manage multiple active projects at different stages without dropping anything - a quick win in HR this week does not mean the Finance automation waits&lt;/li&gt;\n&lt;li&gt;Genuinely curious about how companies work: the org chart, the incentives, the handoffs, the bottlenecks. This is what separates a good AI builder from a great one in a business context&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;&lt;strong&gt;Bonus Points For:&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;Direct experience working in or closely with G&amp;amp;A, Finance, Legal, Marketing Ops, or Customer Success teams - you have lived in the workflows you will be redesigning&lt;/li&gt;\n&lt;li&gt;Familiarity with AI governance basics: data handling, PII awareness, and when a use case needs a security or privacy review before it ships&lt;/li&gt;\n&lt;li&gt;Experience working in a small program or startup environment where you wore multiple hats and shipped without a lot of process overhead&lt;/li&gt;\n&lt;li&gt;Experience in cloud infrastructure, SaaS, or storage companies - comfort with technical products and the teams that build them&lt;/li&gt;\n&lt;li&gt;A portfolio, GitHub, or examples of AI workflows or automations you have built - something you can show, not just describe&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;At Backblaze, we value being fair and good to our customers, partners, and employees. That\u2019s why diversity, equity, and inclusion are at the core of our values. We are committed to fostering a workforce where all employees feel a sense of belonging regardless of race, ethnicity, nationality, gender, sexual orientation, age, religion, socio-economic status, ability, veteran status, and education. We believe that our dedication to cultivating a diverse workspace not only allows us to better serve our customers in over 175 countries, but further reinforces our commitment to doing the right thing.&amp;nbsp;&lt;strong&gt;We are proud to be an Equal Opportunity Employer.&lt;/strong&gt;&lt;/p&gt;\n&lt;p&gt;To understand more about the data we collect and process as part of your application, please view our&amp;nbsp;&lt;a href=&quot;https://cdn.prod.website-files.com/63d32de856f6323a43a277f2/64b0660cd90ac9b4953f7f1d_Backblaze_HR_Employee_Related_Privacy_Notice.pdf&quot;&gt;Backblaze Employee Privacy Notice.&lt;/a&gt;&lt;br&gt;&lt;br&gt;#LATAM&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 4015231008,
+      "name": "Human Resources and AI Enablement",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 4034650008,
+      "name": "Remote - Argentina",
+      "location": null,
+      "child_ids": [],
+      "parent_id": 4034649008
+    },
+    {
+      "id": 4034408008,
+      "name": "Remote - Colombia ",
+      "location": null,
+      "child_ids": [],
+      "parent_id": 4034407008
+    },
+    {
+      "id": 4034410008,
+      "name": "Remote - Costa Rica ",
+      "location": null,
+      "child_ids": [],
+      "parent_id": 4034409008
+    },
+    {
+      "id": 4034653008,
+      "name": "Remote - Mexico",
+      "location": null,
+      "child_ids": [],
+      "parent_id": 4034651008
+    }
+  ],
+  "ai_disclaimer": "<p>We use Greenhouse\u2019s AI-powered Talent Matching tool to compare your application against our job requirements.</p>",
+  "include_ai_disclaimer": true,
+  "ai_opt_out_request_url": "http://app8.greenhouse.io/ai_opt_out_request/job_post/5287532008/ai_opt_out"
+}
