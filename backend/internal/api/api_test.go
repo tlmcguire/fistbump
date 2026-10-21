@@ -18,6 +18,41 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/db"
 )
 
+// fakeSearcher stands in for Greenhouse search. It records the query and boards it was given.
+type fakeSearcher struct {
+	result    connectors.SearchResult
+	err       error
+	called    bool
+	gotQuery  connectors.Query
+	gotBoards []string
+}
+
+func (f *fakeSearcher) Search(_ context.Context, q connectors.Query, boards []string) (connectors.SearchResult, error) {
+	f.called, f.gotQuery, f.gotBoards = true, q, boards
+	return f.result, f.err
+}
+
+// newSearchServer builds a server whose search route uses the given searcher.
+func newSearchServer(t *testing.T, f jobSearcher) *Server {
+	t.Helper()
+	conn, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("db.Open: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return New(Config{DB: conn, Greenhouse: &fakeFetcher{}, Searcher: f, Token: testToken, Version: "test"})
+}
+
+// postFetch sends body to the search route with the valid token.
+func postFetch(t *testing.T, s *Server, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/v1/connectors/greenhouse/fetch", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, req)
+	return rec
+}
+
 const testToken = "test-token"
 
 // fakeFetcher stands in for the Greenhouse client. It records what it was asked for and returns
@@ -306,4 +341,179 @@ func TestHandleMapsErrors(t *testing.T) {
 			wantError(t, rec, tc.wantStatus, tc.wantCode)
 		})
 	}
+}
+
+func TestConnectorList(t *testing.T) {
+	rec := doAuth(t, newTestServer(t, &fakeFetcher{}), "GET", "/v1/connectors")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", rec.Code, rec.Body.String())
+	}
+	var got []struct{ ID, Name string }
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].ID != "greenhouse" || got[0].Name != "Greenhouse" {
+		t.Errorf("connectors = %+v, want just greenhouse", got)
+	}
+}
+
+func TestGreenhouseFetchSuccess(t *testing.T) {
+	f := &fakeSearcher{}
+	rec := postFetch(t, newSearchServer(t, f), `{"query":{"keywords":["  data analyst ",""],"boards":["acme","acme","globex"]}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", rec.Code, rec.Body.String())
+	}
+	if f.gotQuery.Limit != 20 || f.gotQuery.WorkMode != "Any" {
+		t.Errorf("defaults = limit %d, work mode %q; want 20 and Any", f.gotQuery.Limit, f.gotQuery.WorkMode)
+	}
+	if got := f.gotQuery.Keywords; len(got) != 1 || got[0] != "data analyst" {
+		t.Errorf("keywords = %q, want [data analyst]", got)
+	}
+	if got := f.gotBoards; len(got) != 2 || got[0] != "acme" || got[1] != "globex" {
+		t.Errorf("boards = %q, want [acme globex]", got)
+	}
+	// Nil slices from the searcher must encode as arrays, not null.
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(rec.Body).Decode(&raw); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"postings", "errors"} {
+		if string(raw[key]) != "[]" {
+			t.Errorf("%s = %s, want []", key, raw[key])
+		}
+	}
+}
+
+func TestGreenhouseFetchRejectsBadRequests(t *testing.T) {
+	kw := `"keywords":["go"]`
+	for _, tc := range []struct {
+		name, body string
+		status     int
+		code       string
+	}{
+		{"malformed JSON", `{"query":`, 400, "bad_request"},
+		{"empty body", ``, 400, "bad_request"},
+		{"two JSON values", `{"query":{` + kw + `}} {}`, 400, "bad_request"},
+		{"unknown top-level field", `{"query":{` + kw + `},"x":1}`, 422, "validation_failed"},
+		{"unknown query field", `{"query":{` + kw + `,"pay_min":1}}`, 422, "validation_failed"},
+		{"wrong type", `{"query":{"keywords":"go"}}`, 422, "validation_failed"},
+		{"too large", `{"query":{"location":"` + strings.Repeat("x", maxFetchBody) + `"}}`, 422, "validation_failed"},
+		{"no keywords", `{"query":{}}`, 422, "validation_failed"},
+		{"blank keywords", `{"query":{"keywords":["  "]}}`, 422, "validation_failed"},
+		{"too many keywords", `{"query":{"keywords":["a","b","c","d","e","f","g","h","i","j","k"]}}`, 422, "validation_failed"},
+		{"keyword too long", `{"query":{"keywords":["` + strings.Repeat("x", maxKeywordLen+1) + `"]}}`, 422, "validation_failed"},
+		{"limit too high", `{"query":{` + kw + `,"limit":51}}`, 422, "validation_failed"},
+		{"limit negative", `{"query":{` + kw + `,"limit":-1}}`, 422, "validation_failed"},
+		{"bad work mode", `{"query":{` + kw + `,"work_mode":"Anywhere"}}`, 422, "validation_failed"},
+		{"unknown category", `{"query":{` + kw + `,"categories":["nope"]}}`, 422, "validation_failed"},
+		{"bad board token", `{"query":{` + kw + `,"boards":["Acme.com"]}}`, 422, "validation_failed"},
+		{"too many boards", `{"query":{` + kw + `,"boards":[` + strings.TrimSuffix(strings.Repeat(`"a",`, maxBoards+1), ",") + `]}}`, 422, "validation_failed"},
+		{"no boards match", `{"query":{` + kw + `,"company":"zzzz no such company"}}`, 422, "validation_failed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := &fakeSearcher{}
+			wantError(t, postFetch(t, newSearchServer(t, f), tc.body), tc.status, tc.code)
+			if f.called {
+				t.Error("searcher was called for an invalid request")
+			}
+		})
+	}
+}
+
+func TestGreenhouseFetchErrors(t *testing.T) {
+	body := `{"query":{"keywords":["go"],"boards":["acme"]}}`
+	wantError(t, postFetch(t, newSearchServer(t, &fakeSearcher{err: greenhouse.ErrorUpstream}), body), 502, "upstream_error")
+	wantError(t, postFetch(t, newSearchServer(t, &fakeSearcher{err: errors.New("secret detail")}), body), 500, "internal")
+	// No searcher configured: the route answers 501 instead of panicking.
+	wantError(t, postFetch(t, newTestServer(t, &fakeFetcher{}), body), 501, "not_implemented")
+}
+
+// The single-posting route was dropped: results carry raw_text, and phase 1's route covers reloads.
+func TestGreenhousePostingsRouteIsGone(t *testing.T) {
+	wantError(t, doAuth(t, newTestServer(t, &fakeFetcher{}), "GET", "/v1/connectors/greenhouse/postings/1"), 404, "not_found")
+}
+
+func TestChooseBoards(t *testing.T) {
+	all := greenhouse.Tokens()
+	if len(all) == 0 {
+		t.Fatal("no curated boards")
+	}
+	first := greenhouse.Board{}
+	for _, c := range greenhouse.Categories() {
+		if len(c.Boards) > 0 {
+			first = c.Boards[0]
+			break
+		}
+	}
+
+	for _, tc := range []struct {
+		name string
+		q    connectors.Query
+		want func(got []string) string // returns a failure message, or ""
+	}{
+		{"explicit boards are used as given and de-duplicated", connectors.Query{Boards: []string{"b", "a", "b"}, Company: "ignored", Categories: []string{"nope"}},
+			func(got []string) string {
+				if strings.Join(got, ",") != "b,a" {
+					return "want b,a"
+				}
+				return ""
+			}},
+		{"empty boards list means not set", connectors.Query{Boards: []string{}},
+			func(got []string) string {
+				if len(got) != len(all) {
+					return "want every curated board"
+				}
+				return ""
+			}},
+		{"no filters gives every curated board once", connectors.Query{},
+			func(got []string) string {
+				if len(got) != len(all) {
+					return "want every curated board"
+				}
+				return ""
+			}},
+		{"company filter is case-insensitive and trimmed", connectors.Query{Company: "  " + strings.ToUpper(first.Company) + " "},
+			func(got []string) string {
+				for _, tok := range got {
+					if !strings.Contains(strings.ToLower(greenhouse.CompanyFor(tok)), strings.ToLower(first.Company)) {
+						return "returned a board that does not match the company: " + tok
+					}
+				}
+				for _, tok := range got {
+					if tok == first.Token {
+						return ""
+					}
+				}
+				return "missing " + first.Token
+			}},
+		{"company matching nothing gives no boards", connectors.Query{Company: "zzzz no such company"},
+			func(got []string) string {
+				if len(got) != 0 {
+					return "want none"
+				}
+				return ""
+			}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := chooseBoards(tc.q)
+			if msg := tc.want(got); msg != "" {
+				t.Errorf("%s (got %d boards)", msg, len(got))
+			}
+			seen := map[string]bool{}
+			for _, tok := range got {
+				if seen[tok] {
+					t.Errorf("duplicate board %q", tok)
+				}
+				seen[tok] = true
+			}
+		})
+	}
+
+	t.Run("categories narrow the curated set", func(t *testing.T) {
+		cats := greenhouse.Categories()
+		got := chooseBoards(connectors.Query{Categories: []string{cats[0].ID}})
+		if len(got) == 0 || len(got) > len(all) {
+			t.Errorf("got %d boards for %q, want between 1 and %d", len(got), cats[0].ID, len(all))
+		}
+	})
 }

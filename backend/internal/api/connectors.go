@@ -92,6 +92,9 @@ func chooseBoards(q connectors.Query) []string {
 // greenhouseFetch searches the curated boards and returns ranked postings with their descriptions.
 // It answers 422 for an invalid query and 502 only when every board failed.
 func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
+	if s.search == nil {
+		return notImplemented() // no searcher configured yet
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxFetchBody)
 
 	var body struct {
