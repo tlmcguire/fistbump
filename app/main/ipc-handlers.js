@@ -16,6 +16,14 @@ function register(ipcMain, backend) {
     }
     return backend.call('GET', `/v1/connectors/greenhouse/boards/${seg(board)}/jobs/${seg(jobId)}`);
   });
+
+  //new phase 2
+  ipcMain.handle('connectors:search', (_event, query) => {
+    if (!query || typeof query !== 'object' || Array.isArray(query)) return bad('Invalid search');
+    return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query});
+  });
+
+  ipcMain.handle('connectors:list', () => backend.call('GET', '/v1/connectors'));
 }
 
 module.exports = { CHANNELS, register };

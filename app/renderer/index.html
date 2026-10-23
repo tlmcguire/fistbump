@@ -14,6 +14,7 @@
         </header>
 
         <main>
+            <!--
             <h1>Job Listing</h1>
             <form id="job-form">
                 <label for="job-url">Greenhouse job URL</label>
@@ -47,6 +48,86 @@
                 <p id="error-message"></p>
                 <button id="try-again" type="button">Try Again</button>
             </section>
+            -->
+
+            <h1>Jobs</h1>
+
+            <div class="tabs" role="tablist">
+                <button type="button" id="tab-find" role="tab" aria-selected="true">Find jobs</button>
+                <button type="button" id="tab-link" role="tab" aria-selected="false">Open a listing</button>
+            </div>
+
+            <!--new tabs-->
+
+            <!--Find jobs tab panel-->
+            <div id="panel-find">
+                <form id="search-form">
+                    <label for="search-keywords">Keywords</label>
+                    <input id="search-keywords" type="text" placeholder="e.g. data analyst, web developer">
+
+                    <label for="search-location">Location</label>
+                    <input id="search-location" type="text" placeholder="e.g. Charleston, SC (optional)">
+
+                    <label for="search-work-mode">Work mode</label>
+                    <select id="search-work-mode">
+                        <option>Any</option>
+                        <option>Remote</option>
+                        <option>Hybrid</option>
+                        <option>On-site</option>
+
+                    </select>
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
+            <!--Open a listing tab panel, old html moved inside tab container-->
+            <div id="panel-load-listing" hidden>
+                <form id="job-form">
+                    <label for="job-url">Greenhouse job URL</label>
+                    <input id="job-url" type="url" placeholder="Paste job posting URL" required>
+                    <button type="submit">Load Listing</button>
+                </form>
+            </div>
+
+            <!--Updated loading section states-->
+            <section id="state-initial" class="state" >
+                <p id="initial-message"></p>
+            </section>
+
+            <section id="state-loading" class="state" hidden>
+                <p id="loading-message"></p>
+            </section>
+
+            <!--load listing and search results section states-->
+            <section id="state-results" class="state" hidden>
+                <p id="result-counts"></p>
+                <p id="result-empty">Search yielded no results. Check search parameters and try again.</p>
+                <ul id="result-list" class="results"></ul>
+                <details id="result-errors" hidden>
+                    <summary>Some boards could not be searched</summary>
+                    <ul id="result-errors-list"></ul>
+                </details>
+            </section>
+
+            <section id="state-success" class="state" hidden>
+                <h2 id ="job-title" title="title"></h2>
+                <p id="job-company"></p>
+                <p id="job-location"></p>
+                <p id="job-updated"></p>
+                <a id="job-link" href="#" target="_blank" hidden>Open original posting</a>
+                <a id="company-link" href="#" target="_blank" hidden>Open company website</a>
+                <h3 title="title">Description</h3>
+                <p id="job-description"></p>
+                <button id="reload-listing" type="button">Reload Listing</button>
+
+            </section>
+
+            <section id="state-error" class="state" hidden>
+                <h2>An error has occurred</h2>
+                <p id="error-message"></p>
+                <button id="try-again" type="button">Try Again</button>
+            </section>
+
 
         </main>
 
