@@ -3,9 +3,15 @@ body {
     margin: 0;
     padding: 24px;
     font-family: system-ui, sans-serif;
-    background: #09255c;
+    background: #0A255C;
     color: white;
   }
+
+  body, * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
   
   header {
     text-align: center;
@@ -34,14 +40,108 @@ body {
     border: 1px solid #52668e;
     border-radius: 8px;
   }
-  
-  input, button {
-    padding: 12px;
+
+  .state#state-success{
+    background: white;
+    color: black;
+  }
+
+  .state#state-success #title{
+    color: #0A255C;
   }
   
+  input, button, select {
+    padding: 12px;
+  }
+
+  /*button test*/
+  button{
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: white;
+    color:#0A255C;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+
+    transition:background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+
+  }
+
+  /*changes nondisabled hovered buttons*/
+  button:hover:not(:disabled){
+    background-color: #e0eaff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+  }
+
+  /*translates buttons downwards when clicked*/
+  button:active:not(:disabled){
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  
+  /*for when we add more buttons to populate the ui but dont have a page for them yet.*/
+  button:disabled{
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
   
   .state[hidden] {
     display: none;
   }
+
+  .tabs{
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .tabs button {
+    flex: 1;
+  }
+
+  /*changes tab colors if it is selected*/
+  .tabs [aria-selected="true"]{
+    background: #3158a0;
+    color: white;
+    font-weight: 600;
+  }
+  .tabs [aria-selected="true"]:hover{
+    background: #3158a0;
+    color: white;
+  }
+
+
+  /*Adds specific colors to specific buttons*/
+  #search-form button[type="submit"], #job-form button[type="submit"]{
+    background: #CEA615;
+    color:#0A255C;
+    font-weight: 600;
+  }
+  #search-form button[type="submit"]:hover:not(:disabled), #job-form button[type="submit"]:hover:not(:disabled) {
+    background: #f3cd43;
+  }
+
+  /*results ul*/
+.results{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/*one row in result list*/
+.result-open{
+  width: 100%;
+  gap: 4px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
 
   
