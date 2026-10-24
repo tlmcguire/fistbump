@@ -1,343 +1,340 @@
-/* Colors: navy background, translucent panels on it, gold for the main action. */
+/*
+ * Layout: a desktop window, not a web page. The window never scrolls; the sidebar, toolbar and
+ * filters stay put, and the results and the open listing scroll in their own panes.
+ *
+ *   ┌ sidebar ┬ toolbar (search bar)          ┐
+ *   │  logo   ├ filters (optional row)         ┤
+ *   │  nav    ├ results pane │ detail pane     ┤
+ *   └─────────┴──────────────┴─────────────────┘
+ */
 :root {
-  --navy: #0A255C;
-  --panel: rgba(255, 255, 255, 0.07);
-  --panel-edge: rgba(255, 255, 255, 0.10);
-  --muted: rgba(255, 255, 255, 0.65);
+  --bg: #0b2457;
+  --sidebar: #081b44;
+  --surface: #0f2c66;      /* toolbar, filters */
+  --raised: #153678;       /* menus, hovered rows */
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #f2f5fb;
+  --muted: rgba(242, 245, 251, 0.62);
+  --faint: rgba(242, 245, 251, 0.42);
   --accent: #CEA615;
-  --accent-hover: #f3cd43;
-  --selected: #3158a0;
+  --accent-hover: #e2b92a;
+  --accent-ink: #0A255C;
+  --select: rgba(99, 145, 230, 0.28);
+  --select-strong: #3158a0;
+  --control: rgba(255, 255, 255, 0.10);
+  --control-hover: rgba(255, 255, 255, 0.16);
+  --field: #ffffff;
+  --field-ink: #141a26;
+  --radius: 6px;
+  --sidebar-width: 188px;
+  --toolbar-height: 52px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 body {
-  margin: 0;
-  padding: 20px 24px 32px;
-  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  background: var(--navy);
-  color: white;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
   cursor: default;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Buttons, labels and chrome are not text to copy; listings and results are (see below). */
+/* No rubber-band bounce or swipe-back: the window is an app, not a page. */
+html, body, .pane {
+  overscroll-behavior: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+/* Counts line up as they change. */
+#result-counts, .pager, .badge, .history-run > span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chrome is not text to copy; listings, results and messages are. */
 body, * {
   -webkit-user-select: none;
   user-select: none;
 }
 
-#state-success, #state-success *, .result, .result * {
+.listing, .listing *, .result-body, .result-body *, .state-message p, .note, .empty {
   -webkit-user-select: text;
   user-select: text;
 }
 
-header {
+h1, h2, h3, p {
+  margin: 0;
+}
+
+h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+h3 { font-size: 13px; font-weight: 650; }
+
+a { color: inherit; }
+
+[hidden] {
+  display: none !important;
+}
+
+/* Thin scrollbars that suit the dark panes. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.26); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Window drag regions. Controls inside them must stay clickable. */
+.drag { -webkit-app-region: drag; }
+.drag button, .drag input, .drag select, .drag a, .drag label, .drag .history, .drag .filters, .drag .suggestions {
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- Controls ---------- */
+
+input, select {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--field);
+  color: var(--field-ink);
+  font: inherit;
+  min-width: 0;
+}
+
+input[type="search"]::-webkit-search-cancel-button { cursor: default; }
+input::placeholder { color: #8a93a6; }
+input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 0;
+}
+
+input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+button, .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: default;
+}
+
+button, .button, .nav-item, .result {
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+button:hover:not(:disabled), .button:hover { background: var(--control-hover); }
+button:active:not(:disabled), .button:active { filter: brightness(0.92); }
+button:focus-visible, .button:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 1px;
+}
+button:disabled { opacity: 0.45; }
+
+button.primary, .button.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+button.primary:hover:not(:disabled), .button.primary:hover { background: var(--accent-hover); }
+
+.badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
   text-align: center;
-  margin-bottom: 20px;
+}
+
+/* ---------- Frame ---------- */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+}
+
+.sidebar-top {
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* macOS draws its window buttons over the top left of the sidebar, so the logo starts below them. */
+.platform-darwin .sidebar-top {
+  padding-top: 46px;
 }
 
 .logo {
   display: block;
-  max-width: 180px;
-  width: auto;
+  width: 108px;
   height: auto;
-  margin: 0 auto;
+  -webkit-user-drag: none;
 }
 
-main {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-h1 {
-  margin: 0 0 14px;
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-h2, h3, p {
-  margin: 0;
-}
-
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1rem; color: var(--muted); }
-
-/* A panel holds one form or one state. The first and last children sit flush so the padding is even. */
-form, .state {
+.nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 10px;
-}
-
-.state[hidden] {
-  display: none;
-}
-
-label {
-  margin-bottom: -4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-input, select {
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: white;
-  color: #111;
-  font: inherit;
-  cursor: text;
-}
-
-select { cursor: default; }
-
-input::placeholder { color: #8a94a8; }
-
-input:focus-visible, select:focus-visible {
-  outline: 2px solid var(--accent-hover);
-  outline-offset: 1px;
-}
-
-/* Buttons are flat, like controls in a desktop app: no lift, no shadow. */
-button {
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.14);
-  color: white;
-  font: inherit;
-  font-weight: 600;
-  cursor: default;
-  transition: background-color 120ms ease;
-}
-
-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-button:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.30);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent-hover);
-  outline-offset: 1px;
-}
-
-button:disabled {
-  opacity: 0.45;
-}
-
-/* The tabs are one segmented control. */
-.tabs {
-  display: flex;
   gap: 2px;
-  margin-top: 14px;
-  padding: 3px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 10px;
+  padding: 14px 10px;
 }
 
-.tabs button {
-  flex: 1;
+.nav-heading {
+  padding: 0 10px 6px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nav-item {
+  justify-content: flex-start;
+  height: 30px;
+  padding: 0 10px;
   background: transparent;
   color: var(--muted);
+  font-weight: 500;
 }
 
-.tabs button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.10);
+.nav-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.nav-item[aria-selected="true"],
+.nav-item[aria-selected="true"]:hover:not(:disabled) {
+  background: var(--select);
+  color: var(--text);
 }
 
-.tabs [aria-selected="true"],
-.tabs [aria-selected="true"]:hover:not(:disabled) {
-  background: var(--selected);
-  color: white;
-}
-
-/* The main action of each form. */
-#search-form button[type="submit"], #job-form button[type="submit"] {
-  margin-top: 4px;
-  background: var(--accent);
-  color: var(--navy);
-}
-
-#search-form button[type="submit"]:hover:not(:disabled), #job-form button[type="submit"]:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-/* An opened listing is a white sheet. */
-.state#state-success {
-  background: white;
-  border-color: transparent;
-  color: #1b2333;
-}
-
-#state-success h2 { color: var(--navy); }
-#state-success h3 { color: #5b6477; }
-
-#state-success a {
-  color: var(--navy);
-  font-weight: 600;
-}
-
-#state-success button {
-  background: #e8edf7;
-  color: var(--navy);
-  align-self: flex-start;
-}
-
-#state-success button:hover:not(:disabled) {
-  background: #d8e0f0;
-}
-
-#job-description {
-  white-space: pre-wrap;
-}
-
-/* Results */
-.results {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
 }
 
-/* One result: a white card with the company logo beside the text. */
-.result {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  background: white;
-  color: var(--navy);
-  border-radius: 9px;
-}
-
-/* The open button fills the card but is not a second box inside it. */
-.result-open {
-  width: 100%;
-  gap: 2px;
-  padding: 0;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
+/* On macOS and Windows the window has the system's material behind it (vibrancy, Mica). The page is clear
+   there, the content stays opaque, and the sidebar is tinted so the material shows through it softly. */
+.platform-darwin, .platform-darwin body,
+.platform-win32, .platform-win32 body {
   background: transparent;
-  color: var(--navy);
 }
 
-.result-open:hover:not(:disabled) {
-  background: transparent;
-  text-decoration: underline;
+.platform-darwin .sidebar,
+.platform-win32 .sidebar {
+  background: rgba(8, 27, 68, 0.88);
 }
 
-.result-open span {
-  font-weight: 400;
-  color: #4a5670;
+/* When the window is in the background its selection greys out, as native apps do. */
+.window-inactive .nav-item[aria-selected="true"] { background: rgba(255, 255, 255, 0.08); }
+.window-inactive .result.selected::before { background: var(--faint); }
+
+/* ---------- Toolbar and filters ---------- */
+
+.toolbar {
+  flex: none;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
 
-.result-link {
-  color: var(--navy);
-  font-size: 13px;
-  font-weight: 600;
-  align-self: flex-start;
-}
-
-.result-link:visited {
-  color: #5b3d8f;
-}
-
-.pager {
+.toolbar-form {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   align-items: center;
-  gap: 4px;
-  margin-top: 14px;
+  gap: 8px;
+  min-height: var(--toolbar-height);
+  padding: 11px 16px;
 }
 
-.pager button {
-  min-width: 34px;
-  padding: 6px 10px;
+/* The filters row only sits in the toolbar's form so one submit covers everything. */
+.toolbar-form .filters {
+  flex: 1 1 100%;
 }
 
-.pager [aria-current="page"],
-.pager [aria-current="page"]:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--navy);
-}
-
-/* Explains filters that did not apply to the results. */
-#result-note {
-  padding: 8px 12px;
-  background: rgba(243, 205, 67, 0.12);
-  border-left: 3px solid var(--accent-hover);
-  border-radius: 4px;
-}
-
-#result-counts {
-  color: var(--muted);
-}
-
-#result-errors summary {
-  cursor: default;
-  color: var(--muted);
-}
-
-/* Autocomplete dropdown under the search inputs. */
-.suggestions {
-  list-style: none;
-  margin: -6px 0 0;
-  padding: 4px;
-  background: white;
-  color: var(--navy);
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-.suggestions li {
+.field {
+  position: relative; /* anchors the autocomplete list */
   display: flex;
-  justify-content: space-between;
-  padding: 6px 10px;
-  border-radius: 5px;
+  min-width: 0;
 }
 
-.suggestions li.active, .suggestions li:hover {
-  background: #e4e9f5;
+.field > input {
+  flex: 1;
+  min-width: 0;
 }
 
-.suggestions small {
-  opacity: 0.6;
+.toolbar-form > .field { flex: 0 1 200px; }
+.toolbar-form > .field.grow { flex: 1 1 320px; }
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px 14px;
+  align-items: end;
+  margin: 3px -16px -11px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.12);
 }
 
-/* Extra search options sit behind a disclosure so the common search stays short. */
-details summary {
-  cursor: default;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.options {
+.filters label {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.filters label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  color: var(--text);
+  font-weight: 400;
 }
 
 .pair {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .pair input {
@@ -345,96 +342,286 @@ details summary {
   min-width: 0;
 }
 
-label.check {
+.filters-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-weight: 400;
-  color: white;
+  justify-content: flex-end;
 }
 
-.result-pay {
-  font-weight: 600;
+.filters-actions button {
+  background: transparent;
+  color: var(--muted);
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
+/* ---------- Content panes ---------- */
 
-/* The id selector matches the one that gives form buttons their top margin, so it wins here. */
-#search-form .actions button[type="submit"] {
+.content {
   flex: 1;
-  margin-top: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  min-height: 0;
 }
+
+.pane {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.results-pane {
+  border-right: 1px solid var(--line);
+}
+
+/* Open a link has no results, so the listing takes the whole width. */
+.main.view-link .content { grid-template-columns: minmax(0, 1fr); }
+.main.view-link .results-pane { display: none; }
+
+/* A narrow window shows one pane at a time: the list, or the listing with a way back. */
+@media (max-width: 860px) {
+  :root { --sidebar-width: 156px; }
+  .content { grid-template-columns: minmax(0, 1fr); }
+  .main.view-find:not(.has-detail) .detail-pane { display: none; }
+  .main.view-find.has-detail .results-pane { display: none; }
+}
+
+@media (min-width: 861px) {
+  .back { display: none !important; }
+}
+
+/* A message centred in its pane: empty, loading and error states. */
+.state-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100%;
+  padding: 32px 28px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* A small spinner for anything that is working. */
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .logo-tile.reveal > * { animation: none; }
+}
+
+.state-message h2 {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.state-message p {
+  max-width: 340px;
+}
+
+/* ---------- Results ---------- */
 
 .results-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+#result-counts {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 label.sort {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
   white-space: nowrap;
 }
 
 label.sort select {
-  padding: 4px 8px;
+  height: 24px;
+  padding: 0 4px;
+  font-size: 12px;
 }
 
-.result-snippet {
-  color: #4a5670;
-  font-size: 13px;
+.note {
+  margin: 10px 14px 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: rgba(226, 185, 42, 0.12);
+  border-left: 3px solid var(--accent-hover);
+  font-size: 12px;
 }
 
-.result small {
-  color: #6b7690;
+.empty {
+  padding: 28px 20px;
+  color: var(--muted);
+  text-align: center;
 }
 
-#cancel-search {
-  align-self: flex-start;
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One result row: logo, then title, details and a short preview. */
+.result {
+  position: relative;
+  display: flex;
+  gap: 11px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.result:hover { background: rgba(255, 255, 255, 0.04); }
+.result.selected { background: var(--select); }
+.result.selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
 }
 
 .result-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
 
-/* A company logo, or its first letter until the logo loads or when there is none. */
+/* The open button is the row's title and details; a click anywhere on it opens the listing. */
+.result-open {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  white-space: normal;
+  font-weight: 400;
+}
+
+.result-open:hover:not(:disabled) { background: transparent; }
+
+.result-open strong {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.result-open span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.result small {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.result-link {
+  align-self: flex-start;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-link:hover { color: var(--text); }
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 14px;
+}
+
+.pager button {
+  min-width: 30px;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.pager span { color: var(--faint); }
+
+.pager [aria-current="page"],
+.pager [aria-current="page"]:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.result-errors {
+  margin: 0 14px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-errors summary { cursor: default; }
+
+/* ---------- Logos ---------- */
+
+/* A company logo, or its first letter when there is none. Blank until its answer is known. */
 .logo-tile {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  border: 1px solid #dde3f0;
   background: white;
   overflow: hidden;
   color: white;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
 }
 
-/* Until its logo is known a tile is blank, then the logo or letter fades in. */
-.logo-tile.pending {
-  background: #eef1f8;
+.logo-tile.large {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  font-size: 22px;
 }
 
-.logo-tile.reveal > * {
-  animation: logo-in 180ms ease-out;
-}
+.logo-tile.pending { background: rgba(255, 255, 255, 0.10); }
+
+.logo-tile.reveal > * { animation: logo-in 180ms ease-out; }
 
 @keyframes logo-in {
   from { opacity: 0; }
@@ -446,42 +633,90 @@ label.sort select {
   height: 100%;
   object-fit: contain;
   padding: 4px;
-  box-sizing: border-box;
+}
+
+/* ---------- Listing ---------- */
+
+.listing {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 820px;
+  padding: 22px 28px 40px;
+}
+
+.back {
+  align-self: flex-start;
 }
 
 .job-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* Recent searches: a menu opened from the History button, over the page instead of in its flow. */
+.job-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#job-company {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.listing h3 {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#job-description {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: 13.5px;
+}
+
+/* ---------- History menu ---------- */
+
 .history-menu {
   position: relative;
-  display: flex; /* so the History button is as tall as Search and Clear */
-}
-
-.history-menu > button {
-  flex: 1;
+  display: flex;
 }
 
 .history {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 10;
-  width: min(440px, 80vw);
+  z-index: 20;
+  width: min(420px, 70vw);
   max-height: 60vh;
   overflow-y: auto;
   padding: 12px;
-  background: #15337a;
-  border: 1px solid var(--panel-edge);
-  border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-}
-
-.history[hidden] {
-  display: none;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 .history-head {
@@ -489,35 +724,18 @@ label.sort select {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 4px;
-}
-
-.history-head h3 {
-  color: white;
+  margin-bottom: 2px;
 }
 
 .history-close {
-  padding: 4px 12px;
+  height: 26px;
+  padding: 0 10px;
 }
 
 .history-hint {
   margin-bottom: 8px;
-  font-size: 13px;
   color: var(--muted);
-}
-
-.history-foot {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--panel-edge);
-}
-
-.history-foot button {
-  padding: 4px 10px;
-  font-size: 13px;
-  font-weight: 500;
-  background: transparent;
-  color: var(--muted);
+  font-size: 12px;
 }
 
 .history-list {
@@ -526,7 +744,7 @@ label.sort select {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .history-list li {
@@ -538,21 +756,22 @@ label.sort select {
 .history-run {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
+  height: auto;
+  padding: 7px 8px;
+  background: transparent;
   text-align: left;
   font-weight: 500;
-  background: transparent;
-  padding: 6px 8px;
+  white-space: normal;
 }
 
 .history-label {
   display: flex;
   flex-direction: column;
-  min-width: 0;
   gap: 2px;
+  min-width: 0;
 }
 
 .history-label strong,
@@ -563,21 +782,68 @@ label.sort select {
 }
 
 .history-label small {
-  font-weight: 400;
   color: var(--muted);
+  font-weight: 400;
 }
 
 .history-run > span:last-child {
   flex: none;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--faint);
+  font-size: 11px;
 }
 
 .history-remove {
   flex: none;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 500;
+  height: 26px;
+  padding: 0 8px;
   background: transparent;
   color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
 }
+
+.history-foot {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.history-foot button {
+  height: 26px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- Autocomplete ---------- */
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  min-width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: white;
+  color: var(--accent-ink);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.suggestions li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  border-radius: 4px;
+}
+
+.suggestions li.active, .suggestions li:hover { background: #e4e9f5; }
+.suggestions small { opacity: 0.6; }

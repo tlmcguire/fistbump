@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  // The renderer styles itself for the platform, for example to leave room for the macOS window buttons.
+  platform: process.platform,
+
   connectors: {
     link: (url) => ipcRenderer.invoke('connectors:link', url),
     posting: (board, jobId) => ipcRenderer.invoke('connectors:posting', board, jobId),
