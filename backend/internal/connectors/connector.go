@@ -35,6 +35,7 @@ type Dropped struct {
 const (
 	DefaultLimit = 20
 	MaxLimit     = 50
+	MaxOffset    = 1000
 )
 
 // Work modes a search can ask for.
@@ -54,6 +55,7 @@ type Query struct {
 	Boards     []string `json:"boards"`
 	Company    string   `json:"company"`
 	Limit      int      `json:"limit"`
+	Offset     int      `json:"offset"` // where in the ranked list this page starts; 0 for the first page
 }
 
 // Validate checks the fields that do not depend on a connector. The messages are shown to the user.
@@ -61,6 +63,9 @@ type Query struct {
 func (q Query) Validate() error {
 	if q.Limit < 1 || q.Limit > MaxLimit {
 		return errors.New("Limit must be between 1 and 50")
+	}
+	if q.Offset < 0 || q.Offset > MaxOffset {
+		return errors.New("Offset must be between 0 and 1000")
 	}
 	switch q.WorkMode {
 	case WorkModeAny, WorkModeRemote, WorkModeHybrid, WorkModeOnSite:
@@ -80,6 +85,8 @@ type SearchError struct {
 type SearchResult struct {
 	Postings        []Posting     `json:"postings"`
 	Matched         int           `json:"matched"`          // postings that passed the filters
+	HasMore         bool          `json:"has_more"`         // more ranked postings follow this page
+	NextOffset      int           `json:"next_offset"`      // the offset that asks for the next page
 	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
 	BoardsSearched  int           `json:"boards_searched"`  // boards listed without error
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list

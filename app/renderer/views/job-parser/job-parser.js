@@ -17,6 +17,7 @@ window.JobParser = {
       let results = null;
       let fromResults = false; //true while a listing opened from the result list is on screen
       let searchedQuery = {};
+      const PAGE_SIZE = 20; //results requested per page
 
   
       //gets each section's state and shows it accordingly.
@@ -95,7 +96,9 @@ window.JobParser = {
       const displayPosting = (data, opened = false) => {
         posting = data;
         fromResults = opened;
-        $("back-to-results").hidden = !(opened && results);
+        $("load-more").addEventListener("click", loadMore);
+
+      $("back-to-results").hidden = !(opened && results);
   
         document.getElementById("job-title").textContent =
           data.position_title || "Unknown position";
@@ -158,6 +161,7 @@ window.JobParser = {
       //get one row of the search results and define it's html
       const resultItem = result => {
         const item = document.createElement("li");
+        item.className = "result";
         const open = document.createElement("button");
           open.type = "button";
           open.className = "result-open";
@@ -177,6 +181,7 @@ window.JobParser = {
           const url = safeURL(result.company_url);
           if (url) {
             const link = el("a", "Company site");
+            link.className = "result-link";
             link.href = url;
             link.target = "_blank";
             link.rel = "noopener noreferrer";
@@ -217,7 +222,7 @@ window.JobParser = {
         }
 
         if (data.postings.length > 0 && data.matched > data.postings.length) {
-          notes.push(`Showing the best ${data.postings.length.toLocaleString()} of ${data.matched.toLocaleString()} matches.`);
+          notes.push(`Showing ${data.postings.length.toLocaleString()} of ${data.matched.toLocaleString()} matches.`);
         }
         if (data.boards_searched < data.boards_total) {
           const missed = data.boards_total - data.boards_searched;
@@ -240,6 +245,11 @@ window.JobParser = {
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
 
+        const more = $("load-more");
+        more.hidden = !data.has_more;
+        more.disabled = false;
+        more.textContent = "Show more results";
+
         $("result-errors").hidden = data.errors.length === 0;
         $("result-errors-list").replaceChildren(
           ...data.errors.map(failed => el("li", `${failed.board}: ${failed.message}`))
@@ -255,7 +265,7 @@ window.JobParser = {
         showLoading("Searching Greenhouse...");
 
         try {
-          const data = await window.FistBumpAPI.search(query);
+          const data = await window.FistBumpAPI.search({...query, offset: 0});
           renderResults(data);
           results = data;
           showState("results");
@@ -266,6 +276,31 @@ window.JobParser = {
         }
       };
   
+      //asks for the next page and adds it below the current ones. A posting already shown is skipped.
+      const loadMore = async () => {
+        const button = $("load-more");
+        button.disabled = true;
+        button.textContent = "Loading...";
+
+        try {
+          const data = await window.FistBumpAPI.search({...searchedQuery, offset: results.next_offset});
+          const key = posting => `${posting.board}/${posting.external_id}`;
+          const seen = new Set(results.postings.map(key));
+          const fresh = data.postings.filter(posting => !seen.has(key(posting)));
+          //keep the first page's counts for errors but take the newest paging state
+          results = {...data, postings: [...results.postings, ...fresh], errors: mergeErrors(results.errors, data.errors)};
+          renderResults(results);
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "Could not load more results. Try again.";
+        }
+      };
+
+      const mergeErrors = (a, b) => {
+        const seen = new Set(a.map(failed => `${failed.board}: ${failed.message}`));
+        return [...a, ...b.filter(failed => !seen.has(`${failed.board}: ${failed.message}`))];
+      };
+
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
       tabs.find.addEventListener("click", () => selectTab("find"));
       tabs.link.addEventListener("click", () => selectTab("link"));
@@ -276,7 +311,8 @@ window.JobParser = {
         const query = {
           keywords: $("search-keywords").value.split(",").map(word => word.trim()).filter(Boolean),
           location: $("search-location").value.trim(),
-          work_mode: $("search-work-mode").value
+          work_mode: $("search-work-mode").value,
+          limit: PAGE_SIZE
         };
         window.Suggest.remember("keywords", query.keywords);
         window.Suggest.remember("location", [query.location]);
