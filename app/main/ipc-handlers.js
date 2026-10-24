@@ -37,10 +37,15 @@ function register(ipcMain, backend) {
     return { ok: true };
   });
 
-  // The company's logo as a data URL, read by the backend from the company's own site.
-  ipcMain.handle('connectors:logo', (_event, url) => {
-    if (typeof url !== 'string' || !url) return bad('Enter a company website link');
-    return backend.call('GET', `/v1/connectors/greenhouse/logo?url=${encodeURIComponent(url)}`);
+  // The company's logo as a data URL, read by the backend from the company's own site or its Greenhouse board.
+  ipcMain.handle('connectors:logo', (_event, url, board) => {
+    const site = typeof url === 'string' ? url : '';
+    const token = typeof board === 'string' ? board : '';
+    if (!site && !token) return bad('Enter a company website link or a board');
+    const query = new URLSearchParams();
+    if (site) query.set('url', site);
+    if (token) query.set('board', token);
+    return backend.call('GET', `/v1/connectors/greenhouse/logo?${query}`);
   });
 
   ipcMain.handle('connectors:categories', () => backend.call('GET', '/v1/connectors/greenhouse/categories'));

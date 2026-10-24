@@ -28,7 +28,7 @@ type jobSearcher interface {
 
 // logoFinder is the part of the logos package the logo route uses, so tests can pass a fake.
 type logoFinder interface {
-	Logo(ctx context.Context, site string) (logos.Logo, error)
+	Logo(ctx context.Context, site, board string) (logos.Logo, error)
 }
 
 // Config is what main.go and tests pass to New. Fields are exported so other packages can set them.

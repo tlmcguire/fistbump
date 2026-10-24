@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,11 +48,16 @@ func (l Logo) DataURL() string {
 
 // Fetcher finds and caches logos. HTTP defaults to a client that refuses private addresses.
 type Fetcher struct {
-	DB   *sql.DB
-	HTTP *http.Client
-	Now  func() time.Time
-	sem  chan struct{}
+	DB        *sql.DB
+	HTTP      *http.Client
+	Now       func() time.Time
+	BoardBase string // Greenhouse's job board site; replaceable for tests
+	sem       chan struct{}
 }
+
+const defaultBoardBase = "https://job-boards.greenhouse.io"
+
+var boardToken = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 
 // New returns a Fetcher stored in db. At most four logos are fetched at once.
 func New(db *sql.DB) *Fetcher {
@@ -102,8 +108,9 @@ func safeClient() *http.Client {
 			TLSHandshakeTimeout: 4 * time.Second,
 			MaxIdleConnsPerHost: 2,
 		},
+		// Sites often hop http to https and apex to www. The address check covers every hop.
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 3 || req.URL.Scheme != "https" {
+			if len(via) >= 5 || (req.URL.Scheme != "https" && req.URL.Scheme != "http") {
 				return http.ErrUseLastResponse
 			}
 			return nil
@@ -120,13 +127,24 @@ func Host(site string) (string, error) {
 	return strings.TrimPrefix(strings.ToLower(u.Host), "www."), nil
 }
 
-// Logo returns the company's logo, from the cache when it is under a day old.
-func (f *Fetcher) Logo(ctx context.Context, site string) (Logo, error) {
-	host, err := Host(site)
-	if err != nil {
-		return Logo{}, err
+// Logo returns a company's logo, from the cache when it is under a day old. site is the company's
+// website link, if known; board is its Greenhouse board token, which finds the company's site and
+// logo when site is empty or its own site has no usable icon.
+func (f *Fetcher) Logo(ctx context.Context, site, board string) (Logo, error) {
+	var hosts []string
+	key := ""
+	if site != "" {
+		host, err := Host(site)
+		if err != nil {
+			return Logo{}, err
+		}
+		key, hosts = host, hostVariants(host)
+	} else if boardToken.MatchString(board) {
+		key = "board:" + board
+	} else {
+		return Logo{}, errors.New("a site or a board is needed")
 	}
-	if logo, known, err := f.cached(host); known {
+	if logo, known, err := f.cached(key); known {
 		return logo, err
 	}
 
@@ -136,14 +154,171 @@ func (f *Fetcher) Logo(ctx context.Context, site string) (Logo, error) {
 	case <-ctx.Done():
 		return Logo{}, ctx.Err()
 	}
+	ctx, cancel := context.WithTimeout(ctx, 14*time.Second)
+	defer cancel()
 
-	logo, err := f.find(ctx, host)
+	logo, err := f.search(ctx, hosts, board)
 	if errors.Is(err, ErrNotFound) {
-		f.store(host, Logo{}, false)
+		f.store(key, Logo{}, false)
 	} else if err == nil {
-		f.store(host, logo, true)
+		f.store(key, logo, true)
 	}
 	return logo, err
+}
+
+// hostVariants lists the hosts worth trying for a site: itself, with and without "www.", and the
+// parent of a careers or jobs subdomain, since the careers site often has no icon of its own.
+func hostVariants(host string) []string {
+	out := []string{host}
+	add := func(h string) {
+		for _, o := range out {
+			if o == h {
+				return
+			}
+		}
+		out = append(out, h)
+	}
+	bare := strings.TrimPrefix(host, "www.")
+	if bare != host {
+		add(bare)
+	} else {
+		add("www." + host)
+	}
+	if first, rest, ok := strings.Cut(bare, "."); ok && strings.Contains(rest, ".") {
+		switch first {
+		case "careers", "jobs", "job", "apply", "work", "join", "boards":
+			add(rest)
+			add("www." + rest)
+		}
+	}
+	return out
+}
+
+// search tries each host's own site, then the company's Greenhouse board page, which names the
+// company's site (when it redirects there) or carries a logo of its own.
+func (f *Fetcher) search(ctx context.Context, hosts []string, board string) (Logo, error) {
+	tried := map[string]bool{}
+	try := func(host string) (Logo, bool) {
+		if tried[host] || ctx.Err() != nil {
+			return Logo{}, false
+		}
+		tried[host] = true
+		logo, err := f.find(ctx, host)
+		return logo, err == nil
+	}
+	for _, h := range hosts {
+		if logo, ok := try(h); ok {
+			return logo, nil
+		}
+	}
+	if board == "" || !boardToken.MatchString(board) || ctx.Err() != nil {
+		return Logo{}, ErrNotFound
+	}
+	site, logoURL := f.boardPage(ctx, board)
+	if site != "" {
+		for _, h := range hostVariants(site) {
+			if logo, ok := try(h); ok {
+				return logo, nil
+			}
+		}
+	}
+	if logoURL != "" {
+		if body, _, err := f.get(ctx, logoURL, maxImage); err == nil {
+			if ct := imageType(body); ct != "" {
+				return Logo{ContentType: ct, Data: body}, nil
+			}
+		}
+	}
+	return Logo{}, ErrNotFound
+}
+
+var greenhouseHost = regexp.MustCompile(`(^|\.)greenhouse\.io$`)
+
+// boardPage reads a company's Greenhouse board page. Most boards redirect to the company's own
+// careers site, which gives the site's host. The rest serve a page with the company's logo.
+func (f *Fetcher) boardPage(ctx context.Context, board string) (siteHost, logoURL string) {
+	base := f.BoardBase
+	if base == "" {
+		base = defaultBoardBase
+	}
+	link := strings.TrimRight(base, "/") + "/" + board
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
+	if err != nil {
+		return "", ""
+	}
+	req.Header.Set("User-Agent", userAgent)
+	hc := f.HTTP
+	if hc == nil {
+		hc = safeClient()
+	}
+	stay := *hc // the redirect itself is the answer, so it is not followed
+	stay.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	res, err := stay.Do(req)
+	if err != nil {
+		return "", ""
+	}
+	defer res.Body.Close()
+
+	switch {
+	case res.StatusCode >= 300 && res.StatusCode < 400:
+		to, err := res.Request.URL.Parse(res.Header.Get("Location"))
+		if err != nil || to.Scheme != "https" || to.Hostname() == "" || greenhouseHost.MatchString(to.Hostname()) {
+			return "", ""
+		}
+		return strings.ToLower(to.Host), ""
+	case res.StatusCode == http.StatusOK:
+		page, err := io.ReadAll(io.LimitReader(res.Body, maxPage))
+		if err != nil {
+			return "", ""
+		}
+		return "", boardLogo(page, res.Request.URL)
+	}
+	return "", ""
+}
+
+// boardLogo finds the logo image on a Greenhouse board page: an image whose alt text ends in
+// "Logo", else the page's og:image.
+func boardLogo(page []byte, base *url.URL) string {
+	doc, err := xhtml.Parse(strings.NewReader(string(page)))
+	if err != nil {
+		return ""
+	}
+	var alt, og string
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		if n.Type == xhtml.ElementNode {
+			attr := func(k string) string {
+				for _, a := range n.Attr {
+					if strings.EqualFold(a.Key, k) {
+						return a.Val
+					}
+				}
+				return ""
+			}
+			switch n.Data {
+			case "img":
+				if alt == "" && strings.HasSuffix(strings.ToLower(strings.TrimSpace(attr("alt"))), "logo") {
+					alt = attr("src")
+				}
+			case "meta":
+				if og == "" && attr("property") == "og:image" {
+					og = attr("content")
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(doc)
+	for _, raw := range []string{alt, og} {
+		if ref, err := url.Parse(raw); err == nil && raw != "" {
+			if abs := base.ResolveReference(ref); abs.Scheme == "https" {
+				return abs.String()
+			}
+		}
+	}
+	return ""
 }
 
 func (f *Fetcher) cached(host string) (Logo, bool, error) {
@@ -262,6 +437,9 @@ func (f *Fetcher) get(ctx context.Context, link string, limit int64) ([]byte, *u
 	return body, res.Request.URL, nil
 }
 
+// schemaLogo matches "logo": "https://..." and "logo": {"url": "https://..."} in a page's JSON.
+var schemaLogo = regexp.MustCompile(`"logo"\s*:\s*(?:\{[^}]*?"url"\s*:\s*)?"((?:https?:)?\\?/[^"]+)"`)
+
 // iconLinks lists icon URLs in a page, best first: apple touch icons, then icons by declared size.
 func iconLinks(page []byte, base *url.URL) []string {
 	doc, err := xhtml.Parse(strings.NewReader(string(page)))
@@ -312,6 +490,15 @@ func iconLinks(page []byte, base *url.URL) []string {
 		}
 	}
 	walk(doc)
+	// A logo named in the page's structured data is usually the real logo, so it ranks above plain icons.
+	for _, m := range schemaLogo.FindAllStringSubmatch(string(page), -1) {
+		raw := strings.ReplaceAll(m[1], `\/`, "/")
+		if ref, err := url.Parse(raw); err == nil {
+			if abs := base.ResolveReference(ref); abs.Scheme == "https" {
+				found = append(found, icon{abs.String(), 500})
+			}
+		}
+	}
 	sort.SliceStable(found, func(i, j int) bool { return found[i].score > found[j].score })
 	out := make([]string, 0, len(found))
 	for _, i := range found {
