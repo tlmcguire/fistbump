@@ -211,6 +211,7 @@ The build went past the plan in these places. The decisions table below is the p
 - **Paging.** `offset`, `has_more` and `next_offset`, with numbered pages in the app. Each company's first three postings rank ahead of its later ones, and nothing is dropped.
 - **Other preferences.** `level`, `posted_within`, `exclude` and `sort`. Duplicate roles at one company fold into one result.
 - **Cache.** Listings and descriptions are stored in `greenhouse_listing_cache` and `greenhouse_description_cache`, not files. Rows older than a day are deleted at launch and every hour.
+- **Logos.** `GET /v1/connectors/greenhouse/logo` reads an icon from the company own site (never a third-party icon service), with address checks, size limits and a one-day cache in `logo_cache`.
 - **Cancel.** The app cancels a search in progress when a new one starts or when the user presses Cancel.
 
 ## Done when
