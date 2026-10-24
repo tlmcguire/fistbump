@@ -226,16 +226,15 @@ func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.
 
 // fetchCached is FetchJob through the 24 hour description cache.
 func (c *Client) fetchCached(ctx context.Context, board, id string) (connectors.Posting, error) {
-	key := board + "/" + id
 	cache := c.cache()
-	if v, ok := cache.description(key); ok {
-		return v.(connectors.Posting), nil
+	if p, ok := cache.description(board, id); ok {
+		return p, nil
 	}
 	p, err := c.FetchJob(ctx, board, id)
 	if err != nil {
 		return connectors.Posting{}, err
 	}
-	cache.putDescription(key, p)
+	cache.putDescription(board, id, p)
 	return p, nil
 }
 

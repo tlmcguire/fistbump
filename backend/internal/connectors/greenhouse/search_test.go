@@ -76,7 +76,7 @@ func (s *searchServer) client(t *testing.T) *Client {
 		http.NotFound(w, r)
 	}))
 	t.Cleanup(srv.Close)
-	return &Client{BaseURL: srv.URL, HTTP: srv.Client(), Cache: NewCache("")}
+	return &Client{BaseURL: srv.URL, HTTP: srv.Client(), Cache: NewCache(nil)}
 }
 
 func query(keywords ...string) connectors.Query {

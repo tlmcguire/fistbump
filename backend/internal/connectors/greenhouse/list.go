@@ -115,7 +115,7 @@ func (e cachedListing) result(board string) ([]Listing, error) {
 func (c *Client) cache() *Cache {
 	c.cacheOnce.Do(func() {
 		if c.Cache == nil {
-			c.Cache = NewCache("")
+			c.Cache = NewCache(nil)
 		}
 	})
 	return c.Cache
