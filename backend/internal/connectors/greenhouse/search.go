@@ -31,6 +31,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	result := connectors.SearchResult{
 		Postings:     []connectors.Posting{},
 		Errors:       []connectors.SearchError{},
+		Companies:    []string{},
 		BoardsTotal:  len(boards),
 		KeywordsUsed: q.Keywords,
 		WorkModeUsed: q.WorkMode,
