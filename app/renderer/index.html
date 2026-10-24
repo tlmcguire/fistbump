@@ -1,58 +1,186 @@
-
-<!--This is just a test page for the electron setup-->
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8"/>
-        <title>Job Listing</title>
+        <title>Fistbump</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:">
         <link rel="stylesheet" href="styles/base.css" />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
     </head>
     <body>
-        <header>
-            <img src="views/graphics/logo.png" alt="FistBump logo" class="logo">
-        </header>
+        <div class="app">
+            <!--Sidebar: app navigation. Its top is a drag region, and on macOS leaves room for the window buttons.-->
+            <aside class="sidebar">
+                <div class="sidebar-top drag">
+                    <img src="views/graphics/logo.png" alt="Fistbump" class="logo">
+                </div>
+                <nav class="nav" role="tablist" aria-label="Jobs">
+                    <p class="nav-heading">Jobs</p>
+                    <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true">Find jobs</button>
+                    <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false">Open a link</button>
+                </nav>
+            </aside>
 
-        <main>
-            <h1>Job Listing</h1>
-            <form id="job-form">
-                <label for="job-url">Greenhouse job URL</label>
-                <input id="job-url" type="url" placeholder="Paste job posting URL" required>
-                <button type="submit">Load Listing</button>
-            </form>
+            <main id="main" class="main view-find">
+                <!--Toolbar: the search bar for Find jobs, or the link box for Open a link. It doubles as a drag region.-->
+                <header class="toolbar drag">
+                    <form id="search-form" class="toolbar-form" autocomplete="off">
+                        <div class="field grow">
+                            <input id="search-keywords" type="search" aria-label="Keywords" placeholder="Job title or keywords, e.g. data analyst">
+                        </div>
+                        <div class="field">
+                            <input id="search-location" type="search" aria-label="Location" placeholder="Location">
+                        </div>
+                        <button type="submit" class="primary">Search</button>
+                        <button type="button" id="filters-toggle" aria-expanded="false" aria-controls="filters">Filters<span id="filters-count" class="badge" hidden></span></button>
+                        <div class="history-menu">
+                            <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
+                            <section id="history" class="history" role="dialog" aria-label="Recent searches" hidden>
+                                <div class="history-head">
+                                    <h3>Recent searches</h3>
+                                    <button type="button" id="history-close" class="history-close">Close</button>
+                                </div>
+                                <p class="history-hint">Choose a search to run it again.</p>
+                                <ul id="history-list" class="history-list"></ul>
+                                <div class="history-foot">
+                                    <button type="button" id="clear-history">Clear all history</button>
+                                </div>
+                            </section>
+                        </div>
 
-            <section id="state-initial" class="state" >
-                <p>Enter a Greenhouse job URL to view it.</p>
-            </section>
+                        <!--Filters: a row under the toolbar, shown with the Filters button. Part of the same form.-->
+                        <div id="filters" class="filters" hidden>
+                            <label>Company
+                                <span class="field"><input id="search-company" type="text" placeholder="e.g. Stripe"></span>
+                            </label>
+                            <label>Industry
+                                <select id="search-industry">
+                                    <option value="">Any industry</option>
+                                </select>
+                            </label>
+                            <label>Work mode
+                                <select id="search-work-mode">
+                                    <option>Any</option>
+                                    <option>Remote</option>
+                                    <option>Hybrid</option>
+                                    <option>On-site</option>
+                                </select>
+                            </label>
+                            <label>Posted within
+                                <select id="search-posted">
+                                    <option value="0">Any time</option>
+                                    <option value="1">Last day</option>
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30">Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </label>
+                            <label>Yearly pay (USD)
+                                <span class="pair">
+                                    <input id="search-pay-min" type="text" inputmode="numeric" aria-label="Minimum yearly pay" placeholder="Min, e.g. 90k">
+                                    <input id="search-pay-max" type="text" inputmode="numeric" aria-label="Maximum yearly pay" placeholder="Max">
+                                </span>
+                            </label>
+                            <label>Leave out titles with
+                                <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
+                            </label>
+                            <label class="check"><input id="search-require-pay" type="checkbox"> Hide postings that do not list pay</label>
+                            <div class="filters-actions">
+                                <button type="button" id="clear-search">Reset all</button>
+                            </div>
+                        </div>
+                    </form>
 
-            <section id="state-loading" class="state" hidden>
-                <p>Loading job listing...</p>
-            </section>
+                    <form id="job-form" class="toolbar-form" hidden>
+                        <div class="field grow">
+                            <input id="job-url" type="url" aria-label="Greenhouse job link" placeholder="Paste a Greenhouse job link" required>
+                        </div>
+                        <button type="submit" class="primary">Open</button>
+                    </form>
+                </header>
 
-            <section id="state-success" class="state" hidden>
-                <h2 id ="job-title"></h2>
-                <p id="job-company"></p>
-                <p id="job-location"></p>
-                <p id="job-updated"></p>
-                <a id="job-link" href="#" target="_blank" hidden>Open original posting</a>
-                <a id="company-link" href="#" target="_blank" hidden>Open company website</a>
-                <h3>Description</h3>
-                <p id="job-description"></p>
-                <button id="reload-listing" type="button">Reload Listing</button>
+                <div class="content">
+                    <!--Results pane: the search's states. Only one is shown at a time.-->
+                    <section id="results-pane" class="pane results-pane" aria-label="Search results">
+                        <div id="state-initial" class="state state-message">
+                            <p id="initial-message"></p>
+                        </div>
 
-            </section>
+                        <div id="state-loading" class="state state-message" hidden>
+                            <div class="spinner" aria-hidden="true"></div>
+                            <p id="loading-message" role="status"></p>
+                            <button id="cancel-search" type="button" hidden>Cancel</button>
+                        </div>
 
-            <section id="state-error" class="state" hidden>
-                <h2>Couldn't load listing</h2>
-                <p id="error-message"></p>
-                <button id="try-again" type="button">Try Again</button>
-            </section>
+                        <div id="state-results" class="state" hidden>
+                            <div class="results-head">
+                                <p id="result-counts"></p>
+                                <label class="sort">Sort
+                                    <select id="result-sort">
+                                        <option value="relevance">Best match</option>
+                                        <option value="newest">Newest</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <p id="result-note" class="note" hidden></p>
+                            <p id="result-empty" class="empty"></p>
+                            <ul id="result-list" class="results"></ul>
+                            <nav id="pager" class="pager" aria-label="Result pages" hidden></nav>
+                            <details id="result-errors" class="result-errors" hidden>
+                                <summary>Some boards could not be searched</summary>
+                                <ul id="result-errors-list"></ul>
+                            </details>
+                        </div>
 
-        </main>
+                        <div id="state-error" class="state state-message" hidden>
+                            <h2>Search failed</h2>
+                            <p id="error-message"></p>
+                            <button id="try-again" type="button">Try again</button>
+                        </div>
+                    </section>
+
+                    <!--Detail pane: the open listing, or a placeholder, its loading message or its error.-->
+                    <section id="detail-pane" class="pane detail-pane" aria-label="Job listing">
+                        <div id="detail-empty" class="detail-state state-message">
+                            <p id="detail-empty-message"></p>
+                        </div>
+
+                        <div id="detail-loading" class="detail-state state-message" hidden>
+                            <div class="spinner" aria-hidden="true"></div>
+                            <p id="detail-loading-message" role="status"></p>
+                        </div>
+
+                        <article id="state-success" class="detail-state listing" hidden>
+                            <button id="back-to-results" type="button" class="back" hidden>&larr; Results</button>
+                            <div class="job-head">
+                                <div id="job-logo" class="logo-tile large" aria-hidden="true"></div>
+                                <div class="job-heading">
+                                    <h2 id="job-title"></h2>
+                                    <p id="job-company"></p>
+                                </div>
+                            </div>
+                            <p class="job-meta"><span id="job-location"></span><span id="job-updated"></span></p>
+                            <div class="job-actions">
+                                <a id="job-link" class="button primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
+                                <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
+                                <button id="reload-listing" type="button">Reload</button>
+                            </div>
+                            <h3>Description</h3>
+                            <p id="job-description"></p>
+                        </article>
+
+                        <div id="detail-error" class="detail-state state-message" hidden>
+                            <h2>Couldn't load the listing</h2>
+                            <p id="detail-error-message"></p>
+                            <button id="detail-try-again" type="button">Try again</button>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
 
         <script src="js/api.js" defer></script>
+        <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
         <script src="js/app.js" defer></script>
-
     </body>
 </html>

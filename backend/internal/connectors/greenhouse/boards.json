@@ -183,10 +183,6 @@
           "company": "Scale AI"
         },
         {
-          "token": "scoutai",
-          "company": "Scout AI"
-        },
-        {
           "token": "shifttechnology",
           "company": "Shift Technology"
         },
@@ -978,10 +974,6 @@
           "company": "Cribl"
         },
         {
-          "token": "cybereason",
-          "company": "Cybereason"
-        },
-        {
           "token": "cymulate",
           "company": "Cymulate"
         },
@@ -1746,10 +1738,6 @@
           "company": "Atomic Industries"
         },
         {
-          "token": "carbon",
-          "company": "Carbon"
-        },
-        {
           "token": "cellink",
           "company": "CelLink"
         },
@@ -1824,10 +1812,6 @@
         {
           "token": "spacex",
           "company": "SpaceX"
-        },
-        {
-          "token": "supernal",
-          "company": "Supernal"
         },
         {
           "token": "tulip",
@@ -1950,10 +1934,6 @@
         {
           "token": "spire",
           "company": "Spire"
-        },
-        {
-          "token": "supernal",
-          "company": "Supernal"
         },
         {
           "token": "trueanomalyinc",
@@ -2528,10 +2508,6 @@
           "company": "Afresh"
         },
         {
-          "token": "carbonrobotics",
-          "company": "Carbon Robotics"
-        },
-        {
           "token": "pivotbio",
           "company": "Pivot Bio"
         }
@@ -2878,10 +2854,6 @@
         {
           "token": "lightmatter",
           "company": "Lightmatter"
-        },
-        {
-          "token": "nothing",
-          "company": "Nothing"
         },
         {
           "token": "psiquantum",
