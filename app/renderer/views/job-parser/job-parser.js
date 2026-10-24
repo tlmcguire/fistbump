@@ -273,11 +273,14 @@ window.JobParser = {
       searchForm.addEventListener("submit", event => {
         event.preventDefault();
 
-        runSearch({
+        const query = {
           keywords: $("search-keywords").value.split(",").map(word => word.trim()).filter(Boolean),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value
-        });
+        };
+        window.Suggest.remember("keywords", query.keywords);
+        window.Suggest.remember("location", [query.location]);
+        runSearch(query);
       });
 
       form.addEventListener("submit", event => {
@@ -300,6 +303,10 @@ window.JobParser = {
           selectTab(activeTab);
         }
       });
+
+      window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
+      window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});
+
       selectTab("find");
     }
   };
