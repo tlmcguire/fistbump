@@ -710,6 +710,10 @@ window.JobParser = {
         $("history").hidden = !open;
         $("history-toggle").setAttribute("aria-expanded", String(open));
       };
+      $("history-close").addEventListener("click", () => {
+        setHistoryOpen(false);
+        $("history-toggle").focus();
+      });
       $("history-toggle").addEventListener("click", () => setHistoryOpen($("history").hidden));
       document.addEventListener("mousedown", event => {
         if (!$("history").hidden && !$("history").parentElement.contains(event.target)) setHistoryOpen(false);
@@ -745,10 +749,10 @@ window.JobParser = {
             saveForm();
             searchForm.requestSubmit();
           });
-          const remove = el("button", "\u00d7");
+          const remove = el("button", "Remove");
           remove.type = "button";
           remove.className = "history-remove";
-          remove.setAttribute("aria-label", "Remove this search from history");
+          remove.setAttribute("aria-label", `Remove "${title}" from history`);
           remove.addEventListener("click", () => {
             storeHistory(loadHistory().filter((_, i) => i !== index));
             renderHistory();

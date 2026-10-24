@@ -364,7 +364,8 @@ label.check {
   margin-top: 4px;
 }
 
-.actions button[type="submit"] {
+/* The id selector matches the one that gives form buttons their top margin, so it wins here. */
+#search-form .actions button[type="submit"] {
   flex: 1;
   margin-top: 0;
 }
@@ -457,6 +458,11 @@ label.sort select {
 /* Recent searches: a menu opened from the History button, over the page instead of in its flow. */
 .history-menu {
   position: relative;
+  display: flex; /* so the History button is as tall as Search and Clear */
+}
+
+.history-menu > button {
+  flex: 1;
 }
 
 .history {
@@ -482,10 +488,31 @@ label.sort select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
-.history-head button {
+.history-head h3 {
+  color: white;
+}
+
+.history-close {
+  padding: 4px 12px;
+}
+
+.history-hint {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.history-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.history-foot button {
   padding: 4px 10px;
   font-size: 13px;
   font-weight: 500;
@@ -549,6 +576,8 @@ label.sort select {
 .history-remove {
   flex: none;
   padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
   background: transparent;
   color: var(--muted);
 }
