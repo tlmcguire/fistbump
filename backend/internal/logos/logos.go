@@ -59,9 +59,9 @@ const defaultBoardBase = "https://job-boards.greenhouse.io"
 
 var boardToken = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 
-// New returns a Fetcher stored in db. At most four logos are fetched at once.
+// New returns a Fetcher stored in db. At most eight logos are fetched at once.
 func New(db *sql.DB) *Fetcher {
-	return &Fetcher{DB: db, HTTP: safeClient(), Now: time.Now, sem: make(chan struct{}, 4)}
+	return &Fetcher{DB: db, HTTP: safeClient(), Now: time.Now, sem: make(chan struct{}, 8)}
 }
 
 func (f *Fetcher) now() time.Time {

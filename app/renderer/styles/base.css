@@ -426,6 +426,20 @@ label.sort select {
   font-size: 18px;
 }
 
+/* Until its logo is known a tile is blank, then the logo or letter fades in. */
+.logo-tile.pending {
+  background: #eef1f8;
+}
+
+.logo-tile.reveal > * {
+  animation: logo-in 180ms ease-out;
+}
+
+@keyframes logo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .logo-tile img {
   width: 100%;
   height: 100%;
