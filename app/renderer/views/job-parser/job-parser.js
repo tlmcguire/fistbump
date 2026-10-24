@@ -252,6 +252,19 @@ window.JobParser = {
             empty = `${names} ${data.companies.length === 1 ? "has" : "have"} no postings that match your search. Try removing a keyword or filter.`;
           }
         }
+        //tell the user when the titles are not what they typed, e.g. senior roles for "junior software engineer"
+        if (query.keywords.length && data.matched > 0 && Number.isInteger(data.exact_matched)) {
+          const typed = query.keywords.join(", ");
+          const level = {Intern: "internship", Entry: "entry-level", Senior: "senior", Lead: "lead or management"}[data.level_wanted];
+          if (data.exact_matched === 0) {
+            notes.push(level
+              ? `No exact match for "${typed}": there are no ${level} postings, so these are other levels of similar roles.`
+              : `No exact match for "${typed}". These are the closest titles.`);
+          } else if (data.exact_matched < data.matched) {
+            const exact = data.exact_matched.toLocaleString();
+            notes.push(`${exact} exact ${data.exact_matched === 1 ? "match" : "matches"} for "${typed}" ${data.exact_matched === 1 ? "comes" : "come"} first, followed by close matches${level ? " at other levels" : ""}.`);
+          }
+        }
         if (query.pay_min || query.pay_max) {
           const unlisted = data.postings.filter(posting => !posting.pay_max).length;
           if (unlisted > 0 && !query.require_pay) {
