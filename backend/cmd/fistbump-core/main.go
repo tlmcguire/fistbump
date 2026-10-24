@@ -26,6 +26,7 @@ var version = "dev"
 const (
 	dbFile          = "fistbump.db"
 	shutdownTimeout = 5 * time.Second
+	cacheMaxAge     = 24 * time.Hour
 )
 
 func main() {
@@ -56,12 +57,16 @@ func run() error {
 	}
 	defer conn.Close()
 
-	cacheDir := filepath.Join(*dataDir, "cache", "greenhouse")
-	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
-		return fmt.Errorf("creating cache directory: %w", err)
-	}
+	// Search results are cached in the database. Files from the earlier on-disk cache are not used.
+	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
 	gh := greenhouse.NewClient()
-	gh.Cache = greenhouse.NewCache(cacheDir)
+	gh.Cache = greenhouse.NewCache(conn)
+	// Cached results older than a day are of no use: listings revalidate after 6 hours and descriptions expire after 24.
+	if n, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
+		slog.Warn("purging the search cache", "error", err)
+	} else if n > 0 {
+		slog.Info("purged old search cache", "rows", n)
+	}
 
 	handler := api.New(api.Config{
 		DB:         conn,
