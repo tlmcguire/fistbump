@@ -356,3 +356,46 @@ label.check {
 .result-pay {
   font-weight: 600;
 }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actions button[type="submit"] {
+  flex: 1;
+  margin-top: 0;
+}
+
+.results-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+label.sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+label.sort select {
+  padding: 4px 8px;
+}
+
+.result-snippet {
+  color: #4a5670;
+  font-size: 13px;
+}
+
+.result small {
+  color: #6b7690;
+}
+
+#cancel-search {
+  align-self: flex-start;
+}

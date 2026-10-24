@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('api', {
     search: (query) => ipcRenderer.invoke('connectors:search', query),
     list: () => ipcRenderer.invoke('connectors:list'),
     categories: () => ipcRenderer.invoke('connectors:categories'),
+    cancelSearch: () => ipcRenderer.invoke('connectors:cancel-search'),
   },
 });

@@ -1,10 +1,13 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
-const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories'];
+const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search'];
 
 const bad = (message) => ({ error: { code: 'validation_failed', message, details: null } });
 const seg = (s) => encodeURIComponent(String(s));
 
 function register(ipcMain, backend) {
+  // Only one search runs at a time: starting a new one, or pressing Cancel, stops the old one.
+  let activeSearch = null;
+
   ipcMain.handle('connectors:link', (_event, url) => {
     if (typeof url !== 'string' || !url.trim()) return bad('Enter a Greenhouse job link.');
     return backend.call('GET', `/v1/connectors/greenhouse/link?url=${encodeURIComponent(url.trim())}`);
@@ -20,7 +23,18 @@ function register(ipcMain, backend) {
   //new phase 2
   ipcMain.handle('connectors:search', (_event, query) => {
     if (!query || typeof query !== 'object' || Array.isArray(query)) return bad('Invalid search');
-    return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query});
+    activeSearch?.abort();
+    const controller = new AbortController();
+    activeSearch = controller;
+    return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query}, controller.signal).finally(() => {
+      if (activeSearch === controller) activeSearch = null;
+    });
+  });
+
+  ipcMain.handle('connectors:cancel-search', () => {
+    activeSearch?.abort();
+    activeSearch = null;
+    return { ok: true };
   });
 
   ipcMain.handle('connectors:categories', () => backend.call('GET', '/v1/connectors/greenhouse/categories'));

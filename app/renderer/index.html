@@ -120,7 +120,10 @@
                         </div>
                     </details>
 
-                    <button type="submit">Search</button>
+                    <div class="actions">
+                        <button type="submit">Search</button>
+                        <button type="button" id="clear-search">Clear</button>
+                    </div>
                 </form>
             </div>
 
@@ -140,11 +143,20 @@
 
             <section id="state-loading" class="state" hidden>
                 <p id="loading-message"></p>
+                <button id="cancel-search" type="button" hidden>Cancel</button>
             </section>
 
             <!--load listing and search results section states-->
             <section id="state-results" class="state" hidden>
-                <p id="result-counts"></p>
+                <div class="results-head">
+                    <p id="result-counts"></p>
+                    <label class="sort">Sort by
+                        <select id="result-sort">
+                            <option value="relevance">Best match</option>
+                            <option value="newest">Newest</option>
+                        </select>
+                    </label>
+                </div>
                 <p id="result-note" hidden></p>
                 <p id="result-empty">Search yielded no results. Check search parameters and try again.</p>
                 <ul id="result-list" class="results"></ul>
