@@ -120,3 +120,19 @@ func Tokens() []string {
 	sort.Strings(out)
 	return out
 }
+
+// CompanyNames lists the curated company names, sorted and without duplicates.
+func CompanyNames() []string {
+	seen := map[string]bool{}
+	names := []string{}
+	for _, c := range file.Categories {
+		for _, b := range c.Boards {
+			if !seen[b.Company] {
+				seen[b.Company] = true
+				names = append(names, b.Company)
+			}
+		}
+	}
+	sort.Strings(names)
+	return names
+}

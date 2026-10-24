@@ -28,5 +28,34 @@ window.FistBumpAPI = {
         throw new Error("Connection error");
       }
       return this.request(() => window.api.connectors.posting(board, jobId));
+    },
+
+    async categories() {
+      if (!window.api?.connectors?.categories) {
+        throw new Error("Connection error");
+      }
+      return this.request(() => window.api.connectors.categories());
+    },
+
+    //the company's logo as a data URL, or null when its site has none
+    async logo(url, board) {
+      if (!window.api?.connectors?.logo) return null;
+      try {
+        return (await this.request(() => window.api.connectors.logo(url, board))).data_url || null;
+      } catch {
+        return null;
+      }
+    },
+
+    //stops the search in progress; the pending search call then fails with "Search canceled"
+    cancelSearch() {
+      return window.api?.connectors?.cancelSearch?.();
+    },
+
+    async search(query) {
+      if (!window.api?.connectors?.search) {
+        throw new Error("Connection error");
+      }
+      return this.request(() => window.api.connectors.search(query));
     }
   };

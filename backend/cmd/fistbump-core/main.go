@@ -18,6 +18,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/api"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
+	"github.com/tlmcguire/fistbump/backend/internal/logos"
 )
 
 // version is reported by GET /v1/health. Release builds can set it with -ldflags "-X main.version=...".
@@ -26,6 +27,7 @@ var version = "dev"
 const (
 	dbFile          = "fistbump.db"
 	shutdownTimeout = 5 * time.Second
+	cacheMaxAge     = 24 * time.Hour
 )
 
 func main() {
@@ -56,9 +58,39 @@ func run() error {
 	}
 	defer conn.Close()
 
+	// Search results are cached in the database. Files from the earlier on-disk cache are not used.
+	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
+	gh := greenhouse.NewClient()
+	gh.Cache = greenhouse.NewCache(conn)
+	// Cached results older than a day are of no use: listings revalidate after 6 hours and descriptions expire after 24.
+	if n, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
+		slog.Warn("purging the search cache", "error", err)
+	} else if n > 0 {
+		slog.Info("purged old search cache", "rows", n)
+	}
+
+	logoFetcher := logos.New(conn)
+	if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
+		slog.Warn("purging the logo cache", "error", err)
+	}
+
+	// A long-running app would otherwise keep a day-old cache until the next launch.
+	go func() {
+		for range time.Tick(time.Hour) {
+			if _, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
+				slog.Warn("purging the search cache", "error", err)
+			}
+			if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
+				slog.Warn("purging the logo cache", "error", err)
+			}
+		}
+	}()
+
 	handler := api.New(api.Config{
 		DB:         conn,
-		Greenhouse: greenhouse.NewClient(),
+		Greenhouse: gh,
+		Searcher:   gh,
+		Logos:      logoFetcher,
 		Token:      token,
 		Version:    version,
 	})

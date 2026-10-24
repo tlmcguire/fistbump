@@ -1,5 +1,6 @@
 {
   "name": "fistbump",
+  "productName": "Fistbump",
   "version": "0.1.0",
   "description": "A local-first job application assistant",
   "main": "app/main/main.js",
@@ -7,7 +8,7 @@
   "scripts": {
     "dev": "electron .",
     "build:go": "node scripts/build-go.js",
-    "test": "echo \"no tests yet\""
+    "test": "node --test app/tests/ipc.test.js"
   },
   "devDependencies": {
     "electron": "*",
