@@ -1,78 +1,105 @@
 window.JobParser = {
     mount() {
-      const form = document.getElementById("job-form");
-      const input = document.getElementById("job-url");
-      const loadButton = form.querySelector('button[type="submit"]');
-      const states = ["initial", "loading", "success", "error", "results"];
-      let posting = null;
-
-      //phase 2 setup
-      let retry = null;
       const $ = id => document.getElementById(id);
+      const main = $("main");
+      const form = $("job-form");
+      const input = $("job-url");
+      const loadButton = form.querySelector('button[type="submit"]');
       const searchForm = $("search-form");
       const searchButton = searchForm.querySelector('button[type="submit"]');
       const tabs = {find: $("tab-find"), link: $("tab-link")};
-      const panels = {find: $("panel-find"), link: $("panel-load-listing")};
+      const forms = {find: searchForm, link: form};
+
+      //The results pane and the detail pane each show one state at a time.
+      const RESULT_STATES = ["state-initial", "state-loading", "state-results", "state-error"];
+      const DETAIL_STATES = ["detail-empty", "detail-loading", "state-success", "detail-error"];
+
+      let posting = null;        //the listing in the detail pane
+      let selectedKey = "";      //its board/id, to highlight it in the result list
+      let fromResults = false;   //true while the open listing came from the result list
+      let searchRetry = null;    //what Try again does in the results pane
+      let detailRetry = null;    //and in the detail pane
       let activeTab = "find";
       let results = null;
-      let fromResults = false; //true while a listing opened from the result list is on screen
       let searchedQuery = {};
       const PAGE_SIZE = 20; //results requested per page
       const MAX_PAGES = 250; //the backend's offset limit (5000) divided by PAGE_SIZE
       let pages = new Map(); //page number -> the backend's response for it
       let currentPage = 1;
 
-  
-      //gets each section's state and shows it accordingly.
-      const showState = state => {
-        states.forEach(name => {
-          document.getElementById(`state-${name}`).hidden = name !== state;
-        });
-      };
+      const showState = state => RESULT_STATES.forEach(id => { $(id).hidden = id !== state; });
+      const showDetail = state => DETAIL_STATES.forEach(id => { $(id).hidden = id !== state; });
 
-      //shows the loading section and assigns the message
+      //shows the results pane's loading message
       const showLoading = (message, cancelable = false) => {
         $("loading-message").textContent = message;
         $("cancel-search").hidden = !cancelable;
-        showState("loading");
+        showState("state-loading");
       };
 
-      //locks buttons and tabs during a request
-      const setBusy = busy => {
-        loadButton.disabled = busy;
-        searchButton.disabled = busy;
-        tabs.find.disabled = busy;
+      const showInitial = message => {
+        $("initial-message").textContent = message;
+        showState("state-initial");
       };
 
-      //tab switch
+      //the placeholder in the detail pane, worded for the view it is in
+      const showDetailEmpty = () => {
+        $("detail-empty-message").textContent = activeTab === "find"
+          ? "Choose a job from the list to see the full posting."
+          : "Paste a Greenhouse job link above and press Open.";
+        posting = null;
+        selectedKey = "";
+        markSelected();
+        main.classList.remove("has-detail");
+        showDetail("detail-empty");
+      };
+
+      //a search and a link load run separately, so each only locks its own button
+      const setSearchBusy = busy => { searchButton.disabled = busy; };
+      const setLinkBusy = busy => { loadButton.disabled = busy; };
+
+      //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
-        activeTab = name;
-        for (const key in tabs){
-          tabs[key].setAttribute("aria-selected", key === name);
-          panels[key].hidden=key!==name;
+        if (name !== activeTab) {
+          activeTab = name;
+          showDetailEmpty();
         }
-        if (name==="find" && results){
-          showState("results");
-        } else{
-          let messageText = "";
-          if (name === "find"){
-            messageText = "Enter keywords and press Search to find jobs.";
-          } else {
-            messageText = "Enter a Greenhouse job URL to view the listing.";
+        for (const key in tabs) {
+          tabs[key].setAttribute("aria-selected", String(key === name));
+          forms[key].hidden = key !== name;
+        }
+        main.classList.toggle("view-find", name === "find");
+        main.classList.toggle("view-link", name === "link");
+        if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
+          showInitial("Search by job title, location, company or industry. Results appear here.");
+        }
+        (name === "find" ? $("search-keywords") : input).focus();
+      };
 
-          }
-          $("initial-message").textContent = messageText;
-          showState("initial");
+      //Puts a search error in the results pane.
+      const showError = error => {
+        $("error-message").textContent = error.message || "An unknown error has occurred";
+        showState("state-error");
+      };
+
+      //Puts a listing error in the detail pane.
+      const showDetailError = error => {
+        $("detail-error-message").textContent = error.message || "An unknown error has occurred";
+        main.classList.add("has-detail");
+        showDetail("detail-error");
+      };
+
+      const keyOf = result => `${result.board}/${result.external_id}`;
+
+      //highlights the open listing in the result list, if it is on this page
+      const markSelected = () => {
+        for (const row of $("result-list").children) {
+          const selected = row.dataset.key === selectedKey;
+          row.classList.toggle("selected", selected);
+          row.querySelector(".result-open")?.setAttribute("aria-current", selected ? "true" : "false");
         }
       };
-  
-      //Puts an error message on the page. 
-      const showError = error => {
-        document.getElementById("error-message").textContent =
-          error.message || "An unknown error has occurred";
-        showState("error");
-      };
-  
+
       //only allows https links
       const safeURL = value => {
         try {
@@ -96,61 +123,64 @@ window.JobParser = {
         }
       };
   
-      //fill page with job data
+      //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
         posting = data;
         fromResults = opened;
+        selectedKey = opened ? keyOf(data) : "";
+        markSelected();
         $("back-to-results").hidden = !(opened && results);
-  
-        document.getElementById("job-title").textContent =
-          data.position_title || "Unknown position";
-        document.getElementById("job-company").textContent =
-          data.company_name || "Unknown company";
-        document.getElementById("job-location").textContent =
-          data.location || "Unknown job location";
-        document.getElementById("job-updated").textContent =
-          data.updated_at
-            ? `Last updated: ${new Date(data.updated_at).toLocaleString()}`
-            : "";
-  
-        document.getElementById("job-description").textContent =
-          data.raw_text || "Unknown description";
-  
+
+        $("job-title").textContent = data.position_title || "Unknown position";
+        $("job-company").textContent = data.company_name || "Unknown company";
+        $("job-location").textContent = data.location || "Location not listed";
+        $("job-updated").textContent = data.updated_at ? `Updated ${new Date(data.updated_at).toLocaleDateString()}` : "";
+        $("job-description").textContent = data.raw_text || "No description was given.";
+
         fillLogo($("job-logo"), data.company_name, data.company_url, data.board);
         setLink("job-link", data.listing_url);
         setLink("company-link", data.company_url);
-  
-        showState("success");
+
+        main.classList.add("has-detail");
+        showDetail("state-success");
+        $("detail-pane").scrollTop = 0;
       };
-  
-      //edited 10/22 for new state handling system
+
+      const showDetailLoading = message => {
+        $("detail-loading-message").textContent = message;
+        main.classList.add("has-detail");
+        showDetail("detail-loading");
+      };
+
+      //opens a pasted job link
       const loadPosting = async url => {
-        retry = () => loadPosting(url);
-        setBusy(true);
-        showLoading("Loading job listing...");
-  
+        detailRetry = () => loadPosting(url);
+        setLinkBusy(true);
+        showDetailLoading("Opening the listing...");
         try {
           displayPosting(await window.FistBumpAPI.link(url));
         } catch (error) {
-          showError(error);
+          showDetailError(error);
         } finally {
-          setBusy(false);
+          setLinkBusy(false);
         }
       };
 
-      //refreshes an existing job listing
-      const reloadPosting = async() => {
+      //refreshes the open listing from Greenhouse
+      const reloadPosting = async () => {
         if (!posting) return;
-        retry = reloadPosting;
-        setBusy(true);
-        showLoading("Reloading job listing...")
-          
+        const current = posting;
+        const opened = fromResults;
+        detailRetry = reloadPosting;
+        $("reload-listing").disabled = true;
+        showDetailLoading("Reloading the listing...");
         try {
-          displayPosting(await window.FistBumpAPI.posting(posting.board, posting.external_id), fromResults);
+          displayPosting(await window.FistBumpAPI.posting(current.board, current.external_id), opened);
         } catch (error) {
-          showError(error);
+          posting = current; //keep it, so Try again can reload the same listing
+          showDetailError(error);
         } finally {
-          setBusy(false);
+          $("reload-listing").disabled = false;
         }
       };
 
@@ -272,6 +302,7 @@ window.JobParser = {
       const resultItem = result => {
         const item = document.createElement("li");
         item.className = "result";
+        item.dataset.key = keyOf(result);
         const tile = document.createElement("div");
         tile.className = "logo-tile";
         tile.setAttribute("aria-hidden", "true");
@@ -287,10 +318,11 @@ window.JobParser = {
             el ("span", [
               result.company_name,
               result.location,
-              result.work_mode,
+              //the work mode, unless the location already says it ("Remote", "Hybrid - Boston")
+              !String(result.location || "").toLowerCase().includes(String(result.work_mode || "").toLowerCase()) && result.work_mode,
               payText(result),
               ago(result.updated_at)
-            ].filter(Boolean).join(" . "))
+            ].filter(Boolean).join(" \u00b7 "))
           );
 
           open.addEventListener("click", () => displayPosting(result, true));
@@ -404,6 +436,7 @@ window.JobParser = {
         $("result-empty").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
+        markSelected();
 
         renderPager();
 
@@ -417,12 +450,13 @@ window.JobParser = {
 
       //main function to run the search
       const runSearch = async query => {
-        retry = () => runSearch(query);
+        searchRetry = () => runSearch(query);
+        main.classList.remove("has-detail"); //a narrow window goes back to the list
         const previous = {pages, currentPage, results, searchedQuery};
         const mine = ++searchSeq;
         searchedQuery = query;
         results = null;
-        setBusy(true);
+        setSearchBusy(true);
         const wide = !query.company && !query.categories.length && boardTotal;
         showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards...` : "Searching Greenhouse...", true);
 
@@ -436,18 +470,24 @@ window.JobParser = {
           results = data;
           $("result-sort").value = query.sort || "relevance";
           renderResults(data);
-          showState("results");
+          showState("state-results");
+          $("results-pane").scrollTop = 0;
         } catch (error) {
           if (mine !== searchSeq) return;
           if (error.message === "Search canceled") {
             //put back what was on screen before this search
             ({pages, currentPage, results, searchedQuery} = previous);
-            selectTab("find");
+            if (results) {
+              renderResults(results);
+              showState("state-results");
+            } else {
+              showInitial("Search canceled.");
+            }
             return;
           }
           showError(error);
         } finally {
-          if (mine === searchSeq) setBusy(false);
+          if (mine === searchSeq) setSearchBusy(false);
         }
       };
 
@@ -491,19 +531,21 @@ window.JobParser = {
       const goToPage = async page => {
         if (page < 1 || page > pageCount()) return;
         const mine = ++pageSeq;
-        retry = () => goToPage(page);
+        searchRetry = () => goToPage(page);
         let data = pages.get(page);
 
         if (!data) {
-          setBusy(true);
+          setSearchBusy(true);
           $("pager").querySelectorAll("button").forEach(node => { node.disabled = true; });
           try {
             data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * PAGE_SIZE});
           } catch (error) {
-            if (error.message !== "Search canceled") showError(error);
+            if (mine !== pageSeq) return;
+            if (error.message === "Search canceled") renderPager(); //re-enable the page buttons
+            else showError(error);
             return;
           } finally {
-            setBusy(false);
+            setSearchBusy(false);
           }
           pages.set(page, data);
         }
@@ -518,8 +560,8 @@ window.JobParser = {
         currentPage = page;
         results = {...data, postings: data.postings.filter(p => !shown.has(`${p.board}/${p.external_id}`))};
         renderResults(results);
-        showState("results");
-        $("result-counts").scrollIntoView({block: "start"});
+        showState("state-results");
+        $("results-pane").scrollTop = 0;
       };
 
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
@@ -548,14 +590,15 @@ window.JobParser = {
         };
         for (const id of ["search-pay-min", "search-pay-max"]) {
           if ($(id).value.trim() && !pay(id)) {
-            $("initial-message").textContent = "Enter pay as a yearly amount, such as 90000 or 90k.";
-            showState("initial");
+            showInitial("Enter pay as a yearly amount, such as 90000 or 90k.");
+            setFiltersOpen(true);
+            $(id).focus();
             return;
           }
         }
         if (!query.keywords.length && !query.location && !query.categories.length && !query.company) {
-          $("initial-message").textContent = "Enter keywords, a location, a company or an industry to search.";
-          showState("initial");
+          showInitial("Enter keywords, a location, a company or an industry to search.");
+          $("search-keywords").focus();
           return;
         }
         saveForm();
@@ -575,17 +618,33 @@ window.JobParser = {
         }
       });
 
-      $("back-to-results").addEventListener("click", () => showState("results"));
+      $("back-to-results").addEventListener("click", () => main.classList.remove("has-detail"));
+      $("reload-listing").addEventListener("click", reloadPosting);
+      $("try-again").addEventListener("click", () => searchRetry ? searchRetry() : selectTab("find"));
+      $("detail-try-again").addEventListener("click", () => detailRetry ? detailRetry() : showDetailEmpty());
 
-      document.getElementById("reload-listing").addEventListener("click", reloadPosting);
-  
-      document.getElementById("try-again").addEventListener("click", async () => {
-        if (retry){
-          retry();
-        } else {
-          selectTab(activeTab);
-        }
-      });
+      //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
+      const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
+        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+      const filterInUse = id => {
+        const field = $(id);
+        if (field.type === "checkbox") return field.checked;
+        const value = field.value.trim();
+        return value !== "" && value !== "Any" && value !== "0";
+      };
+      const updateFilterCount = () => {
+        const count = FILTER_IDS.filter(filterInUse).length;
+        $("filters-count").hidden = count === 0;
+        $("filters-count").textContent = String(count);
+        $("filters-toggle").title = count ? `${count} ${count === 1 ? "filter" : "filters"} in use` : "Filters";
+      };
+      const setFiltersOpen = open => {
+        $("filters").hidden = !open;
+        $("filters-toggle").setAttribute("aria-expanded", String(open));
+      };
+      $("filters-toggle").addEventListener("click", () => setFiltersOpen($("filters").hidden));
+      searchForm.addEventListener("input", updateFilterCount);
+      searchForm.addEventListener("change", updateFilterCount);
 
       //industries come from the backend's curated lists; the form still works without them
       let boardTotal = 0; //how many boards an unfiltered search reads, from the categories route
@@ -602,6 +661,7 @@ window.JobParser = {
           //the saved industry could not be chosen until its option existed
           const saved = JSON.parse(localStorage.getItem(FORM_KEY) || "{}")["search-industry"];
           if (saved) $("search-industry").value = saved;
+          updateFilterCount();
         } catch {
           //nothing saved
         }
@@ -611,7 +671,6 @@ window.JobParser = {
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
         "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
       const FORM_KEY = "fistbump.search-form";
-      const OPTION_IDS = ["search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
 
       //the form as an object, and back
       const readFields = () => {
@@ -625,8 +684,7 @@ window.JobParser = {
           if ($(id).type === "checkbox") $(id).checked = fields[id] === true;
           else $(id).value = String(fields[id]);
         }
-        $("more-options").open = OPTION_IDS.some(id =>
-          $(id).type === "checkbox" ? $(id).checked : $(id).value && $(id).value !== "Any" && $(id).value !== "0");
+        updateFilterCount();
       };
 
       const saveForm = () => {
@@ -719,7 +777,8 @@ window.JobParser = {
         if (!$("history").hidden && !$("history").parentElement.contains(event.target)) setHistoryOpen(false);
       });
       document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && !$("history").hidden) {
+        if (event.key === "Escape" && !$("history").hidden && !event.defaultPrevented) {
+          event.preventDefault();
           setHistoryOpen(false);
           $("history-toggle").focus();
         }
@@ -788,6 +847,7 @@ window.JobParser = {
       $("clear-search").addEventListener("click", () => {
         searchForm.reset();
         try { localStorage.removeItem(FORM_KEY); } catch { /* nothing saved to remove */ }
+        updateFilterCount();
         $("search-keywords").focus();
       });
 
@@ -801,6 +861,28 @@ window.JobParser = {
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
       window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});
 
+      //Keyboard shortcuts: Cmd/Ctrl+F to search, Cmd/Ctrl+1 and 2 to switch views, Esc to close the filters.
+      document.addEventListener("keydown", event => {
+        const mod = window.api?.platform === "darwin" ? event.metaKey : event.ctrlKey;
+        if (mod && !event.shiftKey && !event.altKey) {
+          if (event.key === "f") {
+            event.preventDefault();
+            const box = activeTab === "find" ? $("search-keywords") : input;
+            box.focus();
+            box.select();
+          } else if (event.key === "1" || event.key === "2") {
+            event.preventDefault();
+            selectTab(event.key === "1" ? "find" : "link");
+          }
+        } else if (event.key === "Escape" && !event.defaultPrevented && !$("filters").hidden) {
+          setFiltersOpen(false);
+          $("filters-toggle").focus();
+        }
+      });
+      $("tab-find").title = `Find jobs (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}1)`;
+      $("tab-link").title = `Open a link (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}2)`;
+
+      showDetailEmpty();
       selectTab("find");
     }
   };

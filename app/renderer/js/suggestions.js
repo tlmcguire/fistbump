@@ -196,7 +196,8 @@ window.Suggest = (() => {
     };
 
     input.addEventListener("input", open);
-    input.addEventListener("focus", open);
+    // The list opens when the user types or clicks into the box, not when the box is focused by the app.
+    input.addEventListener("mousedown", () => { if (document.activeElement === input) open(); else setTimeout(open); });
     input.addEventListener("blur", close);
     input.addEventListener("keydown", event => {
       if (box.hidden) {
@@ -213,6 +214,7 @@ window.Suggest = (() => {
         event.preventDefault(); // choose the highlighted item instead of submitting the form
         choose(active);
       } else if (event.key === "Escape") {
+        event.preventDefault(); // this Esc is used up: nothing else on the page should also close
         close();
       }
     });

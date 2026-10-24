@@ -1,5 +1,14 @@
 appId: com.fistbump.app
-productName: fistbump
+directories:
+  buildResources: build
+mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
+win:
+  icon: build/icon.ico
+linux:
+  icon: build/icon.png
+productName: Fistbump
 files:
   - app/**/*
 extraResources:
