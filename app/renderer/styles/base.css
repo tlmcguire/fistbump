@@ -487,6 +487,7 @@ label.sort select {
   flex: 1;
   min-width: 0;
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   text-align: left;
@@ -495,13 +496,26 @@ label.sort select {
   padding: 6px 8px;
 }
 
-.history-run span:first-child {
+.history-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.history-label strong,
+.history-label small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.history-run span:last-child {
+.history-label small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.history-run > span:last-child {
   flex: none;
   color: var(--muted);
   font-size: 12px;
