@@ -183,12 +183,12 @@ window.JobParser = {
 
       //fill all results
       const renderResults = data => {
-        $("results-counts").textContent = 
+        $("result-counts").textContent = 
         `${data.matched.toLocaleString()} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
 
-        $("result-errors").hidden=data.errors.length > 0;
+        $("result-errors").hidden = data.errors.length === 0;
         $("result-errors-list").replaceChildren(
           ...data.errors.map(failed => el("li", `${failed.board}: ${failed.message}`))
         );
