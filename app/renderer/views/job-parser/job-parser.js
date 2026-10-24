@@ -159,6 +159,13 @@ window.JobParser = {
         return node;
       };
 
+      //a yearly range such as "$120k-$150k", or "" when the posting lists none
+      const payText = result => {
+        if (!result.pay_max) return "";
+        const k = value => `$${Math.round(value / 1000)}k`;
+        return result.pay_min && result.pay_min !== result.pay_max ? `${k(result.pay_min)}-${k(result.pay_max)}` : k(result.pay_max);
+      };
+
       //get one row of the search results and define it's html
       const resultItem = result => {
         const item = document.createElement("li");
@@ -172,6 +179,7 @@ window.JobParser = {
               result.company_name,
               result.location,
               result.work_mode,
+              payText(result),
               result.updated_at && new Date(result.updated_at).toLocaleDateString()
             ].filter(Boolean).join(" . "))
           );
@@ -222,6 +230,9 @@ window.JobParser = {
             (remote > 0 ? `, plus ${remote.toLocaleString()} remote.` : "."));
         }
 
+        if (data.partial) {
+          notes.push("A pay range needs each description, so only the top matches were checked. Narrow the search to see more.");
+        }
         if (data.boards_searched < data.boards_total) {
           const missed = data.boards_total - data.boards_searched;
           notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
@@ -235,7 +246,7 @@ window.JobParser = {
       //fill all results
       const renderResults = data => {
         $("result-counts").textContent = 
-        `${data.matched.toLocaleString()} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
+        `${data.matched.toLocaleString()}${data.partial ? "+" : ""} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
@@ -347,12 +358,26 @@ window.JobParser = {
       searchForm.addEventListener("submit", event => {
         event.preventDefault();
 
+        const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
+        const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
         const query = {
-          keywords: $("search-keywords").value.split(",").map(word => word.trim()).filter(Boolean),
+          keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value,
+          categories: $("search-industry").value ? [$("search-industry").value] : [],
+          level: $("search-level").value,
+          posted_within: number("search-posted"),
+          exclude: words("search-exclude"),
+          pay_min: number("search-pay-min"),
+          pay_max: number("search-pay-max"),
+          require_pay: $("search-require-pay").checked,
           limit: PAGE_SIZE
         };
+        if (!query.keywords.length && !query.location && !query.categories.length) {
+          $("initial-message").textContent = "Enter keywords, a location or an industry to search.";
+          showState("initial");
+          return;
+        }
         window.Suggest.remember("keywords", query.keywords);
         window.Suggest.remember("location", [query.location]);
         runSearch(query);
@@ -378,6 +403,15 @@ window.JobParser = {
           selectTab(activeTab);
         }
       });
+
+      //industries come from the backend's curated lists; the form still works without them
+      window.FistBumpAPI.categories().then(data => {
+        for (const category of data.categories) {
+          const option = el("option", `${category.parent ? "\u00a0\u00a0" : ""}${category.name} (${category.board_count})`);
+          option.value = category.id;
+          $("search-industry").append(option);
+        }
+      }).catch(() => {});
 
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
       window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});

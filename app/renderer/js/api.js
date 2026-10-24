@@ -30,6 +30,13 @@ window.FistBumpAPI = {
       return this.request(() => window.api.connectors.posting(board, jobId));
     },
 
+    async categories() {
+      if (!window.api?.connectors?.categories) {
+        throw new Error("Connection error");
+      }
+      return this.request(() => window.api.connectors.categories());
+    },
+
     async search(query) {
       if (!window.api?.connectors?.search) {
         throw new Error("Connection error");
