@@ -38,10 +38,10 @@ window.FistBumpAPI = {
     },
 
     //the company's logo as a data URL, or null when its site has none
-    async logo(url) {
+    async logo(url, board) {
       if (!window.api?.connectors?.logo) return null;
       try {
-        return (await this.request(() => window.api.connectors.logo(url))).data_url || null;
+        return (await this.request(() => window.api.connectors.logo(url, board))).data_url || null;
       } catch {
         return null;
       }

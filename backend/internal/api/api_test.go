@@ -601,8 +601,8 @@ type fakeLogos struct {
 	got  string
 }
 
-func (f *fakeLogos) Logo(_ context.Context, site string) (logos.Logo, error) {
-	f.got = site
+func (f *fakeLogos) Logo(_ context.Context, site, board string) (logos.Logo, error) {
+	f.got = site + "|" + board
 	return f.logo, f.err
 }
 
@@ -627,12 +627,19 @@ func TestCompanyLogo(t *testing.T) {
 		ContentType string `json:"content_type"`
 		DataURL     string `json:"data_url"`
 	}
-	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &body) != nil || body.DataURL != "data:image/png;base64,cG5n" || f.got != "https://acme.com/careers" {
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &body) != nil || body.DataURL != "data:image/png;base64,cG5n" || f.got != "https://acme.com/careers|" {
 		t.Errorf("found: status %d, body %q", rec.Code, rec.Body.String())
 	}
 
 	if rec := get(&fakeLogos{err: logos.ErrNotFound}, "url="+url.QueryEscape("https://acme.com")); rec.Code != 404 {
 		t.Errorf("no logo: status %d", rec.Code)
+	}
+	f = &fakeLogos{logo: logos.Logo{ContentType: "image/png", Data: []byte("png")}}
+	if rec := get(f, "board=acme"); rec.Code != 200 || f.got != "|acme" {
+		t.Errorf("by board: status %d, got %q", rec.Code, f.got)
+	}
+	if rec := get(&fakeLogos{}, "board="+url.QueryEscape("Bad Token!")); rec.Code != 422 {
+		t.Errorf("bad board: status %d", rec.Code)
 	}
 	for name, q := range map[string]string{"missing": "", "http": "url=" + url.QueryEscape("http://acme.com"), "no scheme": "url=acme.com"} {
 		if rec := get(&fakeLogos{}, q); rec.Code != 422 {

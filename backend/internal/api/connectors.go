@@ -230,20 +230,25 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// companyLogo handles GET /v1/connectors/greenhouse/logo?url=: the logo from the company's own site as a
-// data URL. A company with no usable logo answers 404, which the app shows as a letter instead.
+// companyLogo handles GET /v1/connectors/greenhouse/logo?url=&board=: the company's logo as a data URL,
+// from its own site and, failing that, its Greenhouse board page. A company with no usable logo answers 404, which the app shows as a letter instead.
 func (s *Server) companyLogo(w http.ResponseWriter, r *http.Request) error {
 	if s.logos == nil {
 		return notImplemented()
 	}
-	site := r.URL.Query().Get("url")
-	if site == "" || len(site) > maxLinkLen {
-		return validationFailed("Enter a company website link")
+	site, board := r.URL.Query().Get("url"), r.URL.Query().Get("board")
+	if (site == "" && board == "") || len(site) > maxLinkLen {
+		return validationFailed("Enter a company website link or a board")
 	}
-	if _, err := logos.Host(site); err != nil {
-		return validationFailed("The company link must be an https link")
+	if site != "" {
+		if _, err := logos.Host(site); err != nil {
+			return validationFailed("The company link must be an https link")
+		}
 	}
-	logo, err := s.logos.Logo(r.Context(), site)
+	if board != "" && !boardPattern.MatchString(board) {
+		return validationFailed("Board token is not valid")
+	}
+	logo, err := s.logos.Logo(r.Context(), site, board)
 	if err != nil {
 		if r.Context().Err() != nil {
 			return err

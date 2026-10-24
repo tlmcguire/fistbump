@@ -56,7 +56,7 @@ func TestPrefersTouchIconAndReturnsDataURL(t *testing.T) {
 		"/":          `<html><head><link rel="icon" href="/small.png" sizes="16x16"><link rel="apple-touch-icon" href="/touch.png"></head></html>`,
 		"/small.png": "", "/touch.png": "",
 	})
-	logo, err := f.Logo(context.Background(), s.srv.URL)
+	logo, err := f.Logo(context.Background(), s.srv.URL, "")
 	if err != nil || logo.ContentType != "image/png" {
 		t.Fatalf("logo = %+v, err %v", logo, err)
 	}
@@ -72,36 +72,36 @@ func mustURL(s string) *url.URL { u, _ := url.Parse(s); return u }
 
 func TestFallsBackToFaviconIco(t *testing.T) {
 	s, f := newSite(t, map[string]string{"/": "<html></html>", "/favicon.ico": string(tinyPNG)})
-	if logo, err := f.Logo(context.Background(), s.srv.URL); err != nil || logo.ContentType != "image/png" {
+	if logo, err := f.Logo(context.Background(), s.srv.URL, ""); err != nil || logo.ContentType != "image/png" {
 		t.Errorf("favicon.ico fallback: %+v, %v", logo, err)
 	}
 }
 
 func TestRejectsNonImages(t *testing.T) {
 	s, f := newSite(t, map[string]string{"/": "<html></html>", "/favicon.png": ""})
-	if _, err := f.Logo(context.Background(), s.srv.URL); !errors.Is(err, ErrNotFound) {
+	if _, err := f.Logo(context.Background(), s.srv.URL, ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("no icon: err %v", err)
 	}
 
 	// An icon link that serves HTML is not a logo, whatever the server says it is.
 	s, f = newSite(t, map[string]string{"/": `<link rel="icon" href="/x.ico">`, "/x.ico": "<html>not an image</html>"})
-	if _, err := f.Logo(context.Background(), s.srv.URL); !errors.Is(err, ErrNotFound) {
+	if _, err := f.Logo(context.Background(), s.srv.URL, ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("html as icon: err %v", err)
 	}
 }
 
 func TestCachesFoundAndMissing(t *testing.T) {
 	s, f := newSite(t, map[string]string{"/": `<link rel="icon" href="/logo.png">`, "/logo.png": ""})
-	f.Logo(context.Background(), s.srv.URL)
+	f.Logo(context.Background(), s.srv.URL, "")
 	hits := s.hits.Load()
-	if _, err := f.Logo(context.Background(), s.srv.URL); err != nil || s.hits.Load() != hits {
+	if _, err := f.Logo(context.Background(), s.srv.URL, ""); err != nil || s.hits.Load() != hits {
 		t.Errorf("second call hit the site again: err %v, hits %d -> %d", err, hits, s.hits.Load())
 	}
 
 	s2, f2 := newSite(t, map[string]string{"/": "<html></html>"})
-	f2.Logo(context.Background(), s2.srv.URL)
+	f2.Logo(context.Background(), s2.srv.URL, "")
 	hits = s2.hits.Load()
-	if _, err := f2.Logo(context.Background(), s2.srv.URL); !errors.Is(err, ErrNotFound) || s2.hits.Load() != hits {
+	if _, err := f2.Logo(context.Background(), s2.srv.URL, ""); !errors.Is(err, ErrNotFound) || s2.hits.Load() != hits {
 		t.Errorf("a missing logo was fetched again: err %v", err)
 	}
 
@@ -116,7 +116,7 @@ func TestCachesFoundAndMissing(t *testing.T) {
 func TestSizeLimit(t *testing.T) {
 	big := strings.Repeat("a", maxImage+10)
 	s, f := newSite(t, map[string]string{"/": `<link rel="icon" href="/big.ico">`, "/big.ico": "\x89PNG\r\n\x1a\n" + big})
-	if _, err := f.Logo(context.Background(), s.srv.URL); !errors.Is(err, ErrNotFound) {
+	if _, err := f.Logo(context.Background(), s.srv.URL, ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("oversize image: err %v", err)
 	}
 }
@@ -148,7 +148,118 @@ func TestPrivateAddressesAreRefused(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(tinyPNG) }))
 	defer srv.Close()
 	f := &Fetcher{HTTP: safeClient(), sem: make(chan struct{}, 1)}
-	if _, err := f.Logo(context.Background(), srv.URL); !errors.Is(err, ErrNotFound) {
+	if _, err := f.Logo(context.Background(), srv.URL, ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("local server: err %v", err)
+	}
+}
+
+func TestSchemaLogoRanksAboveIcons(t *testing.T) {
+	page := []byte(`<link rel="icon" href="/fav.ico"><script type="application/ld+json">{"@type":"Organization","logo":"https:\/\/cdn.acme.com\/logo.png"}</script>`)
+	links := iconLinks(page, mustURL("https://acme.com"))
+	if len(links) != 2 || links[0] != "https://cdn.acme.com/logo.png" {
+		t.Errorf("links = %v", links)
+	}
+	page = []byte(`<script>{"logo":{"@type":"ImageObject","url":"/img/logo.svg"}}</script>`)
+	if links := iconLinks(page, mustURL("https://acme.com")); len(links) != 1 || links[0] != "https://acme.com/img/logo.svg" {
+		t.Errorf("object logo = %v", links)
+	}
+}
+
+func TestHostVariants(t *testing.T) {
+	cases := map[string][]string{
+		"acme.com":         {"acme.com", "www.acme.com"},
+		"www.acme.com":     {"www.acme.com", "acme.com"},
+		"careers.acme.com": {"careers.acme.com", "www.careers.acme.com", "acme.com", "www.acme.com"},
+		"shop.acme.com":    {"shop.acme.com", "www.shop.acme.com"},
+	}
+	for host, want := range cases {
+		if got := hostVariants(host); strings.Join(got, " ") != strings.Join(want, " ") {
+			t.Errorf("hostVariants(%q) = %v, want %v", host, got, want)
+		}
+	}
+}
+
+func TestFollowsHTTPHopsAndWwwRedirects(t *testing.T) {
+	// The home page answers with a redirect chain before the page; the icon is found at the end.
+	var final *httptest.Server
+	hop := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, final.URL+r.URL.Path, http.StatusMovedPermanently)
+	}))
+	defer hop.Close()
+	final = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			w.Write([]byte(`<link rel="icon" href="/i.png">`))
+			return
+		}
+		w.Write(tinyPNG)
+	}))
+	defer final.Close()
+	f := &Fetcher{HTTP: hop.Client(), sem: make(chan struct{}, 1)}
+	// both test servers use the same certificate authority, so one client trusts both
+	f.HTTP = &http.Client{Transport: hop.Client().Transport}
+	if logo, err := f.Logo(context.Background(), hop.URL, ""); err != nil || logo.ContentType != "image/png" {
+		t.Errorf("after redirect: %+v, %v", logo, err)
+	}
+}
+
+func TestBoardPageRedirectGivesTheSite(t *testing.T) {
+	site, f := newSite(t, map[string]string{"/": `<link rel="icon" href="/logo.png">`, "/logo.png": ""})
+	boards := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/acme" {
+			http.Redirect(w, r, site.srv.URL+"/careers", http.StatusFound)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer boards.Close()
+	f.BoardBase = boards.URL
+	logo, err := f.Logo(context.Background(), "", "acme")
+	if err != nil || logo.ContentType != "image/png" {
+		t.Fatalf("board redirect: %+v, %v", logo, err)
+	}
+	// A second call is served from the cache under the board.
+	hits := site.hits.Load()
+	f.Logo(context.Background(), "", "acme")
+	if site.hits.Load() != hits {
+		t.Error("the board result was not cached")
+	}
+	if _, err := f.Logo(context.Background(), "", "nosuchboard"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("unknown board: %v", err)
+	}
+	if _, err := f.Logo(context.Background(), "", "Bad Token"); err == nil {
+		t.Error("a bad board token was accepted")
+	}
+}
+
+func TestBoardPageLogoWhenThereIsNoRedirect(t *testing.T) {
+	var cdn *httptest.Server
+	cdn = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/backblaze" {
+			w.Write([]byte(`<html><head><meta property="og:image" content="/ignored.png"></head><body><img src="` + cdn.URL + `/logo.png" alt="Backblaze Logo"></body></html>`))
+			return
+		}
+		w.Write(tinyPNG)
+	}))
+	defer cdn.Close()
+	f := &Fetcher{HTTP: cdn.Client(), BoardBase: cdn.URL, sem: make(chan struct{}, 1)}
+	if logo, err := f.Logo(context.Background(), "", "backblaze"); err != nil || logo.ContentType != "image/png" {
+		t.Errorf("board page logo: %+v, %v", logo, err)
+	}
+}
+
+func TestSiteFailureFallsBackToTheBoard(t *testing.T) {
+	// The company's own site has no icon, but its board page has a logo.
+	site, f := newSite(t, map[string]string{"/": "<html></html>"})
+	board := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/acme" {
+			w.Write([]byte(`<img src="/l.png" alt="Acme Logo">`))
+			return
+		}
+		w.Write(tinyPNG)
+	}))
+	defer board.Close()
+	f.BoardBase = board.URL
+	if logo, err := f.Logo(context.Background(), site.srv.URL, "acme"); err != nil || logo.ContentType != "image/png" {
+		t.Errorf("fallback: %+v, %v", logo, err)
 	}
 }

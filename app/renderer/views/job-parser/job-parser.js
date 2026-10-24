@@ -116,7 +116,7 @@ window.JobParser = {
         document.getElementById("job-description").textContent =
           data.raw_text || "Unknown description";
   
-        fillLogo($("job-logo"), data.company_name, data.company_url);
+        fillLogo($("job-logo"), data.company_name, data.company_url, data.board);
         setLink("job-link", data.listing_url);
         setLink("company-link", data.company_url);
   
@@ -198,26 +198,28 @@ window.JobParser = {
           job().finally(() => { logoActive--; nextLogo(); });
         }
       };
-      const logoFor = url => {
-        if (!logos.has(url)) {
-          logos.set(url, new Promise(resolve => {
-            logoWaiting.push(() => window.FistBumpAPI.logo(url).then(resolve));
+      //one request per company site, or per board when the posting names no site
+      const logoFor = (url, board) => {
+        const key = url || `board:${board}`;
+        if (!logos.has(key)) {
+          logos.set(key, new Promise(resolve => {
+            logoWaiting.push(() => window.FistBumpAPI.logo(url, board).then(resolve));
             nextLogo();
           }));
         }
-        return logos.get(url);
+        return logos.get(key);
       };
 
       //fills a tile with the company's first letter, then swaps in the logo if there is one
-      const fillLogo = (tile, name, companyUrl) => {
+      const fillLogo = (tile, name, companyUrl, board) => {
         const letter = (name || "?").trim().charAt(0).toUpperCase() || "?";
         let hue = 0;
         for (const ch of name || "") hue = (hue * 31 + ch.charCodeAt(0)) % 360;
         tile.replaceChildren(document.createTextNode(letter));
         tile.style.backgroundColor = `hsl(${hue} 45% 40%)`;
         const url = safeURL(companyUrl);
-        if (!url) return;
-        logoFor(url).then(dataUrl => {
+        if (!url && !board) return;
+        logoFor(url || "", board).then(dataUrl => {
           if (!dataUrl || !tile.isConnected) return;
           const image = document.createElement("img");
           image.alt = "";
@@ -236,7 +238,7 @@ window.JobParser = {
         const tile = document.createElement("div");
         tile.className = "logo-tile";
         tile.setAttribute("aria-hidden", "true");
-        fillLogo(tile, result.company_name, result.company_url);
+        fillLogo(tile, result.company_name, result.company_url, result.board);
         const body = document.createElement("div");
         body.className = "result-body";
         item.append(tile, body);
