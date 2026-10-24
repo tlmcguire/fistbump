@@ -1,229 +1,321 @@
+/* Colors: navy background, translucent panels on it, gold for the main action. */
+:root {
+  --navy: #0A255C;
+  --panel: rgba(255, 255, 255, 0.07);
+  --panel-edge: rgba(255, 255, 255, 0.10);
+  --muted: rgba(255, 255, 255, 0.65);
+  --accent: #CEA615;
+  --accent-hover: #f3cd43;
+  --selected: #3158a0;
+}
 
 body {
-    margin: 0;
-    padding: 24px;
-    font-family: system-ui, sans-serif;
-    background: #0A255C;
-    color: white;
-  }
+  margin: 0;
+  padding: 20px 24px 32px;
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--navy);
+  color: white;
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
+}
 
-  body, * {
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  
-  
-  header {
-    text-align: center;
-    margin-bottom: 32px;
-  }
-  
-  .logo {
-    display: block;
-    max-width: 240px;
-    width: auto;
-    height: auto;
-    margin: 0 auto;
-  }
-  
-  main {
-    max-width: 640px;
-    margin: 0 auto;
-  }
-  
-  form, .state {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 20px;
-    padding: 20px;
-    border: 1px solid #52668e;
-    border-radius: 8px;
-  }
+/* Buttons, labels and chrome are not text to copy; listings and results are (see below). */
+body, * {
+  -webkit-user-select: none;
+  user-select: none;
+}
 
-  .state#state-success{
-    background: white;
-    color: black;
-  }
+#state-success, #state-success *, .result, .result * {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
-  .state#state-success #title{
-    color: #0A255C;
-  }
-  
-  input, button, select {
-    padding: 12px;
-  }
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
 
-  /*button test*/
-  button{
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: white;
-    color:#0A255C;
-    font-family: inherit;
-    font-size: 1rem;
-    font-weight: 600;
+.logo {
+  display: block;
+  max-width: 180px;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+}
 
-    transition:background-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+main {
+  max-width: 720px;
+  margin: 0 auto;
+}
 
-  }
+h1 {
+  margin: 0 0 14px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
 
-  /*changes nondisabled hovered buttons*/
-  button:hover:not(:disabled){
-    background-color: #e0eaff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-    transform: translateY(-1px);
-  }
+h2, h3, p {
+  margin: 0;
+}
 
-  /*translates buttons downwards when clicked*/
-  button:active:not(:disabled){
-    transform: translateY(0);
-    box-shadow: none;
-  }
-  
-  /*for when we add more buttons to populate the ui but dont have a page for them yet.*/
-  button:disabled{
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  
-  .state[hidden] {
-    display: none;
-  }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1rem; color: var(--muted); }
 
-  .tabs{
-    display: flex;
-    gap: 8px;
-    margin-top: 20px;
-  }
+/* A panel holds one form or one state. The first and last children sit flush so the padding is even. */
+form, .state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+}
 
-  .tabs button {
-    flex: 1;
-  }
+.state[hidden] {
+  display: none;
+}
 
-  /*changes tab colors if it is selected*/
-  .tabs [aria-selected="true"]{
-    background: #3158a0;
-    color: white;
-    font-weight: 600;
-  }
-  .tabs [aria-selected="true"]:hover{
-    background: #3158a0;
-    color: white;
-  }
+label {
+  margin-bottom: -4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
 
+input, select {
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: white;
+  color: #111;
+  font: inherit;
+  cursor: text;
+}
 
-  /*Adds specific colors to specific buttons*/
-  #search-form button[type="submit"], #job-form button[type="submit"]{
-    background: #CEA615;
-    color:#0A255C;
-    font-weight: 600;
-  }
-  #search-form button[type="submit"]:hover:not(:disabled), #job-form button[type="submit"]:hover:not(:disabled) {
-    background: #f3cd43;
-  }
+select { cursor: default; }
 
-  /*results ul*/
-.results{
+input::placeholder { color: #8a94a8; }
+
+input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 1px;
+}
+
+/* Buttons are flat, like controls in a desktop app: no lift, no shadow. */
+button {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: default;
+  transition: background-color 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.30);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.45;
+}
+
+/* The tabs are one segmented control. */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+}
+
+.tabs button {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+}
+
+.tabs button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.tabs [aria-selected="true"],
+.tabs [aria-selected="true"]:hover:not(:disabled) {
+  background: var(--selected);
+  color: white;
+}
+
+/* The main action of each form. */
+#search-form button[type="submit"], #job-form button[type="submit"] {
+  margin-top: 4px;
+  background: var(--accent);
+  color: var(--navy);
+}
+
+#search-form button[type="submit"]:hover:not(:disabled), #job-form button[type="submit"]:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+/* An opened listing is a white sheet. */
+.state#state-success {
+  background: white;
+  border-color: transparent;
+  color: #1b2333;
+}
+
+#state-success h2 { color: var(--navy); }
+#state-success h3 { color: #5b6477; }
+
+#state-success a {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+#state-success button {
+  background: #e8edf7;
+  color: var(--navy);
+  align-self: flex-start;
+}
+
+#state-success button:hover:not(:disabled) {
+  background: #d8e0f0;
+}
+
+#job-description {
+  white-space: pre-wrap;
+}
+
+/* Results */
+.results {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-/*one result: a white bubble holding the open button and the company link*/
-.result{
+/* One result: a white card holding the open button and the company link. */
+.result {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: 6px;
+  padding: 12px 14px;
   background: white;
-  color: #0A255C;
-  border-radius: 10px;
+  color: var(--navy);
+  border-radius: 9px;
 }
 
-/*the open button fills the bubble but is not a second box inside it*/
-.result-open{
+/* The open button fills the card but is not a second box inside it. */
+.result-open {
   width: 100%;
-  gap: 4px;
+  gap: 2px;
   padding: 0;
   text-align: left;
   display: flex;
   flex-direction: column;
   background: transparent;
-  box-shadow: none;
+  color: var(--navy);
 }
 
-.result-open:hover:not(:disabled){
-  transform: none;
-  box-shadow: none;
+.result-open:hover:not(:disabled) {
   background: transparent;
   text-decoration: underline;
 }
 
-.result-link{
-  color: #0A255C;
+.result-open span {
+  font-weight: 400;
+  color: #4a5670;
+}
+
+.result-link {
+  color: var(--navy);
+  font-size: 13px;
   font-weight: 600;
   align-self: flex-start;
 }
 
-.result-link:visited{
+.result-link:visited {
   color: #5b3d8f;
 }
 
-.pager{
+.pager {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  margin-top: 16px;
+  gap: 4px;
+  margin-top: 14px;
 }
 
-.pager button{
-  min-width: 40px;
+.pager button {
+  min-width: 34px;
+  padding: 6px 10px;
+}
+
+.pager [aria-current="page"],
+.pager [aria-current="page"]:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--navy);
+}
+
+/* Explains filters that did not apply to the results. */
+#result-note {
   padding: 8px 12px;
+  background: rgba(243, 205, 67, 0.12);
+  border-left: 3px solid var(--accent-hover);
+  border-radius: 4px;
 }
 
-.pager [aria-current="page"]{
-  background: #f3cd43;
+#result-counts {
+  color: var(--muted);
 }
 
-  
-/*explains filters that did not apply to the results*/
-#result-note{
-  border-left: 3px solid #f3cd43;
-  padding: 8px 12px;
+#result-errors summary {
+  cursor: default;
+  color: var(--muted);
 }
 
-/*autocomplete dropdown under the search inputs*/
-.suggestions{
+/* Autocomplete dropdown under the search inputs. */
+.suggestions {
   list-style: none;
-  margin: 4px 0 0;
+  margin: -6px 0 0;
   padding: 4px;
   background: white;
-  color: #0A255C;
-  border-radius: 10px;
-  max-height: 260px;
+  color: var(--navy);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  max-height: 240px;
   overflow-y: auto;
 }
 
-.suggestions li{
+.suggestions li {
   display: flex;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 5px;
 }
 
-.suggestions li.active, .suggestions li:hover{
+.suggestions li.active, .suggestions li:hover {
   background: #e4e9f5;
 }
 
-.suggestions small{
+.suggestions small {
   opacity: 0.6;
 }
