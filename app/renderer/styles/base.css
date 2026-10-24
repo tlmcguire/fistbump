@@ -175,9 +175,22 @@ body {
   color: #5b3d8f;
 }
 
-#load-more{
-  width: 100%;
-  margin-top: 12px;
+.pager{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.pager button{
+  min-width: 40px;
+  padding: 8px 12px;
+}
+
+.pager [aria-current="page"]{
+  background: #f3cd43;
 }
 
   
