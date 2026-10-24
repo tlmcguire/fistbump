@@ -114,12 +114,16 @@
                         <button type="submit">Search</button>
                         <div class="history-menu">
                             <button type="button" id="history-toggle" aria-haspopup="true" aria-expanded="false" disabled title="No recent searches yet">History</button>
-                            <section id="history" class="history" hidden>
+                            <section id="history" class="history" role="dialog" aria-label="Recent searches" hidden>
                                 <div class="history-head">
                                     <h3>Recent searches</h3>
-                                    <button type="button" id="clear-history">Clear history</button>
+                                    <button type="button" id="history-close" class="history-close">Close</button>
                                 </div>
+                                <p class="history-hint">Choose a search to run it again.</p>
                                 <ul id="history-list" class="history-list"></ul>
+                                <div class="history-foot">
+                                    <button type="button" id="clear-history">Clear all history</button>
+                                </div>
                             </section>
                         </div>
                         <button type="button" id="clear-search">Clear</button>
