@@ -190,12 +190,16 @@ window.JobParser = {
       const describeSearch = (data, query) => {
         const place = query.location;
         const mode = query.work_mode;
+        //an older backend build does not send location_matched; skip the location notes rather than guess
+        const located = Number.isInteger(data.location_matched);
         const noun = count => count === 1 ? "posting" : "postings";
         const notes = [];
         let empty = "No postings matched. Check the keywords and try again.";
 
         if (place && mode === "Remote") {
           notes.push(`Showing remote postings only. Remote jobs are not tied to ${place}, so the location was not used.`);
+        } else if (place && !located) {
+          //nothing to say about the location
         } else if (place && data.matched === 0) {
           empty = mode === "Any"
             ? `No postings matched in ${place}, and no remote postings matched either. Try different keywords, a nearby city or a state.`
