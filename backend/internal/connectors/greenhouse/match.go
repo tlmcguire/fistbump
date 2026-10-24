@@ -183,3 +183,50 @@ func Score(titleScore, locationScore float64) float64 {
 }
 
 func round2(f float64) float64 { return float64(int(f*100+0.5)) / 100 }
+
+var (
+	internRe = regexp.MustCompile(`\b(intern|internship|co-op|apprentice)\b`)
+	entryRe  = regexp.MustCompile(`\b(junior|jr|entry|entry-level|graduate|new grad|associate)\b`)
+	seniorRe = regexp.MustCompile(`\b(senior|sr|iii|iv)\b`)
+	leadRe   = regexp.MustCompile(`\b(lead|principal|staff|manager|director|head|vp|vice president|chief)\b`)
+)
+
+// Level reads the experience level from a title. A title that says none is Mid.
+func Level(title string) string {
+	t := strings.ToLower(nonWordKeepDash.ReplaceAllString(title, " "))
+	switch {
+	case internRe.MatchString(t):
+		return connectors.LevelIntern
+	case leadRe.MatchString(t):
+		return connectors.LevelLead
+	case seniorRe.MatchString(t):
+		return connectors.LevelSenior
+	case entryRe.MatchString(t):
+		return connectors.LevelEntry
+	}
+	return connectors.LevelMid
+}
+
+var nonWordKeepDash = regexp.MustCompile(`[^A-Za-z0-9 -]+`)
+
+// LevelOK applies the requested level.
+func LevelOK(level, want string) bool {
+	return want == "" || want == connectors.LevelAny || level == want
+}
+
+// ExcludeOK is false when the title contains any of the words, as whole words or phrases.
+func ExcludeOK(title string, words []string) bool {
+	t := " " + strings.Join(titleFields(title), " ") + " "
+	for _, w := range words {
+		f := titleFields(w)
+		if len(f) > 0 && strings.Contains(t, " "+strings.Join(f, " ")+" ") {
+			return false
+		}
+	}
+	return true
+}
+
+// titleFields lower-cases and splits text into words without folding synonyms or dropping any.
+func titleFields(s string) []string {
+	return strings.Fields(nonWord.ReplaceAllString(strings.ToLower(s), " "))
+}

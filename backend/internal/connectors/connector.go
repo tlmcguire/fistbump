@@ -19,6 +19,8 @@ type Posting struct {
 	RawText       string    `json:"raw_text"`
 	// Search results only. Phase 1's routes leave these zero, and omitempty keeps them out of the response.
 	WorkMode   string  `json:"work_mode,omitempty"`
+	PayMin     int     `json:"pay_min,omitempty"` // yearly USD read from the description; 0 when it lists none
+	PayMax     int     `json:"pay_max,omitempty"`
 	Score      float64 `json:"score,omitempty"`
 	TitleScore float64 `json:"title_score,omitempty"`
 	SkillScore float64 `json:"skill_score,omitempty"`
@@ -46,6 +48,16 @@ const (
 	WorkModeOnSite = "On-site"
 )
 
+// Experience levels a search can ask for, read from the posting title.
+const (
+	LevelAny    = "Any"
+	LevelIntern = "Intern"
+	LevelEntry  = "Entry"
+	LevelMid    = "Mid"
+	LevelSenior = "Senior"
+	LevelLead   = "Lead"
+)
+
 // Query is a job search request. The API layer fills the defaults before calling Validate.
 type Query struct {
 	Keywords   []string `json:"keywords"`
@@ -56,7 +68,18 @@ type Query struct {
 	Company    string   `json:"company"`
 	Limit      int      `json:"limit"`
 	Offset     int      `json:"offset"` // where in the ranked list this page starts; 0 for the first page
+
+	// Preferences. The zero value of each means no preference.
+	Level        string   `json:"level"`         // Intern, Entry, Mid, Senior, Lead or Any; judged from the title
+	PostedWithin int      `json:"posted_within"` // days since the posting was updated; 0 for any
+	Exclude      []string `json:"exclude"`       // words that rule a posting out when its title has them
+	PayMin       int      `json:"pay_min"`       // yearly USD; a posting must pay at least this much at its top
+	PayMax       int      `json:"pay_max"`       // yearly USD; a posting must start at or under this
+	RequirePay   bool     `json:"require_pay"`   // drop postings that list no pay when a pay range is set
 }
+
+// HasPay reports whether the query filters on pay, which needs each posting's description.
+func (q Query) HasPay() bool { return q.PayMin > 0 || q.PayMax > 0 }
 
 // Validate checks the fields that do not depend on a connector. The messages are shown to the user.
 // Board tokens and categories belong to the connector, so its API layer checks them.
@@ -66,6 +89,23 @@ func (q Query) Validate() error {
 	}
 	if q.Offset < 0 || q.Offset > MaxOffset {
 		return errors.New("Offset must be between 0 and 5000")
+	}
+	switch q.Level {
+	case "", LevelAny, LevelIntern, LevelEntry, LevelMid, LevelSenior, LevelLead:
+	default:
+		return errors.New("Level must be Intern, Entry, Mid, Senior, Lead or Any")
+	}
+	if q.PostedWithin < 0 || q.PostedWithin > 365 {
+		return errors.New("Posted within must be between 0 and 365 days")
+	}
+	if q.PayMin < 0 || q.PayMax < 0 || q.PayMin > 10_000_000 || q.PayMax > 10_000_000 {
+		return errors.New("Pay must be a yearly amount between 0 and 10,000,000")
+	}
+	if q.PayMax > 0 && q.PayMin > q.PayMax {
+		return errors.New("Minimum pay cannot be above maximum pay")
+	}
+	if len(q.Exclude) > 10 {
+		return errors.New("Too many words to exclude")
 	}
 	switch q.WorkMode {
 	case WorkModeAny, WorkModeRemote, WorkModeHybrid, WorkModeOnSite:
@@ -87,6 +127,7 @@ type SearchResult struct {
 	Matched         int           `json:"matched"`          // postings that passed the filters
 	HasMore         bool          `json:"has_more"`         // more ranked postings follow this page
 	NextOffset      int           `json:"next_offset"`      // the offset that asks for the next page
+	Partial         bool          `json:"partial"`          // matched is a lower bound: a pay filter stopped scanning early
 	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
 	BoardsSearched  int           `json:"boards_searched"`  // boards listed without error
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list
