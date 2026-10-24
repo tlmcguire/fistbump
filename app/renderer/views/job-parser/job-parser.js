@@ -7,8 +7,8 @@ window.JobParser = {
       const loadButton = form.querySelector('button[type="submit"]');
       const searchForm = $("search-form");
       const searchButton = searchForm.querySelector('button[type="submit"]');
-      const tabs = {find: $("tab-find"), link: $("tab-link")};
-      const forms = {find: searchForm, link: form};
+      const tabs = {find: $("tab-find"), link: $("tab-link"), settings: $("tab-settings")};
+      const forms = {find: searchForm, link: form, settings: $("settings-title")};
 
       //The results pane and the detail pane each show one state at a time.
       const RESULT_STATES = ["state-initial", "state-loading", "state-results", "state-error"];
@@ -20,10 +20,12 @@ window.JobParser = {
       let searchRetry = null;    //what Try again does in the results pane
       let detailRetry = null;    //and in the detail pane
       let activeTab = "find";
+      let lastJobsTab = "find"; //the last of Find jobs and Open a link that was shown
       let results = null;
       let searchedQuery = {};
-      const PAGE_SIZE = 20; //results requested per page
-      const MAX_PAGES = 250; //the backend's offset limit (5000) divided by PAGE_SIZE
+      const MAX_OFFSET = 5000; //the backend's offset limit
+      //results a page: the setting at the time of the search, so changing it does not break paging
+      const pageSize = () => searchedQuery.limit || window.Prefs.get("pageSize");
       let pages = new Map(); //page number -> the backend's response for it
       let currentPage = 1;
 
@@ -44,9 +46,9 @@ window.JobParser = {
 
       //the placeholder in the detail pane, worded for the view it is in
       const showDetailEmpty = () => {
-        $("detail-empty-message").textContent = activeTab === "find"
-          ? "Choose a job from the list to see the full posting."
-          : "Paste a Greenhouse job link above and press Open.";
+        $("detail-empty-message").textContent = activeTab === "link"
+          ? "Paste a Greenhouse job link above and press Open."
+          : "Choose a job from the list to see the full posting.";
         posting = null;
         selectedKey = "";
         markSelected();
@@ -60,8 +62,10 @@ window.JobParser = {
 
       //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
-        if (name !== activeTab) {
-          activeTab = name;
+        //Find jobs and Open a link each show their own listing; Settings leaves the open one as it was.
+        activeTab = name;
+        if (name !== "settings" && name !== lastJobsTab) {
+          lastJobsTab = name;
           showDetailEmpty();
         }
         for (const key in tabs) {
@@ -70,6 +74,14 @@ window.JobParser = {
         }
         main.classList.toggle("view-find", name === "find");
         main.classList.toggle("view-link", name === "link");
+        main.classList.toggle("view-settings", name === "settings");
+        $("settings-pane").hidden = name !== "settings";
+        setFiltersOpen(false);
+        setHistoryOpen(false);
+        if (name === "settings") {
+          window.Settings?.refresh();
+          return;
+        }
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
           showInitial("Search by job title, location, company or industry. Results appear here.");
         }
@@ -263,6 +275,7 @@ window.JobParser = {
       //Asks for the logos of some results and waits for them, but never longer than budget milliseconds, so a
       //slow site cannot hold the page back. Tiles for logos that are not in time fade in when they arrive.
       const preloadLogos = (postings, budget = 700) => {
+        if (!window.Prefs.get("showLogos")) return Promise.resolve();
         const waits = [...new Set(postings.map(result => {
           const url = safeURL(result.company_url);
           return url || result.board ? logoEntry(url || "", result.board) : null;
@@ -287,7 +300,7 @@ window.JobParser = {
           }
         };
         const url = safeURL(companyUrl);
-        if (!url && !board) return paint(null);
+        if ((!url && !board) || !window.Prefs.get("showLogos")) return paint(null);
         const entry = logoEntry(url || "", board);
         if (entry.done) return paint(entry);
         tile.classList.add("pending"); //blank until the answer arrives
@@ -492,7 +505,7 @@ window.JobParser = {
       };
 
       //Pages are numbered from 1. A page is fetched once, then kept until the next search.
-      const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / PAGE_SIZE), MAX_PAGES);
+      const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / pageSize()), Math.floor(MAX_OFFSET / pageSize()) + 1);
 
       //page numbers to show: the first, the last and the ones around the current page, with gaps as null
       const pageWindow = (current, total) => {
@@ -538,7 +551,7 @@ window.JobParser = {
           setSearchBusy(true);
           $("pager").querySelectorAll("button").forEach(node => { node.disabled = true; });
           try {
-            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * PAGE_SIZE});
+            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * pageSize()});
           } catch (error) {
             if (mine !== pageSeq) return;
             if (error.message === "Search canceled") renderPager(); //re-enable the page buttons
@@ -567,6 +580,7 @@ window.JobParser = {
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
       tabs.find.addEventListener("click", () => selectTab("find"));
       tabs.link.addEventListener("click", () => selectTab("link"));
+      tabs.settings.addEventListener("click", () => selectTab("settings"));
 
       searchForm.addEventListener("submit", event => {
         event.preventDefault();
@@ -586,7 +600,7 @@ window.JobParser = {
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
           sort: $("result-sort").value,
-          limit: PAGE_SIZE
+          limit: window.Prefs.get("pageSize")
         };
         for (const id of ["search-pay-min", "search-pay-max"]) {
           if ($(id).value.trim() && !pay(id)) {
@@ -834,11 +848,7 @@ window.JobParser = {
       };
 
       //Clear history also forgets the recent entries each box suggests
-      $("clear-history").addEventListener("click", () => {
-        storeHistory([]);
-        window.Suggest.clearRecent();
-        renderHistory();
-      });
+      $("clear-history").addEventListener("click", () => window.JobParser.clearHistory());
 
       restoreForm();
       renderHistory();
@@ -870,6 +880,9 @@ window.JobParser = {
             const box = activeTab === "find" ? $("search-keywords") : input;
             box.focus();
             box.select();
+          } else if (event.key === ",") {
+            event.preventDefault();
+            selectTab("settings");
           } else if (event.key === "1" || event.key === "2") {
             event.preventDefault();
             selectTab(event.key === "1" ? "find" : "link");
@@ -881,6 +894,24 @@ window.JobParser = {
       });
       $("tab-find").title = `Find jobs (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}1)`;
       $("tab-link").title = `Open a link (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}2)`;
+
+      //What the settings page needs from this view.
+      window.JobParser.selectTab = selectTab;
+      window.JobParser.historyCount = () => loadHistory().length;
+      window.JobParser.clearHistory = () => {
+        storeHistory([]);
+        window.Suggest.clearRecent();
+        renderHistory();
+      };
+      window.JobParser.resetForm = () => $("clear-search").click();
+      window.api?.app?.onOpenSettings?.(() => selectTab("settings"));
+
+      //A new page size or sort applies from the next search; the sort select starts at the saved default.
+      $("result-sort").value = window.Prefs.get("defaultSort");
+      window.Prefs.onChange(key => {
+        if (key === "defaultSort" && !results) $("result-sort").value = window.Prefs.get("defaultSort");
+        if (key === "showLogos" && results) renderResults(results);
+      });
 
       showDetailEmpty();
       selectTab("find");
