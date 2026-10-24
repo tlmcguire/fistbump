@@ -319,3 +319,40 @@ button:disabled {
 .suggestions small {
   opacity: 0.6;
 }
+
+/* Extra search options sit behind a disclosure so the common search stays short. */
+details summary {
+  cursor: default;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pair {
+  display: flex;
+  gap: 8px;
+}
+
+.pair input {
+  flex: 1;
+  min-width: 0;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 400;
+  color: white;
+}
+
+.result-pay {
+  font-weight: 600;
+}

@@ -1,5 +1,5 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
-const CHANNELS = ['connectors:link', 'connectors:posting'];
+const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories'];
 
 const bad = (message) => ({ error: { code: 'validation_failed', message, details: null } });
 const seg = (s) => encodeURIComponent(String(s));
@@ -22,6 +22,8 @@ function register(ipcMain, backend) {
     if (!query || typeof query !== 'object' || Array.isArray(query)) return bad('Invalid search');
     return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query});
   });
+
+  ipcMain.handle('connectors:categories', () => backend.call('GET', '/v1/connectors/greenhouse/categories'));
 
   ipcMain.handle('connectors:list', () => backend.call('GET', '/v1/connectors'));
 }

@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('api', {
     //new in phase 2
     search: (query) => ipcRenderer.invoke('connectors:search', query),
     list: () => ipcRenderer.invoke('connectors:list'),
+    categories: () => ipcRenderer.invoke('connectors:categories'),
   },
 });

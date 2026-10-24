@@ -76,6 +76,47 @@
                         <option>On-site</option>
 
                     </select>
+
+                    <label for="search-industry">Industry</label>
+                    <select id="search-industry">
+                        <option value="">Any industry</option>
+                    </select>
+
+                    <details id="more-options">
+                        <summary>More options</summary>
+
+                        <div class="options">
+                            <label for="search-level">Experience level</label>
+                            <select id="search-level">
+                                <option>Any</option>
+                                <option>Intern</option>
+                                <option>Entry</option>
+                                <option>Mid</option>
+                                <option>Senior</option>
+                                <option>Lead</option>
+                            </select>
+
+                            <label for="search-posted">Posted within</label>
+                            <select id="search-posted">
+                                <option value="0">Any time</option>
+                                <option value="1">Last day</option>
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+
+                            <label for="search-pay-min">Yearly pay (USD)</label>
+                            <div class="pair">
+                                <input id="search-pay-min" type="number" min="0" step="1000" placeholder="Minimum">
+                                <input id="search-pay-max" type="number" min="0" step="1000" placeholder="Maximum">
+                            </div>
+                            <label class="check"><input id="search-require-pay" type="checkbox"> Only postings that list pay</label>
+
+                            <label for="search-exclude">Leave out titles with</label>
+                            <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
+                        </div>
+                    </details>
+
                     <button type="submit">Search</button>
                 </form>
             </div>
