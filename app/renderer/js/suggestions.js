@@ -88,6 +88,17 @@ window.Suggest = (() => {
     }
   };
 
+  // clearRecent forgets the recent entries of every box, so they stop appearing as suggestions.
+  const clearRecent = () => {
+    for (const key of ["keywords", "location", "company"]) {
+      try {
+        localStorage.removeItem(`fistbump.recent.${key}`);
+      } catch {
+        // storage can be unavailable; there is nothing to clear then
+      }
+    }
+  };
+
   // matches ranks recent entries first, then names that start with the term, then names where every
   // typed word starts some word of the name ("junior dev" finds "Junior Developer"), then names that
   // contain the term.
@@ -207,5 +218,5 @@ window.Suggest = (() => {
     });
   };
 
-  return {attach, remember, matches, TITLES: ALL_TITLES, PLACES};
+  return {attach, remember, clearRecent, matches, TITLES: ALL_TITLES, PLACES};
 })();

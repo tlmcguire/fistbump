@@ -685,8 +685,10 @@ window.JobParser = {
         renderHistory();
       };
 
+      //Clear history also forgets the recent entries each box suggests
       $("clear-history").addEventListener("click", () => {
         storeHistory([]);
+        window.Suggest.clearRecent();
         renderHistory();
       });
 
