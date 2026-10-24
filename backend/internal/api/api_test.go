@@ -16,6 +16,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
+	"github.com/tlmcguire/fistbump/backend/internal/logos"
 )
 
 // fakeSearcher stands in for Greenhouse search. It records the query and boards it was given.
@@ -591,5 +592,51 @@ func TestGreenhouseFetchByCompany(t *testing.T) {
 	rec = postFetch(t, newSearchServer(t, &fakeSearcher{}), `{"query":{"company":"!!!"}}`)
 	if rec.Code != 200 {
 		t.Errorf("junk company: status %d", rec.Code)
+	}
+}
+
+type fakeLogos struct {
+	logo logos.Logo
+	err  error
+	got  string
+}
+
+func (f *fakeLogos) Logo(_ context.Context, site string) (logos.Logo, error) {
+	f.got = site
+	return f.logo, f.err
+}
+
+func TestCompanyLogo(t *testing.T) {
+	get := func(f *fakeLogos, query string) *httptest.ResponseRecorder {
+		conn, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { conn.Close() })
+		s := New(Config{DB: conn, Greenhouse: &fakeFetcher{}, Logos: f, Token: testToken, Version: "test"})
+		req := httptest.NewRequest("GET", "/v1/connectors/greenhouse/logo?"+query, nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, req)
+		return rec
+	}
+
+	f := &fakeLogos{logo: logos.Logo{ContentType: "image/png", Data: []byte("png")}}
+	rec := get(f, "url="+url.QueryEscape("https://acme.com/careers"))
+	var body struct {
+		ContentType string `json:"content_type"`
+		DataURL     string `json:"data_url"`
+	}
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &body) != nil || body.DataURL != "data:image/png;base64,cG5n" || f.got != "https://acme.com/careers" {
+		t.Errorf("found: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	if rec := get(&fakeLogos{err: logos.ErrNotFound}, "url="+url.QueryEscape("https://acme.com")); rec.Code != 404 {
+		t.Errorf("no logo: status %d", rec.Code)
+	}
+	for name, q := range map[string]string{"missing": "", "http": "url=" + url.QueryEscape("http://acme.com"), "no scheme": "url=acme.com"} {
+		if rec := get(&fakeLogos{}, q); rec.Code != 422 {
+			t.Errorf("%s: status %d, want 422", name, rec.Code)
+		}
 	}
 }

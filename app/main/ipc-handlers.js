@@ -1,5 +1,5 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
-const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search'];
+const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo'];
 
 const bad = (message) => ({ error: { code: 'validation_failed', message, details: null } });
 const seg = (s) => encodeURIComponent(String(s));
@@ -35,6 +35,12 @@ function register(ipcMain, backend) {
     activeSearch?.abort();
     activeSearch = null;
     return { ok: true };
+  });
+
+  // The company's logo as a data URL, read by the backend from the company's own site.
+  ipcMain.handle('connectors:logo', (_event, url) => {
+    if (typeof url !== 'string' || !url) return bad('Enter a company website link');
+    return backend.call('GET', `/v1/connectors/greenhouse/logo?url=${encodeURIComponent(url)}`);
   });
 
   ipcMain.handle('connectors:categories', () => backend.call('GET', '/v1/connectors/greenhouse/categories'));

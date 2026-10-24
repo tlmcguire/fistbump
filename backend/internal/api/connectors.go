@@ -10,6 +10,7 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
+	"github.com/tlmcguire/fistbump/backend/internal/logos"
 )
 
 // Board tokens are lowercase letters, digits, - and _. Job ids are digits. The length caps sit well
@@ -226,6 +227,33 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		result.Errors = []connectors.SearchError{}
 	}
 	writeJSON(w, http.StatusOK, result)
+	return nil
+}
+
+// companyLogo handles GET /v1/connectors/greenhouse/logo?url=: the logo from the company's own site as a
+// data URL. A company with no usable logo answers 404, which the app shows as a letter instead.
+func (s *Server) companyLogo(w http.ResponseWriter, r *http.Request) error {
+	if s.logos == nil {
+		return notImplemented()
+	}
+	site := r.URL.Query().Get("url")
+	if site == "" || len(site) > maxLinkLen {
+		return validationFailed("Enter a company website link")
+	}
+	if _, err := logos.Host(site); err != nil {
+		return validationFailed("The company link must be an https link")
+	}
+	logo, err := s.logos.Logo(r.Context(), site)
+	if err != nil {
+		if r.Context().Err() != nil {
+			return err
+		}
+		return notFound("No logo found for this company.")
+	}
+	writeJSON(w, http.StatusOK, struct {
+		ContentType string `json:"content_type"`
+		DataURL     string `json:"data_url"`
+	}{logo.ContentType, logo.DataURL()})
 	return nil
 }
 
