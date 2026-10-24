@@ -413,7 +413,6 @@ func TestGreenhouseFetchRejectsBadRequests(t *testing.T) {
 		{"unknown category", `{"query":{` + kw + `,"categories":["nope"]}}`, 422, "validation_failed"},
 		{"bad board token", `{"query":{` + kw + `,"boards":["Acme.com"]}}`, 422, "validation_failed"},
 		{"too many boards", `{"query":{` + kw + `,"boards":[` + strings.TrimSuffix(strings.Repeat(`"a",`, maxBoards+1), ",") + `]}}`, 422, "validation_failed"},
-		{"no boards match", `{"query":{` + kw + `,"company":"zzzz no such company"}}`, 422, "validation_failed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := &fakeSearcher{}
@@ -555,5 +554,42 @@ func TestCategoryList(t *testing.T) {
 	}
 	if c := got.Categories[0]; c.ID == "" || c.Name == "" || c.BoardCount == 0 {
 		t.Errorf("first category = %+v", c)
+	}
+}
+
+func TestGreenhouseFetchByCompany(t *testing.T) {
+	// A curated company searches its own board and is named in the result.
+	f := &fakeSearcher{}
+	rec := postFetch(t, newSearchServer(t, f), `{"query":{"company":"stripe"}}`)
+	var got connectors.SearchResult
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &got) != nil {
+		t.Fatalf("status %d, body %q", rec.Code, rec.Body.String())
+	}
+	if len(f.gotBoards) != 1 || f.gotBoards[0] != "stripe" || len(got.Companies) != 1 || got.Companies[0] != "Stripe" {
+		t.Errorf("boards %v, companies %v", f.gotBoards, got.Companies)
+	}
+
+	// A company that is not curated is tried as a board token, and used if Greenhouse has it.
+	f = &fakeSearcher{result: connectors.SearchResult{BoardsSearched: 1}}
+	rec = postFetch(t, newSearchServer(t, f), `{"query":{"company":"Zed Labs"}}`)
+	got = connectors.SearchResult{}
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	if rec.Code != 200 || len(f.gotBoards) != 2 || f.gotBoards[0] != "zedlabs" || f.gotBoards[1] != "zed-labs" || len(got.Companies) != 2 {
+		t.Errorf("guess: status %d, boards %v, companies %v", rec.Code, f.gotBoards, got.Companies)
+	}
+
+	// If no such board exists the answer is an empty result with no companies, not an error.
+	f = &fakeSearcher{err: greenhouse.ErrorUpstream}
+	rec = postFetch(t, newSearchServer(t, f), `{"query":{"company":"Zed Labs"}}`)
+	got = connectors.SearchResult{Companies: []string{"x"}}
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	if rec.Code != 200 || len(got.Companies) != 0 || len(got.Postings) != 0 {
+		t.Errorf("unknown company: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	// A name with nothing usable in it is also reported as not found.
+	rec = postFetch(t, newSearchServer(t, &fakeSearcher{}), `{"query":{"company":"!!!"}}`)
+	if rec.Code != 200 {
+		t.Errorf("junk company: status %d", rec.Code)
 	}
 }
