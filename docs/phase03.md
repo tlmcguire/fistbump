@@ -140,15 +140,15 @@ Not detected, and documented as limits: text covered by an image, text hidden by
 
 Progress:
 
-- [ ] 1. `models.go`
-- [ ] 2. `store.go`
-- [ ] 3. `profile.go`, `experience.go`, `education.go`
-- [ ] 4. `resume.go` (store)
-- [ ] 5. `settings.go` (store)
-- [ ] 6. `render.go`
-- [ ] 7. `decode.go`, `respond.go` additions
-- [ ] 8. `resume.go` (api)
-- [ ] 9. `settings.go` (api)
+- [x] 1. `models.go`
+- [x] 2. `store.go`
+- [x] 3. `profile.go`, `experience.go`, `education.go`
+- [x] 4. `resume.go` (store)
+- [x] 5. `settings.go` (store)
+- [x] 6. `render.go`
+- [x] 7. `decode.go`, `respond.go` additions
+- [x] 8. `resume.go` (api)
+- [x] 9. `settings.go` (api)
 - [ ] 10. `ipc-handlers.js`, `preload.js`
 - [ ] 11. `app.js` router
 - [ ] 12. `resume-builder.js`
@@ -159,7 +159,7 @@ Progress:
 - [ ] 17. `resumeparse/parse.go`
 - [ ] 18. `resume_import.go` (api)
 - [ ] 19. Import in Electron and the Resume view
-- [ ] Tests and tooling
+- [ ] Tests and tooling (backend tests and `seed.sql` done; fixtures for import and the Electron and renderer tests remain)
 
 ### Backend
 

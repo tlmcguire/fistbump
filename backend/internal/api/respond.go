@@ -52,6 +52,21 @@ func validationFailed(msg string) *apiError {
 	}
 }
 
+// validationError is a 422 that names the JSON field at fault, so the form can mark it.
+func validationError(field, msg string) *apiError {
+	e := validationFailed(msg)
+	e.Details = map[string]any{"field": field}
+	return e
+}
+
+func conflict(msg string) *apiError {
+	return &apiError{
+		Status:  http.StatusConflict,
+		Code:    "conflict",
+		Message: msg,
+	}
+}
+
 func notImplemented() *apiError {
 	return &apiError{
 		Status:  http.StatusNotImplemented,
