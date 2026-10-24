@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	xhtml "golang.org/x/net/html"
@@ -88,7 +89,10 @@ func ParseLink(rawString string) (board, jobID string, err error) {
 type Client struct {
 	BaseURL string
 	HTTP    *http.Client
-	MaxBody int64 // response size cap in bytes; 0 means the default
+	MaxBody int64  // response size cap in bytes; 0 means the default
+	Cache   *Cache // listing and description cache; nil means a memory-only one
+
+	cacheOnce sync.Once
 }
 
 // NewClient returns a client for the live API with a request timeout.
@@ -488,13 +492,7 @@ func toPosting(board, jobID string, raw rawJob) (connectors.Posting, error) {
 	title := clean(raw.Title)
 	location := clean(raw.Location.Name)
 
-	company := CompanyFor(board)
-	if company == "" {
-		company = clean(raw.CompanyName)
-	}
-	if company == "" {
-		company = board
-	}
+	company := companyName(board, clean(raw.CompanyName))
 
 	return connectors.Posting{
 		ExternalID:    jobID,

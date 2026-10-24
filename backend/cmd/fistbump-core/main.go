@@ -56,9 +56,17 @@ func run() error {
 	}
 	defer conn.Close()
 
+	cacheDir := filepath.Join(*dataDir, "cache", "greenhouse")
+	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
+		return fmt.Errorf("creating cache directory: %w", err)
+	}
+	gh := greenhouse.NewClient()
+	gh.Cache = greenhouse.NewCache(cacheDir)
+
 	handler := api.New(api.Config{
 		DB:         conn,
-		Greenhouse: greenhouse.NewClient(),
+		Greenhouse: gh,
+		Searcher:   gh,
 		Token:      token,
 		Version:    version,
 	})
