@@ -43,7 +43,7 @@ As written in [api.md](api.md).
 { "freed_bytes": 36700160, "removed": { "old_jobs": 12, "trash": 2, "files": 517 }, "dry_run": true }
 ```
 
-- **Targets.** `cache`: phase 2's Greenhouse cache (memory and disk). `partial_downloads`: `.part` files with no running download. `old_jobs`: jobs with no application, neither archived nor trashed, whose `searched_at` is older than `older_than_days` (default `jobs.retention_days`). `trash`: trashed jobs older than `jobs.trash_days`. `unused_models`: installed models other than `ai.selected_model`.
+- **Targets.** `cache`: phase 2's Greenhouse cache (memory and the two `greenhouse_*_cache` tables). `partial_downloads`: `.part` files with no running download. `old_jobs`: jobs with no application, neither archived nor trashed, whose `searched_at` is older than `older_than_days` (default `jobs.retention_days`). `trash`: trashed jobs older than `jobs.trash_days`. `unused_models`: installed models other than `ai.selected_model`.
 - Deleting jobs cascades to revisions, suggestions and tailored resumes. Jobs with applications are never removed (`RESTRICT`).
 - After removing jobs, run `VACUUM` so the database file shrinks.
 - **Automatic cleanup** at startup: `old_jobs` and `trash` only, logged to stderr. Files are removed only when the user asks.
@@ -133,7 +133,7 @@ References: [electron-builder configuration](https://www.electron.build/configur
 **Goal:** the storage report and cleanup.
 
 - `gc.go`: `OldJobs(days, dryRun)`, `TrashedJobs(days, dryRun)` return the count and delete when not a dry run; `Vacuum()`.
-- `storage.go`: sizes by walking `<data-dir>` (database files including `-wal` and `-shm`, `models/`, `cache/`, `*.part`), job count, and cleanup over the targets above. Call phase 2's `Cache.Clear()` for `cache`.
+- `storage.go`: sizes by walking `<data-dir>` (database files including `-wal` and `-shm`, `models/`, `cache/`, `*.part`), job count, and cleanup over the targets above. Call phase 2's `Cache.Clear()` for `cache`; its size comes from the two cache tables, not from `cache/`.
 - Run `old_jobs` and `trash` cleanup at startup from `main.go`.
 
 #### 6. `app/renderer/views/settings/settings.js` (storage section)
