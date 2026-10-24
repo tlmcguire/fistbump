@@ -101,6 +101,7 @@
             <!--load listing and search results section states-->
             <section id="state-results" class="state" hidden>
                 <p id="result-counts"></p>
+                <p id="result-note" hidden></p>
                 <p id="result-empty">Search yielded no results. Check search parameters and try again.</p>
                 <ul id="result-list" class="results"></ul>
                 <details id="result-errors" hidden>
@@ -110,6 +111,7 @@
             </section>
 
             <section id="state-success" class="state" hidden>
+                <button id="back-to-results" type="button" hidden>&larr; Back to results</button>
                 <h2 id ="job-title" title="title"></h2>
                 <p id="job-company"></p>
                 <p id="job-location"></p>

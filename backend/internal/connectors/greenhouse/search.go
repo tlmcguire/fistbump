@@ -73,6 +73,9 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				if p.TitleScore < minTitleScore {
 					continue
 				}
+				if len(terms) > 0 && locationMatches(p.Location, terms) {
+					result.LocationMatched++
+				}
 				p.Score = Score(p.TitleScore, LocationScore(p.Location, p.WorkMode, terms))
 				candidates = append(candidates, p)
 			}

@@ -83,6 +83,19 @@ func TestLocation(t *testing.T) {
 	if !LocationOK("Remote - US", connectors.WorkModeRemote, terms, "Any") {
 		t.Error("remote passes a location filter")
 	}
+	for _, loc := range []string{"Remote - Australia", "Remote - Ireland", "Remote, Poland", "Remote - UK", "Remote Canada"} {
+		if LocationOK(loc, connectors.WorkModeRemote, terms, "Any") {
+			t.Errorf("%q should not pass for a US location", loc)
+		}
+	}
+	for _, loc := range []string{"Remote", "Remote - United States", "Remote - US", "US-Remote", "Raleigh, North Carolina, USA; Remote, East Coast USA", "Costa Mesa, California, United States; Remote"} {
+		if !LocationOK(loc, connectors.WorkModeRemote, terms, "Any") {
+			t.Errorf("%q should pass for a US location", loc)
+		}
+	}
+	if !LocationOK("Remote - Australia", connectors.WorkModeRemote, locationTerms("Sydney"), "Any") {
+		t.Error("foreign remote is not filtered when the user is not in the US")
+	}
 	if LocationOK("Remote - US", connectors.WorkModeRemote, terms, "On-site") {
 		t.Error("remote does not pass when On-site is requested")
 	}

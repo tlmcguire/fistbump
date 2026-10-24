@@ -125,16 +125,45 @@ func locationMatches(location string, terms []string) bool {
 	return false
 }
 
-// LocationOK applies the location filter. Remote postings pass unless the request is On-site;
-// an empty location passes everything.
+// LocationOK applies the location filter. A remote posting passes unless the request is On-site,
+// or unless it names a country the user is not in (so "Remote - Australia" is dropped for a US
+// location). An empty location passes everything.
 func LocationOK(location, mode string, terms []string, wantMode string) bool {
 	if len(terms) == 0 {
 		return true
 	}
-	if mode == connectors.WorkModeRemote && wantMode != connectors.WorkModeOnSite {
+	if locationMatches(location, terms) {
 		return true
 	}
-	return locationMatches(location, terms)
+	return mode == connectors.WorkModeRemote && wantMode != connectors.WorkModeOnSite && !abroad(location, terms)
+}
+
+var (
+	usStates = regexp.MustCompile(`^(al|ak|az|ar|ca|co|ct|de|dc|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy)$`)
+	usNames  = regexp.MustCompile(`\b(united states|usa|u\.s\.|america|alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\b`)
+	usWord   = regexp.MustCompile(`\b(us|usa|united states|u\.s\.|north america|americas)\b|\bus-`)
+	// Countries and regions that mark a remote posting as not for a US-based user.
+	foreignRe = regexp.MustCompile(`\b(australia|new zealand|canada|mexico|brazil|argentina|colombia|costa rica|chile|peru|uk|united kingdom|ireland|england|scotland|germany|france|spain|portugal|italy|netherlands|belgium|poland|sweden|norway|denmark|finland|switzerland|austria|czech|romania|bulgaria|hungary|ukraine|turkey|israel|egypt|nigeria|kenya|south africa|india|pakistan|bangladesh|sri lanka|china|japan|korea|singapore|malaysia|indonesia|philippines|thailand|vietnam|taiwan|hong kong|uae|dubai|emea|apac|latam|europe|eu|asia|africa|oceania)\b`)
+)
+
+// inUS reports whether the requested location terms put the user in the United States.
+func inUS(terms []string) bool {
+	for _, t := range terms {
+		if usStates.MatchString(t) || usNames.MatchString(t) || usWord.MatchString(t) {
+			return true
+		}
+	}
+	return false
+}
+
+// abroad reports whether a posting location names a foreign country and nothing that says US, for a
+// user in the US. Other users are not filtered: the posting passes.
+func abroad(location string, terms []string) bool {
+	if !inUS(terms) {
+		return false
+	}
+	l := strings.ToLower(location)
+	return foreignRe.MatchString(l) && !usWord.MatchString(l) && !usNames.MatchString(l)
 }
 
 // LocationScore is 1 for a location match, 0.5 for remote and 0 otherwise.
