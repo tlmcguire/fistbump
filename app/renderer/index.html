@@ -77,6 +77,9 @@
 
                     </select>
 
+                    <label for="search-company">Company</label>
+                    <input id="search-company" type="text" placeholder="e.g. Stripe (optional)">
+
                     <label for="search-industry">Industry</label>
                     <select id="search-industry">
                         <option value="">Any industry</option>
@@ -107,10 +110,10 @@
 
                             <label for="search-pay-min">Yearly pay (USD)</label>
                             <div class="pair">
-                                <input id="search-pay-min" type="number" min="0" step="1000" placeholder="Minimum">
-                                <input id="search-pay-max" type="number" min="0" step="1000" placeholder="Maximum">
+                                <input id="search-pay-min" type="text" inputmode="numeric" placeholder="Minimum, e.g. 90k">
+                                <input id="search-pay-max" type="text" inputmode="numeric" placeholder="Maximum (optional)">
                             </div>
-                            <label class="check"><input id="search-require-pay" type="checkbox"> Only postings that list pay</label>
+                            <label class="check"><input id="search-require-pay" type="checkbox"> Hide postings that do not list pay</label>
 
                             <label for="search-exclude">Leave out titles with</label>
                             <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
