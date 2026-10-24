@@ -145,6 +145,10 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	q.Keywords = keywords
+	// With nothing to search by, fall back to the user's target positions, then their latest job title.
+	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" {
+		q.Keywords = s.defaultKeywords(r.Context())
+	}
 	exclude := make([]string, 0, len(q.Exclude))
 	for _, word := range q.Exclude {
 		if word = strings.TrimSpace(word); word != "" {

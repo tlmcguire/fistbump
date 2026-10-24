@@ -116,6 +116,10 @@ The master resume is `profile` plus `experiences` plus `education`. One profile 
 | `PUT /v1/resume/education/{id}` | Education fields (full replace) | Education | UPDATE `education` |
 | `DELETE /v1/resume/education/{id}` | none | `204` | DELETE `education` |
 
+Dates sent as `YYYY-MM` are stored as `YYYY-MM-01`; blank strings are stored as `null`. A `PUT` to an experience or education entry keeps its `sort_order` unless the body sends one. Reordering is two `PUT`s.
+
+When `POST /v1/connectors/greenhouse/fetch` has no keywords and nothing else to search by (location, industry, boards, company), it uses `profile.target_positions`, else the title of the latest experience (a current role first, then the newest start date). `keywords_used` reports what was searched.
+
 Validation: `end_date` must not precede `start_date`. `gpa` is between 0 and 5. Skills are trimmed, lower-cased for matching, and de-duplicated. Experience `description` and `impact` are the text AI suggestions target.
 
 ## Resume import and generation (`resume_import.go`)
