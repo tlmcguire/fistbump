@@ -16,7 +16,7 @@ window.JobParser = {
       let activeTab = "find";
       let results = null;
       let fromResults = false; //true while a listing opened from the result list is on screen
-      let searchedLocation = "";
+      let searchedQuery = {};
 
   
       //gets each section's state and shows it accordingly.
@@ -185,14 +185,54 @@ window.JobParser = {
           return item;
       };
 
+      //explains what the search could and could not find, so a filter that did not apply is never silent.
+      //Postings outside the requested place only get through as remote, so matched - location_matched is the remote count.
+      const describeSearch = (data, query) => {
+        const place = query.location;
+        const mode = query.work_mode;
+        const noun = count => count === 1 ? "posting" : "postings";
+        const notes = [];
+        let empty = "No postings matched. Check the keywords and try again.";
+
+        if (place && mode === "Remote") {
+          notes.push(`Showing remote postings only. Remote jobs are not tied to ${place}, so the location was not used.`);
+        } else if (place && data.matched === 0) {
+          empty = mode === "Any"
+            ? `No postings matched in ${place}, and no remote postings matched either. Try different keywords, a nearby city or a state.`
+            : `No ${mode.toLowerCase()} postings matched in ${place}. Try Any or Remote, a nearby city or a state.`;
+        } else if (place && data.location_matched === 0) {
+          const remote = data.matched.toLocaleString();
+          notes.push(mode === "Any"
+            ? `No postings were found in ${place}. These ${remote} ${noun(data.matched)} are remote, so they may be open to people there, but none are listed for ${place}.`
+            : `No ${mode.toLowerCase()} postings were found in ${place}. Only remote postings were found, and they are shown below.`);
+        } else if (place) {
+          const local = data.location_matched.toLocaleString();
+          const remote = data.matched - data.location_matched;
+          notes.push(`${local} ${noun(data.location_matched)} in ${place}` +
+            (remote > 0 ? `, plus ${remote.toLocaleString()} remote.` : "."));
+        }
+
+        if (data.postings.length > 0 && data.matched > data.postings.length) {
+          notes.push(`Showing the best ${data.postings.length.toLocaleString()} of ${data.matched.toLocaleString()} matches.`);
+        }
+        if (data.boards_searched < data.boards_total) {
+          const missed = data.boards_total - data.boards_searched;
+          notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
+        }
+        if (data.postings.length < Math.min(data.matched, 1) ) {
+          notes.push("Descriptions could not be loaded for the top matches, so none are shown. Try again.");
+        }
+        return {note: notes.join(" "), empty};
+      };
+
       //fill all results
       const renderResults = data => {
         $("result-counts").textContent = 
         `${data.matched.toLocaleString()} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
-        //say so when nothing is in the requested location, so remote results are not mistaken for local ones
-        const note = $("result-note");
-        note.hidden = !(searchedLocation && data.matched > 0 && data.location_matched === 0);
-        note.textContent = `No postings found in ${searchedLocation}. Showing remote postings instead.`;
+        const {note, empty} = describeSearch(data, searchedQuery);
+        $("result-note").hidden = !note;
+        $("result-note").textContent = note;
+        $("result-empty").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
 
@@ -205,7 +245,7 @@ window.JobParser = {
       //main function to run the search
       const runSearch = async query => {
         retry = () => runSearch(query);
-        searchedLocation = query.location;
+        searchedQuery = query;
         results = null;
         setBusy(true);
         showLoading("Searching Greenhouse...");

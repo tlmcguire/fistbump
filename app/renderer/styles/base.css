@@ -145,3 +145,8 @@ body {
 }
 
   
+/*explains filters that did not apply to the results*/
+#result-note{
+  border-left: 3px solid #f3cd43;
+  padding: 8px 12px;
+}
