@@ -444,3 +444,50 @@ func TestSearchFoldsDuplicatesAndSorts(t *testing.T) {
 		t.Errorf("newest first = %q", r.Postings[0].PositionTitle)
 	}
 }
+
+func TestSearchReportsExactMatches(t *testing.T) {
+	s := &searchServer{boards: map[string][]fakeJob{
+		"acme": {
+			{1, "Senior Software Engineer", "Remote", "2026-10-03T00:00:00Z"},
+			{2, "Software Engineer", "Remote", "2026-10-02T00:00:00Z"},
+			{3, "Junior Software Engineer", "Remote", "2026-10-01T00:00:00Z"},
+		},
+		"zeta": {{4, "Staff Software Engineer", "Remote", "2026-10-05T00:00:00Z"}},
+	}}
+	c := s.client(t)
+	boards := []string{"acme", "zeta"}
+
+	// A level in the keywords puts that level first and counts it as the exact match.
+	r, _ := c.Search(context.Background(), query("junior software engineer"), boards)
+	if r.LevelWanted != "Entry" || r.ExactMatched != 1 || r.Matched != 4 || r.Postings[0].PositionTitle != "Junior Software Engineer" || !r.Postings[0].Exact {
+		t.Errorf("junior: level %q, exact %d, matched %d, first %q", r.LevelWanted, r.ExactMatched, r.Matched, r.Postings[0].PositionTitle)
+	}
+
+	// With no posting of that level there is no exact match, and the others still show.
+	delete(s.boards, "zeta")
+	s.boards["acme"] = s.boards["acme"][:2]
+	c.Cache.Clear() // the first search cached the old listing
+	r, _ = c.Search(context.Background(), query("junior software engineer"), []string{"acme"})
+	if r.ExactMatched != 0 || r.LevelWanted != "Entry" || len(r.Postings) != 2 {
+		t.Errorf("no junior: exact %d, level %q, postings %d", r.ExactMatched, r.LevelWanted, len(r.Postings))
+	}
+
+	// Keywords with no level treat every posting of that title as exact, whatever its seniority.
+	r, _ = c.Search(context.Background(), query("software engineer"), []string{"acme"})
+	if r.LevelWanted != "" || r.ExactMatched != 2 {
+		t.Errorf("plain: level %q, exact %d", r.LevelWanted, r.ExactMatched)
+	}
+
+	// A close but not exact title is counted as a close match only.
+	r, _ = c.Search(context.Background(), query("software developer team"), []string{"acme"})
+	if r.ExactMatched != 0 {
+		t.Errorf("partial title counted as exact: %d", r.ExactMatched)
+	}
+
+	// Without keywords nothing is exact.
+	q := connectors.Query{WorkMode: "Any", Limit: 20, Location: "Remote"}
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.ExactMatched != 0 {
+		t.Errorf("no keywords: exact %d", r.ExactMatched)
+	}
+}

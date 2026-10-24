@@ -37,6 +37,20 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		WorkModeUsed: q.WorkMode,
 	}
 	terms := locationTerms(q.Location)
+	// A level in the keywords ("junior developer") is a preference: the title match ignores seniority
+	// words, so other levels pass, but exact-level postings rank first and the result says which it is.
+	implied := map[string]bool{}
+	if q.Level == "" || q.Level == connectors.LevelAny {
+		for _, k := range q.Keywords {
+			if l := Level(k); l != connectors.LevelMid {
+				implied[l] = true
+				result.LevelWanted = l
+			}
+		}
+	}
+	if len(implied) != 1 {
+		result.LevelWanted = "" // keywords naming several levels have no single level to report
+	}
 	oldest := c.cache().now().AddDate(0, 0, -q.PostedWithin)
 
 	var (
@@ -87,6 +101,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				if p.TitleScore < minTitleScore {
 					continue
 				}
+				p.Exact = len(q.Keywords) > 0 && p.TitleScore == 1 && (len(implied) == 0 || implied[Level(p.PositionTitle)])
 				p.Score = Score(p.TitleScore, LocationScore(p.Location, p.WorkMode, terms))
 				candidates = append(candidates, p)
 			}
@@ -100,6 +115,9 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	newest := q.Sort == connectors.SortNewest
 	sort.SliceStable(candidates, func(i, j int) bool {
 		a, b := candidates[i], candidates[j]
+		if !newest && a.Exact != b.Exact {
+			return a.Exact
+		}
 		if !newest && a.Score != b.Score {
 			return a.Score > b.Score
 		}
@@ -127,6 +145,12 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 			if locationMatches(p.Location, terms) {
 				result.LocationMatched++
 			}
+		}
+	}
+
+	for _, p := range candidates {
+		if p.Exact {
+			result.ExactMatched++
 		}
 	}
 
@@ -165,6 +189,12 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 			scanned += len(chunk)
 		}
 		result.Matched = len(passing)
+		result.ExactMatched = 0
+		for _, p := range passing {
+			if p.Exact {
+				result.ExactMatched++
+			}
+		}
 		result.Partial = scanned < len(ranked)
 		start := min(q.Offset, len(passing))
 		end := min(start+q.Limit, len(passing))

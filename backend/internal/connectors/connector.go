@@ -21,6 +21,7 @@ type Posting struct {
 	WorkMode   string  `json:"work_mode,omitempty"`
 	PayMin     int     `json:"pay_min,omitempty"` // yearly USD read from the description; 0 when it lists none
 	PayMax     int     `json:"pay_max,omitempty"`
+	Exact      bool    `json:"exact,omitempty"`      // the title matches every keyword word and, if the keywords name a level, that level
 	Duplicates int     `json:"duplicates,omitempty"` // other postings of the same title at this company, folded into this one
 	Score      float64 `json:"score,omitempty"`
 	TitleScore float64 `json:"title_score,omitempty"`
@@ -140,6 +141,8 @@ type SearchResult struct {
 	Matched         int           `json:"matched"`          // postings that passed the filters
 	HasMore         bool          `json:"has_more"`         // more ranked postings follow this page
 	NextOffset      int           `json:"next_offset"`      // the offset that asks for the next page
+	ExactMatched    int           `json:"exact_matched"`    // matched postings whose title is an exact match, when keywords were given
+	LevelWanted     string        `json:"level_wanted"`     // a level the keywords name ("Entry" for "junior developer"), else empty
 	Partial         bool          `json:"partial"`          // matched is a lower bound: a pay filter stopped scanning early
 	Companies       []string      `json:"companies"`        // companies searched when the query named one, else empty
 	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
