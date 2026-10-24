@@ -27,6 +27,7 @@ type searchServer struct {
 	boards    map[string][]fakeJob
 	broken    map[string]bool
 	badDetail map[string]bool
+	pay       map[string]string // board/id -> text added to the description
 	listHits  atomic.Int32
 	slow      chan struct{}
 }
@@ -68,7 +69,7 @@ func (s *searchServer) client(t *testing.T) *Client {
 		}
 		for _, j := range jobs {
 			if fmt.Sprint(j.id) == id {
-				fmt.Fprintf(w, `{"id":%d,"title":%q,"location":{"name":%q},"updated_at":%q,"content":"&lt;p&gt;About %s&lt;/p&gt;","absolute_url":"https://job-boards.greenhouse.io/%s/jobs/%d"}`, j.id, j.title, j.location, j.updated, j.title, board, j.id)
+				fmt.Fprintf(w, `{"id":%d,"title":%q,"location":{"name":%q},"updated_at":%q,"content":"&lt;p&gt;About %s. %s&lt;/p&gt;","absolute_url":"https://job-boards.greenhouse.io/%s/jobs/%d"}`, j.id, j.title, j.location, j.updated, j.title, s.pay[board+"/"+id], board, j.id)
 				return
 			}
 		}
@@ -117,7 +118,7 @@ func TestSearchRanksAndFills(t *testing.T) {
 			t.Errorf("posting not filled: %+v", p)
 		}
 	}
-	if r.Postings[0].RawText != "About Data Analyst" {
+	if r.Postings[0].RawText != "About Data Analyst." {
 		t.Errorf("raw_text = %q", r.Postings[0].RawText)
 	}
 	// Stable: the same input gives the same order.
@@ -297,5 +298,120 @@ func TestSearchContextCancel(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("search did not stop after cancel")
+	}
+}
+
+func TestSearchWithoutKeywords(t *testing.T) {
+	s := &searchServer{boards: map[string][]fakeJob{"acme": {
+		{1, "Chef", "Charleston, SC", "2026-10-01T00:00:00Z"},
+		{2, "Data Analyst", "Denver, CO", "2026-10-02T00:00:00Z"},
+		{3, "Accountant", "Charleston, SC", "2026-10-03T00:00:00Z"},
+	}}}
+	c := s.client(t)
+	q := connectors.Query{WorkMode: "Any", Limit: 20, Location: "Charleston, SC"}
+	r, err := c.Search(context.Background(), q, []string{"acme"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(titles(r), "|"); got != "acme:Accountant|acme:Chef" {
+		t.Errorf("location only = %v", got)
+	}
+	q.Location = ""
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 3 || r.Postings[0].PositionTitle != "Accountant" {
+		t.Errorf("industry only = %v", titles(r))
+	}
+}
+
+func TestSearchPreferences(t *testing.T) {
+	now := time.Now().UTC()
+	day := func(n int) string { return now.AddDate(0, 0, -n).Format(time.RFC3339) }
+	s := &searchServer{boards: map[string][]fakeJob{"acme": {
+		{1, "Data Analyst", "Remote", day(1)},
+		{2, "Senior Data Analyst", "Remote", day(2)},
+		{3, "Data Analyst Intern", "Remote", day(3)},
+		{4, "Sales Data Analyst", "Remote", day(4)},
+		{5, "Data Analyst", "Remote", day(60)},
+	}}}
+	c := s.client(t)
+	run := func(mod func(*connectors.Query)) string {
+		q := query("data analyst")
+		mod(&q)
+		r, err := c.Search(context.Background(), q, []string{"acme"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, p := range r.Postings {
+			ids = append(ids, p.ExternalID)
+		}
+		return strings.Join(ids, ",")
+	}
+	if got := run(func(q *connectors.Query) { q.Level = "Senior" }); got != "2" {
+		t.Errorf("senior = %q", got)
+	}
+	if got := run(func(q *connectors.Query) { q.Level = "Intern" }); got != "3" {
+		t.Errorf("intern = %q", got)
+	}
+	if got := run(func(q *connectors.Query) { q.Exclude = []string{"sales", "intern"} }); got != "1,2,5" {
+		t.Errorf("exclude = %q", got)
+	}
+	if got := run(func(q *connectors.Query) { q.PostedWithin = 7 }); got != "1,2,3,4" {
+		t.Errorf("posted within 7 days = %q", got)
+	}
+}
+
+func TestSearchPayRange(t *testing.T) {
+	now := time.Now().UTC()
+	var jobs []fakeJob
+	pay := map[string]string{}
+	for i := 1; i <= 10; i++ {
+		jobs = append(jobs, fakeJob{i, "Data Analyst", "Remote", now.AddDate(0, 0, -i).Format(time.RFC3339)})
+	}
+	pay["acme/1"] = "$80,000 - $90,000"
+	pay["acme/2"] = "$130,000 - $150,000"
+	pay["acme/4"] = "$120,000 - $160,000"
+	pay["acme/6"] = "$200,000 - $220,000"
+	s := &searchServer{boards: map[string][]fakeJob{"acme": jobs}, pay: pay}
+	c := s.client(t)
+
+	q := query("data analyst")
+	q.PayMin, q.PayMax = 125000, 180000
+	r, err := c.Search(context.Background(), q, []string{"acme"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 2 and 4 fit; 3, 5 and 7 to 10 list no pay and are kept; 1 and 6 are out of range.
+	if r.Matched != 8 || len(r.Postings) != 8 || r.Partial {
+		t.Errorf("matched %d, postings %d, partial %v", r.Matched, len(r.Postings), r.Partial)
+	}
+	for _, p := range r.Postings {
+		if p.ExternalID == "1" || p.ExternalID == "6" {
+			t.Errorf("posting %s is outside the range", p.ExternalID)
+		}
+	}
+	for _, p := range r.Postings {
+		if p.ExternalID == "2" && (p.PayMin != 130000 || p.PayMax != 150000) {
+			t.Errorf("pay on posting 2 = %d to %d", p.PayMin, p.PayMax)
+		}
+	}
+
+	q.RequirePay = true
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.Matched != 2 {
+		t.Errorf("require pay: matched %d, want 2", r.Matched)
+	}
+
+	// Paging walks the filtered list.
+	q.RequirePay = false
+	q.Limit = 3
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 3 || !r.HasMore || r.NextOffset != 3 {
+		t.Errorf("page 1: %d postings, more %v, next %d", len(r.Postings), r.HasMore, r.NextOffset)
+	}
+	q.Offset = 3
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 3 || !r.HasMore {
+		t.Errorf("page 2: %d postings, more %v", len(r.Postings), r.HasMore)
 	}
 }

@@ -89,6 +89,26 @@ func chooseBoards(q connectors.Query) []string {
 	return out
 }
 
+// categoryList handles GET /v1/connectors/greenhouse/categories: the curated industries, so the app can offer them.
+func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
+	type category struct {
+		ID         string  `json:"id"`
+		Name       string  `json:"name"`
+		Parent     *string `json:"parent"`
+		BoardCount int     `json:"board_count"`
+	}
+	out := []category{}
+	for _, c := range greenhouse.Categories() {
+		out = append(out, category{c.ID, c.Name, c.Parent, greenhouse.BoardCount(c.ID)})
+	}
+	writeJSON(w, http.StatusOK, struct {
+		Categories []category `json:"categories"`
+		VerifiedAt string     `json:"verified_at"`
+		Notice     string     `json:"notice"`
+	}{out, greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
+	return nil
+}
+
 // greenhouseFetch searches the curated boards and returns ranked postings with their descriptions.
 // It answers 422 for an invalid query and 502 only when every board failed.
 func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
@@ -132,8 +152,9 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if err := q.Validate(); err != nil {
 		return validationFailed(err.Error())
 	}
-	if len(q.Keywords) == 0 {
-		return validationFailed("Enter keywords to search")
+	// Keywords are optional when the search is narrowed some other way: a place, an industry or boards.
+	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" {
+		return validationFailed("Enter keywords, a location or an industry to search")
 	}
 	if len(q.Keywords) > maxKeywords {
 		return validationFailed("Too many keywords")

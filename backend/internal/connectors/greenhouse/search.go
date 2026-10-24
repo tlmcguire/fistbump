@@ -16,6 +16,8 @@ const (
 	listConcurrency  = 24
 	fetchConcurrency = 8
 	perCompanyCap    = 3
+	payScanCap       = 300 // descriptions read at most when a pay range is set
+	payChunk         = 40
 )
 
 // Search lists the given boards, filters and ranks their postings, and fetches full data for the
@@ -33,6 +35,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		WorkModeUsed: q.WorkMode,
 	}
 	terms := locationTerms(q.Location)
+	oldest := c.cache().now().AddDate(0, 0, -q.PostedWithin)
 
 	var (
 		mu         sync.Mutex
@@ -69,7 +72,16 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				if !ModeOK(p.WorkMode, q.WorkMode) || !LocationOK(p.Location, p.WorkMode, terms, q.WorkMode) {
 					continue
 				}
-				p.TitleScore = TitleScore(p.PositionTitle, q.Keywords)
+				if !LevelOK(Level(p.PositionTitle), q.Level) || !ExcludeOK(p.PositionTitle, q.Exclude) {
+					continue
+				}
+				if q.PostedWithin > 0 && !p.UpdatedAt.IsZero() && p.UpdatedAt.Before(oldest) {
+					continue
+				}
+				p.TitleScore = 1 // with no keywords, any title fits
+				if len(q.Keywords) > 0 {
+					p.TitleScore = TitleScore(p.PositionTitle, q.Keywords)
+				}
 				if p.TitleScore < minTitleScore {
 					continue
 				}
@@ -120,22 +132,69 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	}
 	ranked := append(first, later...)
 
-	start := min(q.Offset, len(ranked))
-	end := min(start+q.Limit, len(ranked))
-	top := ranked[start:end]
-	result.HasMore = end < len(ranked)
-	result.NextOffset = end
+	fill := func(posts []connectors.Posting) []*connectors.Posting {
+		return c.fill(ctx, posts, &mu, failed)
+	}
 
-	// Full data for the top postings. A failed detail drops the posting and lists its board.
-	full := make([]*connectors.Posting, len(top))
-	fsem := make(chan struct{}, fetchConcurrency)
-	for i, p := range top {
+	var page []connectors.Posting
+	if q.HasPay() {
+		// A pay range is in the description, so descriptions are read in rank order, a chunk at a
+		// time, until the page and one posting more are found or the scan cap is reached.
+		var passing []connectors.Posting
+		scanned := 0
+		for scanned < len(ranked) && scanned < payScanCap && len(passing) < q.Offset+q.Limit+1 && ctx.Err() == nil {
+			chunk := ranked[scanned:min(scanned+payChunk, len(ranked), payScanCap)]
+			for _, p := range fill(chunk) {
+				if p != nil && PayOK(p.PayMin, p.PayMax, q.PayMin, q.PayMax, q.RequirePay) {
+					passing = append(passing, *p)
+				}
+			}
+			scanned += len(chunk)
+		}
+		result.Matched = len(passing)
+		result.Partial = scanned < len(ranked)
+		start := min(q.Offset, len(passing))
+		end := min(start+q.Limit, len(passing))
+		page = passing[start:end]
+		result.HasMore = end < len(passing) || result.Partial
+		result.NextOffset = end
+		result.LocationMatched = min(result.LocationMatched, len(passing)) // an upper bound, shown only as a count
+	} else {
+		start := min(q.Offset, len(ranked))
+		end := min(start+q.Limit, len(ranked))
+		for _, p := range fill(ranked[start:end]) {
+			if p != nil {
+				page = append(page, *p)
+			}
+		}
+		result.HasMore = end < len(ranked)
+		result.NextOffset = end
+	}
+	result.Postings = append(result.Postings, page...)
+
+	for board := range failed {
+		result.Errors = append(result.Errors, connectors.SearchError{Board: board, Message: failed[board]})
+	}
+	sort.Slice(result.Errors, func(i, j int) bool { return result.Errors[i].Board < result.Errors[j].Board })
+	if result.BoardsSearched == 0 && len(boards) > 0 {
+		return result, fmt.Errorf("%w: every board failed", ErrorUpstream)
+	}
+	return result, nil
+}
+
+// fill fetches the description of each posting, at most fetchConcurrency at a time, and returns the
+// postings in the same order with nil where a fetch failed. A failure lists the posting's board.
+func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.Mutex, failed map[string]string) []*connectors.Posting {
+	full := make([]*connectors.Posting, len(posts))
+	sem := make(chan struct{}, fetchConcurrency)
+	var wg sync.WaitGroup
+	for i, p := range posts {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			select {
-			case fsem <- struct{}{}:
-				defer func() { <-fsem }()
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
 			case <-ctx.Done():
 				mu.Lock()
 				failed[p.Board] = "timed out"
@@ -155,24 +214,14 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 			if detail.CompanyName != "" {
 				p.CompanyName = detail.CompanyName
 			}
+			if low, high, ok := ParsePay(detail.RawText); ok {
+				p.PayMin, p.PayMax = low, high
+			}
 			full[i] = &p
 		}()
 	}
 	wg.Wait()
-	for _, p := range full {
-		if p != nil {
-			result.Postings = append(result.Postings, *p)
-		}
-	}
-
-	for board := range failed {
-		result.Errors = append(result.Errors, connectors.SearchError{Board: board, Message: failed[board]})
-	}
-	sort.Slice(result.Errors, func(i, j int) bool { return result.Errors[i].Board < result.Errors[j].Board })
-	if result.BoardsSearched == 0 && len(boards) > 0 {
-		return result, fmt.Errorf("%w: every board failed", ErrorUpstream)
-	}
-	return result, nil
+	return full
 }
 
 // fetchCached is FetchJob through the 24 hour description cache.

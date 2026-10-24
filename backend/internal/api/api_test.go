@@ -395,11 +395,14 @@ func TestGreenhouseFetchRejectsBadRequests(t *testing.T) {
 		{"empty body", ``, 400, "bad_request"},
 		{"two JSON values", `{"query":{` + kw + `}} {}`, 400, "bad_request"},
 		{"unknown top-level field", `{"query":{` + kw + `},"x":1}`, 422, "validation_failed"},
-		{"unknown query field", `{"query":{` + kw + `,"pay_min":1}}`, 422, "validation_failed"},
+		{"unknown query field", `{"query":{` + kw + `,"salary":1}}`, 422, "validation_failed"},
+		{"bad level", `{"query":{` + kw + `,"level":"Wizard"}}`, 422, "validation_failed"},
+		{"pay range reversed", `{"query":{` + kw + `,"pay_min":100,"pay_max":50}}`, 422, "validation_failed"},
+		{"posted within too long", `{"query":{` + kw + `,"posted_within":400}}`, 422, "validation_failed"},
 		{"wrong type", `{"query":{"keywords":"go"}}`, 422, "validation_failed"},
 		{"too large", `{"query":{"location":"` + strings.Repeat("x", maxFetchBody) + `"}}`, 422, "validation_failed"},
-		{"no keywords", `{"query":{}}`, 422, "validation_failed"},
-		{"blank keywords", `{"query":{"keywords":["  "]}}`, 422, "validation_failed"},
+		{"nothing to search by", `{"query":{}}`, 422, "validation_failed"},
+		{"blank keywords and location", `{"query":{"keywords":["  "],"location":" "}}`, 422, "validation_failed"},
 		{"too many keywords", `{"query":{"keywords":["a","b","c","d","e","f","g","h","i","j","k"]}}`, 422, "validation_failed"},
 		{"keyword too long", `{"query":{"keywords":["` + strings.Repeat("x", maxKeywordLen+1) + `"]}}`, 422, "validation_failed"},
 		{"limit too high", `{"query":{` + kw + `,"limit":51}}`, 422, "validation_failed"},
@@ -518,4 +521,39 @@ func TestChooseBoards(t *testing.T) {
 			t.Errorf("got %d boards for %q, want between 1 and %d", len(got), cats[0].ID, len(all))
 		}
 	})
+}
+
+func TestGreenhouseFetchWithoutKeywords(t *testing.T) {
+	for name, body := range map[string]string{
+		"location": `{"query":{"location":"Charleston, SC"}}`,
+		"industry": `{"query":{"categories":["technical"]}}`,
+	} {
+		f := &fakeSearcher{}
+		rec := postFetch(t, newSearchServer(t, f), body)
+		if rec.Code != http.StatusOK || !f.called || len(f.gotQuery.Keywords) != 0 {
+			t.Errorf("%s: status %d, called %v, keywords %v (body %q)", name, rec.Code, f.called, f.gotQuery.Keywords, rec.Body.String())
+		}
+	}
+}
+
+func TestCategoryList(t *testing.T) {
+	s := newSearchServer(t, &fakeSearcher{})
+	req := httptest.NewRequest("GET", "/v1/connectors/greenhouse/categories", nil)
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, req)
+	var got struct {
+		Categories []struct {
+			ID         string  `json:"id"`
+			Name       string  `json:"name"`
+			Parent     *string `json:"parent"`
+			BoardCount int     `json:"board_count"`
+		} `json:"categories"`
+	}
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &got) != nil || len(got.Categories) == 0 {
+		t.Fatalf("status %d, body %q", rec.Code, rec.Body.String())
+	}
+	if c := got.Categories[0]; c.ID == "" || c.Name == "" || c.BoardCount == 0 {
+		t.Errorf("first category = %+v", c)
+	}
 }
