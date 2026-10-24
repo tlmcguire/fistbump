@@ -488,19 +488,13 @@ window.JobParser = {
 
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
-        //pay is typed as 90000, 90,000, $90k or 90K; a blank or unreadable box means no limit
-        const pay = id => {
-          const match = $(id).value.replace(/[$,\s]/g, "").match(/^(\d+(?:\.\d+)?)(k?)$/i);
-          if (!match) return 0;
-          return Math.round(parseFloat(match[1]) * (match[2] ? 1000 : 1));
-        };
+        const pay = id => parsePay($(id).value);
         const query = {
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value,
           company: $("search-company").value.trim(),
           categories: $("search-industry").value ? [$("search-industry").value] : [],
-          level: $("search-level").value,
           posted_within: number("search-posted"),
           exclude: words("search-exclude"),
           pay_min: pay("search-pay-min"),
@@ -572,9 +566,9 @@ window.JobParser = {
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
-        "search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
       const FORM_KEY = "fistbump.search-form";
-      const OPTION_IDS = ["search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+      const OPTION_IDS = ["search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
 
       //the form as an object, and back
       const readFields = () => {
@@ -607,6 +601,13 @@ window.JobParser = {
         }
       };
 
+      //pay is typed as 90000, 90,000, $90k or 90K; a blank or unreadable box means no limit
+      const parsePay = text => {
+        const match = String(text).replace(/[$,\s]/g, "").match(/^(\d+(?:\.\d+)?)(k?)$/i);
+        return match ? Math.round(parseFloat(match[1]) * (match[2] ? 1000 : 1)) : 0;
+      };
+      const payLabel = amount => amount >= 1000 ? `$${Math.round(amount / 1000)}k` : `$${amount}`;
+
       //Recent searches: the form fields of each search that ran, newest first, kept on this computer only.
       const HISTORY_KEY = "fistbump.search-history";
       const HISTORY_MAX = 15;
@@ -627,22 +628,36 @@ window.JobParser = {
         }
       };
 
-      //a short description of a search, such as "web developer in Charleston, SC, remote, $90k+"
-      const describeFields = fields => {
+      //Describes a search in full: a title (what was searched for) and every option that narrowed it.
+      //The industry's name is kept with the entry, since the select may not be filled when the list is drawn.
+      const describeFields = (fields, industryName = "") => {
         const text = id => String(fields[id] ?? "").trim();
+        const optionText = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(value)}"]`)?.textContent || "").trim();
         const industry = text("search-industry")
-          ? ($("search-industry").querySelector(`option[value="${CSS.escape(text("search-industry"))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim()
+          ? (industryName || optionText("search-industry", text("search-industry")).replace(/\s*\(\d+\)$/, "")).trim()
           : "";
-        const parts = [
-          text("search-keywords"),
-          text("search-location") && `in ${text("search-location")}`,
-          text("search-company") && `at ${text("search-company")}`,
-          industry,
-          text("search-work-mode") !== "Any" && text("search-work-mode").toLowerCase(),
-          text("search-level") !== "Any" && text("search-level").toLowerCase(),
-          text("search-pay-min") && `${text("search-pay-min")}+`
-        ].filter(Boolean);
-        return parts.join(", ") || "All jobs";
+        const place = text("search-location");
+        const company = text("search-company");
+
+        const title = text("search-keywords") || (company && `Jobs at ${company}`) || industry || (place && `Jobs in ${place}`) || "All jobs";
+        const details = [];
+        if (text("search-keywords") && place) details.push(`in ${place}`);
+        else if (!text("search-keywords") && (company || industry) && place) details.push(`in ${place}`);
+        if (text("search-keywords") && company) details.push(`at ${company}`);
+        if (industry && title !== industry) details.push(industry);
+        if (text("search-work-mode") && text("search-work-mode") !== "Any") details.push(`${text("search-work-mode")} only`);
+        if (text("search-posted") && text("search-posted") !== "0") {
+          details.push(optionText("search-posted", text("search-posted")).toLowerCase());
+        }
+        const min = parsePay(text("search-pay-min"));
+        const max = parsePay(text("search-pay-max"));
+        if (min && max) details.push(`pay ${payLabel(min)} to ${payLabel(max)}`);
+        else if (min) details.push(`pay at least ${payLabel(min)}`);
+        else if (max) details.push(`pay up to ${payLabel(max)}`);
+        if (fields["search-require-pay"] === true) details.push("only postings that list pay");
+        const exclude = text("search-exclude");
+        if (exclude) details.push(`leaving out ${exclude}`);
+        return {title, details};
       };
 
       const sameSearch = (a, b) => FORM_IDS.every(id => String(a[id] ?? "") === String(b[id] ?? ""));
@@ -655,8 +670,13 @@ window.JobParser = {
           const run = document.createElement("button");
           run.type = "button";
           run.className = "history-run";
-          run.append(el("span", describeFields(entry.fields)), el("span", ago(entry.at).replace("Updated ", "")));
-          run.title = "Search again";
+          const {title, details} = describeFields(entry.fields, entry.industry);
+          const label = document.createElement("span");
+          label.className = "history-label";
+          label.append(el("strong", title));
+          if (details.length) label.append(el("small", details.join(" \u00b7 ")));
+          run.append(label, el("span", ago(entry.at).replace("Updated ", "")));
+          run.title = [title, ...details].join(", ");
           run.addEventListener("click", () => {
             if (searchButton.disabled) return;
             applyFields(entry.fields);
@@ -680,7 +700,10 @@ window.JobParser = {
       const recordSearch = () => {
         const fields = readFields();
         const list = loadHistory().filter(entry => !sameSearch(entry.fields, fields));
-        list.unshift({fields, at: new Date().toISOString()});
+        const industry = fields["search-industry"]
+          ? ($("search-industry").selectedOptions[0]?.textContent || "").replace(/\s*\(\d+\)$/, "").trim()
+          : "";
+        list.unshift({fields, industry, at: new Date().toISOString()});
         storeHistory(list.slice(0, HISTORY_MAX));
         renderHistory();
       };
