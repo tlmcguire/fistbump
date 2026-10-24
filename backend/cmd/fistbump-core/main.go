@@ -18,6 +18,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/api"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
+	"github.com/tlmcguire/fistbump/backend/internal/logos"
 )
 
 // version is reported by GET /v1/health. Release builds can set it with -ldflags "-X main.version=...".
@@ -68,11 +69,19 @@ func run() error {
 		slog.Info("purged old search cache", "rows", n)
 	}
 
+	logoFetcher := logos.New(conn)
+	if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
+		slog.Warn("purging the logo cache", "error", err)
+	}
+
 	// A long-running app would otherwise keep a day-old cache until the next launch.
 	go func() {
 		for range time.Tick(time.Hour) {
 			if _, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
 				slog.Warn("purging the search cache", "error", err)
+			}
+			if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
+				slog.Warn("purging the logo cache", "error", err)
 			}
 		}
 	}()
@@ -81,6 +90,7 @@ func run() error {
 		DB:         conn,
 		Greenhouse: gh,
 		Searcher:   gh,
+		Logos:      logoFetcher,
 		Token:      token,
 		Version:    version,
 	})

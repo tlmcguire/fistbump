@@ -116,6 +116,7 @@ window.JobParser = {
         document.getElementById("job-description").textContent =
           data.raw_text || "Unknown description";
   
+        fillLogo($("job-logo"), data.company_name, data.company_url);
         setLink("job-link", data.listing_url);
         setLink("company-link", data.company_url);
   
@@ -186,10 +187,59 @@ window.JobParser = {
         return flat.slice(0, 200).replace(/\s+\S*$/, "") + "\u2026";
       };
 
+      //Logos come from each company's own site through the backend. One request per site, at most four at a time.
+      const logos = new Map();
+      let logoActive = 0;
+      const logoWaiting = [];
+      const nextLogo = () => {
+        while (logoActive < 4 && logoWaiting.length) {
+          const job = logoWaiting.shift();
+          logoActive++;
+          job().finally(() => { logoActive--; nextLogo(); });
+        }
+      };
+      const logoFor = url => {
+        if (!logos.has(url)) {
+          logos.set(url, new Promise(resolve => {
+            logoWaiting.push(() => window.FistBumpAPI.logo(url).then(resolve));
+            nextLogo();
+          }));
+        }
+        return logos.get(url);
+      };
+
+      //fills a tile with the company's first letter, then swaps in the logo if there is one
+      const fillLogo = (tile, name, companyUrl) => {
+        const letter = (name || "?").trim().charAt(0).toUpperCase() || "?";
+        let hue = 0;
+        for (const ch of name || "") hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+        tile.replaceChildren(document.createTextNode(letter));
+        tile.style.backgroundColor = `hsl(${hue} 45% 40%)`;
+        const url = safeURL(companyUrl);
+        if (!url) return;
+        logoFor(url).then(dataUrl => {
+          if (!dataUrl || !tile.isConnected) return;
+          const image = document.createElement("img");
+          image.alt = "";
+          image.addEventListener("load", () => {
+            tile.style.backgroundColor = "white";
+            tile.replaceChildren(image);
+          });
+          image.src = dataUrl; //a data URL from the backend; it is shown only once it decodes
+        });
+      };
+
       //get one row of the search results and define it's html
       const resultItem = result => {
         const item = document.createElement("li");
         item.className = "result";
+        const tile = document.createElement("div");
+        tile.className = "logo-tile";
+        tile.setAttribute("aria-hidden", "true");
+        fillLogo(tile, result.company_name, result.company_url);
+        const body = document.createElement("div");
+        body.className = "result-body";
+        item.append(tile, body);
         const open = document.createElement("button");
           open.type = "button";
           open.className = "result-open";
@@ -205,13 +255,13 @@ window.JobParser = {
           );
 
           open.addEventListener("click", () => displayPosting(result, true));
-          item.append(open);
+          body.append(open);
 
           const preview = snippet(result.raw_text);
-          if (preview) item.append(el("p", preview));
-          if (item.lastChild.tagName === "P") item.lastChild.className = "result-snippet";
+          if (preview) body.append(el("p", preview));
+          if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
           if (result.duplicates) {
-            item.append(el("small", `Also posted in ${result.duplicates} other ${result.duplicates === 1 ? "location" : "locations"}`));
+            body.append(el("small", `Also posted in ${result.duplicates} other ${result.duplicates === 1 ? "location" : "locations"}`));
           }
 
           const url = safeURL(result.company_url);
@@ -221,7 +271,7 @@ window.JobParser = {
             link.href = url;
             link.target = "_blank";
             link.rel = "noopener noreferrer";
-            item.append(link);
+            body.append(link);
           }
           return item;
       };

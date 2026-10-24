@@ -6,7 +6,7 @@
         <meta charset="UTF-8"/>
         <title>Job Listing</title>
         <link rel="stylesheet" href="styles/base.css" />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:">
     </head>
     <body>
         <header>
@@ -169,7 +169,10 @@
 
             <section id="state-success" class="state" hidden>
                 <button id="back-to-results" type="button" hidden>&larr; Back to results</button>
-                <h2 id ="job-title" title="title"></h2>
+                <div class="job-head">
+                    <div id="job-logo" class="logo-tile" aria-hidden="true"></div>
+                    <h2 id ="job-title" title="title"></h2>
+                </div>
                 <p id="job-company"></p>
                 <p id="job-location"></p>
                 <p id="job-updated"></p>

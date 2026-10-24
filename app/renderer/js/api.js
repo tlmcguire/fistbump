@@ -37,6 +37,16 @@ window.FistBumpAPI = {
       return this.request(() => window.api.connectors.categories());
     },
 
+    //the company's logo as a data URL, or null when its site has none
+    async logo(url) {
+      if (!window.api?.connectors?.logo) return null;
+      try {
+        return (await this.request(() => window.api.connectors.logo(url))).data_url || null;
+      } catch {
+        return null;
+      }
+    },
+
     //stops the search in progress; the pending search call then fails with "Search canceled"
     cancelSearch() {
       return window.api?.connectors?.cancelSearch?.();

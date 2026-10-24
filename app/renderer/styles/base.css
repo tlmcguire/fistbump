@@ -211,11 +211,12 @@ button:disabled {
   gap: 8px;
 }
 
-/* One result: a white card holding the open button and the company link. */
+/* One result: a white card with the company logo beside the text. */
 .result {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
   padding: 12px 14px;
   background: white;
   color: var(--navy);
@@ -398,4 +399,43 @@ label.sort select {
 
 #cancel-search {
   align-self: flex-start;
+}
+
+.result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* A company logo, or its first letter until the logo loads or when there is none. */
+.logo-tile {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #dde3f0;
+  background: white;
+  overflow: hidden;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.logo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.job-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }

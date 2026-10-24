@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/logos"
 )
 
 // jobFetcher is the part of the Greenhouse client the API uses, so tests can pass a fake.
@@ -25,11 +26,17 @@ type jobSearcher interface {
 	Search(ctx context.Context, q connectors.Query, boards []string) (connectors.SearchResult, error)
 }
 
+// logoFinder is the part of the logos package the logo route uses, so tests can pass a fake.
+type logoFinder interface {
+	Logo(ctx context.Context, site string) (logos.Logo, error)
+}
+
 // Config is what main.go and tests pass to New. Fields are exported so other packages can set them.
 type Config struct {
 	DB         *sql.DB
 	Greenhouse jobFetcher
 	Searcher   jobSearcher
+	Logos      logoFinder
 	Token      string // per-launch bearer token from FISTBUMP_TOKEN
 	Version    string
 }
@@ -39,6 +46,7 @@ type Server struct {
 	db      *sql.DB
 	gh      jobFetcher
 	search  jobSearcher
+	logos   logoFinder
 	token   string
 	version string
 	handler http.Handler // the mux wrapped in middleware, built once in New
@@ -57,6 +65,7 @@ func (s *Server) routes() []route {
 		{"GET /v1/connectors", s.connectorList},
 		{"POST /v1/connectors/greenhouse/fetch", s.greenhouseFetch},
 		{"GET /v1/connectors/greenhouse/categories", s.categoryList},
+		{"GET /v1/connectors/greenhouse/logo", s.companyLogo},
 		{"GET /v1/connectors/greenhouse/link", s.greenhouseLink},
 		{"GET /v1/connectors/greenhouse/boards/{board}/jobs/{job_id}", s.greenhouseJob},
 	}
@@ -169,6 +178,7 @@ func New(cfg Config) *Server {
 		db:      cfg.DB,
 		gh:      cfg.Greenhouse,
 		search:  cfg.Searcher,
+		logos:   cfg.Logos,
 		token:   cfg.Token,
 		version: cfg.Version,
 	}
