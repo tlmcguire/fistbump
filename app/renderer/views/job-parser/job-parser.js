@@ -662,9 +662,27 @@ window.JobParser = {
 
       const sameSearch = (a, b) => FORM_IDS.every(id => String(a[id] ?? "") === String(b[id] ?? ""));
 
+      //the history menu opens over the page and closes when the user picks something or clicks elsewhere
+      const setHistoryOpen = open => {
+        $("history").hidden = !open;
+        $("history-toggle").setAttribute("aria-expanded", String(open));
+      };
+      $("history-toggle").addEventListener("click", () => setHistoryOpen($("history").hidden));
+      document.addEventListener("mousedown", event => {
+        if (!$("history").hidden && !$("history").parentElement.contains(event.target)) setHistoryOpen(false);
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !$("history").hidden) {
+          setHistoryOpen(false);
+          $("history-toggle").focus();
+        }
+      });
+
       const renderHistory = () => {
         const list = loadHistory();
-        $("history").hidden = list.length === 0;
+        $("history-toggle").disabled = list.length === 0;
+        $("history-toggle").title = list.length ? "Recent searches" : "No recent searches yet";
+        if (list.length === 0) setHistoryOpen(false);
         $("history-list").replaceChildren(...list.map((entry, index) => {
           const item = document.createElement("li");
           const run = document.createElement("button");
@@ -679,6 +697,7 @@ window.JobParser = {
           run.title = [title, ...details].join(", ");
           run.addEventListener("click", () => {
             if (searchButton.disabled) return;
+            setHistoryOpen(false);
             applyFields(entry.fields);
             saveForm();
             searchForm.requestSubmit();

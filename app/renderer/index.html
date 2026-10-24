@@ -112,17 +112,19 @@
 
                     <div class="actions">
                         <button type="submit">Search</button>
+                        <div class="history-menu">
+                            <button type="button" id="history-toggle" aria-haspopup="true" aria-expanded="false" disabled title="No recent searches yet">History</button>
+                            <section id="history" class="history" hidden>
+                                <div class="history-head">
+                                    <h3>Recent searches</h3>
+                                    <button type="button" id="clear-history">Clear history</button>
+                                </div>
+                                <ul id="history-list" class="history-list"></ul>
+                            </section>
+                        </div>
                         <button type="button" id="clear-search">Clear</button>
                     </div>
                 </form>
-
-                <section id="history" class="history" hidden>
-                    <div class="history-head">
-                        <h3>Recent searches</h3>
-                        <button type="button" id="clear-history">Clear history</button>
-                    </div>
-                    <ul id="history-list" class="history-list"></ul>
-                </section>
             </div>
 
             <!--Open a listing tab panel, old html moved inside tab container-->
