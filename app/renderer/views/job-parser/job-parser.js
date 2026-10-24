@@ -187,47 +187,84 @@ window.JobParser = {
         return flat.slice(0, 200).replace(/\s+\S*$/, "") + "\u2026";
       };
 
-      //Logos come from each company's own site through the backend. One request per site, at most four at a time.
-      const logos = new Map();
+      //Logos come from each company's own site through the backend. Each company is asked for once, six at a
+      //time. A finished logo is kept decoded in memory, so a tile can be painted at once with no flicker.
+      const logos = new Map(); //key -> {promise, done, image}; image is null when the company has no logo
       let logoActive = 0;
       const logoWaiting = [];
       const nextLogo = () => {
-        while (logoActive < 4 && logoWaiting.length) {
+        while (logoActive < 6 && logoWaiting.length) {
           const job = logoWaiting.shift();
           logoActive++;
           job().finally(() => { logoActive--; nextLogo(); });
         }
       };
-      //one request per company site, or per board when the posting names no site
-      const logoFor = (url, board) => {
+
+      //one entry per company site, or per board when the posting names no site
+      const logoEntry = (url, board) => {
         const key = url || `board:${board}`;
         if (!logos.has(key)) {
-          logos.set(key, new Promise(resolve => {
-            logoWaiting.push(() => window.FistBumpAPI.logo(url, board).then(resolve));
+          const entry = {done: false, image: null};
+          entry.promise = new Promise(resolve => {
+            logoWaiting.push(async () => {
+              const dataUrl = await window.FistBumpAPI.logo(url, board);
+              if (dataUrl) {
+                //decode before anyone shows it, so it appears whole instead of painting in
+                const image = new Image();
+                image.alt = "";
+                image.src = dataUrl; //a data URL from the backend
+                try {
+                  await image.decode();
+                  entry.image = image;
+                } catch {
+                  //an image that will not decode counts as no logo
+                }
+              }
+              entry.done = true;
+              resolve(entry);
+            });
             nextLogo();
-          }));
+          });
+          logos.set(key, entry);
         }
         return logos.get(key);
       };
 
-      //fills a tile with the company's first letter, then swaps in the logo if there is one
+      //Asks for the logos of some results and waits for them, but never longer than budget milliseconds, so a
+      //slow site cannot hold the page back. Tiles for logos that are not in time fade in when they arrive.
+      const preloadLogos = (postings, budget = 700) => {
+        const waits = [...new Set(postings.map(result => {
+          const url = safeURL(result.company_url);
+          return url || result.board ? logoEntry(url || "", result.board) : null;
+        }))].filter(entry => entry && !entry.done).map(entry => entry.promise);
+        if (!waits.length) return Promise.resolve();
+        return Promise.race([Promise.all(waits), new Promise(resolve => setTimeout(resolve, budget))]);
+      };
+
+      //Paints a tile: the logo when it is ready, else a plain tile that fades to the logo, or to the company's
+      //first letter if there is none. A tile whose answer is already known is painted with no animation.
       const fillLogo = (tile, name, companyUrl, board) => {
-        const letter = (name || "?").trim().charAt(0).toUpperCase() || "?";
-        let hue = 0;
-        for (const ch of name || "") hue = (hue * 31 + ch.charCodeAt(0)) % 360;
-        tile.replaceChildren(document.createTextNode(letter));
-        tile.style.backgroundColor = `hsl(${hue} 45% 40%)`;
-        const url = safeURL(companyUrl);
-        if (!url && !board) return;
-        logoFor(url || "", board).then(dataUrl => {
-          if (!dataUrl || !tile.isConnected) return;
-          const image = document.createElement("img");
-          image.alt = "";
-          image.addEventListener("load", () => {
+        const paint = entry => {
+          tile.classList.remove("pending");
+          if (entry?.image) {
             tile.style.backgroundColor = "white";
-            tile.replaceChildren(image);
-          });
-          image.src = dataUrl; //a data URL from the backend; it is shown only once it decodes
+            tile.replaceChildren(entry.image.cloneNode());
+          } else {
+            let hue = 0;
+            for (const ch of name || "") hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+            tile.style.backgroundColor = `hsl(${hue} 45% 40%)`;
+            tile.replaceChildren(document.createTextNode((name || "?").trim().charAt(0).toUpperCase() || "?"));
+          }
+        };
+        const url = safeURL(companyUrl);
+        if (!url && !board) return paint(null);
+        const entry = logoEntry(url || "", board);
+        if (entry.done) return paint(entry);
+        tile.classList.add("pending"); //blank until the answer arrives
+        entry.promise.then(done => {
+          if (!tile.isConnected) return;
+          paint(done);
+          tile.classList.add("reveal");
         });
       };
 
@@ -392,6 +429,8 @@ window.JobParser = {
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
           if (mine !== searchSeq) return; //a newer search owns the page now
+          await preloadLogos(data.postings);
+          if (mine !== searchSeq) return;
           pages = new Map([[1, data]]);
           currentPage = 1;
           results = data;
@@ -448,8 +487,10 @@ window.JobParser = {
       };
 
       //shows a page of results, asking the backend only if the page is not kept yet
+      let pageSeq = 0; //counts page changes, so a slow one cannot land after a newer one
       const goToPage = async page => {
         if (page < 1 || page > pageCount()) return;
+        const mine = ++pageSeq;
         retry = () => goToPage(page);
         let data = pages.get(page);
 
@@ -466,6 +507,8 @@ window.JobParser = {
           }
           pages.set(page, data);
         }
+        await preloadLogos(data.postings);
+        if (mine !== pageSeq) return;
 
         //a posting is on one page only, since the backend's order is fixed; drop a repeat if the data moved between requests
         const shown = new Set();
