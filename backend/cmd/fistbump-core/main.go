@@ -91,6 +91,8 @@ func run() error {
 		Greenhouse: gh,
 		Searcher:   gh,
 		Logos:      logoFetcher,
+		DataDir:    *dataDir,
+		Caches:     []api.CacheClearer{gh.Cache, logoFetcher},
 		Token:      token,
 		Version:    version,
 	})
