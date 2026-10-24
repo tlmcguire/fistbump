@@ -35,7 +35,7 @@ type Dropped struct {
 const (
 	DefaultLimit = 20
 	MaxLimit     = 50
-	MaxOffset    = 1000
+	MaxOffset    = 5000
 )
 
 // Work modes a search can ask for.
@@ -65,7 +65,7 @@ func (q Query) Validate() error {
 		return errors.New("Limit must be between 1 and 50")
 	}
 	if q.Offset < 0 || q.Offset > MaxOffset {
-		return errors.New("Offset must be between 0 and 1000")
+		return errors.New("Offset must be between 0 and 5000")
 	}
 	switch q.WorkMode {
 	case WorkModeAny, WorkModeRemote, WorkModeHybrid, WorkModeOnSite:

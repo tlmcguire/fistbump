@@ -18,6 +18,9 @@ window.JobParser = {
       let fromResults = false; //true while a listing opened from the result list is on screen
       let searchedQuery = {};
       const PAGE_SIZE = 20; //results requested per page
+      const MAX_PAGES = 250; //the backend's offset limit (5000) divided by PAGE_SIZE
+      let pages = new Map(); //page number -> the backend's response for it
+      let currentPage = 1;
 
   
       //gets each section's state and shows it accordingly.
@@ -96,9 +99,7 @@ window.JobParser = {
       const displayPosting = (data, opened = false) => {
         posting = data;
         fromResults = opened;
-        $("load-more").addEventListener("click", loadMore);
-
-      $("back-to-results").hidden = !(opened && results);
+        $("back-to-results").hidden = !(opened && results);
   
         document.getElementById("job-title").textContent =
           data.position_title || "Unknown position";
@@ -221,9 +222,6 @@ window.JobParser = {
             (remote > 0 ? `, plus ${remote.toLocaleString()} remote.` : "."));
         }
 
-        if (data.postings.length > 0 && data.matched > data.postings.length) {
-          notes.push(`Showing ${data.postings.length.toLocaleString()} of ${data.matched.toLocaleString()} matches.`);
-        }
         if (data.boards_searched < data.boards_total) {
           const missed = data.boards_total - data.boards_searched;
           notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
@@ -245,10 +243,7 @@ window.JobParser = {
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
 
-        const more = $("load-more");
-        more.hidden = !data.has_more;
-        more.disabled = false;
-        more.textContent = "Show more results";
+        renderPager();
 
         $("result-errors").hidden = data.errors.length === 0;
         $("result-errors-list").replaceChildren(
@@ -266,8 +261,10 @@ window.JobParser = {
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
-          renderResults(data);
+          pages = new Map([[1, data]]);
+          currentPage = 1;
           results = data;
+          renderResults(data);
           showState("results");
         } catch (error) {
           showError(error);
@@ -276,29 +273,71 @@ window.JobParser = {
         }
       };
   
-      //asks for the next page and adds it below the current ones. A posting already shown is skipped.
-      const loadMore = async () => {
-        const button = $("load-more");
-        button.disabled = true;
-        button.textContent = "Loading...";
+      //Pages are numbered from 1. A page is fetched once, then kept until the next search.
+      const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / PAGE_SIZE), MAX_PAGES);
 
-        try {
-          const data = await window.FistBumpAPI.search({...searchedQuery, offset: results.next_offset});
-          const key = posting => `${posting.board}/${posting.external_id}`;
-          const seen = new Set(results.postings.map(key));
-          const fresh = data.postings.filter(posting => !seen.has(key(posting)));
-          //keep the first page's counts for errors but take the newest paging state
-          results = {...data, postings: [...results.postings, ...fresh], errors: mergeErrors(results.errors, data.errors)};
-          renderResults(results);
-        } catch (error) {
-          button.disabled = false;
-          button.textContent = "Could not load more results. Try again.";
+      //page numbers to show: the first, the last and the ones around the current page, with gaps as null
+      const pageWindow = (current, total) => {
+        const wanted = new Set([1, total]);
+        for (let n = current - 2; n <= current + 2; n++) {
+          if (n >= 1 && n <= total) wanted.add(n);
         }
+        const sorted = [...wanted].sort((a, b) => a - b);
+        return sorted.flatMap((n, i) => i > 0 && n - sorted[i - 1] > 1 ? [null, n] : [n]);
       };
 
-      const mergeErrors = (a, b) => {
-        const seen = new Set(a.map(failed => `${failed.board}: ${failed.message}`));
-        return [...a, ...b.filter(failed => !seen.has(`${failed.board}: ${failed.message}`))];
+      const renderPager = () => {
+        const total = pageCount();
+        const pager = $("pager");
+        pager.hidden = total < 2;
+        if (total < 2) return;
+
+        const button = (label, page, {current = false, disabled = false} = {}) => {
+          const node = el("button", label);
+          node.type = "button";
+          node.disabled = disabled;
+          if (current) node.setAttribute("aria-current", "page");
+          node.addEventListener("click", () => goToPage(page));
+          return node;
+        };
+        pager.replaceChildren(
+          button("Previous", currentPage - 1, {disabled: currentPage === 1}),
+          ...pageWindow(currentPage, total).map(n =>
+            n === null ? el("span", "...") : button(String(n), n, {current: n === currentPage})),
+          button("Next", currentPage + 1, {disabled: currentPage === total})
+        );
+      };
+
+      //shows a page of results, asking the backend only if the page is not kept yet
+      const goToPage = async page => {
+        if (page < 1 || page > pageCount()) return;
+        retry = () => goToPage(page);
+        let data = pages.get(page);
+
+        if (!data) {
+          setBusy(true);
+          $("pager").querySelectorAll("button").forEach(node => { node.disabled = true; });
+          try {
+            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * PAGE_SIZE});
+          } catch (error) {
+            showError(error);
+            return;
+          } finally {
+            setBusy(false);
+          }
+          pages.set(page, data);
+        }
+
+        //a posting is on one page only, since the backend's order is fixed; drop a repeat if the data moved between requests
+        const shown = new Set();
+        for (const [number, other] of pages) {
+          if (number < page) other.postings.forEach(p => shown.add(`${p.board}/${p.external_id}`));
+        }
+        currentPage = page;
+        results = {...data, postings: data.postings.filter(p => !shown.has(`${p.board}/${p.external_id}`))};
+        renderResults(results);
+        showState("results");
+        $("result-counts").scrollIntoView({block: "start"});
       };
 
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
