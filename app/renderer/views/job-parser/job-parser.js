@@ -522,6 +522,7 @@ window.JobParser = {
           return;
         }
         saveForm();
+        recordSearch();
         window.Suggest.remember("keywords", query.keywords);
         window.Suggest.remember("location", [query.location]);
         window.Suggest.remember("company", [query.company]);
@@ -573,30 +574,124 @@ window.JobParser = {
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
         "search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
       const FORM_KEY = "fistbump.search-form";
+      const OPTION_IDS = ["search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+
+      //the form as an object, and back
+      const readFields = () => {
+        const fields = {};
+        for (const id of FORM_IDS) fields[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
+        return fields;
+      };
+      const applyFields = fields => {
+        for (const id of FORM_IDS) {
+          if (!(id in fields)) continue;
+          if ($(id).type === "checkbox") $(id).checked = fields[id] === true;
+          else $(id).value = String(fields[id]);
+        }
+        $("more-options").open = OPTION_IDS.some(id =>
+          $(id).type === "checkbox" ? $(id).checked : $(id).value && $(id).value !== "Any" && $(id).value !== "0");
+      };
+
       const saveForm = () => {
         try {
-          const saved = {};
-          for (const id of FORM_IDS) saved[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
-          localStorage.setItem(FORM_KEY, JSON.stringify(saved));
+          localStorage.setItem(FORM_KEY, JSON.stringify(readFields()));
         } catch {
           //storage can be unavailable; the form just starts empty next time
         }
       };
       const restoreForm = () => {
         try {
-          const saved = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
-          for (const id of FORM_IDS) {
-            if (!(id in saved)) continue;
-            if ($(id).type === "checkbox") $(id).checked = saved[id] === true;
-            else $(id).value = String(saved[id]);
-          }
-          $("more-options").open = ["search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"]
-            .some(id => $(id).type === "checkbox" ? $(id).checked : $(id).value && $(id).value !== "Any" && $(id).value !== "0");
+          applyFields(JSON.parse(localStorage.getItem(FORM_KEY) || "{}"));
         } catch {
           //a damaged saved form is ignored
         }
       };
+
+      //Recent searches: the form fields of each search that ran, newest first, kept on this computer only.
+      const HISTORY_KEY = "fistbump.search-history";
+      const HISTORY_MAX = 15;
+      const loadHistory = () => {
+        try {
+          const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+          return Array.isArray(list) ? list.filter(entry => entry && typeof entry.fields === "object" && entry.fields) : [];
+        } catch {
+          return [];
+        }
+      };
+      const storeHistory = list => {
+        try {
+          if (list.length) localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+          else localStorage.removeItem(HISTORY_KEY);
+        } catch {
+          //history is a convenience; losing it is fine
+        }
+      };
+
+      //a short description of a search, such as "web developer in Charleston, SC, remote, $90k+"
+      const describeFields = fields => {
+        const text = id => String(fields[id] ?? "").trim();
+        const industry = text("search-industry")
+          ? ($("search-industry").querySelector(`option[value="${CSS.escape(text("search-industry"))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim()
+          : "";
+        const parts = [
+          text("search-keywords"),
+          text("search-location") && `in ${text("search-location")}`,
+          text("search-company") && `at ${text("search-company")}`,
+          industry,
+          text("search-work-mode") !== "Any" && text("search-work-mode").toLowerCase(),
+          text("search-level") !== "Any" && text("search-level").toLowerCase(),
+          text("search-pay-min") && `${text("search-pay-min")}+`
+        ].filter(Boolean);
+        return parts.join(", ") || "All jobs";
+      };
+
+      const sameSearch = (a, b) => FORM_IDS.every(id => String(a[id] ?? "") === String(b[id] ?? ""));
+
+      const renderHistory = () => {
+        const list = loadHistory();
+        $("history").hidden = list.length === 0;
+        $("history-list").replaceChildren(...list.map((entry, index) => {
+          const item = document.createElement("li");
+          const run = document.createElement("button");
+          run.type = "button";
+          run.className = "history-run";
+          run.append(el("span", describeFields(entry.fields)), el("span", ago(entry.at).replace("Updated ", "")));
+          run.title = "Search again";
+          run.addEventListener("click", () => {
+            if (searchButton.disabled) return;
+            applyFields(entry.fields);
+            saveForm();
+            searchForm.requestSubmit();
+          });
+          const remove = el("button", "\u00d7");
+          remove.type = "button";
+          remove.className = "history-remove";
+          remove.setAttribute("aria-label", "Remove this search from history");
+          remove.addEventListener("click", () => {
+            storeHistory(loadHistory().filter((_, i) => i !== index));
+            renderHistory();
+          });
+          item.append(run, remove);
+          return item;
+        }));
+      };
+
+      //called when a search starts; a search already in the list moves to the top
+      const recordSearch = () => {
+        const fields = readFields();
+        const list = loadHistory().filter(entry => !sameSearch(entry.fields, fields));
+        list.unshift({fields, at: new Date().toISOString()});
+        storeHistory(list.slice(0, HISTORY_MAX));
+        renderHistory();
+      };
+
+      $("clear-history").addEventListener("click", () => {
+        storeHistory([]);
+        renderHistory();
+      });
+
       restoreForm();
+      renderHistory();
       searchForm.addEventListener("change", saveForm);
 
       $("clear-search").addEventListener("click", () => {
