@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "electron .",
     "build:go": "node scripts/build-go.js",
-    "test": "echo \"no tests yet\""
+    "test": "node --test app/tests/ipc.test.js"
   },
   "devDependencies": {
     "electron": "*",

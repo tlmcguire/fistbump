@@ -37,6 +37,11 @@ window.FistBumpAPI = {
       return this.request(() => window.api.connectors.categories());
     },
 
+    //stops the search in progress; the pending search call then fails with "Search canceled"
+    cancelSearch() {
+      return window.api?.connectors?.cancelSearch?.();
+    },
+
     async search(query) {
       if (!window.api?.connectors?.search) {
         throw new Error("Connection error");

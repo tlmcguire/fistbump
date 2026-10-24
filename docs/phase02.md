@@ -87,17 +87,17 @@ api.md writes this route as `/v1/connectors/{id}/fetch`. Greenhouse is the only 
 
 Progress:
 
-- [ ] 1. `connector.go` search fields
-- [ ] 2. `cache.go`
-- [ ] 3. `list.go`
-- [ ] 4. `match.go`
-- [ ] 5. `search.go`
-- [ ] 6. `connectors.go` handlers
-- [ ] 7. `main.go` wiring
-- [ ] 8. `ipc-handlers.js`, `preload.js`
-- [ ] 9. Find tab
-- [ ] 10. api.md
-- [ ] Tests and tooling
+- [x] 1. `connector.go` search fields
+- [x] 2. `cache.go`
+- [x] 3. `list.go`
+- [x] 4. `match.go`
+- [x] 5. `search.go`
+- [x] 6. `connectors.go` handlers
+- [x] 7. `main.go` wiring
+- [x] 8. `ipc-handlers.js`, `preload.js`
+- [x] 9. Find tab
+- [x] 10. api.md
+- [x] Tests and tooling
 
 ### Backend
 
@@ -201,6 +201,17 @@ Apply the changes in "api.md changes in this phase" in the same pull request.
 - `search_test.go` with an `httptest.Server`: ranking order is stable, company variety cap, one failing board lands in `errors`, every board failing returns an error, `limit` respected, a detail failure drops that posting, context cancel stops work.
 - `api_test.go`: fetch success, `422` cases, and that `GET /v1/connectors/greenhouse/postings/x` is gone (`404` or `405`).
 - Manual: one live search with the cache empty, then the same search again; the second makes no listing requests (check the backend log).
+
+## Changes made while building
+
+The build went past the plan in these places. The decisions table below is the plan; this is what shipped.
+
+- **Pay.** `pay_min`, `pay_max` and `require_pay` filter on a range read from description text, in US dollars only. A pay filter reads up to 300 descriptions in rank order, so `matched` can be a lower bound (`partial`). Postings that list no pay are kept unless `require_pay` is set.
+- **Company, industry and location alone.** Keywords are optional when `company`, `categories`, `boards` or `location` narrows the search. A company that is not curated is tried as a Greenhouse board token. `GET /v1/connectors/greenhouse/categories` is read-only and lists industries, companies and the board total.
+- **Paging.** `offset`, `has_more` and `next_offset`, with numbered pages in the app. Each company's first three postings rank ahead of its later ones, and nothing is dropped.
+- **Other preferences.** `level`, `posted_within`, `exclude` and `sort`. Duplicate roles at one company fold into one result.
+- **Cache.** Listings and descriptions are stored in `greenhouse_listing_cache` and `greenhouse_description_cache`, not files. Rows older than a day are deleted at launch and every hour.
+- **Cancel.** The app cancels a search in progress when a new one starts or when the user presses Cancel.
 
 ## Done when
 

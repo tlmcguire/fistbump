@@ -115,11 +115,11 @@ class Backend extends EventEmitter {
   }
 
   // request returns { status, headers, json, buffer }. It throws if the backend is not reachable.
-  async request(method, urlPath, body) {
+  async request(method, urlPath, body, signal) {
     if (!this.port || (this.state !== 'ready' && this.state !== 'starting')) {
       throw new Error('The backend is not running. It may be restarting; try again in a moment.');
     }
-    const init = { method, headers: { Authorization: `Bearer ${this.token}` } };
+    const init = { method, headers: { Authorization: `Bearer ${this.token}` }, signal };
     if (body !== undefined) {
       init.headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(body);
@@ -138,12 +138,14 @@ class Backend extends EventEmitter {
   }
 
   // wraps request, but returns only the JSON, or an error if something goes wrong
-  async call(method, urlPath, body) {
+  // An aborted signal gives a 'canceled' error, and the backend stops the work when the connection closes.
+  async call(method, urlPath, body, signal) {
     try {
-      const res = await this.request(method, urlPath, body);
+      const res = await this.request(method, urlPath, body, signal);
       if (res.json) return res.json;
       return { error: { code: 'internal', message: 'The backend sent an unreadable response', details: null } };
     } catch {
+      if (signal?.aborted) return { error: { code: 'canceled', message: 'Search canceled', details: null } };
       return { error: { code: 'unreachable', message: 'Could not reach the Fistbump backend. Restart the app and try again.', details: null } };
     }
   }

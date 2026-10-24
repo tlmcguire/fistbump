@@ -31,8 +31,9 @@ window.JobParser = {
       };
 
       //shows the loading section and assigns the message
-      const showLoading = message => {
+      const showLoading = (message, cancelable = false) => {
         $("loading-message").textContent = message;
+        $("cancel-search").hidden = !cancelable;
         showState("loading");
       };
 
@@ -166,6 +167,25 @@ window.JobParser = {
         return result.pay_min && result.pay_min !== result.pay_max ? `${k(result.pay_min)}-${k(result.pay_max)}` : k(result.pay_max);
       };
 
+      //"today", "3 days ago", "2 weeks ago"; an unreadable date gives ""
+      const ago = iso => {
+        const then = new Date(iso);
+        if (!iso || isNaN(then)) return "";
+        const days = Math.max(0, Math.floor((Date.now() - then.getTime()) / 86400000));
+        if (days === 0) return "Updated today";
+        if (days === 1) return "Updated yesterday";
+        if (days < 14) return `Updated ${days} days ago`;
+        if (days < 60) return `Updated ${Math.floor(days / 7)} weeks ago`;
+        return `Updated ${Math.floor(days / 30)} months ago`;
+      };
+
+      //the first couple of lines of a description, on one line
+      const snippet = text => {
+        const flat = (text || "").replace(/\s+/g, " ").replace(/^[-\u2022*\s]+/, "").trim();
+        if (flat.length <= 200) return flat;
+        return flat.slice(0, 200).replace(/\s+\S*$/, "") + "\u2026";
+      };
+
       //get one row of the search results and define it's html
       const resultItem = result => {
         const item = document.createElement("li");
@@ -180,12 +200,19 @@ window.JobParser = {
               result.location,
               result.work_mode,
               payText(result),
-              result.updated_at && new Date(result.updated_at).toLocaleDateString()
+              ago(result.updated_at)
             ].filter(Boolean).join(" . "))
           );
 
           open.addEventListener("click", () => displayPosting(result, true));
           item.append(open);
+
+          const preview = snippet(result.raw_text);
+          if (preview) item.append(el("p", preview));
+          if (item.lastChild.tagName === "P") item.lastChild.className = "result-snippet";
+          if (result.duplicates) {
+            item.append(el("small", `Also posted in ${result.duplicates} other ${result.duplicates === 1 ? "location" : "locations"}`));
+          }
 
           const url = safeURL(result.company_url);
           if (url) {
@@ -284,28 +311,42 @@ window.JobParser = {
         );
       };
 
+      let searchSeq = 0; //counts searches, so an older one that finishes late is ignored
+
       //main function to run the search
       const runSearch = async query => {
         retry = () => runSearch(query);
+        const previous = {pages, currentPage, results, searchedQuery};
+        const mine = ++searchSeq;
         searchedQuery = query;
         results = null;
         setBusy(true);
-        showLoading("Searching Greenhouse...");
+        const wide = !query.company && !query.categories.length && boardTotal;
+        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards...` : "Searching Greenhouse...", true);
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
+          if (mine !== searchSeq) return; //a newer search owns the page now
           pages = new Map([[1, data]]);
           currentPage = 1;
           results = data;
+          $("result-sort").value = query.sort || "relevance";
           renderResults(data);
           showState("results");
         } catch (error) {
+          if (mine !== searchSeq) return;
+          if (error.message === "Search canceled") {
+            //put back what was on screen before this search
+            ({pages, currentPage, results, searchedQuery} = previous);
+            selectTab("find");
+            return;
+          }
           showError(error);
         } finally {
-          setBusy(false);
+          if (mine === searchSeq) setBusy(false);
         }
       };
-  
+
       //Pages are numbered from 1. A page is fetched once, then kept until the next search.
       const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / PAGE_SIZE), MAX_PAGES);
 
@@ -353,7 +394,7 @@ window.JobParser = {
           try {
             data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * PAGE_SIZE});
           } catch (error) {
-            showError(error);
+            if (error.message !== "Search canceled") showError(error);
             return;
           } finally {
             setBusy(false);
@@ -400,6 +441,7 @@ window.JobParser = {
           pay_min: pay("search-pay-min"),
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
+          sort: $("result-sort").value,
           limit: PAGE_SIZE
         };
         for (const id of ["search-pay-min", "search-pay-max"]) {
@@ -414,6 +456,7 @@ window.JobParser = {
           showState("initial");
           return;
         }
+        saveForm();
         window.Suggest.remember("keywords", query.keywords);
         window.Suggest.remember("location", [query.location]);
         window.Suggest.remember("company", [query.company]);
@@ -442,15 +485,66 @@ window.JobParser = {
       });
 
       //industries come from the backend's curated lists; the form still works without them
+      let boardTotal = 0; //how many boards an unfiltered search reads, from the categories route
       const companyNames = []; //filled with the curated company names for autocomplete
       window.FistBumpAPI.categories().then(data => {
         companyNames.push(...(data.companies || []));
+        boardTotal = data.board_total || 0;
         for (const category of data.categories) {
           const option = el("option", `${category.parent ? "\u00a0\u00a0" : ""}${category.name} (${category.board_count})`);
           option.value = category.id;
           $("search-industry").append(option);
         }
+        try {
+          //the saved industry could not be chosen until its option existed
+          const saved = JSON.parse(localStorage.getItem(FORM_KEY) || "{}")["search-industry"];
+          if (saved) $("search-industry").value = saved;
+        } catch {
+          //nothing saved
+        }
       }).catch(() => {});
+
+      //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
+      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
+        "search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+      const FORM_KEY = "fistbump.search-form";
+      const saveForm = () => {
+        try {
+          const saved = {};
+          for (const id of FORM_IDS) saved[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
+          localStorage.setItem(FORM_KEY, JSON.stringify(saved));
+        } catch {
+          //storage can be unavailable; the form just starts empty next time
+        }
+      };
+      const restoreForm = () => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
+          for (const id of FORM_IDS) {
+            if (!(id in saved)) continue;
+            if ($(id).type === "checkbox") $(id).checked = saved[id] === true;
+            else $(id).value = String(saved[id]);
+          }
+          $("more-options").open = ["search-level", "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"]
+            .some(id => $(id).type === "checkbox" ? $(id).checked : $(id).value && $(id).value !== "Any" && $(id).value !== "0");
+        } catch {
+          //a damaged saved form is ignored
+        }
+      };
+      restoreForm();
+      searchForm.addEventListener("change", saveForm);
+
+      $("clear-search").addEventListener("click", () => {
+        searchForm.reset();
+        try { localStorage.removeItem(FORM_KEY); } catch { /* nothing saved to remove */ }
+        $("search-keywords").focus();
+      });
+
+      $("cancel-search").addEventListener("click", () => window.FistBumpAPI.cancelSearch());
+
+      $("result-sort").addEventListener("change", () => {
+        if (results) runSearch({...searchedQuery, sort: $("result-sort").value});
+      });
 
       window.Suggest.attach($("search-company"), {key: "company", fixed: companyNames});
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
