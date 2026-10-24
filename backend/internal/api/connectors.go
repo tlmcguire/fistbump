@@ -103,9 +103,10 @@ func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 	}
 	writeJSON(w, http.StatusOK, struct {
 		Categories []category `json:"categories"`
+		Companies  []string   `json:"companies"`
 		VerifiedAt string     `json:"verified_at"`
 		Notice     string     `json:"notice"`
-	}{out, greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
+	}{out, greenhouse.CompanyNames(), greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
 	return nil
 }
 
@@ -180,13 +181,29 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	boards := chooseBoards(q)
+	named := strings.TrimSpace(q.Company) != "" && len(q.Boards) == 0 // the search is for one company
+	guessed := false
+	if len(boards) == 0 && named {
+		// The curated list has no such company. Greenhouse board tokens are usually the company name,
+		// so try that; one listing request tells us whether the board exists.
+		boards, guessed = guessBoards(q.Company), true
+	}
 	if len(boards) == 0 {
+		if named {
+			return writeNoCompany(w, q)
+		}
 		return validationFailed("No boards match this search")
 	}
 
 	result, err := s.search.Search(r.Context(), q, boards)
+	if guessed && (err != nil || result.BoardsSearched == 0) {
+		return writeNoCompany(w, q) // not a Greenhouse board we can find
+	}
 	if err != nil {
 		return greenhouseError(err)
+	}
+	if named {
+		result.Companies = companyNames(boards)
 	}
 	// Nil slices would encode as null; the app expects arrays.
 	if result.Postings == nil {
@@ -196,6 +213,53 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		result.Errors = []connectors.SearchError{}
 	}
 	writeJSON(w, http.StatusOK, result)
+	return nil
+}
+
+// guessBoards turns a company name into likely Greenhouse board tokens: "Acme Corp" gives
+// "acmecorp" and "acme-corp".
+func guessBoards(company string) []string {
+	var words []string
+	for _, w := range strings.FieldsFunc(strings.ToLower(company), func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9')
+	}) {
+		words = append(words, w)
+	}
+	var out []string
+	for _, token := range []string{strings.Join(words, ""), strings.Join(words, "-")} {
+		if boardPattern.MatchString(token) && (len(out) == 0 || out[0] != token) {
+			out = append(out, token)
+		}
+	}
+	return out
+}
+
+// companyNames is the display name of each board, at most ten.
+func companyNames(boards []string) []string {
+	names := []string{}
+	for _, token := range boards {
+		if len(names) == 10 {
+			break
+		}
+		if name := greenhouse.CompanyFor(token); name != "" {
+			names = append(names, name)
+		} else {
+			names = append(names, token)
+		}
+	}
+	return names
+}
+
+// writeNoCompany answers a search for a company whose listings cannot be found: a normal empty
+// result with no companies, which the app explains, instead of an error.
+func writeNoCompany(w http.ResponseWriter, q connectors.Query) error {
+	writeJSON(w, http.StatusOK, connectors.SearchResult{
+		Postings:     []connectors.Posting{},
+		Errors:       []connectors.SearchError{},
+		Companies:    []string{},
+		KeywordsUsed: q.Keywords,
+		WorkModeUsed: q.WorkMode,
+	})
 	return nil
 }
 

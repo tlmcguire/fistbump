@@ -128,6 +128,7 @@ type SearchResult struct {
 	HasMore         bool          `json:"has_more"`         // more ranked postings follow this page
 	NextOffset      int           `json:"next_offset"`      // the offset that asks for the next page
 	Partial         bool          `json:"partial"`          // matched is a lower bound: a pay filter stopped scanning early
+	Companies       []string      `json:"companies"`        // companies searched when the query named one, else empty
 	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
 	BoardsSearched  int           `json:"boards_searched"`  // boards listed without error
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list
