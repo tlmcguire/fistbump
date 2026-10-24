@@ -132,6 +132,7 @@ func TestSearchFilters(t *testing.T) {
 		{1, "Data Analyst", "Remote - US", "2026-10-01T00:00:00Z"},
 		{2, "Data Analyst", "Charleston, SC", "2026-10-01T00:00:00Z"},
 		{3, "Data Analyst", "Denver, CO", "2026-10-01T00:00:00Z"},
+		{4, "Data Analyst", "Remote - Australia", "2026-10-01T00:00:00Z"},
 	}}}
 	c := s.client(t)
 	q := query("data analyst")
@@ -144,6 +145,11 @@ func TestSearchFilters(t *testing.T) {
 	r, _ = c.Search(context.Background(), q, []string{"acme"})
 	if len(r.Postings) != 1 || r.Postings[0].ExternalID != "1" {
 		t.Errorf("remote = %v", r.Postings)
+	}
+	q.WorkMode = "Any"
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 2 || r.Matched != 2 || r.LocationMatched != 1 || r.Postings[0].ExternalID != "2" {
+		t.Errorf("any = %v, matched %d, location_matched %d", titles(r), r.Matched, r.LocationMatched)
 	}
 }
 

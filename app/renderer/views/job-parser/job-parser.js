@@ -15,6 +15,8 @@ window.JobParser = {
       const panels = {find: $("panel-find"), link: $("panel-load-listing")};
       let activeTab = "find";
       let results = null;
+      let fromResults = false; //true while a listing opened from the result list is on screen
+      let searchedLocation = "";
 
   
       //gets each section's state and shows it accordingly.
@@ -90,8 +92,10 @@ window.JobParser = {
       };
   
       //fill page with job data
-      const displayPosting = data => {
+      const displayPosting = (data, opened = false) => {
         posting = data;
+        fromResults = opened;
+        $("back-to-results").hidden = !(opened && results);
   
         document.getElementById("job-title").textContent =
           data.position_title || "Unknown position";
@@ -136,7 +140,7 @@ window.JobParser = {
         showLoading("Reloading job listing...")
           
         try {
-          displayPosting(await window.FistBumpAPI.posting(posting.board, posting.external_id));
+          displayPosting(await window.FistBumpAPI.posting(posting.board, posting.external_id), fromResults);
         } catch (error) {
           showError(error);
         } finally {
@@ -167,7 +171,7 @@ window.JobParser = {
             ].filter(Boolean).join(" . "))
           );
 
-          open.addEventListener("click", () => displayPosting(result));
+          open.addEventListener("click", () => displayPosting(result, true));
           item.append(open);
 
           const url = safeURL(result.company_url);
@@ -185,6 +189,10 @@ window.JobParser = {
       const renderResults = data => {
         $("result-counts").textContent = 
         `${data.matched.toLocaleString()} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
+        //say so when nothing is in the requested location, so remote results are not mistaken for local ones
+        const note = $("result-note");
+        note.hidden = !(searchedLocation && data.matched > 0 && data.location_matched === 0);
+        note.textContent = `No postings found in ${searchedLocation}. Showing remote postings instead.`;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
 
@@ -197,6 +205,7 @@ window.JobParser = {
       //main function to run the search
       const runSearch = async query => {
         retry = () => runSearch(query);
+        searchedLocation = query.location;
         results = null;
         setBusy(true);
         showLoading("Searching Greenhouse...");
@@ -235,6 +244,8 @@ window.JobParser = {
           loadPosting(url);
         }
       });
+
+      $("back-to-results").addEventListener("click", () => showState("results"));
 
       document.getElementById("reload-listing").addEventListener("click", reloadPosting);
   

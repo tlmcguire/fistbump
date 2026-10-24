@@ -80,6 +80,7 @@ type SearchError struct {
 type SearchResult struct {
 	Postings        []Posting     `json:"postings"`
 	Matched         int           `json:"matched"`          // postings that passed the filters
+	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
 	BoardsSearched  int           `json:"boards_searched"`  // boards listed without error
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list
 	PostingsScanned int           `json:"postings_scanned"` // postings seen across those boards
