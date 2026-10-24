@@ -161,7 +161,7 @@ window.JobParser = {
 
       //a yearly range such as "$120k-$150k", or "" when the posting lists none
       const payText = result => {
-        if (!result.pay_max) return "";
+        if (!result.pay_max) return searchedQuery.pay_min || searchedQuery.pay_max ? "Pay not listed" : "";
         const k = value => `$${Math.round(value / 1000)}k`;
         return result.pay_min && result.pay_min !== result.pay_max ? `${k(result.pay_min)}-${k(result.pay_max)}` : k(result.pay_max);
       };
@@ -209,6 +209,28 @@ window.JobParser = {
         const noun = count => count === 1 ? "posting" : "postings";
         const notes = [];
         let empty = "No postings matched. Check the keywords and try again.";
+
+        const company = query.company;
+        if (company && !(data.companies || []).length) {
+          //nothing to search: say so plainly instead of showing an empty list
+          return {
+            note: "",
+            empty: `We can't find listings for "${company}" yet. We search a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or try searching by keywords or industry instead.`
+          };
+        }
+        if (company) {
+          const names = data.companies.slice(0, 3).join(", ") + (data.companies.length > 3 ? ` and ${data.companies.length - 3} more` : "");
+          notes.push(`Searched ${names}.`);
+          if (data.matched === 0) {
+            empty = `${names} ${data.companies.length === 1 ? "has" : "have"} no postings that match your search. Try removing a keyword or filter.`;
+          }
+        }
+        if (query.pay_min || query.pay_max) {
+          const unlisted = data.postings.filter(posting => !posting.pay_max).length;
+          if (unlisted > 0 && !query.require_pay) {
+            notes.push(`Pay is not listed for ${unlisted} of the ${data.postings.length} shown on this page, so the pay range could not be checked for them. Tick "Hide postings that do not list pay" to remove them.`);
+          }
+        }
 
         if (place && mode === "Remote") {
           notes.push(`Showing remote postings only. Remote jobs are not tied to ${place}, so the location was not used.`);
@@ -360,26 +382,41 @@ window.JobParser = {
 
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
+        //pay is typed as 90000, 90,000, $90k or 90K; a blank or unreadable box means no limit
+        const pay = id => {
+          const match = $(id).value.replace(/[$,\s]/g, "").match(/^(\d+(?:\.\d+)?)(k?)$/i);
+          if (!match) return 0;
+          return Math.round(parseFloat(match[1]) * (match[2] ? 1000 : 1));
+        };
         const query = {
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value,
+          company: $("search-company").value.trim(),
           categories: $("search-industry").value ? [$("search-industry").value] : [],
           level: $("search-level").value,
           posted_within: number("search-posted"),
           exclude: words("search-exclude"),
-          pay_min: number("search-pay-min"),
-          pay_max: number("search-pay-max"),
+          pay_min: pay("search-pay-min"),
+          pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
           limit: PAGE_SIZE
         };
-        if (!query.keywords.length && !query.location && !query.categories.length) {
-          $("initial-message").textContent = "Enter keywords, a location or an industry to search.";
+        for (const id of ["search-pay-min", "search-pay-max"]) {
+          if ($(id).value.trim() && !pay(id)) {
+            $("initial-message").textContent = "Enter pay as a yearly amount, such as 90000 or 90k.";
+            showState("initial");
+            return;
+          }
+        }
+        if (!query.keywords.length && !query.location && !query.categories.length && !query.company) {
+          $("initial-message").textContent = "Enter keywords, a location, a company or an industry to search.";
           showState("initial");
           return;
         }
         window.Suggest.remember("keywords", query.keywords);
         window.Suggest.remember("location", [query.location]);
+        window.Suggest.remember("company", [query.company]);
         runSearch(query);
       });
 
@@ -405,7 +442,9 @@ window.JobParser = {
       });
 
       //industries come from the backend's curated lists; the form still works without them
+      const companyNames = []; //filled with the curated company names for autocomplete
       window.FistBumpAPI.categories().then(data => {
+        companyNames.push(...(data.companies || []));
         for (const category of data.categories) {
           const option = el("option", `${category.parent ? "\u00a0\u00a0" : ""}${category.name} (${category.board_count})`);
           option.value = category.id;
@@ -413,6 +452,7 @@ window.JobParser = {
         }
       }).catch(() => {});
 
+      window.Suggest.attach($("search-company"), {key: "company", fixed: companyNames});
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
       window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});
 
