@@ -403,6 +403,8 @@ func TestGreenhouseFetchRejectsBadRequests(t *testing.T) {
 		{"too many keywords", `{"query":{"keywords":["a","b","c","d","e","f","g","h","i","j","k"]}}`, 422, "validation_failed"},
 		{"keyword too long", `{"query":{"keywords":["` + strings.Repeat("x", maxKeywordLen+1) + `"]}}`, 422, "validation_failed"},
 		{"limit too high", `{"query":{` + kw + `,"limit":51}}`, 422, "validation_failed"},
+		{"offset negative", `{"query":{` + kw + `,"offset":-1}}`, 422, "validation_failed"},
+		{"offset too high", `{"query":{` + kw + `,"offset":1001}}`, 422, "validation_failed"},
 		{"limit negative", `{"query":{` + kw + `,"limit":-1}}`, 422, "validation_failed"},
 		{"bad work mode", `{"query":{` + kw + `,"work_mode":"Anywhere"}}`, 422, "validation_failed"},
 		{"unknown category", `{"query":{` + kw + `,"categories":["nope"]}}`, 422, "validation_failed"},

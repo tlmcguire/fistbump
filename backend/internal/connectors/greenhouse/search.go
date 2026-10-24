@@ -105,19 +105,26 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		return a.ExternalID < b.ExternalID
 	})
 
-	// Company variety: no company takes more than perCompanyCap places.
-	var top []connectors.Posting
+	// Company variety: each company's first perCompanyCap postings come ahead of its later ones, so
+	// no company fills a page. Nothing is dropped, so paging reaches every match, and the order is
+	// fixed, so no page repeats another.
+	var first, later []connectors.Posting
 	perCompany := map[string]int{}
 	for _, p := range candidates {
-		if len(top) == q.Limit {
-			break
-		}
-		if perCompany[p.Board] >= perCompanyCap {
-			continue
+		if perCompany[p.Board] < perCompanyCap {
+			first = append(first, p)
+		} else {
+			later = append(later, p)
 		}
 		perCompany[p.Board]++
-		top = append(top, p)
 	}
+	ranked := append(first, later...)
+
+	start := min(q.Offset, len(ranked))
+	end := min(start+q.Limit, len(ranked))
+	top := ranked[start:end]
+	result.HasMore = end < len(ranked)
+	result.NextOffset = end
 
 	// Full data for the top postings. A failed detail drops the posting and lists its board.
 	full := make([]*connectors.Posting, len(top))

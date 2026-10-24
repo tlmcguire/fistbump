@@ -153,7 +153,7 @@ func TestSearchFilters(t *testing.T) {
 	}
 }
 
-func TestSearchCompanyVarietyAndLimit(t *testing.T) {
+func TestSearchCompanyVarietyAndPaging(t *testing.T) {
 	var many []fakeJob
 	for i := 1; i <= 6; i++ {
 		many = append(many, fakeJob{i, "Data Analyst", "Remote", fmt.Sprintf("2026-10-0%dT00:00:00Z", i)})
@@ -163,15 +163,54 @@ func TestSearchCompanyVarietyAndLimit(t *testing.T) {
 		"small": {{10, "Data Analyst", "Remote", "2026-09-01T00:00:00Z"}},
 	}}
 	c := s.client(t)
-	r, _ := c.Search(context.Background(), query("data analyst"), []string{"big", "small"})
-	if len(r.Postings) != 4 || r.Matched != 7 {
-		t.Errorf("postings = %v, matched = %d", titles(r), r.Matched)
-	}
+	boards := []string{"big", "small"}
+
+	// A page of 4 holds big's first 3 and small's one, ahead of big's later postings.
 	q := query("data analyst")
-	q.Limit = 2
-	r, _ = c.Search(context.Background(), q, []string{"big", "small"})
-	if len(r.Postings) != 2 {
-		t.Errorf("limit: got %d postings", len(r.Postings))
+	q.Limit = 4
+	r, _ := c.Search(context.Background(), q, boards)
+	if len(r.Postings) != 4 || r.Matched != 7 || !r.HasMore || r.NextOffset != 4 {
+		t.Fatalf("page 1: %v, matched %d, more %v, next %d", titles(r), r.Matched, r.HasMore, r.NextOffset)
+	}
+	seen := map[string]bool{}
+	big := 0
+	for _, p := range r.Postings {
+		seen[p.Board+p.ExternalID] = true
+		if p.Board == "big" {
+			big++
+		}
+	}
+	if big != 3 {
+		t.Errorf("page 1 has %d from big, want 3", big)
+	}
+
+	// The next pages continue from NextOffset and never repeat a posting.
+	for offset, pages := r.NextOffset, 0; ; pages++ {
+		if pages > 5 {
+			t.Fatal("paging did not finish")
+		}
+		q.Offset = offset
+		r, _ = c.Search(context.Background(), q, boards)
+		for _, p := range r.Postings {
+			if seen[p.Board+p.ExternalID] {
+				t.Errorf("%s%s repeated", p.Board, p.ExternalID)
+			}
+			seen[p.Board+p.ExternalID] = true
+		}
+		if !r.HasMore {
+			break
+		}
+		offset = r.NextOffset
+	}
+	if len(seen) != 7 {
+		t.Errorf("paging reached %d postings, want 7", len(seen))
+	}
+
+	// An offset past the end is an empty last page.
+	q.Offset = 500
+	r, _ = c.Search(context.Background(), q, boards)
+	if len(r.Postings) != 0 || r.HasMore {
+		t.Errorf("past the end: %v, more %v", titles(r), r.HasMore)
 	}
 }
 

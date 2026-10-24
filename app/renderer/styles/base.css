@@ -135,13 +135,49 @@ body {
   gap: 12px;
 }
 
-/*one row in result list*/
+/*one result: a white bubble holding the open button and the company link*/
+.result{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: white;
+  color: #0A255C;
+  border-radius: 10px;
+}
+
+/*the open button fills the bubble but is not a second box inside it*/
 .result-open{
   width: 100%;
   gap: 4px;
+  padding: 0;
   text-align: left;
   display: flex;
   flex-direction: column;
+  background: transparent;
+  box-shadow: none;
+}
+
+.result-open:hover:not(:disabled){
+  transform: none;
+  box-shadow: none;
+  background: transparent;
+  text-decoration: underline;
+}
+
+.result-link{
+  color: #0A255C;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.result-link:visited{
+  color: #5b3d8f;
+}
+
+#load-more{
+  width: 100%;
+  margin-top: 12px;
 }
 
   
