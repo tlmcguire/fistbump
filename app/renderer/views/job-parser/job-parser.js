@@ -219,8 +219,8 @@ window.JobParser = {
           const missed = data.boards_total - data.boards_searched;
           notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
         }
-        if (data.postings.length < Math.min(data.matched, 1) ) {
-          notes.push("Descriptions could not be loaded for the top matches, so none are shown. Try again.");
+        if (data.postings.length === 0 && data.matched > 0) {
+          empty = "Matches were found, but their descriptions could not be loaded. Try again.";
         }
         return {note: notes.join(" "), empty};
       };
