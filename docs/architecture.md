@@ -204,7 +204,7 @@ The Greenhouse job board API has no search. `GET /v1/boards/{board}/jobs` return
 ```mermaid
 flowchart LR
     Boards["All curated boards<br/>+ custom boards"] --> List["List each board<br/>(24 concurrent, no content)"]
-    List --> Cache["Listing cache<br/>memory + data/cache, 6 h"]
+    List --> Cache["Listing cache<br/>memory + database, 6 h"]
     Cache --> Filter["Title, location,<br/>work mode filters"]
     Filter --> Detail["Fetch descriptions<br/>for top 40 titles"]
     Detail --> Rank["Rank: title fit, resume skills,<br/>home location, company variety"]
@@ -216,7 +216,7 @@ flowchart LR
 - **Keywords.** Request keywords, else `profile.target_positions`, else the title of the most recent experience. Titles are matched by words, not phrases: seniority words are ignored, common synonyms are folded (developer and engineer, front end and frontend), and an exact phrase ranks higher.
 - **Filters.** Location terms match the posting location; remote postings pass a location filter unless the user wants on-site. Remote must be stated in the posting; hybrid and on-site pass when the posting does not say.
 - **Rank.** Descriptions are fetched for the 40 best title matches (5 s per request, 8 s for the stage) and scored by overlap with resume skills. Postings near `profile.home_location` rank higher, postings in other countries lower. No company fills more than 3 of the top slots. Ranking is deterministic and does not call AI.
-- **Cache.** Listings are cached in memory and in `data/cache/greenhouse/` for 6 hours, descriptions in memory for 24 hours. Storage cleanup of `cache` clears both. A board that returns 404 is remembered and reported in `errors`.
+- **Cache.** Listings are cached in memory and in the `greenhouse_listing_cache` table for 6 hours, descriptions in memory and in `greenhouse_description_cache` for 24 hours. At launch, rows older than a day are deleted. Storage cleanup of `cache` clears both tables. A board that returns 404 is remembered and reported in `errors`.
 - **Persistence.** Search results are not written to the database. Saving a posting fetches its description if needed and stores it with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. Saving again refreshes `searched_at`.
 - **Network.** Requests carry only public board tokens and job ids. Keywords, filters and the resume stay on the computer, because filtering and ranking are local. See the network policy above.
 
@@ -530,7 +530,7 @@ No em dashes. Plain wording.
 
 ### Open
 
-- **Persistent Greenhouse index.** Listings are cached as JSON files. If search across more boards gets slow, an FTS5 table is the extension point.
+- **Persistent Greenhouse index.** Listings are cached as JSON in SQLite tables. If search across more boards gets slow, an FTS5 table is the extension point.
 
 ## Related docs
 
