@@ -15,6 +15,35 @@ window.Suggest = (() => {
     "Software Engineering Intern", "Data Analyst Intern", "Marketing Intern",
   ];
 
+  // Roles that come in levels. Each gets junior, senior and numbered forms, so typing "junior dev" or
+  // "analyst II" finds a suggestion.
+  const LEVELED = [
+    "Software Engineer", "Software Developer", "Web Developer", "Frontend Engineer", "Backend Engineer",
+    "Full Stack Engineer", "Data Analyst", "Data Engineer", "Data Scientist", "Business Analyst",
+    "Financial Analyst", "Security Analyst", "Security Engineer", "QA Engineer", "DevOps Engineer",
+    "Systems Administrator", "Network Engineer", "Product Designer", "UX Designer", "Product Manager",
+    "Project Manager", "Marketing Specialist", "Accountant", "Recruiter", "Customer Support Specialist",
+  ];
+  const LEVEL_PREFIXES = ["Junior", "Jr", "Entry Level", "Associate", "Senior", "Sr", "Staff", "Principal", "Lead"];
+  const LEVEL_SUFFIXES = ["I", "II", "III", "Intern"];
+
+  // Roles whose level is written as a tier or number.
+  const TIERED = [
+    "SOC Analyst Tier 1", "SOC Analyst Tier 2", "SOC Analyst Tier 3", "SOC Analyst I", "SOC Analyst II", "SOC Analyst III",
+    "SOC 1", "SOC 2", "SOC 3", "Security Operations Analyst", "Incident Response Analyst", "Threat Hunter",
+    "Help Desk Tier 1", "Help Desk Tier 2", "Service Desk Analyst", "Desktop Support Technician",
+    "Technical Support Engineer Tier 1", "Technical Support Engineer Tier 2", "Support Engineer Level 1",
+    "Support Engineer Level 2", "Customer Support Tier 1", "Customer Support Tier 2", "IT Technician",
+    "New Grad Software Engineer", "Graduate Software Engineer", "Early Career Engineer", "Apprentice Developer",
+    "Engineering Manager", "Senior Engineering Manager", "Director of Engineering", "VP of Engineering",
+  ];
+
+  const leveled = LEVELED.flatMap(role => [
+    ...LEVEL_PREFIXES.map(prefix => `${prefix} ${role}`),
+    ...LEVEL_SUFFIXES.map(suffix => `${role} ${suffix}`),
+  ]);
+  const ALL_TITLES = [...new Set([...TITLES, ...TIERED, ...leveled])];
+
   const PLACES = [
     "Albuquerque, NM", "Anchorage, AK", "Atlanta, GA", "Austin, TX", "Baltimore, MD", "Birmingham, AL",
     "Boise, ID", "Boston, MA", "Boulder, CO", "Brooklyn, NY", "Buffalo, NY", "Charleston, SC",
@@ -59,9 +88,12 @@ window.Suggest = (() => {
     }
   };
 
-  // matches ranks recent entries first, then names that start with the term, then names that contain it.
+  // matches ranks recent entries first, then names that start with the term, then names where every
+  // typed word starts some word of the name ("junior dev" finds "Junior Developer"), then names that
+  // contain the term.
   const matches = (term, key, fixed) => {
     const t = term.trim().toLowerCase();
+    const typed = t.split(/\s+/).filter(Boolean);
     const seen = new Set();
     const out = [];
     const add = (value, show) => {
@@ -71,11 +103,16 @@ window.Suggest = (() => {
         out.push({value, recent: show});
       }
     };
-    const fits = (value, at) => t === "" ? at === "start" : at === "start"
-      ? value.toLowerCase().startsWith(t) : value.toLowerCase().includes(t);
-    for (const value of recent(key)) if (fits(value, "start")) add(value, true);
-    for (const value of fixed) if (fits(value, "start")) add(value, false);
-    if (t) for (const value of fixed) if (fits(value, "any")) add(value, false);
+    const starts = value => value.toLowerCase().startsWith(t);
+    const words = value => typed.every(word => value.toLowerCase().split(/[\s,/()-]+/).some(w => w.startsWith(word)));
+    const contains = value => value.toLowerCase().includes(t);
+    for (const value of recent(key)) if (starts(value)) add(value, true);
+    for (const value of fixed) if (starts(value)) add(value, false);
+    if (t) {
+      for (const value of recent(key)) if (words(value)) add(value, true);
+      for (const value of fixed) if (words(value)) add(value, false);
+      for (const value of fixed) if (contains(value)) add(value, false);
+    }
     return out.slice(0, MAX_ITEMS);
   };
 
@@ -170,5 +207,5 @@ window.Suggest = (() => {
     });
   };
 
-  return {attach, remember, matches, TITLES, PLACES};
+  return {attach, remember, matches, TITLES: ALL_TITLES, PLACES};
 })();

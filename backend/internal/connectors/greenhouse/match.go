@@ -15,11 +15,12 @@ var (
 	// seniority words say how senior a role is, not what it is. "intern" is kept: it changes the job.
 	seniority = map[string]bool{
 		"senior": true, "sr": true, "junior": true, "jr": true, "lead": true,
-		"principal": true, "staff": true, "i": true, "ii": true, "iii": true,
+		"principal": true, "staff": true,
 	}
 	// Multi-word spellings are folded first, then single words.
 	phraseFolds = [][2]string{{"front end", "frontend"}, {"back end", "backend"}, {"full stack", "fullstack"}}
-	wordFolds   = map[string]string{"developer": "engineer", "dev": "engineer", "swe": "engineer"}
+	// Roman numerals fold to digits, so "SOC Analyst I" matches "soc analyst 1".
+	wordFolds = map[string]string{"developer": "engineer", "dev": "engineer", "swe": "engineer", "i": "1", "ii": "2", "iii": "3", "iv": "4"}
 
 	remoteRe = regexp.MustCompile(`\bremote\b`)
 	hybridRe = regexp.MustCompile(`\bhybrid\b`)

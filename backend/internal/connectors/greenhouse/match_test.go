@@ -21,6 +21,10 @@ func TestTitleScore(t *testing.T) {
 		{"Marketing Manager", []string{"data analyst"}, 0},
 		{"Software Engineering Intern", []string{"software engineer"}, 0.5},
 		{"Accountant", []string{"data analyst", "accountant"}, 1},
+		{"SOC Analyst I", []string{"soc analyst 1"}, 1},
+		{"SOC Analyst - Tier 1", []string{"soc analyst 1"}, 1},
+		{"Security Analyst II", []string{"security analyst 2"}, 1},
+		{"Security Analyst II", []string{"security analyst"}, 1},
 	}
 	for _, c := range cases {
 		if got := TitleScore(c.title, c.keywords); got != c.want {

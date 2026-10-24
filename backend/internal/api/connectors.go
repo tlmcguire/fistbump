@@ -144,6 +144,13 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	q.Keywords = keywords
+	exclude := make([]string, 0, len(q.Exclude))
+	for _, word := range q.Exclude {
+		if word = strings.TrimSpace(word); word != "" {
+			exclude = append(exclude, word)
+		}
+	}
+	q.Exclude = exclude
 	if q.Limit == 0 {
 		q.Limit = 20
 	}
@@ -160,6 +167,11 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 	if len(q.Keywords) > maxKeywords {
 		return validationFailed("Too many keywords")
+	}
+	for _, word := range q.Exclude {
+		if len(word) > maxKeywordLen {
+			return validationFailed("A word to exclude is too long")
+		}
 	}
 	for _, keyword := range q.Keywords {
 		if len(keyword) > maxKeywordLen {
