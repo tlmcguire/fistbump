@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,9 +86,6 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				if p.TitleScore < minTitleScore {
 					continue
 				}
-				if len(terms) > 0 && locationMatches(p.Location, terms) {
-					result.LocationMatched++
-				}
 				p.Score = Score(p.TitleScore, LocationScore(p.Location, p.WorkMode, terms))
 				candidates = append(candidates, p)
 			}
@@ -98,15 +96,17 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	if err := ctx.Err(); err != nil && errors.Is(err, context.Canceled) {
 		return result, err // the caller stopped waiting
 	}
-	result.Matched = len(candidates)
-
+	newest := q.Sort == connectors.SortNewest
 	sort.SliceStable(candidates, func(i, j int) bool {
 		a, b := candidates[i], candidates[j]
-		if a.Score != b.Score {
+		if !newest && a.Score != b.Score {
 			return a.Score > b.Score
 		}
 		if !a.UpdatedAt.Equal(b.UpdatedAt) {
 			return a.UpdatedAt.After(b.UpdatedAt)
+		}
+		if a.Score != b.Score {
+			return a.Score > b.Score
 		}
 		if a.CompanyName != b.CompanyName {
 			return a.CompanyName < b.CompanyName
@@ -116,6 +116,18 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		}
 		return a.ExternalID < b.ExternalID
 	})
+
+	// The same role posted in several places is one result. The best-ranked copy stays and counts the rest.
+	candidates = foldDuplicates(candidates)
+	result.Matched = len(candidates)
+	result.LocationMatched = 0
+	if len(terms) > 0 {
+		for _, p := range candidates {
+			if locationMatches(p.Location, terms) {
+				result.LocationMatched++
+			}
+		}
+	}
 
 	// Company variety: each company's first perCompanyCap postings come ahead of its later ones, so
 	// no company fills a page. Nothing is dropped, so paging reaches every match, and the order is
@@ -182,6 +194,23 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	return result, nil
 }
 
+// foldDuplicates keeps the first posting of each company and title and counts the others in
+// Duplicates. The input is ranked, so the kept copy is the best one.
+func foldDuplicates(ranked []connectors.Posting) []connectors.Posting {
+	index := map[string]int{}
+	out := make([]connectors.Posting, 0, len(ranked))
+	for _, p := range ranked {
+		key := p.Board + "\x00" + strings.Join(titleFields(p.PositionTitle), " ")
+		if at, ok := index[key]; ok {
+			out[at].Duplicates++
+			continue
+		}
+		index[key] = len(out)
+		out = append(out, p)
+	}
+	return out
+}
+
 // fill fetches the description of each posting, at most fetchConcurrency at a time, and returns the
 // postings in the same order with nil where a fetch failed. A failure lists the posting's board.
 func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.Mutex, failed map[string]string) []*connectors.Posting {
@@ -216,6 +245,12 @@ func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.
 			}
 			if low, high, ok := ParsePay(detail.RawText); ok {
 				p.PayMin, p.PayMax = low, high
+			}
+			// A posting whose location says nothing may still say in its text that the role is remote or hybrid.
+			if p.WorkMode == connectors.WorkModeOnSite {
+				if mode := DescribedMode(detail.RawText); mode != "" {
+					p.WorkMode = mode
+				}
 			}
 			full[i] = &p
 		}()

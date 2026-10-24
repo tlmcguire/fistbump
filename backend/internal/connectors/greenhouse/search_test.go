@@ -130,10 +130,10 @@ func TestSearchRanksAndFills(t *testing.T) {
 
 func TestSearchFilters(t *testing.T) {
 	s := &searchServer{boards: map[string][]fakeJob{"acme": {
-		{1, "Data Analyst", "Remote - US", "2026-10-01T00:00:00Z"},
-		{2, "Data Analyst", "Charleston, SC", "2026-10-01T00:00:00Z"},
-		{3, "Data Analyst", "Denver, CO", "2026-10-01T00:00:00Z"},
-		{4, "Data Analyst", "Remote - Australia", "2026-10-01T00:00:00Z"},
+		{1, "Data Analyst 1", "Remote - US", "2026-10-01T00:00:00Z"},
+		{2, "Data Analyst 2", "Charleston, SC", "2026-10-01T00:00:00Z"},
+		{3, "Data Analyst 3", "Denver, CO", "2026-10-01T00:00:00Z"},
+		{4, "Data Analyst 4", "Remote - Australia", "2026-10-01T00:00:00Z"},
 	}}}
 	c := s.client(t)
 	q := query("data analyst")
@@ -157,11 +157,11 @@ func TestSearchFilters(t *testing.T) {
 func TestSearchCompanyVarietyAndPaging(t *testing.T) {
 	var many []fakeJob
 	for i := 1; i <= 6; i++ {
-		many = append(many, fakeJob{i, "Data Analyst", "Remote", fmt.Sprintf("2026-10-0%dT00:00:00Z", i)})
+		many = append(many, fakeJob{i, fmt.Sprintf("Data Analyst %d", i), "Remote", fmt.Sprintf("2026-10-0%dT00:00:00Z", i)})
 	}
 	s := &searchServer{boards: map[string][]fakeJob{
 		"big":   many,
-		"small": {{10, "Data Analyst", "Remote", "2026-09-01T00:00:00Z"}},
+		"small": {{10, "Data Analyst 10", "Remote", "2026-09-01T00:00:00Z"}},
 	}}
 	c := s.client(t)
 	boards := []string{"big", "small"}
@@ -255,8 +255,8 @@ func TestSearchEveryBoardFails(t *testing.T) {
 func TestSearchDetailFailureDropsPosting(t *testing.T) {
 	s := &searchServer{
 		boards: map[string][]fakeJob{"acme": {
-			{1, "Data Analyst", "Remote", "2026-10-02T00:00:00Z"},
-			{2, "Data Analyst", "Remote", "2026-10-01T00:00:00Z"},
+			{1, "Data Analyst 1", "Remote", "2026-10-02T00:00:00Z"},
+			{2, "Data Analyst 2", "Remote", "2026-10-01T00:00:00Z"},
 		}},
 		badDetail: map[string]bool{"acme/1": true},
 	}
@@ -327,11 +327,11 @@ func TestSearchPreferences(t *testing.T) {
 	now := time.Now().UTC()
 	day := func(n int) string { return now.AddDate(0, 0, -n).Format(time.RFC3339) }
 	s := &searchServer{boards: map[string][]fakeJob{"acme": {
-		{1, "Data Analyst", "Remote", day(1)},
-		{2, "Senior Data Analyst", "Remote", day(2)},
-		{3, "Data Analyst Intern", "Remote", day(3)},
-		{4, "Sales Data Analyst", "Remote", day(4)},
-		{5, "Data Analyst", "Remote", day(60)},
+		{1, "Data Analyst 1", "Remote", day(1)},
+		{2, "Senior Data Analyst 2", "Remote", day(2)},
+		{3, "Data Analyst Intern 3", "Remote", day(3)},
+		{4, "Sales Data Analyst 4", "Remote", day(4)},
+		{5, "Data Analyst 5", "Remote", day(60)},
 	}}}
 	c := s.client(t)
 	run := func(mod func(*connectors.Query)) string {
@@ -366,7 +366,7 @@ func TestSearchPayRange(t *testing.T) {
 	var jobs []fakeJob
 	pay := map[string]string{}
 	for i := 1; i <= 10; i++ {
-		jobs = append(jobs, fakeJob{i, "Data Analyst", "Remote", now.AddDate(0, 0, -i).Format(time.RFC3339)})
+		jobs = append(jobs, fakeJob{i, fmt.Sprintf("Data Analyst %d", i), "Remote", now.AddDate(0, 0, -i).Format(time.RFC3339)})
 	}
 	pay["acme/1"] = "$80,000 - $90,000"
 	pay["acme/2"] = "$130,000 - $150,000"
@@ -413,5 +413,34 @@ func TestSearchPayRange(t *testing.T) {
 	r, _ = c.Search(context.Background(), q, []string{"acme"})
 	if len(r.Postings) != 3 || !r.HasMore {
 		t.Errorf("page 2: %d postings, more %v", len(r.Postings), r.HasMore)
+	}
+}
+
+func TestSearchFoldsDuplicatesAndSorts(t *testing.T) {
+	s := &searchServer{boards: map[string][]fakeJob{"acme": {
+		{1, "Data Analyst", "Austin, TX", "2026-10-01T00:00:00Z"},
+		{2, "Data Analyst", "Denver, CO", "2026-10-02T00:00:00Z"},
+		{3, "Data Analyst", "Remote", "2026-10-03T00:00:00Z"},
+		{4, "Data Analyst, Finance", "Austin, TX", "2026-10-09T00:00:00Z"},
+	}}}
+	c := s.client(t)
+	r, _ := c.Search(context.Background(), query("data analyst"), []string{"acme"})
+	if r.Matched != 2 || len(r.Postings) != 2 {
+		t.Fatalf("matched %d, postings %v", r.Matched, titles(r))
+	}
+	for _, p := range r.Postings {
+		if p.PositionTitle == "Data Analyst" && p.Duplicates != 2 {
+			t.Errorf("duplicates = %d, want 2", p.Duplicates)
+		}
+	}
+	// Relevance puts the exact title first; newest puts the most recently updated first.
+	if r.Postings[0].PositionTitle != "Data Analyst" {
+		t.Errorf("relevance first = %q", r.Postings[0].PositionTitle)
+	}
+	q := query("data analyst")
+	q.Sort = "newest"
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.Postings[0].PositionTitle != "Data Analyst, Finance" {
+		t.Errorf("newest first = %q", r.Postings[0].PositionTitle)
 	}
 }

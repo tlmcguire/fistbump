@@ -97,7 +97,8 @@ func ModeOK(mode, want string) bool {
 	return mode == want || (mode == connectors.WorkModeOnSite && want == connectors.WorkModeHybrid)
 }
 
-// locationTerms splits the request's location into lower-case city, state or country terms.
+// locationTerms splits the request's location into lower-case terms (city, state, country) and
+// adds their other spellings, so "South Carolina" also looks for "SC".
 func locationTerms(s string) []string {
 	var out []string
 	for _, p := range strings.Split(strings.ToLower(s), ",") {
@@ -105,17 +106,21 @@ func locationTerms(s string) []string {
 			out = append(out, p)
 		}
 	}
-	return out
+	// "Charleston, South Carolina" is also worth trying as one name, for groups like "new york, ny".
+	if len(out) > 1 {
+		out = append(out, strings.Join(out, ", "))
+	}
+	return expandTerms(out)
 }
 
-// locationMatches reports whether any term appears in the posting location. Terms of two letters
-// (state codes) must match a whole word, so "in" does not match "Berlin".
+// locationMatches reports whether any term appears in the posting location. Two-letter terms are
+// state codes and must match a whole word in capitals, so "in" does not match "Berlin" and "or" in
+// "Oakland or Remote" is not Oregon.
 func locationMatches(location string, terms []string) bool {
 	l := strings.ToLower(location)
 	for _, t := range terms {
-		if len(t) <= 2 {
-			re := regexp.MustCompile(`\b` + regexp.QuoteMeta(t) + `\b`)
-			if re.MatchString(l) {
+		if codeLike(t) {
+			if capitalWord(location, strings.ToUpper(t)) {
 				return true
 			}
 		} else if strings.Contains(l, t) {
@@ -123,6 +128,27 @@ func locationMatches(location string, terms []string) bool {
 		}
 	}
 	return false
+}
+
+// capitalWord reports whether word appears in s as a whole word, in this case.
+func capitalWord(s, word string) bool {
+	for i := 0; ; {
+		at := strings.Index(s[i:], word)
+		if at < 0 {
+			return false
+		}
+		start, end := i+at, i+at+len(word)
+		before := start == 0 || !isLetter(s[start-1])
+		after := end == len(s) || !isLetter(s[end])
+		if before && after {
+			return true
+		}
+		i = start + 1
+	}
+}
+
+func isLetter(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }
 
 // LocationOK applies the location filter. A remote posting passes unless the request is On-site,
@@ -186,9 +212,13 @@ func round2(f float64) float64 { return float64(int(f*100+0.5)) / 100 }
 
 var (
 	internRe = regexp.MustCompile(`\b(intern|internship|co-op|apprentice)\b`)
-	entryRe  = regexp.MustCompile(`\b(junior|jr|entry|entry-level|graduate|new grad|associate)\b`)
+	entryRe  = regexp.MustCompile(`\b(junior|jr|entry|entry-level|graduate|new grad)\b|\bassociate\b`)
 	seniorRe = regexp.MustCompile(`\b(senior|sr|iii|iv)\b`)
-	leadRe   = regexp.MustCompile(`\b(lead|principal|staff|manager|director|head|vp|vice president|chief)\b`)
+	// A manager is a mid-level role unless the title says more: an engineering manager leads a team.
+	leadRe = regexp.MustCompile(`\b(lead|principal|staff|director|head|vp|vice president|chief|associate director|associate vice president|associate general counsel|engineering manager|senior manager|group manager|general manager|managing)\b`)
+
+	describedRemote = regexp.MustCompile(`(?i)\b(fully remote|100% remote|remote[- ]first|this is a remote|remote position|remote role|remote opportunity|work from anywhere|work remotely from)\b`)
+	describedHybrid = regexp.MustCompile(`(?i)\b(hybrid (role|position|work|schedule|model|environment)|this is a hybrid|\d days? (a|per) week (in|at) the office|in[- ]office \d days?)\b`)
 )
 
 // Level reads the experience level from a title. A title that says none is Mid.
@@ -208,6 +238,18 @@ func Level(title string) string {
 }
 
 var nonWordKeepDash = regexp.MustCompile(`[^A-Za-z0-9 -]+`)
+
+// DescribedMode reads a stricter work mode from a description: "fully remote", "hybrid role" and the
+// like. It returns "" when the text does not say, since benefits lists mention "remote" in passing.
+func DescribedMode(text string) string {
+	switch {
+	case describedRemote.MatchString(text):
+		return connectors.WorkModeRemote
+	case describedHybrid.MatchString(text):
+		return connectors.WorkModeHybrid
+	}
+	return ""
+}
 
 // LevelOK applies the requested level.
 func LevelOK(level, want string) bool {

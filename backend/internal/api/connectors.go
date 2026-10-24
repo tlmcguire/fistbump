@@ -104,9 +104,10 @@ func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 	writeJSON(w, http.StatusOK, struct {
 		Categories []category `json:"categories"`
 		Companies  []string   `json:"companies"`
+		BoardTotal int        `json:"board_total"`
 		VerifiedAt string     `json:"verified_at"`
 		Notice     string     `json:"notice"`
-	}{out, greenhouse.CompanyNames(), greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
+	}{out, greenhouse.CompanyNames(), len(greenhouse.Tokens()), greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
 	return nil
 }
 

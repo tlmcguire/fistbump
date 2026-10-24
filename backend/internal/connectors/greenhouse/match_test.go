@@ -109,3 +109,42 @@ func TestLocation(t *testing.T) {
 		t.Errorf("Score = %v, want 0.85", got)
 	}
 }
+
+func TestLocationAliases(t *testing.T) {
+	cases := []struct {
+		want, posting string
+		ok            bool
+	}{
+		{"Charleston, South Carolina", "Charleston, SC", true},
+		{"South Carolina", "Columbia, SC", true},
+		{"Charleston, SC", "South Carolina", true},
+		{"NYC", "New York, NY", true},
+		{"New York", "NYC", true},
+		{"SF", "San Francisco, CA", true},
+		{"Bay Area", "Oakland, CA", true},
+		{"Oregon", "Oakland, CA or Remote", false}, // "or" is a word, not the state
+		{"Oregon", "Portland, OR", true},
+		{"Indiana", "Berlin, Germany", false},
+		{"Texas", "Austin, TX", true},
+	}
+	for _, c := range cases {
+		if got := locationMatches(c.posting, locationTerms(c.want)); got != c.ok {
+			t.Errorf("%q vs %q = %v, want %v", c.want, c.posting, got, c.ok)
+		}
+	}
+}
+
+func TestDescribedMode(t *testing.T) {
+	cases := map[string]string{
+		"This is a fully remote position.":         "Remote",
+		"We are remote-first.":                     "Remote",
+		"Hybrid role, 3 days a week in the office": "Hybrid",
+		"Benefits include a remote work stipend.":  "",
+		"Great team.": "",
+	}
+	for text, want := range cases {
+		if got := DescribedMode(text); got != want {
+			t.Errorf("DescribedMode(%q) = %q, want %q", text, got, want)
+		}
+	}
+}

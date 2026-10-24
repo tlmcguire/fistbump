@@ -68,6 +68,15 @@ func run() error {
 		slog.Info("purged old search cache", "rows", n)
 	}
 
+	// A long-running app would otherwise keep a day-old cache until the next launch.
+	go func() {
+		for range time.Tick(time.Hour) {
+			if _, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
+				slog.Warn("purging the search cache", "error", err)
+			}
+		}
+	}()
+
 	handler := api.New(api.Config{
 		DB:         conn,
 		Greenhouse: gh,

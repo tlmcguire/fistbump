@@ -12,10 +12,18 @@ func TestParsePay(t *testing.T) {
 		{"Pay: $60k to $75k", 60000, 75000, true},
 		{"$100 - 150k depending on experience", 100000, 150000, true},
 		{"$45 - $55 per hour", 93600, 114400, true},
-		{"US: $140,000-$170,000. Canada: $130,000 – $160,000", 130000, 170000, true},
+		{"US: $140,000-$170,000. Canada: $130,000 – $160,000", 140000, 170000, true},
 		{"Raised $50 - $60 million in funding", 0, 0, false}, // below a salary once read as dollars
 		{"A $5,000 - $10,000 signing bonus", 0, 0, false},
 		{"No pay listed", 0, 0, false},
+		{"$120,000 USD - $150,000 USD", 120000, 150000, true},
+		{"The base salary is $150,000 per year.", 150000, 150000, true},
+		{"Pay is $55/hour", 114400, 114400, true},
+		{"CA$120,000 - CA$150,000", 0, 0, false},
+		{"Range: $120,000 - $150,000 CAD", 0, 0, false},
+		{"£50,000 - £60,000", 0, 0, false},
+		{"€70,000 - €80,000", 0, 0, false},
+		{"Canadian roles pay $90,000 - $110,000", 0, 0, false},
 	}
 	for _, c := range cases {
 		low, hi, ok := ParsePay(c.text)
@@ -52,6 +60,11 @@ func TestLevelAndExclude(t *testing.T) {
 		"Staff Engineer":              "Lead",
 		"Engineering Manager":         "Lead",
 		"Data Analyst III":            "Senior",
+		"Associate Product Manager":   "Entry",
+		"Account Manager":             "Mid",
+		"Product Manager":             "Mid",
+		"Associate Director, Finance": "Lead",
+		"Senior Manager, Sales":       "Lead",
 	}
 	for title, want := range levels {
 		if got := Level(title); got != want {

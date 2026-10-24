@@ -21,6 +21,7 @@ type Posting struct {
 	WorkMode   string  `json:"work_mode,omitempty"`
 	PayMin     int     `json:"pay_min,omitempty"` // yearly USD read from the description; 0 when it lists none
 	PayMax     int     `json:"pay_max,omitempty"`
+	Duplicates int     `json:"duplicates,omitempty"` // other postings of the same title at this company, folded into this one
 	Score      float64 `json:"score,omitempty"`
 	TitleScore float64 `json:"title_score,omitempty"`
 	SkillScore float64 `json:"skill_score,omitempty"`
@@ -48,6 +49,12 @@ const (
 	WorkModeOnSite = "On-site"
 )
 
+// Orders a search can ask for.
+const (
+	SortRelevance = "relevance"
+	SortNewest    = "newest"
+)
+
 // Experience levels a search can ask for, read from the posting title.
 const (
 	LevelAny    = "Any"
@@ -70,6 +77,7 @@ type Query struct {
 	Offset     int      `json:"offset"` // where in the ranked list this page starts; 0 for the first page
 
 	// Preferences. The zero value of each means no preference.
+	Sort         string   `json:"sort"`          // "relevance" (default) or "newest"
 	Level        string   `json:"level"`         // Intern, Entry, Mid, Senior, Lead or Any; judged from the title
 	PostedWithin int      `json:"posted_within"` // days since the posting was updated; 0 for any
 	Exclude      []string `json:"exclude"`       // words that rule a posting out when its title has them
@@ -89,6 +97,11 @@ func (q Query) Validate() error {
 	}
 	if q.Offset < 0 || q.Offset > MaxOffset {
 		return errors.New("Offset must be between 0 and 5000")
+	}
+	switch q.Sort {
+	case "", SortRelevance, SortNewest:
+	default:
+		return errors.New("Sort must be relevance or newest")
 	}
 	switch q.Level {
 	case "", LevelAny, LevelIntern, LevelEntry, LevelMid, LevelSenior, LevelLead:
