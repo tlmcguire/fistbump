@@ -61,7 +61,7 @@ Progress:
 - [ ] 3. `build-go.js` folder names
 - [ ] 4. `electron-builder.yml`
 - [ ] 5. `gc.go`, `storage.go`
-- [ ] 6. Storage section in settings
+- [ ] 6. Storage section in settings (built early on `feature/settings-page`: sizes, cache cleanup, data folder; job and model cleanup wait for those features)
 - [ ] 7. `backend.js` restart, startup error screen
 - [ ] 8. `build.yml` (release job)
 - [ ] 9. Size measurement

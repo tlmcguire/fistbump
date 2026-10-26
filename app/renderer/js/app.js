@@ -11,3 +11,4 @@ window.addEventListener("blur", () => document.documentElement.classList.add("wi
 window.addEventListener("focus", () => document.documentElement.classList.remove("window-inactive"));
 
 window.JobParser.mount();
+window.Settings.mount();
