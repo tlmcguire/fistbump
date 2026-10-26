@@ -865,6 +865,16 @@ window.JobParser = {
       document.addEventListener("keydown", event => {
         const mod = window.api?.platform === "darwin" ? event.metaKey : event.ctrlKey;
         if (mod && !event.shiftKey && !event.altKey) {
+          //Suggestion from clanker after adding the Resume view
+          //If resume view is open, this prevents Ctrl+F focusing a hidden box, Cmd/Ctrl+1 and 2 bring Jobs back.
+          if (main.hidden) {
+            if (event.key === "1" || event.key === "2") {
+              event.preventDefault();
+              location.hash = "#/jobs";
+              selectTab(event.key === "1" ? "find" : "link");
+            }
+            return;
+          }
           if (event.key === "f") {
             event.preventDefault();
             const box = activeTab === "find" ? $("search-keywords") : input;
