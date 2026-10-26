@@ -19,6 +19,7 @@ window.JobParser = {
       let fromResults = false;   //true while the open listing came from the result list
       let searchRetry = null;    //what Try again does in the results pane
       let detailRetry = null;    //and in the detail pane
+      let detailSeq = 0;         //counts what the detail pane was given, so a slow load cannot land over a newer one
       let activeTab = "find";
       let lastJobsTab = "find"; //the last of Find jobs and Open a link that was shown
       let results = null;
@@ -49,6 +50,7 @@ window.JobParser = {
         $("detail-empty-message").textContent = activeTab === "link"
           ? "Paste a Greenhouse job link above and press Open."
           : "Choose a job from the list to see the full posting.";
+        detailSeq++;
         posting = null;
         selectedKey = "";
         markSelected();
@@ -137,6 +139,7 @@ window.JobParser = {
   
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
+        detailSeq++;
         posting = data;
         fromResults = opened;
         selectedKey = opened ? keyOf(data) : "";
@@ -159,6 +162,7 @@ window.JobParser = {
       };
 
       const showDetailLoading = message => {
+        detailSeq++;
         $("detail-loading-message").textContent = message;
         main.classList.add("has-detail");
         showDetail("detail-loading");
@@ -168,11 +172,13 @@ window.JobParser = {
       const loadPosting = async url => {
         detailRetry = () => loadPosting(url);
         setLinkBusy(true);
-        showDetailLoading("Opening the listing...");
+        showDetailLoading("Opening the listing\u2026");
+        const mine = detailSeq;
         try {
-          displayPosting(await window.FistBumpAPI.link(url));
+          const data = await window.FistBumpAPI.link(url);
+          if (mine === detailSeq) displayPosting(data);
         } catch (error) {
-          showDetailError(error);
+          if (mine === detailSeq) showDetailError(error);
         } finally {
           setLinkBusy(false);
         }
@@ -185,10 +191,13 @@ window.JobParser = {
         const opened = fromResults;
         detailRetry = reloadPosting;
         $("reload-listing").disabled = true;
-        showDetailLoading("Reloading the listing...");
+        showDetailLoading("Reloading the listing\u2026");
+        const mine = detailSeq;
         try {
-          displayPosting(await window.FistBumpAPI.posting(current.board, current.external_id), opened);
+          const data = await window.FistBumpAPI.posting(current.board, current.external_id);
+          if (mine === detailSeq) displayPosting(data, opened);
         } catch (error) {
+          if (mine !== detailSeq) return;
           posting = current; //keep it, so Try again can reload the same listing
           showDetailError(error);
         } finally {
@@ -341,6 +350,14 @@ window.JobParser = {
           open.addEventListener("click", () => displayPosting(result, true));
           body.append(open);
 
+          //the logo, preview and padding open the listing too; the button stays for the keyboard
+          item.addEventListener("click", event => {
+            if (event.target.closest("button, a")) return; //they handle their own clicks
+            const selection = window.getSelection();
+            if (!selection.isCollapsed && item.contains(selection.anchorNode)) return; //a drag to select text is not a click to open
+            displayPosting(result, true);
+          });
+
           const preview = snippet(result.raw_text);
           if (preview) body.append(el("p", preview));
           if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
@@ -376,7 +393,7 @@ window.JobParser = {
           //nothing to search: say so plainly instead of showing an empty list
           return {
             note: "",
-            empty: `We can't find listings for "${company}" yet. We search a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or try searching by keywords or industry instead.`
+            empty: `No listings for "${company}". Fistbump searches a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or search by keywords or industry instead.`
           };
         }
         if (company) {
@@ -441,8 +458,9 @@ window.JobParser = {
 
       //fill all results
       const renderResults = data => {
-        $("result-counts").textContent = 
-        `${data.matched.toLocaleString()}${data.partial ? "+" : ""} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
+        const count = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+        $("result-counts").textContent = `${data.matched.toLocaleString()}${data.partial ? "+" : ""} ${data.matched === 1 && !data.partial ? "match" : "matches"}` +
+          ` from ${count(data.postings_scanned, "posting", "postings")} on ${count(data.boards_searched, "board", "boards")}`;
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
@@ -460,6 +478,7 @@ window.JobParser = {
       };
 
       let searchSeq = 0; //counts searches, so an older one that finishes late is ignored
+      let pageSeq = 0; //counts page changes and searches, so a slow page cannot land after either
 
       //main function to run the search
       const runSearch = async query => {
@@ -467,11 +486,12 @@ window.JobParser = {
         main.classList.remove("has-detail"); //a narrow window goes back to the list
         const previous = {pages, currentPage, results, searchedQuery};
         const mine = ++searchSeq;
+        pageSeq++; //a page of the old search must not land on this one
         searchedQuery = query;
         results = null;
         setSearchBusy(true);
         const wide = !query.company && !query.categories.length && boardTotal;
-        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards...` : "Searching Greenhouse...", true);
+        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards\u2026` : "Searching Greenhouse\u2026", true);
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
@@ -490,6 +510,7 @@ window.JobParser = {
           if (error.message === "Search canceled") {
             //put back what was on screen before this search
             ({pages, currentPage, results, searchedQuery} = previous);
+            $("result-sort").value = searchedQuery.sort || "relevance";
             if (results) {
               renderResults(results);
               showState("state-results");
@@ -534,13 +555,12 @@ window.JobParser = {
         pager.replaceChildren(
           button("Previous", currentPage - 1, {disabled: currentPage === 1}),
           ...pageWindow(currentPage, total).map(n =>
-            n === null ? el("span", "...") : button(String(n), n, {current: n === currentPage})),
+            n === null ? el("span", "\u2026") : button(String(n), n, {current: n === currentPage})),
           button("Next", currentPage + 1, {disabled: currentPage === total})
         );
       };
 
       //shows a page of results, asking the backend only if the page is not kept yet
-      let pageSeq = 0; //counts page changes, so a slow one cannot land after a newer one
       const goToPage = async page => {
         if (page < 1 || page > pageCount()) return;
         const mine = ++pageSeq;
@@ -558,8 +578,9 @@ window.JobParser = {
             else showError(error);
             return;
           } finally {
-            setSearchBusy(false);
+            if (mine === pageSeq) setSearchBusy(false); //a newer search keeps the button locked
           }
+          if (mine !== pageSeq) return;
           pages.set(page, data);
         }
         await preloadLogos(data.postings);
