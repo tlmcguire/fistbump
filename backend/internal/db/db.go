@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"sort"
@@ -31,7 +32,29 @@ func Open(file string) (*sql.DB, error) {
 		conn.Close()
 		return nil, err
 	}
+	if err := ensureCaches(conn); err != nil {
+		conn.Close()
+		return nil, err
+	}
 	return conn, nil
+}
+
+// cacheMigrations only create cache tables, with IF NOT EXISTS, so they are run on every open as well as in
+// order. That repairs a database whose user_version another build moved past them (an experimental build
+// that shared the data folder did), which would otherwise never get its cache tables.
+var cacheMigrations = []string{"002_greenhouse_cache.sql", "003_logo_cache.sql"}
+
+func ensureCaches(conn *sql.DB) error {
+	for _, name := range cacheMigrations {
+		body, err := migrationsFS.ReadFile(path.Join("migrations", name))
+		if err != nil {
+			return fmt.Errorf("read %s: %w", name, err)
+		}
+		if _, err := conn.Exec(string(body)); err != nil {
+			return fmt.Errorf("ensure %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // dsn enables foreign keys on every pooled connection, which SQLite leaves off by default.
@@ -57,6 +80,10 @@ func migrate(conn *sql.DB) error {
 	var current int
 	if err := conn.QueryRow("PRAGMA user_version").Scan(&current); err != nil {
 		return fmt.Errorf("read schema version: %w", err)
+	}
+	if latest := ms[len(ms)-1].version; current > latest {
+		slog.Warn("database schema is newer than this build; it was written by another build",
+			"schema_version", current, "latest_known", latest)
 	}
 	for _, m := range ms {
 		if m.version <= current {
