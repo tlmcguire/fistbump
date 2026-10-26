@@ -1,5 +1,10 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
-const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo'];
+const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo',
+   'resume:get', 'resume:putProfile', 'resume:preview',
+   'experiences:create', 'experiences:update', 'experiences:delete',
+   'education:create', 'education:update', 'education:delete',
+   'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
+   'settings:get', 'settings:put'];
 
 const bad = (message) => ({ error: { code: 'validation_failed', message, details: null } });
 const seg = (s) => encodeURIComponent(String(s));
