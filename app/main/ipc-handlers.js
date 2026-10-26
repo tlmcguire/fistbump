@@ -1,10 +1,15 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
 const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo',
    'resume:get', 'resume:putProfile', 'resume:preview',
+   'resume:importFile', 'resume:importData', 'resume:importText', 'resume:importApply',
    'experiences:create', 'experiences:update', 'experiences:delete',
    'education:create', 'education:update', 'education:delete',
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
    'settings:get', 'settings:put'];
+
+// The backend refuses larger files too; checking here first avoids reading or sending them.
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+const IMPORT_EXTENSIONS = ['pdf', 'txt', 'md'];
 
 const bad = (message) => ({ error: { code: 'validation_failed', message, details: null } });
 const seg = (s) => encodeURIComponent(String(s));
@@ -19,6 +24,8 @@ const ROUTES = {
   'resume:get': () => ['GET', '/v1/resume'],
   'resume:putProfile': (profile) => isObject(profile) ? ['PUT', '/v1/resume/profile', profile] : bad('Invalid profile'),
   'resume:preview': () => ['GET', '/v1/resume/preview'],
+  'resume:importText': (text) => typeof text === 'string' && text.trim() ? ['POST', '/v1/resume/import', { text }] : bad('Paste the text of your resume.'),
+  'resume:importApply': (body) => isObject(body) && isObject(body.draft) ? ['POST', '/v1/resume/import/apply', body] : bad('Invalid import'),
 
   'experiences:create': (entry) => isObject(entry) ? ['POST', '/v1/resume/experiences', entry] : bad('Invalid experience'),
   'experiences:update': (id, entry) => isId(id) && isObject(entry) ? ['PUT', `/v1/resume/experiences/${id}`, entry] : bad('Invalid experience'),
@@ -38,7 +45,23 @@ const ROUTES = {
   'settings:put': (values) => isObject(values) ? ['PUT', '/v1/settings', values] : bad('Invalid settings'),
 };
 
-function register(ipcMain, backend) {
+const extensionOf = (name) => (/\.([^./\\]+)$/.exec(name) || [])[1]?.toLowerCase() || '';
+const baseName = (name) => String(name).split(/[\\/]/).pop();
+
+// The quick checks before a file is sent. The backend decides the type from the bytes.
+function checkImport(name, size) {
+  if (!IMPORT_EXTENSIONS.includes(extensionOf(name))) return bad(`${baseName(name)} is not a PDF, .txt or .md file.`);
+  if (size === 0) return bad('The file is empty or could not be read.');
+  if (size > MAX_IMPORT_BYTES) return bad('The file is larger than 5 MB. Export it again without images, or paste the text instead.');
+  return null;
+}
+
+const importBytes = (backend, filename, bytes) =>
+  backend.call('POST', '/v1/resume/import', { filename, data_base64: Buffer.from(bytes).toString('base64') });
+
+// deps holds Electron's dialog and BrowserWindow, and fs.promises; tests pass fakes.
+function register(ipcMain, backend, deps = {}) {
+  const fsp = deps.fs || require('node:fs').promises;
   // Only one search runs at a time: starting a new one, or pressing Cancel, stops the old one.
   let activeSearch = null;
 
@@ -86,6 +109,33 @@ function register(ipcMain, backend) {
 
   ipcMain.handle('connectors:list', () => backend.call('GET', '/v1/connectors'));
 
+  // Shows the file picker, then reads and sends the file. The renderer never sends a path.
+  ipcMain.handle('resume:importFile', async (event) => {
+    const win = deps.BrowserWindow?.fromWebContents(event.sender);
+    const picked = await deps.dialog.showOpenDialog(win, {
+      title: 'Import a resume',
+      properties: ['openFile'],
+      filters: [{ name: 'Resumes', extensions: IMPORT_EXTENSIONS }],
+    });
+    if (picked.canceled || !picked.filePaths.length) return { canceled: true };
+    const file = picked.filePaths[0];
+    try {
+      const refused = checkImport(file, (await fsp.stat(file)).size);
+      if (refused) return refused;
+      return importBytes(backend, baseName(file), await fsp.readFile(file));
+    } catch {
+      return bad('The file is empty or could not be read.');
+    }
+  });
+
+  // A dropped file: the renderer read its bytes with File.arrayBuffer().
+  ipcMain.handle('resume:importData', (_event, filename, bytes) => {
+    if (typeof filename !== 'string' || !(bytes instanceof ArrayBuffer || ArrayBuffer.isView(bytes))) {
+      return bad('The file is empty or could not be read.');
+    }
+    return checkImport(filename, bytes.byteLength) || importBytes(backend, baseName(filename), bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes);
+  });
+
   //Loop over routes to add an ipcMain.handle to each channel
   for (const [channel, build] of Object.entries(ROUTES)) {
     ipcMain.handle(channel, (_event, ...args) => {
@@ -96,3 +146,5 @@ function register(ipcMain, backend) {
     });
   }
 }
+
+module.exports = { CHANNELS, register, MAX_IMPORT_BYTES };

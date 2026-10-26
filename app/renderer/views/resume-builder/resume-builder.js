@@ -229,17 +229,20 @@
       }
     };
  
+    const importButton = el("button", {type: "button"}, "Import file");
+    const pasteButton = el("button", {type: "button"}, "Paste text");
     const saveVersionButton = el("button", {type: "button", class: "primary"}, "Save as version");
     const toolbar = el("header", {class: "toolbar drag"},
       el("div", {class: "toolbar-form resume-toolbar"},
         el("h1", {class: "view-title", text: "Master resume"}),
         status,
-        el("div", {class: "toolbar-actions"}, saveVersionButton)));
+        el("div", {class: "toolbar-actions"}, importButton, pasteButton, saveVersionButton)));
  
     const profileSection = el("section", {class: "resume-section", "aria-labelledby": "resume-profile-h"});
     const experienceSection = el("section", {class: "resume-section", "aria-labelledby": "resume-exp-h"});
     const educationSection = el("section", {class: "resume-section", "aria-labelledby": "resume-edu-h"});
-    const editor = el("div", {class: "pane resume-editor"}, profileSection, experienceSection, educationSection);
+    const importSection = el("section", {class: "resume-section import-review", "aria-labelledby": "resume-import-h", hidden: true});
+    const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection);
  
     const previewText = el("pre", {class: "preview-text"});
     const versionsList = el("ul", {class: "versions"});
@@ -562,6 +565,170 @@
       form.inputs.version_label.select();
     });
  
+    // --- Import ---
+    //
+    // A file (picker or drop) or pasted text becomes a draft from POST /v1/resume/import. The draft
+    // is shown in the same forms as the builder; nothing is saved until Apply.
+
+    const IMPORT_EXTENSIONS = ["pdf", "txt", "md"];
+    const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+
+    const showEditor = shown => {
+      importSection.hidden = shown;
+      for (const section of [profileSection, experienceSection, educationSection]) section.hidden = !shown;
+      importButton.disabled = pasteButton.disabled = !shown;
+    };
+
+    const closeImport = () => {
+      importSection.replaceChildren();
+      showEditor(true);
+    };
+
+    //"37 words of hidden text were found and left out (same color as the background)"
+    const hiddenNotice = hidden => {
+      const words = hidden.words === 1 ? "1 word" : `${hidden.words} words`;
+      const reasons = (hidden.reasons || []).join(", ");
+      return el("div", {class: "import-notice", role: "note"},
+        el("p", {text: `${words} of hidden text ${hidden.words === 1 ? "was" : "were"} found and left out${reasons ? ` (${reasons})` : ""}.`}),
+        hidden.sample ? el("details", {}, el("summary", {text: "Show what was left out"}), el("pre", {class: "preview-text", text: hidden.sample})) : null);
+    };
+
+    const runImport = async (call, source) => {
+      importButton.disabled = pasteButton.disabled = true;
+      say("Reading your resume…");
+      const result = await attempt(call);
+      importButton.disabled = pasteButton.disabled = false;
+      if (disposed || !result) return;
+      say("");
+      if (result.canceled) return;
+      renderReview(result, source);
+    };
+
+    function renderReview(result, source) {
+      const draft = result.draft || {};
+      const profileForm = forms.profile(draft.profile || {}, {idPrefix: "import-profile"});
+      const entries = {experience: [], education: []};
+      const lists = {experience: el("div", {class: "import-entries"}), education: el("div", {class: "import-entries"})};
+
+      const addEntry = (kind, values) => {
+        const form = KINDS[kind].form(values, {idPrefix: `import-${kind}`});
+        const item = {form};
+        const remove = el("button", {type: "button", class: "danger"}, "Remove");
+        item.el = el("article", {class: "entry"},
+          el("div", {class: "entry-head"}, el("h3", {text: KINDS[kind].title(values) || `New ${kind}`}), el("div", {class: "entry-actions"}, remove)),
+          form.el);
+        remove.addEventListener("click", () => {
+          entries[kind] = entries[kind].filter(x => x !== item);
+          item.el.remove();
+        });
+        entries[kind].push(item);
+        lists[kind].append(item.el);
+      };
+      (draft.experiences || []).forEach(e => addEntry("experience", e));
+      (draft.education || []).forEach(e => addEntry("education", e));
+
+      const warnings = [...(result.size_warnings || []), ...(draft.warnings || [])];
+      const replace = el("input", {type: "checkbox"});
+      const keepCopy = el("input", {type: "checkbox", checked: true});
+      const error = el("p", {class: "form-error", role: "alert", hidden: true});
+      const apply = el("button", {type: "submit", class: "primary"}, "Apply");
+      const cancel = el("button", {type: "button", onclick: closeImport}, "Discard");
+      const formEl = el("form", {class: "resume-form", novalidate: true},
+        el("h3", {text: "Profile"}), profileForm.el,
+        el("div", {class: "section-head"}, el("h3", {text: "Experience"}),
+          el("button", {type: "button", onclick: () => addEntry("experience", {})}, "Add experience")),
+        lists.experience,
+        el("div", {class: "section-head"}, el("h3", {text: "Education"}),
+          el("button", {type: "button", onclick: () => addEntry("education", {})}, "Add education")),
+        lists.education,
+        el("label", {class: "check"}, replace, "Replace my current entries"),
+        el("label", {class: "check"}, keepCopy, "Keep a copy of the original"),
+        error,
+        el("div", {class: "form-actions"}, cancel, apply));
+
+      formEl.addEventListener("submit", async event => {
+        event.preventDefault();
+        error.hidden = true;
+        const today = new Date().toLocaleDateString(undefined, {dateStyle: "medium"});
+        const body = {
+          draft: {
+            profile: profileForm.read(),
+            experiences: entries.experience.map(x => x.form.read()),
+            education: entries.education.map(x => x.form.read()),
+            skills: draft.skills || [],
+          },
+          replace: replace.checked,
+        };
+        if (keepCopy.checked) body.save_copy = {version_label: `Imported ${source || "resume"}, ${today}`, content: result.text};
+        apply.disabled = true;
+        const saved = await attempt(() => api().resume.importApply(body), err => {
+          // A 422 names the entry at fault; show the message on that entry's form.
+          const d = err?.details || {};
+          const target = d.experience_index != null ? entries.experience[d.experience_index]?.form
+            : d.education_index != null ? entries.education[d.education_index]?.form
+            : d.field ? profileForm : null;
+          if (target) target.showError(err);
+          else {
+            error.textContent = err?.message || "Something went wrong.";
+            error.hidden = false;
+          }
+        });
+        apply.disabled = false;
+        if (!saved || disposed) return;
+        master = saved;
+        editing = null;
+        closeImport();
+        say("Import applied.");
+        renderProfile();
+        renderEntries();
+        refreshPreview();
+        if (body.save_copy) loadVersions();
+      });
+
+      fill(importSection,
+        el("h2", {id: "resume-import-h", text: "Review import"}),
+        el("p", {class: "hint", text: result.notice || "Review every field before applying. Nothing is saved yet."}),
+        warnings.length ? el("ul", {class: "import-warnings"}, warnings.map(w => el("li", {text: w}))) : null,
+        result.hidden_text ? hiddenNotice(result.hidden_text) : null,
+        formEl);
+      showEditor(false);
+      importSection.scrollIntoView?.({block: "start"});
+    }
+
+    importButton.addEventListener("click", () => runImport(() => api().resume.importFile(), null));
+
+    pasteButton.addEventListener("click", () => {
+      const text = el("textarea", {rows: 14, "aria-label": "Resume text", placeholder: "Paste the text of your resume here."});
+      const read = el("button", {type: "submit", class: "primary"}, "Read text");
+      const formEl = el("form", {class: "resume-form"}, text,
+        el("div", {class: "form-actions"}, el("button", {type: "button", onclick: closeImport}, "Cancel"), read));
+      formEl.addEventListener("submit", event => {
+        event.preventDefault();
+        runImport(() => api().resume.importText(text.value), "pasted text");
+      });
+      fill(importSection, el("h2", {id: "resume-import-h", text: "Paste your resume"}), formEl);
+      showEditor(false);
+      queueMicrotask(() => text.focus());
+    });
+
+    // A file dropped anywhere on the view. The extension and size are checked here for a quick
+    // message; the backend checks the bytes again.
+    container.addEventListener("dragover", event => {
+      if (!importSection.hidden || !event.dataTransfer?.types?.includes("Files")) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    });
+    container.addEventListener("drop", async event => {
+      const file = event.dataTransfer?.files?.[0];
+      if (!file || !importSection.hidden) return;
+      event.preventDefault();
+      const ext = (/\.([^.]+)$/.exec(file.name) || [])[1]?.toLowerCase();
+      if (!IMPORT_EXTENSIONS.includes(ext)) return say(`${file.name} is not a PDF, .txt or .md file.`, true);
+      if (file.size > MAX_IMPORT_BYTES) return say("The file is larger than 5 MB. Export it again without images, or paste the text instead.", true);
+      const bytes = await file.arrayBuffer();
+      runImport(() => api().resume.importData(file.name, bytes), file.name);
+    });
+
     // --- Load ---
  
     (async () => {

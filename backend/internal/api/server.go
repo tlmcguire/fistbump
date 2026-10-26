@@ -79,6 +79,8 @@ func (s *Server) routes() []route {
 		{"POST /v1/resume/education", s.educationCreate},
 		{"PUT /v1/resume/education/{id}", s.educationUpdate},
 		{"DELETE /v1/resume/education/{id}", s.educationDelete},
+		{"POST /v1/resume/import", s.resumeImport},
+		{"POST /v1/resume/import/apply", s.resumeImportApply},
 		{"GET /v1/resume/preview", s.resumePreview},
 		{"GET /v1/resumes", s.resumeList},
 		{"POST /v1/resumes", s.resumeCreate},
