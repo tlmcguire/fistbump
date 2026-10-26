@@ -837,3 +837,198 @@ label.sort select {
 
 .suggestions li.active, .suggestions li:hover { background: #e4e9f5; }
 .suggestions small { opacity: 0.6; }
+
+/* ---------- Settings ---------- */
+
+.nav-bottom {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.toolbar-title {
+  display: flex;
+  align-items: center;
+  min-height: var(--toolbar-height);
+  padding: 0 20px;
+}
+
+.toolbar-title h1 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.main.view-settings .content { display: none; }
+.main.view-settings .settings-pane { flex: 1; }
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-width: 720px;
+  padding: 24px 28px 48px;
+}
+
+.settings-group h2 {
+  margin: 0 0 8px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.group-note {
+  margin: -2px 0 10px 2px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+/* Rows grouped on a card, as in system settings: what it is on the left, its control on the right. */
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 52px;
+  padding: 10px 16px;
+}
+
+.setting + .setting { border-top: 1px solid var(--line); }
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setting-text label, .setting-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.setting-text p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.setting select { flex: none; min-width: 150px; }
+.setting > button, .setting > .button, .setting-actions { flex: none; }
+
+.setting-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.setting.future .setting-label,
+.setting.future p { color: var(--faint); }
+
+.size {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px !important;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.setting-status {
+  padding: 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.setting-status:not(:empty) {
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* A button that asks to be pressed again before it does something that cannot be undone. */
+button.confirming,
+button.confirming:hover:not(:disabled) {
+  background: #b3261e;
+  color: white;
+}
+
+/* A switch: a checkbox drawn as a sliding toggle. */
+input.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background-color 140ms ease;
+}
+
+input.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 140ms ease;
+}
+
+input.switch:checked { background: var(--accent); }
+input.switch:checked::after { transform: translateX(16px); }
+
+/* ---------- Accessibility preferences ---------- */
+
+/* Reduce motion: no transitions, fades or spinning. */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.reduce-motion .spinner {
+  border-top-color: rgba(255, 255, 255, 0.18);
+  border-right-color: var(--accent);
+}
+
+/* Increase contrast: brighter secondary text, stronger lines and focus rings. */
+.high-contrast {
+  --muted: rgba(242, 245, 251, 0.88);
+  --faint: rgba(242, 245, 251, 0.72);
+  --line: rgba(255, 255, 255, 0.28);
+  --line-strong: rgba(255, 255, 255, 0.42);
+  --control: rgba(255, 255, 255, 0.18);
+  --control-hover: rgba(255, 255, 255, 0.28);
+}
+
+.high-contrast :focus-visible { outline-width: 3px !important; }
+.high-contrast input, .high-contrast select { border-color: rgba(0, 0, 0, 0.6); }
+.high-contrast .result.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Underline links: every link shows as a link. */
+.underline-links a:not(.button) { text-decoration: underline; }
+.result-link { text-decoration: none; }
+.underline-links .result-link { text-decoration: underline; }

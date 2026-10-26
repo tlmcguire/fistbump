@@ -2,12 +2,14 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -645,5 +647,108 @@ func TestCompanyLogo(t *testing.T) {
 		if rec := get(&fakeLogos{}, q); rec.Code != 422 {
 			t.Errorf("%s: status %d, want 422", name, rec.Code)
 		}
+	}
+}
+
+// fakeCache counts Clear calls and empties the cache tables like the real caches do.
+type fakeCache struct {
+	conn    *sql.DB
+	cleared int
+}
+
+func (f *fakeCache) Clear() error {
+	f.cleared++
+	_, err := f.conn.Exec(`DELETE FROM greenhouse_listing_cache; DELETE FROM greenhouse_description_cache; DELETE FROM logo_cache`)
+	return err
+}
+
+func storageServer(t *testing.T) (*Server, *sql.DB, *fakeCache, string) {
+	t.Helper()
+	dir := t.TempDir()
+	conn, err := db.Open(filepath.Join(dir, "fistbump.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	cache := &fakeCache{conn: conn}
+	s := New(Config{DB: conn, Greenhouse: &fakeFetcher{}, DataDir: dir, Caches: []CacheClearer{cache}, Token: testToken, Version: "test"})
+	return s, conn, cache, dir
+}
+
+func call(t *testing.T, s *Server, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestStorageReportAndCacheCleanup(t *testing.T) {
+	s, conn, cache, dir := storageServer(t)
+	big := strings.Repeat("x", 5000)
+	if _, err := conn.Exec(`INSERT INTO greenhouse_description_cache (board, job_id, posting, fetched_at) VALUES ('acme', '1', json_object('raw_text', ?), '2026-10-24T00:00:00Z')`, big); err != nil {
+		t.Fatal(err)
+	}
+	os.MkdirAll(filepath.Join(dir, "models"), 0o700)
+	os.WriteFile(filepath.Join(dir, "models", "a.gguf"), make([]byte, 300), 0o600)
+	os.WriteFile(filepath.Join(dir, "models", "b.gguf.part"), make([]byte, 100), 0o600)
+
+	var report storageReport
+	rec := call(t, s, "GET", "/v1/storage", "")
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &report) != nil {
+		t.Fatalf("status %d, body %q", rec.Code, rec.Body.String())
+	}
+	if report.DataDir != dir || report.CacheBytes < 5000 || report.DBBytes == 0 || report.ModelsBytes != 400 || report.PartialDownloadsBytes != 100 || report.TotalBytes != report.DBBytes+400 {
+		t.Errorf("report = %+v", report)
+	}
+
+	// A dry run reports what would be freed and changes nothing.
+	var result struct {
+		FreedBytes int64          `json:"freed_bytes"`
+		Removed    map[string]int `json:"removed"`
+		DryRun     bool           `json:"dry_run"`
+	}
+	rec = call(t, s, "POST", "/v1/storage/cleanup", `{"targets":["cache","partial_downloads"],"dry_run":true}`)
+	json.Unmarshal(rec.Body.Bytes(), &result)
+	if rec.Code != 200 || !result.DryRun || result.FreedBytes != report.CacheBytes+100 || result.Removed["files"] != 1 || cache.cleared != 0 {
+		t.Errorf("dry run: status %d, result %+v, cleared %d", rec.Code, result, cache.cleared)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "models", "b.gguf.part")); err != nil {
+		t.Error("a dry run removed a file")
+	}
+
+	rec = call(t, s, "POST", "/v1/storage/cleanup", `{"targets":["cache","partial_downloads"]}`)
+	if rec.Code != 200 || cache.cleared != 1 {
+		t.Fatalf("cleanup: status %d, cleared %d, body %q", rec.Code, cache.cleared, rec.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(dir, "models", "b.gguf.part")); !os.IsNotExist(err) {
+		t.Error("the partial download is still there")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "models", "a.gguf")); err != nil {
+		t.Error("cleanup removed a finished model")
+	}
+	rec = call(t, s, "GET", "/v1/storage", "")
+	json.Unmarshal(rec.Body.Bytes(), &report)
+	if report.CacheBytes != 0 {
+		t.Errorf("cache bytes after cleanup = %d", report.CacheBytes)
+	}
+}
+
+func TestStorageCleanupRejects(t *testing.T) {
+	s, _, cache, _ := storageServer(t)
+	for name, body := range map[string]string{
+		"no targets":     `{"targets":[]}`,
+		"unknown target": `{"targets":["everything"]}`,
+		"planned target": `{"targets":["old_jobs"]}`,
+		"bad days":       `{"targets":["cache"],"older_than_days":0}`,
+		"unknown field":  `{"targets":["cache"],"force":true}`,
+	} {
+		if rec := call(t, s, "POST", "/v1/storage/cleanup", body); rec.Code != 422 {
+			t.Errorf("%s: status %d, want 422 (body %q)", name, rec.Code, rec.Body.String())
+		}
+	}
+	if cache.cleared != 0 {
+		t.Error("a rejected request cleared the cache")
 	}
 }
