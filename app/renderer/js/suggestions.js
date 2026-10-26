@@ -213,6 +213,8 @@ window.Suggest = (() => {
       } else if (event.key === "Enter" && active >= 0) {
         event.preventDefault(); // choose the highlighted item instead of submitting the form
         choose(active);
+      } else if (event.key === "Enter") {
+        close(); // the form submits; the list should not stay open over the results
       } else if (event.key === "Escape") {
         event.preventDefault(); // this Esc is used up: nothing else on the page should also close
         close();
