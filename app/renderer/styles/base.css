@@ -1,11 +1,6 @@
 /*
  * Layout: a desktop window, not a web page. The window never scrolls; the sidebar, toolbar and
  * filters stay put, and the results and the open listing scroll in their own panes.
- *
- *   ┌ sidebar ┬ toolbar (search bar)          ┐
- *   │  logo   ├ filters (optional row)         ┤
- *   │  nav    ├ results pane │ detail pane     ┤
- *   └─────────┴──────────────┴─────────────────┘
  */
 :root {
   --bg: #0b2457;
@@ -17,9 +12,9 @@
   --text: #f2f5fb;
   --muted: rgba(242, 245, 251, 0.62);
   --faint: rgba(242, 245, 251, 0.42);
-  --accent: #CEA615;
+  --accent: #cea615;
   --accent-hover: #e2b92a;
-  --accent-ink: #0A255C;
+  --accent-ink: #0a255c;
   --select: rgba(99, 145, 230, 0.28);
   --select-strong: #3158a0;
   --control: rgba(255, 255, 255, 0.10);
@@ -85,6 +80,11 @@ a { color: inherit; }
 
 [hidden] {
   display: none !important;
+}
+
+::selection {
+  background: var(--select-strong);
+  color: #fff;
 }
 
 /* Thin scrollbars that suit the dark panes. */
@@ -220,11 +220,9 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 .nav-heading {
   padding: 0 10px 6px;
-  color: var(--faint);
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 650;
 }
 
 .nav-item {
@@ -265,7 +263,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 /* When the window is in the background its selection greys out, as native apps do. */
 .window-inactive .nav-item[aria-selected="true"] { background: rgba(255, 255, 255, 0.08); }
-.window-inactive .result.selected::before { background: var(--faint); }
+.window-inactive .result.selected { background: rgba(255, 255, 255, 0.08); }
 
 /* ---------- Toolbar and filters ---------- */
 
@@ -467,7 +465,7 @@ label.sort select {
   padding: 8px 10px;
   border-radius: var(--radius);
   background: rgba(226, 185, 42, 0.12);
-  border-left: 3px solid var(--accent-hover);
+  border: 1px solid rgba(226, 185, 42, 0.28);
   font-size: 12px;
 }
 
@@ -485,7 +483,6 @@ label.sort select {
 
 /* One result row: logo, then title, details and a short preview. */
 .result {
-  position: relative;
   display: flex;
   gap: 11px;
   padding: 11px 14px;
@@ -494,15 +491,6 @@ label.sort select {
 
 .result:hover { background: rgba(255, 255, 255, 0.04); }
 .result.selected { background: var(--select); }
-.result.selected::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent);
-}
 
 .result-body {
   display: flex;
@@ -512,7 +500,7 @@ label.sort select {
   min-width: 0;
 }
 
-/* The open button is the row's title and details; a click anywhere on it opens the listing. */
+/* The open button is the row's title and details, for the keyboard. A click anywhere on the row opens the listing. */
 .result-open {
   display: flex;
   flex-direction: column;
@@ -647,6 +635,12 @@ label.sort select {
 
 .back {
   align-self: flex-start;
+  padding-left: 8px;
+}
+
+.back svg {
+  width: 14px;
+  height: 14px;
 }
 
 .job-head {
@@ -685,10 +679,6 @@ label.sort select {
   margin-top: 6px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 #job-description {
