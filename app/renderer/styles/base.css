@@ -1021,6 +1021,23 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
 .section-head h2 { margin: 0; }
  
 .resume-section .empty { margin: 0; color: var(--faint); }
+
+/* Import review: warnings and the hidden-text notice sit above the draft forms. */
+.import-review h3 { margin: 16px 0 8px; font-size: 13px; }
+.import-review .section-head h3 { margin: 0; }
+.import-review label.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.import-warnings, .import-notice {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+}
+.import-warnings { padding-left: 30px; }
+.import-notice p { margin: 0; }
+.import-notice details { margin-top: 8px; color: var(--muted); }
+.import-entries:empty { display: none; }
  
 .entry, .entry-form {
   margin-top: 10px;

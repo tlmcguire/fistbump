@@ -109,7 +109,7 @@ if (!app.requestSingleInstanceLock()) {
       app.quit();
       return;
     }
-    register(ipcMain, backend);
+    register(ipcMain, backend, { dialog, BrowserWindow });
     nativeTheme.themeSource = 'dark'; // native menus, pickers and the window material match the dark app
     app.setAboutPanelOptions({ applicationName: 'Fistbump', applicationVersion: app.getVersion() });
     appMenu();
