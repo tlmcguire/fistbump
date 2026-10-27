@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('api', {
     createEducation: (entry) => ipcRenderer.invoke('education:create', entry),
     updateEducation: (id, entry) => ipcRenderer.invoke('education:update', id, entry),
     deleteEducation: (id) => ipcRenderer.invoke('education:delete', id),
+    // Import: a draft to review, then apply. importData takes the dropped file's bytes.
+    importFile: () => ipcRenderer.invoke('resume:importFile'),
+    importData: (filename, bytes) => ipcRenderer.invoke('resume:importData', filename, bytes),
+    importText: (text) => ipcRenderer.invoke('resume:importText', text),
+    importApply: (body) => ipcRenderer.invoke('resume:importApply', body),
   },
 
   //Saved resume versions

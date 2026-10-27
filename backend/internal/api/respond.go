@@ -15,11 +15,14 @@ type apiError struct {
 	Code    string
 	Message string
 	Details map[string]any
+	cause   error // what led to it, for errors.As; never sent
 }
 
 func (e *apiError) Error() string {
 	return e.Code + ": " + e.Message
 }
+
+func (e *apiError) Unwrap() error { return e.cause }
 
 func unauthorized() *apiError {
 	return &apiError{

@@ -15,7 +15,12 @@ const maxBody = 1 << 20
 // decodeJSON reads one JSON value from the body into v. Malformed JSON is 400 bad_request; an
 // unknown field or a wrong type is 422 validation_failed naming the field; trailing data is 400.
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+	return decodeJSONLimit(w, r, v, maxBody)
+}
+
+// decodeJSONLimit is decodeJSON with a body cap other than maxBody, for routes that carry files.
+func decodeJSONLimit(w http.ResponseWriter, r *http.Request, v any, limit int64) error {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
