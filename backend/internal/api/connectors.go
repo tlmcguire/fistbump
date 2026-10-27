@@ -318,7 +318,9 @@ func writeNoCompany(w http.ResponseWriter, q connectors.Query) error {
 func bodyError(err error) error {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		return validationFailed("Request is too large")
+		e := validationFailed("Request is too large")
+		e.cause = err
+		return e
 	}
 	var syntax *json.SyntaxError
 	if errors.As(err, &syntax) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
