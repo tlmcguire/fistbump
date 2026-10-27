@@ -7,8 +7,8 @@ window.JobParser = {
       const loadButton = form.querySelector('button[type="submit"]');
       const searchForm = $("search-form");
       const searchButton = searchForm.querySelector('button[type="submit"]');
-      const tabs = {find: $("tab-find"), link: $("tab-link")};
-      const forms = {find: searchForm, link: form};
+      const tabs = {find: $("tab-find"), link: $("tab-link"), settings: $("tab-settings")};
+      const forms = {find: searchForm, link: form, settings: $("settings-title")};
 
       //The results pane and the detail pane each show one state at a time.
       const RESULT_STATES = ["state-initial", "state-loading", "state-results", "state-error"];
@@ -19,11 +19,14 @@ window.JobParser = {
       let fromResults = false;   //true while the open listing came from the result list
       let searchRetry = null;    //what Try again does in the results pane
       let detailRetry = null;    //and in the detail pane
+      let detailSeq = 0;         //counts what the detail pane was given, so a slow load cannot land over a newer one
       let activeTab = "find";
+      let lastJobsTab = "find"; //the last of Find jobs and Open a link that was shown
       let results = null;
       let searchedQuery = {};
-      const PAGE_SIZE = 20; //results requested per page
-      const MAX_PAGES = 250; //the backend's offset limit (5000) divided by PAGE_SIZE
+      const MAX_OFFSET = 5000; //the backend's offset limit
+      //results a page: the setting at the time of the search, so changing it does not break paging
+      const pageSize = () => searchedQuery.limit || window.Prefs.get("pageSize");
       let pages = new Map(); //page number -> the backend's response for it
       let currentPage = 1;
 
@@ -44,9 +47,10 @@ window.JobParser = {
 
       //the placeholder in the detail pane, worded for the view it is in
       const showDetailEmpty = () => {
-        $("detail-empty-message").textContent = activeTab === "find"
-          ? "Choose a job from the list to see the full posting."
-          : "Paste a Greenhouse job link above and press Open.";
+        $("detail-empty-message").textContent = activeTab === "link"
+          ? "Paste a Greenhouse job link above and press Open."
+          : "Choose a job from the list to see the full posting.";
+        detailSeq++;
         posting = null;
         selectedKey = "";
         markSelected();
@@ -60,8 +64,10 @@ window.JobParser = {
 
       //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
-        if (name !== activeTab) {
-          activeTab = name;
+        //Find jobs and Open a link each show their own listing; Settings leaves the open one as it was.
+        activeTab = name;
+        if (name !== "settings" && name !== lastJobsTab) {
+          lastJobsTab = name;
           showDetailEmpty();
         }
         for (const key in tabs) {
@@ -70,6 +76,14 @@ window.JobParser = {
         }
         main.classList.toggle("view-find", name === "find");
         main.classList.toggle("view-link", name === "link");
+        main.classList.toggle("view-settings", name === "settings");
+        $("settings-pane").hidden = name !== "settings";
+        setFiltersOpen(false);
+        setHistoryOpen(false);
+        if (name === "settings") {
+          window.Settings?.refresh();
+          return;
+        }
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
           showInitial("Search by job title, location, company or industry. Results appear here.");
         }
@@ -125,6 +139,7 @@ window.JobParser = {
   
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
+        detailSeq++;
         posting = data;
         fromResults = opened;
         selectedKey = opened ? keyOf(data) : "";
@@ -147,6 +162,7 @@ window.JobParser = {
       };
 
       const showDetailLoading = message => {
+        detailSeq++;
         $("detail-loading-message").textContent = message;
         main.classList.add("has-detail");
         showDetail("detail-loading");
@@ -156,11 +172,13 @@ window.JobParser = {
       const loadPosting = async url => {
         detailRetry = () => loadPosting(url);
         setLinkBusy(true);
-        showDetailLoading("Opening the listing...");
+        showDetailLoading("Opening the listing\u2026");
+        const mine = detailSeq;
         try {
-          displayPosting(await window.FistBumpAPI.link(url));
+          const data = await window.FistBumpAPI.link(url);
+          if (mine === detailSeq) displayPosting(data);
         } catch (error) {
-          showDetailError(error);
+          if (mine === detailSeq) showDetailError(error);
         } finally {
           setLinkBusy(false);
         }
@@ -173,10 +191,13 @@ window.JobParser = {
         const opened = fromResults;
         detailRetry = reloadPosting;
         $("reload-listing").disabled = true;
-        showDetailLoading("Reloading the listing...");
+        showDetailLoading("Reloading the listing\u2026");
+        const mine = detailSeq;
         try {
-          displayPosting(await window.FistBumpAPI.posting(current.board, current.external_id), opened);
+          const data = await window.FistBumpAPI.posting(current.board, current.external_id);
+          if (mine === detailSeq) displayPosting(data, opened);
         } catch (error) {
+          if (mine !== detailSeq) return;
           posting = current; //keep it, so Try again can reload the same listing
           showDetailError(error);
         } finally {
@@ -263,6 +284,7 @@ window.JobParser = {
       //Asks for the logos of some results and waits for them, but never longer than budget milliseconds, so a
       //slow site cannot hold the page back. Tiles for logos that are not in time fade in when they arrive.
       const preloadLogos = (postings, budget = 700) => {
+        if (!window.Prefs.get("showLogos")) return Promise.resolve();
         const waits = [...new Set(postings.map(result => {
           const url = safeURL(result.company_url);
           return url || result.board ? logoEntry(url || "", result.board) : null;
@@ -287,7 +309,7 @@ window.JobParser = {
           }
         };
         const url = safeURL(companyUrl);
-        if (!url && !board) return paint(null);
+        if ((!url && !board) || !window.Prefs.get("showLogos")) return paint(null);
         const entry = logoEntry(url || "", board);
         if (entry.done) return paint(entry);
         tile.classList.add("pending"); //blank until the answer arrives
@@ -334,6 +356,14 @@ window.JobParser = {
           
           body.append(open);
 
+          //the logo, preview and padding open the listing too; the button stays for the keyboard
+          item.addEventListener("click", event => {
+            if (event.target.closest("button, a")) return; //they handle their own clicks
+            const selection = window.getSelection();
+            if (!selection.isCollapsed && item.contains(selection.anchorNode)) return; //a drag to select text is not a click to open
+            displayPosting(result, true);
+          });
+
           const preview = snippet(result.raw_text);
           if (preview) body.append(el("p", preview));
           if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
@@ -369,7 +399,7 @@ window.JobParser = {
           //nothing to search: say so plainly instead of showing an empty list
           return {
             note: "",
-            empty: `We can't find listings for "${company}" yet. We search a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or try searching by keywords or industry instead.`
+            empty: `No listings for "${company}". Fistbump searches a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or search by keywords or industry instead.`
           };
         }
         if (company) {
@@ -434,8 +464,9 @@ window.JobParser = {
 
       //fill all results
       const renderResults = data => {
-        $("result-counts").textContent = 
-        `${data.matched.toLocaleString()}${data.partial ? "+" : ""} matches from ${data.postings_scanned.toLocaleString()} postings on ${data.boards_searched.toLocaleString()} boards`;
+        const count = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+        $("result-counts").textContent = `${data.matched.toLocaleString()}${data.partial ? "+" : ""} ${data.matched === 1 && !data.partial ? "match" : "matches"}` +
+          ` from ${count(data.postings_scanned, "posting", "postings")} on ${count(data.boards_searched, "board", "boards")}`;
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
@@ -453,6 +484,7 @@ window.JobParser = {
       };
 
       let searchSeq = 0; //counts searches, so an older one that finishes late is ignored
+      let pageSeq = 0; //counts page changes and searches, so a slow page cannot land after either
 
       //main function to run the search
       const runSearch = async query => {
@@ -460,11 +492,12 @@ window.JobParser = {
         main.classList.remove("has-detail"); //a narrow window goes back to the list
         const previous = {pages, currentPage, results, searchedQuery};
         const mine = ++searchSeq;
+        pageSeq++; //a page of the old search must not land on this one
         searchedQuery = query;
         results = null;
         setSearchBusy(true);
         const wide = !query.company && !query.categories.length && boardTotal;
-        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards...` : "Searching Greenhouse...", true);
+        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards\u2026` : "Searching Greenhouse\u2026", true);
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
@@ -483,6 +516,7 @@ window.JobParser = {
           if (error.message === "Search canceled") {
             //put back what was on screen before this search
             ({pages, currentPage, results, searchedQuery} = previous);
+            $("result-sort").value = searchedQuery.sort || "relevance";
             if (results) {
               renderResults(results);
               showState("state-results");
@@ -498,7 +532,7 @@ window.JobParser = {
       };
 
       //Pages are numbered from 1. A page is fetched once, then kept until the next search.
-      const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / PAGE_SIZE), MAX_PAGES);
+      const pageCount = () => Math.min(Math.ceil((results?.matched || 0) / pageSize()), Math.floor(MAX_OFFSET / pageSize()) + 1);
 
       //page numbers to show: the first, the last and the ones around the current page, with gaps as null
       const pageWindow = (current, total) => {
@@ -527,13 +561,12 @@ window.JobParser = {
         pager.replaceChildren(
           button("Previous", currentPage - 1, {disabled: currentPage === 1}),
           ...pageWindow(currentPage, total).map(n =>
-            n === null ? el("span", "...") : button(String(n), n, {current: n === currentPage})),
+            n === null ? el("span", "\u2026") : button(String(n), n, {current: n === currentPage})),
           button("Next", currentPage + 1, {disabled: currentPage === total})
         );
       };
 
       //shows a page of results, asking the backend only if the page is not kept yet
-      let pageSeq = 0; //counts page changes, so a slow one cannot land after a newer one
       const goToPage = async page => {
         if (page < 1 || page > pageCount()) return;
         const mine = ++pageSeq;
@@ -544,15 +577,16 @@ window.JobParser = {
           setSearchBusy(true);
           $("pager").querySelectorAll("button").forEach(node => { node.disabled = true; });
           try {
-            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * PAGE_SIZE});
+            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * pageSize()});
           } catch (error) {
             if (mine !== pageSeq) return;
             if (error.message === "Search canceled") renderPager(); //re-enable the page buttons
             else showError(error);
             return;
           } finally {
-            setSearchBusy(false);
+            if (mine === pageSeq) setSearchBusy(false); //a newer search keeps the button locked
           }
+          if (mine !== pageSeq) return;
           pages.set(page, data);
         }
         await preloadLogos(data.postings);
@@ -573,6 +607,7 @@ window.JobParser = {
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
       tabs.find.addEventListener("click", () => selectTab("find"));
       tabs.link.addEventListener("click", () => selectTab("link"));
+      tabs.settings.addEventListener("click", () => selectTab("settings"));
 
       searchForm.addEventListener("submit", event => {
         event.preventDefault();
@@ -592,7 +627,7 @@ window.JobParser = {
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
           sort: $("result-sort").value,
-          limit: PAGE_SIZE
+          limit: window.Prefs.get("pageSize")
         };
         for (const id of ["search-pay-min", "search-pay-max"]) {
           if ($(id).value.trim() && !pay(id)) {
@@ -840,11 +875,7 @@ window.JobParser = {
       };
 
       //Clear history also forgets the recent entries each box suggests
-      $("clear-history").addEventListener("click", () => {
-        storeHistory([]);
-        window.Suggest.clearRecent();
-        renderHistory();
-      });
+      $("clear-history").addEventListener("click", () => window.JobParser.clearHistory());
 
       restoreForm();
       renderHistory();
@@ -874,10 +905,10 @@ window.JobParser = {
           //Suggestion from clanker after adding the Resume view
           //If resume view is open, this prevents Ctrl+F focusing a hidden box, Cmd/Ctrl+1 and 2 bring Jobs back.
           if (main.hidden) {
-            if (event.key === "1" || event.key === "2") {
+            if (event.key === "1" || event.key === "2" || event.key === ",") {
               event.preventDefault();
               location.hash = "#/jobs";
-              selectTab(event.key === "1" ? "find" : "link");
+              selectTab({"1": "find", "2": "link", ",": "settings"}[event.key]);
             }
             return;
           }
@@ -886,6 +917,9 @@ window.JobParser = {
             const box = activeTab === "find" ? $("search-keywords") : input;
             box.focus();
             box.select();
+          } else if (event.key === ",") {
+            event.preventDefault();
+            selectTab("settings");
           } else if (event.key === "1" || event.key === "2") {
             event.preventDefault();
             selectTab(event.key === "1" ? "find" : "link");
@@ -897,6 +931,27 @@ window.JobParser = {
       });
       $("tab-find").title = `Find jobs (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}1)`;
       $("tab-link").title = `Open a link (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}2)`;
+
+      //What the settings page needs from this view.
+      window.JobParser.selectTab = selectTab;
+      window.JobParser.historyCount = () => loadHistory().length;
+      window.JobParser.clearHistory = () => {
+        storeHistory([]);
+        window.Suggest.clearRecent();
+        renderHistory();
+      };
+      window.JobParser.resetForm = () => $("clear-search").click();
+      window.api?.app?.onOpenSettings?.(() => {
+        if (main.hidden) location.hash = "#/jobs";
+        selectTab("settings");
+      });
+
+      //A new page size or sort applies from the next search; the sort select starts at the saved default.
+      $("result-sort").value = window.Prefs.get("defaultSort");
+      window.Prefs.onChange(key => {
+        if (key === "defaultSort" && !results) $("result-sort").value = window.Prefs.get("defaultSort");
+        if (key === "showLogos" && results) renderResults(results);
+      });
 
       showDetailEmpty();
       selectTab("find");

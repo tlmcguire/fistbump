@@ -38,7 +38,9 @@ type Config struct {
 	Greenhouse jobFetcher
 	Searcher   jobSearcher
 	Logos      logoFinder
-	Token      string // per-launch bearer token from FISTBUMP_TOKEN
+	DataDir    string         // where the database and other app data live, for the storage report
+	Caches     []CacheClearer // emptied by storage cleanup
+	Token      string         // per-launch bearer token from FISTBUMP_TOKEN
 	Version    string
 }
 
@@ -49,6 +51,8 @@ type Server struct {
 	gh      jobFetcher
 	search  jobSearcher
 	logos   logoFinder
+	dataDir string
+	caches  []CacheClearer
 	token   string
 	version string
 	handler http.Handler // the mux wrapped in middleware, built once in New
@@ -68,6 +72,8 @@ func (s *Server) routes() []route {
 		{"POST /v1/connectors/greenhouse/fetch", s.greenhouseFetch},
 		{"GET /v1/connectors/greenhouse/categories", s.categoryList},
 		{"GET /v1/connectors/greenhouse/logo", s.companyLogo},
+		{"GET /v1/storage", s.storage},
+		{"POST /v1/storage/cleanup", s.storageCleanup},
 		{"GET /v1/connectors/greenhouse/link", s.greenhouseLink},
 		{"GET /v1/resume", s.resumeGet},
 		{"PUT /v1/resume/profile", s.profilePut},
@@ -202,6 +208,8 @@ func New(cfg Config) *Server {
 		gh:      cfg.Greenhouse,
 		search:  cfg.Searcher,
 		logos:   cfg.Logos,
+		dataDir: cfg.DataDir,
+		caches:  cfg.Caches,
 		token:   cfg.Token,
 		version: cfg.Version,
 	}

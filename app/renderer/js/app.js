@@ -82,12 +82,13 @@ async function route() {
 
 window.addEventListener("hashchange", route);
 
-//Sidebar: the Jobs tabs return to the Jobs view (the view then picks the tab), and Resume opens the Resume view.
-for (const id of ["tab-find", "tab-link"]) {
+//Sidebar: the Jobs tabs and Settings return to the Jobs view (the view then picks the tab), and Resume opens the Resume view.
+for (const id of ["tab-find", "tab-link", "tab-settings"]) {
   document.getElementById(id).addEventListener("click", () => {
     if (routeName() !== "jobs") location.hash = "#/jobs";
   });
 }
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
 
+window.Settings.mount();
 route();

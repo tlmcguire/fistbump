@@ -189,3 +189,34 @@ func TestListMigrationsOrdered(t *testing.T) {
 		}
 	}
 }
+
+// A database whose version another build moved past the cache migrations still gets its cache tables.
+func TestCacheTablesRepairedWhenVersionSkippedThem(t *testing.T) {
+	conn, file := openTemp(t)
+	for _, stmt := range []string{
+		"DROP TABLE greenhouse_listing_cache", "DROP TABLE greenhouse_description_cache", "DROP TABLE logo_cache",
+		"PRAGMA user_version = 6",
+	} {
+		if _, err := conn.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conn.Close()
+
+	again, err := Open(file)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer again.Close()
+	for _, table := range []string{"greenhouse_listing_cache", "greenhouse_description_cache", "logo_cache"} {
+		var n int
+		if err := again.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&n); err != nil || n != 1 {
+			t.Errorf("table %s missing after reopening (n=%d, err=%v)", table, n, err)
+		}
+	}
+	var version int
+	again.QueryRow("PRAGMA user_version").Scan(&version)
+	if version != 6 {
+		t.Errorf("user_version = %d; the repair must not change it", version)
+	}
+}

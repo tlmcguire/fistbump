@@ -111,3 +111,22 @@ test('importText and importApply check their arguments', async () => {
   assert.deepStrictEqual(backend.calls.map((c) => c.url), ['/v1/resume/import', '/v1/resume/import/apply']);
   assert.deepStrictEqual(backend.calls[0].body, { text: 'Ada Lovelace' });
 });
+
+test('storage cleanup only passes known targets to the backend', async () => {
+  const calls = [];
+  const ipc = fakeIpc();
+  register(ipc, { call: async (...args) => { calls.push(args); return { ok: true }; } });
+  const cleanup = ipc.handlers.get('storage:cleanup');
+  assert.strictEqual((await cleanup({}, ['everything'])).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, [])).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, 'cache')).error.code, 'validation_failed');
+  await cleanup({}, ['cache']);
+  assert.deepStrictEqual(calls, [['POST', '/v1/storage/cleanup', { targets: ['cache'] }]]);
+});
+
+test('app actions come from the main process, and say so when missing', async () => {
+  const ipc = fakeIpc();
+  register(ipc, { call: async () => ({}) }, { info: () => ({ version: '0.1.0' }) });
+  assert.deepStrictEqual(await ipc.handlers.get('app:info')(), { version: '0.1.0' });
+  assert.strictEqual((await ipc.handlers.get('app:check-updates')()).error.code, 'validation_failed');
+});
