@@ -325,7 +325,13 @@ window.JobParser = {
             ].filter(Boolean).join(" \u00b7 "))
           );
 
-          open.addEventListener("click", () => displayPosting(result, true));
+          //open.addEventListener("click", () => displayPosting(result, true));
+          //attempted fix for selection delay?
+          item.addEventListener("click", event => {
+            if (event.target.closest("a")) return;
+            displayPosting(result, true);
+          });
+          
           body.append(open);
 
           const preview = snippet(result.raw_text);

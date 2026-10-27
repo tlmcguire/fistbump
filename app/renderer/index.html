@@ -18,10 +18,10 @@
                     <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true">Find jobs</button>
                     <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false">Open a link</button>
                 </nav>
-                <!-- New in phase 3, Resume button to sidebar-->
-                 <nav class= "nav" aria-label=""Resume>
+                <!-- New in phase 3, Resume button to sidebar \\ fixed typos 10/27-->
+                 <nav class= "nav" aria-label="Resume">
                     <p class=" nav-heading">Resume</p>
-                    <button type=""button" id=""nav-resume" class="nav-item" data-route="resume">Master resume</button>
+                    <button type="button" id="nav-resume" class="nav-item" data-route="resume">Master resume</button>
                  </nav>
             </aside>
 
@@ -181,11 +181,14 @@
                     </section>
                 </div>
             </main>
+            <!-- phase 3 resume view-->
+             <main id="view-resume" class="main" hidden></main>
         </div>
 
         <script src="js/api.js" defer></script>
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
+        <script src="views/resume-builder/resume-builder.js" defer></script>
         <script src="js/app.js" defer></script>
     </body>
 </html>

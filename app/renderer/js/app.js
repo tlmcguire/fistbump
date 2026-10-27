@@ -10,8 +10,6 @@ for (const type of ["dragover", "drop"]) {
 window.addEventListener("blur", () => document.documentElement.classList.add("window-inactive"));
 window.addEventListener("focus", () => document.documentElement.classList.remove("window-inactive"));
 
-window.JobParser.mount();
-
 // Everything below new in phase 3
 // Hash routes. Each view has mount(container), which returns a cleanup function the router calls before the next view mounts, so views don't leak listeners. Tailor, tracker, and settings will be added later.
 // The Jobs view (from phases 1 and 2) is written into index.html and binds to it once, so its "mount" shows that markup and its cleanup hides it.
