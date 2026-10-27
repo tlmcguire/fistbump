@@ -5,7 +5,11 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'experiences:create', 'experiences:update', 'experiences:delete',
    'education:create', 'education:update', 'education:delete',
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
-   'settings:get', 'settings:put'];
+   'settings:get', 'settings:put',
+   'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases'];
+
+// Cleanup targets the settings page may ask for. The backend validates them again.
+const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
 
 // The backend refuses larger files too; checking here first avoids reading or sending them.
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
@@ -59,7 +63,8 @@ function checkImport(name, size) {
 const importBytes = (backend, filename, bytes) =>
   backend.call('POST', '/v1/resume/import', { filename, data_base64: Buffer.from(bytes).toString('base64') });
 
-// deps holds Electron's dialog and BrowserWindow, and fs.promises; tests pass fakes.
+// deps holds Electron's dialog and BrowserWindow, fs.promises, and the app-level actions that need
+// Electron (version details, the update check, opening folders and pages); tests pass fakes.
 function register(ipcMain, backend, deps = {}) {
   const fsp = deps.fs || require('node:fs').promises;
   // Only one search runs at a time: starting a new one, or pressing Cancel, stops the old one.
@@ -145,6 +150,21 @@ function register(ipcMain, backend, deps = {}) {
       return backend.call(method, urlPath, body);
     });
   }
+  // Settings: storage use and manual cleanup.
+  ipcMain.handle('storage:report', () => backend.call('GET', '/v1/storage'));
+  ipcMain.handle('storage:cleanup', (_event, targets) => {
+    if (!Array.isArray(targets) || !targets.length || !targets.every((t) => CLEANUP_TARGETS.includes(t))) {
+      return bad('Unknown cleanup target');
+    }
+    return backend.call('POST', '/v1/storage/cleanup', { targets });
+  });
+
+  // Settings: about the app, updates, and the data folder.
+  const missing = () => bad('Not available');
+  ipcMain.handle('app:info', () => (deps.info ? deps.info() : missing()));
+  ipcMain.handle('app:check-updates', () => (deps.checkForUpdates ? deps.checkForUpdates() : missing()));
+  ipcMain.handle('app:show-data-folder', () => (deps.showDataFolder ? deps.showDataFolder() : missing()));
+  ipcMain.handle('app:open-releases', (_event, url) => (deps.openReleases ? deps.openReleases(url) : missing()));
 }
 
 module.exports = { CHANNELS, register, MAX_IMPORT_BYTES };

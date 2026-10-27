@@ -14,20 +14,24 @@
                     <img src="views/graphics/logo.png" alt="Fistbump" class="logo">
                 </div>
                 <nav class="nav" role="tablist" aria-label="Jobs">
-                    <p class="nav-heading">Jobs</p>
+                    <p class="nav-heading" aria-hidden="true">Jobs</p>
                     <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true">Find jobs</button>
                     <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false">Open a link</button>
                 </nav>
-                <!-- New in phase 3, Resume button to sidebar \\ fixed typos 10/27-->
-                 <nav class= "nav" aria-label="Resume">
-                    <p class=" nav-heading">Resume</p>
+                <nav class="nav" aria-label="Resume">
+                    <p class="nav-heading" aria-hidden="true">Resume</p>
                     <button type="button" id="nav-resume" class="nav-item" data-route="resume">Master resume</button>
-                 </nav>
+                </nav>
+                <nav class="nav nav-bottom" role="tablist" aria-label="App">
+                    <button type="button" id="tab-settings" class="nav-item" role="tab" aria-selected="false">Settings<span id="update-dot" class="dot" title="An update is available" hidden></span></button>
+                </nav>
             </aside>
 
             <main id="main" class="main view-find">
                 <!--Toolbar: the search bar for Find jobs, or the link box for Open a link. It doubles as a drag region.-->
                 <header class="toolbar drag">
+                    <div id="settings-title" class="toolbar-title" hidden><h1>Settings</h1></div>
+
                     <form id="search-form" class="toolbar-form" autocomplete="off">
                         <div class="field grow">
                             <input id="search-keywords" type="search" aria-label="Keywords" placeholder="Job title or keywords, e.g. data analyst">
@@ -103,6 +107,216 @@
                     </form>
                 </header>
 
+                <section id="settings-pane" class="pane settings-pane" aria-label="Settings" hidden>
+                    <div class="settings">
+                        <section class="settings-group" aria-labelledby="set-appearance">
+                            <h2 id="set-appearance">Appearance and accessibility</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-text-size">Text size</label>
+                                        <p>Makes everything in the window larger or smaller.</p>
+                                    </div>
+                                    <select id="pref-text-size">
+                                        <option value="small">Small</option>
+                                        <option value="default">Default</option>
+                                        <option value="large">Large</option>
+                                        <option value="larger">Larger</option>
+                                    </select>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-reduce-motion">Reduce motion</label>
+                                        <p>Turns off fades and spinning animations.</p>
+                                    </div>
+                                    <select id="pref-reduce-motion">
+                                        <option value="system">Match system</option>
+                                        <option value="on">On</option>
+                                        <option value="off">Off</option>
+                                    </select>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-high-contrast">Increase contrast</label>
+                                        <p>Brighter secondary text and stronger outlines.</p>
+                                    </div>
+                                    <input id="pref-high-contrast" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-underline-links">Underline links</label>
+                                        <p>Shows every link with an underline, not only on hover.</p>
+                                    </div>
+                                    <input id="pref-underline-links" type="checkbox" class="switch" role="switch">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-search">
+                            <h2 id="set-search">Search</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-page-size">Results per page</label>
+                                    </div>
+                                    <select id="pref-page-size">
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-default-sort">Sort results by</label>
+                                    </div>
+                                    <select id="pref-default-sort">
+                                        <option value="relevance">Best match</option>
+                                        <option value="newest">Newest</option>
+                                    </select>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-show-logos">Show company logos</label>
+                                        <p>Logos are read from each company's own website. Turn this off to contact only Greenhouse.</p>
+                                    </div>
+                                    <input id="pref-show-logos" type="checkbox" class="switch" role="switch">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-privacy">
+                            <h2 id="set-privacy">History</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Recent searches</span>
+                                        <p id="history-summary"></p>
+                                    </div>
+                                    <button type="button" id="settings-clear-history">Clear history</button>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Saved search form</span>
+                                        <p>The keywords and filters Fistbump fills in when it opens.</p>
+                                    </div>
+                                    <button type="button" id="settings-reset-form">Reset</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-storage">
+                            <h2 id="set-storage">Storage</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Search cache</span>
+                                        <p>Job listings, descriptions and logos kept for a day so searches are fast. <span id="cache-size" class="size"></span></p>
+                                    </div>
+                                    <button type="button" id="clear-cache">Clear cache</button>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Database</span>
+                                        <p>Everything Fistbump stores, including the cache. <span id="db-size" class="size"></span></p>
+                                    </div>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Data folder</span>
+                                        <p id="data-dir" class="path"></p>
+                                    </div>
+                                    <button type="button" id="show-data-folder">Show folder</button>
+                                </div>
+                                <p id="storage-status" class="setting-status" role="status"></p>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-saved">
+                            <h2 id="set-saved">Saved data</h2>
+                            <p class="group-note">These clear what you save in Fistbump. Each becomes available when its feature is added.</p>
+                            <div class="settings-card">
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Old saved jobs</span>
+                                        <p>Jobs you saved but never applied to, after they have been kept a while.</p>
+                                    </div>
+                                    <button type="button" class="planned" data-target="old_jobs" disabled>Clear</button>
+                                </div>
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Trash</span>
+                                        <p>Jobs you moved to the trash.</p>
+                                    </div>
+                                    <button type="button" class="planned" data-target="trash" disabled>Empty trash</button>
+                                </div>
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Resumes</span>
+                                        <p>Your saved resumes and their versions.</p>
+                                    </div>
+                                    <button type="button" class="planned" disabled>Delete all</button>
+                                </div>
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Tailored resumes</span>
+                                        <p>Resumes adjusted for a particular job.</p>
+                                    </div>
+                                    <button type="button" class="planned" disabled>Delete all</button>
+                                </div>
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Applications</span>
+                                        <p>The applications you are tracking.</p>
+                                    </div>
+                                    <button type="button" class="planned" disabled>Delete all</button>
+                                </div>
+                                <div class="setting future">
+                                    <div class="setting-text">
+                                        <span class="setting-label">AI models</span>
+                                        <p>Downloaded models, other than the one in use. <span id="models-size" class="size"></span></p>
+                                    </div>
+                                    <button type="button" class="planned" data-target="unused_models" disabled>Remove unused</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-updates">
+                            <h2 id="set-updates">Updates</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Version <span id="app-version"></span></span>
+                                        <p id="update-status" role="status">Fistbump looks for new versions on GitHub.</p>
+                                    </div>
+                                    <div class="setting-actions">
+                                        <button type="button" id="open-release" class="primary" hidden>Download</button>
+                                        <button type="button" id="check-updates">Check for updates</button>
+                                    </div>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-check-updates">Check when Fistbump opens</label>
+                                    </div>
+                                    <input id="pref-check-updates" type="checkbox" class="switch" role="switch">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-about">
+                            <h2 id="set-about">About</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Fistbump</span>
+                                        <p id="about-details">A local-first job application assistant.</p>
+                                    </div>
+                                    <a class="button" href="https://github.com/tlmcguire/fistbump" target="_blank" rel="noopener noreferrer">GitHub</a>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+
                 <div class="content">
                     <!--Results pane: the search's states. Only one is shown at a time.-->
                     <section id="results-pane" class="pane results-pane" aria-label="Search results">
@@ -155,7 +369,7 @@
                         </div>
 
                         <article id="state-success" class="detail-state listing" hidden>
-                            <button id="back-to-results" type="button" class="back" hidden>&larr; Results</button>
+                            <button id="back-to-results" type="button" class="back" hidden><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>Results</button>
                             <div class="job-head">
                                 <div id="job-logo" class="logo-tile large" aria-hidden="true"></div>
                                 <div class="job-heading">
@@ -185,10 +399,12 @@
              <main id="view-resume" class="main" hidden></main>
         </div>
 
+        <script src="js/prefs.js" defer></script>
         <script src="js/api.js" defer></script>
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
         <script src="views/resume-builder/resume-builder.js" defer></script>
+        <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
     </body>
 </html>

@@ -4,6 +4,16 @@ const { app, Menu, shell } = require('electron');
 
 const isMac = process.platform === 'darwin';
 
+// openSettings asks the focused window to show its Settings view.
+function openSettings() {
+  const { BrowserWindow } = require('electron');
+  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+  if (win) {
+    win.show();
+    win.webContents.send('app:open-settings');
+  }
+}
+
 function appMenu() {
   const dev = !app.isPackaged;
   const template = [
@@ -11,6 +21,8 @@ function appMenu() {
       label: 'Fistbump',
       submenu: [
         { role: 'about', label: 'About Fistbump' },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'Cmd+,', click: openSettings },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -21,7 +33,12 @@ function appMenu() {
         { role: 'quit', label: 'Quit Fistbump' },
       ],
     }] : []),
-    { label: 'File', submenu: [isMac ? { role: 'close' } : { role: 'quit' }] },
+    {
+      label: 'File',
+      submenu: isMac
+        ? [{ role: 'close' }]
+        : [{ label: 'Settings', accelerator: 'Ctrl+,', click: openSettings }, { type: 'separator' }, { role: 'quit' }],
+    },
     {
       label: 'Edit',
       submenu: [

@@ -4,6 +4,7 @@ const { Backend } = require('./backend');
 const { register } = require('./ipc-handlers');
 const windowState = require('./window-state');
 const { appMenu, contextMenu } = require('./menus');
+const updates = require('./updates');
 
 app.setName('Fistbump');
 // Data stays where earlier builds kept it (named after the package, "fistbump"), so the product name in
@@ -109,7 +110,30 @@ if (!app.requestSingleInstanceLock()) {
       app.quit();
       return;
     }
-    register(ipcMain, backend, { dialog, BrowserWindow });
+    register(ipcMain, backend, {
+      dialog,
+      BrowserWindow,
+      info: () => ({
+        version: app.getVersion(),
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        node: process.versions.node,
+        platform: process.platform,
+        arch: process.arch,
+        dataDir: app.getPath('userData'),
+      }),
+      checkForUpdates: () => updates.checkForUpdates(app.getVersion()),
+      showDataFolder: async () => {
+        const error = await shell.openPath(app.getPath('userData'));
+        return error ? { error: { code: 'internal', message: error, details: null } } : { ok: true };
+      },
+      // Only GitHub release pages for this project are opened.
+      openReleases: (url) => {
+        const target = typeof url === 'string' && url.startsWith(updates.RELEASES_PAGE) ? url : updates.RELEASES_PAGE;
+        shell.openExternal(target);
+        return { ok: true };
+      },
+    });
     nativeTheme.themeSource = 'dark'; // native menus, pickers and the window material match the dark app
     app.setAboutPanelOptions({ applicationName: 'Fistbump', applicationVersion: app.getVersion() });
     appMenu();

@@ -331,6 +331,8 @@ Settings never hold secrets.
 
 ## Storage (`storage.go`)
 
+Built so far: `GET /v1/storage`, and cleanup of `cache` (the Greenhouse and logo caches) and `partial_downloads`. `old_jobs`, `trash` and `unused_models` answer `422` "not available yet" until saved jobs and models exist; the settings page already lists them, turned off.
+
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
 | `GET /v1/storage` | none | `{ "data_dir", "db_bytes", "models_bytes", "cache_bytes", "partial_downloads_bytes", "job_count", "total_bytes" }` | `COUNT` on `jobs`, file sizes from disk |
