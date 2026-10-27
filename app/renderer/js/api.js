@@ -10,8 +10,12 @@ window.FistBumpAPI = {
         );
         throw new Error(msg || "Connection error");
       }
+      //updated front end error handling for pahse 03
       if (result?.error) {
-        throw new Error(result.error.message || "An unknown error has occurred");
+        const error = new Error(result.error.message || "An unknown error has occurred");
+        error.code = result.error.code;
+        error.details = result.error.details;
+        throw error;
       }
       return result;
     },
@@ -59,3 +63,17 @@ window.FistBumpAPI = {
       return this.request(() => window.api.connectors.search(query));
     }
   };
+
+  //handles new functions called by resume-builder.js and app.js
+  const wrap = (group, names) => Object.fromEntries(names.map(name => [
+    name,
+    (...args) => window.FistBumpAPI.request(() => window.api[group][name](...args)),
+  ]));
+
+  window.FistBumpAPI.resume = wrap("resume", [
+    "get", "putProfile", "preview", "createExperience", "updateExperience", "deleteExperience", 
+    "createEducation", "updateEducation", "deleteEducation",
+    "importFile", "importData", "importText", "importApply",
+  ]);
+
+  window.FistBumpAPI.resumes = wrap("resumes", ["list", "get", "create","update", "delete"]);

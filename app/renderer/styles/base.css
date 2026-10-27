@@ -1130,3 +1130,7 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
   .resume-editor { border-right: 0; }
 }
  
+
+li.result * {
+  user-select: none;
+}
