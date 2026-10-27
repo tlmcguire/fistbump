@@ -15,7 +15,7 @@ import (
 // Visible text of imported document and separates the hidden text in it
 type Extracted struct {
 	Text   string
-	Hidden *Hidden
+	Hidden Hidden
 }
 
 // Imported documents need at least 5 visible words; anything less is a scan or a page of hidden text
@@ -55,10 +55,10 @@ func TextFromPDF(data []byte) (out Extracted, err error) {
 		if p.V.IsNull() {
 			continue
 		}
-		content := p.Content()
+		content := readContent(p)
 		pg := page{box: pageBox(p), fills: content.Fills}
-		var visible []pdf.Text
-		var last *pdf.Text // the last hidden piece, to space dropped words apart
+		var visible []text
+		var last *text // the last hidden piece, to space dropped words apart
 		for _, t := range content.Text {
 			reason, hidden := isHidden(t, pg)
 			if !hidden {
@@ -89,7 +89,7 @@ func TextFromPDF(data []byte) (out Extracted, err error) {
 
 type line struct {
 	y, size float64
-	parts   []pdf.Text
+	parts   []text
 }
 
 // Maps Symbol-font bullets to "•" and drops other private-use (icon) characters.
@@ -109,7 +109,7 @@ func cleanGlyph(s string) string {
 
 // Groups by baseline: join if within 2pt or 35% of font size; else start a new line
 // Lone icons are skipped
-func buildLines(texts []pdf.Text, log *hiddenLog) []*line {
+func buildLines(texts []text, log *hiddenLog) []*line {
 	var lines []*line
 	for _, t := range texts {
 		t.S = cleanGlyph(t.S)
@@ -157,8 +157,8 @@ func buildLines(texts []pdf.Text, log *hiddenLog) []*line {
 
 // Keep one glyph from each group drawn at the same position. Word processors leave glyphs under real ones; the real glyph is the one whose width
 // reaches the next glyph. Dropped glyphs are logged as hidden text.
-func dropOverprints(parts []pdf.Text, log *hiddenLog) []pdf.Text {
-	var out []pdf.Text
+func dropOverprints(parts []text, log *hiddenLog) []text {
+	var out []text
 	for i := 0; i < len(parts); {
 		j := i + 1
 		// Without glyph widths (standard fonts) positions carry no overlap information.
@@ -203,7 +203,7 @@ func stripRunArtifacts(pages [][]*line) {
 	stats := map[string]*stat{}
 	// A run is consecutive glyphs in one font at one size; headings often share a font with body text
 	// at a different size.
-	key := func(t pdf.Text) string { return fmt.Sprintf("%s@%.0f", t.Font, t.FontSize) }
+	key := func(t text) string { return fmt.Sprintf("%s@%.0f", t.Font, t.FontSize) }
 	for _, lines := range pages {
 		for _, l := range lines {
 			start := 0
