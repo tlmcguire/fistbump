@@ -83,12 +83,26 @@ async function route() {
 window.addEventListener("hashchange", route);
 
 //Sidebar: the Jobs tabs and Settings return to the Jobs view (the view then picks the tab), and Resume opens the Resume view.
+//The Jobs view adds its tab listeners when it first mounts, so a click that mounts it is passed on again.
+function openJobsTab(tab) {
+  if (routeName() === "jobs") return;
+  const firstMount = !jobsMounted;
+  location.hash = "#/jobs";
+  show("jobs");
+  if (firstMount) tab.click();
+}
 for (const id of ["tab-find", "tab-link", "tab-settings"]) {
-  document.getElementById(id).addEventListener("click", () => {
-    if (routeName() !== "jobs") location.hash = "#/jobs";
-  });
+  const tab = document.getElementById(id);
+  tab.addEventListener("click", () => openJobsTab(tab));
 }
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
+
+// The menu's Settings item (Cmd/Ctrl+,) works from any view.
+window.api?.app?.onOpenSettings?.(() => {
+  const tab = document.getElementById("tab-settings");
+  if (routeName() === "jobs") tab.click();
+  else openJobsTab(tab);
+});
 
 window.Settings.mount();
 route();

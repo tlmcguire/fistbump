@@ -21,6 +21,12 @@
   --control-hover: rgba(255, 255, 255, 0.16);
   --field: #ffffff;
   --field-ink: #141a26;
+  --field-placeholder: #697186;
+  --danger-text: #ffb4ab;  /* error messages on the dark panes */
+  --danger-line: #ff8a80;  /* the outline of a field with an error */
+  --danger-fill: #b3261e;  /* a button about to do something that cannot be undone */
+  --note: rgba(206, 166, 21, 0.09);
+  --note-line: rgba(206, 166, 21, 0.32);
   --radius: 6px;
   --sidebar-width: 188px;
   --toolbar-height: 52px;
@@ -113,7 +119,7 @@ input, select {
 }
 
 input[type="search"]::-webkit-search-cancel-button { cursor: default; }
-input::placeholder { color: #8a93a6; }
+input::placeholder, textarea::placeholder { color: var(--field-placeholder); }
 input:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent-hover);
   outline-offset: 0;
@@ -859,6 +865,7 @@ label.sort select {
   margin: 0;
   font-size: 15px;
   font-weight: 650;
+  white-space: nowrap;
 }
  
 .toolbar-actions {
@@ -891,8 +898,8 @@ textarea:focus-visible {
 input:disabled, select:disabled, textarea:disabled { opacity: 0.55; }
  
 input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] {
-  border-color: #ff8a80;
-  box-shadow: 0 0 0 1px #ff8a80;
+  border-color: var(--danger-line);
+  box-shadow: 0 0 0 1px var(--danger-line);
 }
  
 .form-grid {
@@ -929,13 +936,13 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
  
 .hint {
   margin: 0;
-  color: var(--faint);
+  color: var(--muted);
   font-size: 12px;
 }
  
 .field-error, .form-error {
   margin: 0;
-  color: #ffb4ab;
+  color: var(--danger-text);
   font-size: 12px;
   font-weight: 550;
 }
@@ -984,7 +991,7 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
   text-overflow: ellipsis;
 }
  
-.resume-status.error { color: #ffb4ab; }
+.resume-status.error { color: var(--danger-text); }
  
 .resume-content { grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); }
  
@@ -1010,7 +1017,7 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
  
 .section-head h2 { margin: 0; }
  
-.resume-section .empty { margin: 0; color: var(--faint); }
+.resume-section .empty { margin: 0; color: var(--muted); }
 
 /* Import review: warnings and the hidden-text notice sit above the draft forms. */
 .import-review h3 { margin: 16px 0 8px; font-size: 13px; }
@@ -1019,12 +1026,13 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
 .import-warnings, .import-notice {
   margin: 0 0 12px;
   padding: 10px 14px;
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--note-line);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--note);
 }
 .import-warnings { padding-left: 30px; }
+.import-warnings li + li { margin-top: 4px; }
+.import-notice summary { cursor: default; }
 .import-notice p { margin: 0; }
 .import-notice details { margin-top: 8px; color: var(--muted); }
 .import-entries:empty { display: none; }
@@ -1094,6 +1102,8 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
   border-radius: 8px;
 }
  
+.version .version-head { flex-direction: column; gap: 8px; }
+.version .entry-actions { justify-content: flex-start; }
 .version strong { display: block; }
 .version small { color: var(--muted); }
 .version .preview-text { margin-top: 10px; }
@@ -1252,7 +1262,7 @@ li.result * {
 /* A button that asks to be pressed again before it does something that cannot be undone. */
 button.confirming,
 button.confirming:hover:not(:disabled) {
-  background: #b3261e;
+  background: var(--danger-fill);
   color: white;
 }
 
