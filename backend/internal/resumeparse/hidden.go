@@ -39,6 +39,9 @@ type hiddenLog struct {
 
 func (h *hiddenLog) add(reason, text string, chars int) {
 	if chars == 0 {
+		if text != "" { // a dropped space still separates the words around it
+			h.gap()
+		}
 		return
 	}
 	if !slices.Contains(h.reasons, reason) {
@@ -55,17 +58,53 @@ func (h *hiddenLog) gap() {
 	}
 }
 
-// Returns nil when nothing was hidden, so the API sends hidden_text: null.
-func (h *hiddenLog) report() *Hidden {
+// Returns the zero Hidden when nothing was hidden, so the API sends hidden_text: null.
+func (h *hiddenLog) report() Hidden {
 	if h.chars == 0 {
-		return nil
+		return Hidden{}
 	}
 	all := strings.Join(strings.Fields(h.text.String()), " ")
-	sample := []rune(all)
-	if len(sample) > sampleLen {
-		sample = sample[:sampleLen]
+	return Hidden{Words: len(strings.Fields(all)), Characters: h.chars, Reasons: h.reasons, Sample: clip(all)}
+}
+
+func clip(s string) string {
+	if r := []rune(s); len(r) > sampleLen {
+		return string(r[:sampleLen])
 	}
-	return &Hidden{Words: len(strings.Fields(all)), Characters: h.chars, Reasons: h.reasons, Sample: string(sample)}
+	return s
+}
+
+// Empty reports whether nothing was hidden.
+func (h Hidden) Empty() bool { return len(h.Reasons) == 0 }
+
+// Merge combines two reports: counts are summed, reasons joined without repeats, and the sample
+// keeps the first sampleLen characters of both.
+func (h Hidden) Merge(o Hidden) Hidden {
+	if o.Empty() {
+		return h
+	}
+	if h.Empty() {
+		return o
+	}
+	out := Hidden{Words: h.Words + o.Words, Characters: h.Characters + o.Characters,
+		Reasons: slices.Clone(h.Reasons), Sample: h.Sample}
+	for _, r := range o.Reasons {
+		if !slices.Contains(out.Reasons, r) {
+			out.Reasons = append(out.Reasons, r)
+		}
+	}
+	if o.Sample != "" {
+		out.Sample = clip(strings.TrimSpace(out.Sample + " " + o.Sample))
+	}
+	return out
+}
+
+// CleanText removes invisible characters (textclean.StripInvisible) and reports them. Every
+// import path calls it: .txt and .md files, pasted text, and PDF text after extraction.
+func CleanText(text string) (string, Hidden) {
+	log := &hiddenLog{}
+	out := stripInvisible(text, log)
+	return out, log.report()
 }
 
 // Removes invisible characters with textclean.StripInvisible and logs them. A single
@@ -93,7 +132,7 @@ func stripInvisible(text string, log *hiddenLog) string {
 // What the hidden-text rules need to know about one PDF page.
 type page struct {
 	box   pdf.Rect
-	fills []pdf.FilledRect
+	fills []filledRect
 }
 
 // How close (per channel, 0 to 1) text may be to its background and still count as the same color.
@@ -107,7 +146,7 @@ const pageEdgeSlack = 0.5
 
 // Applies the hidden-text rules in order: render mode, off the page, microscopic, same
 // color as the background. Overprinted glyphs are found while lines are built (dropOverprints).
-func isHidden(t pdf.Text, p page) (reason string, hidden bool) {
+func isHidden(t text, p page) (reason string, hidden bool) {
 	if t.RenderMode == 3 || t.RenderMode == 7 {
 		return HiddenRenderMode, true
 	}
@@ -126,7 +165,7 @@ func isHidden(t pdf.Text, p page) (reason string, hidden bool) {
 	return "", false
 }
 
-func offPage(t pdf.Text, box pdf.Rect) bool {
+func offPage(t text, box pdf.Rect) bool {
 	if box.Max.X <= box.Min.X || box.Max.Y <= box.Min.Y {
 		return false // no usable box: nothing to compare against
 	}
@@ -136,7 +175,7 @@ func offPage(t pdf.Text, box pdf.Rect) bool {
 
 // Returns the color under the text: the last filled rectangle drawn before it that contains its position, default to white; known is false when
 // that rectangle's color could not be read, so no comparison is made.
-func background(t pdf.Text, fills []pdf.FilledRect) (color [3]float64, known bool) {
+func background(t text, fills []filledRect) (color [3]float64, known bool) {
 	x, y := t.X+t.W/2, t.Y+t.Size*0.3
 	for i := len(fills) - 1; i >= 0; i-- {
 		f := fills[i]
@@ -157,9 +196,9 @@ func colorDistance(a, b [3]float64) float64 {
 
 // Reads the crop box as a rectangle
 func pageBox(p pdf.Page) pdf.Rect {
-	box := p.CropBox()
+	box := inherited(p, "CropBox")
 	if box.Kind() != pdf.Array || box.Len() != 4 {
-		box = p.MediaBox()
+		box = inherited(p, "MediaBox")
 	}
 	if box.Kind() != pdf.Array || box.Len() != 4 {
 		return pdf.Rect{}
@@ -169,4 +208,14 @@ func pageBox(p pdf.Page) pdf.Rect {
 		Min: pdf.Point{X: math.Min(x1, x2), Y: math.Min(y1, y2)},
 		Max: pdf.Point{X: math.Max(x1, x2), Y: math.Max(y1, y2)},
 	}
+}
+
+// Reads a page attribute that may be set on the page or on a parent in the page tree.
+func inherited(p pdf.Page, key string) pdf.Value {
+	for v, depth := p.V, 0; !v.IsNull() && depth < 32; v, depth = v.Key("Parent"), depth+1 {
+		if r := v.Key(key); !r.IsNull() {
+			return r
+		}
+	}
+	return pdf.Value{}
 }
