@@ -941,10 +941,6 @@ window.JobParser = {
         renderHistory();
       };
       window.JobParser.resetForm = () => $("clear-search").click();
-      window.api?.app?.onOpenSettings?.(() => {
-        if (main.hidden) location.hash = "#/jobs";
-        selectTab("settings");
-      });
 
       //A new page size or sort applies from the next search; the sort select starts at the saved default.
       $("result-sort").value = window.Prefs.get("defaultSort");
