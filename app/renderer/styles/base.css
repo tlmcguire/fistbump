@@ -314,23 +314,15 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   border-top: 1px solid var(--line);
 }
 
-.workspace {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-/* Sized by height with a cap on width, so a squarer or wider mark drops in without moving anything. */
-.mark {
+/* The full logo, sized by height. Its PNG is 1000px wide, so it stays sharp at any display scale. */
+.wordmark {
+  display: block;
   width: auto;
-  max-width: 40px;
-  height: 16px;
+  max-width: 100%;
+  min-width: 0;
+  height: 18px;
   object-fit: contain;
-  opacity: 0.9;
+  object-position: left center;
   -webkit-user-drag: none;
 }
 

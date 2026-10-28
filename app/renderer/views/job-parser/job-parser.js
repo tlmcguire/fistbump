@@ -186,30 +186,23 @@ window.JobParser = {
         rememberListing(data);
       };
 
-      //The last listing opened, for Home's "Keep reading". Only what it needs to show and reload it is kept.
+      //The last listing opened, for Home's "Keep reading". Everything the detail pane shows is kept, so it
+      //opens again as it was without asking Greenhouse; Reload fetches it fresh.
       const LISTING_KEY = "fistbump.last-listing";
       function rememberListing(data) {
         if (!data.board || !data.external_id) return;
         try {
-          const {board, external_id, position_title, company_name, location, work_mode} = data;
-          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode, at: new Date().toISOString()}));
+          const {board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
+          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode,
+            updated_at, raw_text, company_url, listing_url, at: new Date().toISOString()}));
         } catch {
           //Home just won't offer it
         }
       }
 
-      //Opens a remembered listing in Find jobs, fresh from Greenhouse.
-      const openSaved = async saved => {
-        detailRetry = () => openSaved(saved);
-        showDetailLoading("Opening the listing\u2026");
-        const mine = detailSeq;
-        try {
-          const data = await window.FistBumpAPI.posting(saved.board, saved.external_id);
-          if (mine !== detailSeq) return;
-          displayPosting(data, Boolean(results?.postings.some(p => keyOf(p) === keyOf(data))));
-        } catch (error) {
-          if (mine === detailSeq) showDetailError(error);
-        }
+      //Opens a remembered listing in Find jobs as it was kept, without asking Greenhouse.
+      const openSaved = saved => {
+        displayPosting(saved, Boolean(results?.postings.some(p => keyOf(p) === keyOf(saved))));
       };
 
       const showDetailLoading = message => {
