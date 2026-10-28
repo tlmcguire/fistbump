@@ -1,6 +1,6 @@
 # Pico, the Fistbump mascot
 
-Thirty poses of Pico, plus `face-expressions.png`, a sheet of its nine faces for reference.
+Thirty-nine poses of Pico, plus `face-expressions.png`, a sheet of its nine faces for reference.
 Each pose is a 400px transparent PNG, cropped and scaled from the 1254px originals so every pose keeps the same scale.
 The app draws them at about 128px.
 
@@ -32,6 +32,12 @@ The originals are raster images, so a pose's colours are close to the app's pale
 | `21-application-sent` · `22-waiting` · `23-interview-day` · `24-on-to-the-next` | The application tracker |
 | `26-private-local` · `27-update-available` | Privacy notes, an update notice |
 | `30-mega-error-faceplant` | A serious error |
+| `31-saved` · `32-archived` · `33-empty-tracker` | The tracker's Saved stage, an archived application, and a tracker with no applications |
+| `34-no-changes` | The diff view when tailoring suggests no changes |
+| `35-connect-provider` · `36-provider-error` | Adding an AI provider or key, and a key that fails or hits a rate limit |
+| `37-confirm-delete` | A confirmation before deleting, if the native dialog is replaced |
+| `38-no-versions` | The resume builder's empty list of saved versions |
+| `39-milestone-badge` | A milestone, with the number written over the badge's blank centre |
 
 ## Home set
 
@@ -44,16 +50,32 @@ The originals are raster images, so a pose's colours are close to the app's pale
 | `01-morning-hello` | Not used (Home shows the month's pose instead) |
 | `animations/*.svg` | Not used. The app shows still poses only for now. |
 
-## Away, monthly and fun-screen sets
+## Full-canvas sets
 
-These three folders hold 400px poses scaled from the full 1254px canvas without cropping, since their props reach the edges. Home draws them a little larger so Pico stays the same size as in the cropped poses.
+These folders hold 400px poses scaled from the full 1254px canvas without cropping, since their props reach the edges. Home draws them a little larger so Pico stays the same size as in the cropped poses.
 
 | Folder | Where |
 |---|---|
 | `monthly/` (`01-january` to `12-december`) | Home, beside the greeting, half the time: the pose for the current month |
 | `fun-screen/` (pixel alien, playful error, tiny bird game, pixel cat, pixel heart, achievement) | Home, beside the greeting, the other half of the time: one picked at random each time Home is shown |
 | `away/` (`01-one-week` to `05-six-months-plus`) | Not used. Home still says "Welcome back" after a week or more away, beside a monthly or fun-screen pose. |
+| `awards/` (`award-0050-applications` to `award-0250-applications`) | Not used. Pico holding a badge for 50, 100, 150, 200 and 250 applications. |
+| `extras/` | Not used. Starting up, a drop target, "are you sure?", a gentle rejection, a milestone, peeking, typing, sleeping and waking, a party, reading, watering a plant and Halloween, plus `06-avatar-*`, Pico's head with each of its ten faces. The avatar, peeking and `09-typing-satisfied` files are 3:2 rather than square. |
 
 ## Introduction
 
 `intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. Home shows `meet-pico.png` above the welcome to someone with no master resume yet. The other three files are not used.
+
+## Animations
+
+`animations/` holds five experimental loops (`idle`, `intro`, `loading`, `searching`, `thinking`) as 512px WebM files with transparency, each beside a still PNG to use as its poster. They are not used: the app shows still poses only for now.
+
+## Outside the app
+
+Art made from Pico that lives elsewhere in the repository:
+
+| File | What it is |
+|---|---|
+| `docs/images/github-banner.png` | The 1280×640 banner at the top of the README, also meant for the repository's social preview |
+| `build/background.tiff` | The macOS DMG window's background, at 540×380 with a 2x copy |
+| `build/installerSidebar.bmp` | Pico on the Windows installer's welcome and finish pages, at 164×314 |
