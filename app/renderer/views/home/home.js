@@ -50,22 +50,45 @@
       chevron());
   const rows = items => el("ul", {class: "home-rows"}, items.map(item => el("li", {}, row(item))));
 
-  //Pico, the mascot. Home shows its looping animations, or the matching still pose when motion is reduced
-  //in Settings (the animations already hold still when the system asks for reduced motion).
+  // ---------- Time away ----------
+
+  //When Fistbump was last open. It is read once, when the app starts, so Home can welcome someone back
+  //for the rest of that run, and then kept current while the app is open.
+  const SEEN_KEY = "fistbump.last-seen";
+  const AWAY = [
+    {days: 180, pose: "05-six-months-plus", text: "It's been over six months. Pico dusted itself off for you."},
+    {days: 90, pose: "04-three-months", text: "It's been about three months since you were here."},
+    {days: 30, pose: "03-one-month", text: "It's been about a month since you were here."},
+    {days: 14, pose: "02-two-weeks", text: "It's been a couple of weeks since you were here."},
+    {days: 7, pose: "01-one-week", text: "It's been a week since you were here."},
+  ];
+  const away = (() => {
+    const last = Date.parse(readJSON(SEEN_KEY) || "");
+    if (Number.isNaN(last)) return null;
+    const days = (Date.now() - last) / 86400000;
+    return AWAY.find(a => days >= a.days) || null;
+  })();
+  const seen = () => {
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify(new Date().toISOString()));
+    } catch {}
+  };
+  seen();
+  setInterval(seen, 10 * 60 * 1000);
+  window.addEventListener("beforeunload", seen);
+
+  //Pico, the mascot. Home shows still poses only.
   const MASCOTS = "views/graphics/mascots";
-  const still = () => document.documentElement.classList.contains("reduce-motion");
-  const LOOPS = {idle: "01-morning-hello", cozy: "02-cozy-break", victory: "04-little-victory"};
-  const pico = loop => el("img", {
-    class: still() ? "mascot" : "mascot loop",
-    src: still() ? `${MASCOTS}/home/${LOOPS[loop]}.png` : `${MASCOTS}/home/animations/${loop}.svg`,
-    alt: "",
-  });
-  //A small still pose that cheers on the last step or two of the resume.
+  const MONTHS = ["01-january", "02-february", "03-march", "04-april", "05-may", "06-june",
+    "07-july", "08-august", "09-september", "10-october", "11-november", "12-december"];
+  //The away and monthly poses keep the art's full canvas, so they are drawn a little larger to match.
+  const pico = src => el("img", {class: src.startsWith("home/") ? "mascot" : "mascot full", src: `${MASCOTS}/${src}.png`, alt: ""});
+  //A small pose that cheers on the last step or two of the resume.
   const nudge = () => el("img", {class: "mascot home-nudge", src: `${MASCOTS}/home/03-youve-got-this.png`, alt: ""});
   //New users meet Pico first. The picture carries its own words, so they are its alt text.
   const intro = () => el("img", {
     class: "home-intro",
-    src: still() ? `${MASCOTS}/intro/meet-pico.png` : `${MASCOTS}/intro/meet-pico-animated.svg`,
+    src: `${MASCOTS}/intro/meet-pico.png`,
     alt: "Meet Pico, your job-search sidekick. Here to help you keep going.",
   });
 
@@ -184,10 +207,11 @@
           : gaps.length <= 2 ? "Your resume is nearly there."
           : "Your resume has a few gaps left to fill.";
         const then = listing ? " The listing you were reading is right where you left it." : "";
+        const hello = away ? "Welcome back" : greeting();
         fill(welcome,
           el("div", {class: "home-welcome-text"},
-            el("h2", {id: "home-greeting", text: firstName ? `${greeting()}, ${firstName}` : greeting()}),
-            el("p", {text: `${today}. ${status}${then}`}),
+            el("h2", {id: "home-greeting", text: firstName ? `${hello}, ${firstName}` : hello}),
+            el("p", {text: `${today}. ${away ? `${away.text} ` : ""}${status}${then}`}),
             listing ? row({
               title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
               detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
@@ -197,8 +221,12 @@
                 window.JobParser.openListing(listing);
               },
             }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
-          //A small hop once the resume is ready; otherwise a wave, or a cozy break in the evening.
-          pico(gaps.length === 0 ? "victory" : new Date().getHours() >= 18 ? "cozy" : "idle"));
+          //After time away, a pose that shows how long it has been; then a small win once the resume is
+          //ready; otherwise a cozy break in the evening, or the pose for this month.
+          pico(away ? `away/${away.pose}`
+            : gaps.length === 0 ? "home/04-little-victory"
+            : new Date().getHours() >= 18 ? "home/02-cozy-break"
+            : `monthly/${MONTHS[new Date().getMonth()]}`));
       }
 
       // Finish your resume

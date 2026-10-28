@@ -1296,8 +1296,8 @@ li.result * {
 }
 
 .home-welcome .mascot { width: 136px; height: 136px; margin: -14px -8px -10px 0; }
-/* The animations keep the art's full canvas, so they are drawn a little larger to match the cropped poses. */
-.home-welcome .mascot.loop { width: 150px; height: 150px; margin: -20px -14px -16px 0; }
+/* The away and monthly poses keep the art's full canvas, so they are drawn a little larger to match the cropped poses. */
+.home-welcome .mascot.full { width: 150px; height: 150px; margin: -20px -14px -16px 0; }
 
 /* New users meet Pico above the welcome. The picture's navy is the page's own, so it has no frame. */
 .home-intro-slot[hidden] { display: none; }

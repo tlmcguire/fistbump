@@ -35,18 +35,26 @@ The originals are raster images, so a pose's colours are close to the app's pale
 
 ## Home set
 
-`home/` holds four more poses for the Home view, cropped and scaled the same way, and `home/animations/` six looping SVGs. Each SVG embeds its own artwork, scaled down to 480px, so it works as a plain `<img src>`, and holds still when the system asks for reduced motion.
+`home/` holds four more poses for the Home view, cropped and scaled the same way, and `home/animations/` six looping SVGs. Each SVG embeds its own artwork, scaled down to 480px, so it works as a plain `<img src>`.
 
 | Asset | Where |
 |---|---|
-| `animations/idle.svg` (still: `01-morning-hello`) | Home, beside the greeting |
-| `animations/cozy.svg` (still: `02-cozy-break`) | Home, beside the greeting from 6pm |
-| `animations/victory.svg` (still: `04-little-victory`) | Home, beside the greeting once the master resume has nothing missing |
+| `02-cozy-break` | Home, beside the greeting from 6pm |
+| `04-little-victory` | Home, beside the greeting once the master resume has nothing missing |
 | `03-youve-got-this` | Home, beside "Finish your resume" when one or two things are left |
-| `animations/searching.svg` · `loading.svg` · `thinking.svg` | Not used yet |
+| `01-morning-hello` | Not used (Home shows the month's pose instead) |
+| `animations/*.svg` | Not used. The app shows still poses only for now. |
 
-Home shows the still pose in place of an animation when Reduce motion is on in Settings.
+## Away, monthly and fun-screen sets
+
+These three folders hold 400px poses scaled from the full 1254px canvas without cropping, since their props reach the edges. Home draws them a little larger so Pico stays the same size as in the cropped poses.
+
+| Folder | Where |
+|---|---|
+| `away/` (`01-one-week` to `05-six-months-plus`) | Home, beside "Welcome back" after a week, two weeks, a month, three months or six months without opening Fistbump. This pose comes before any other, for as long as the app stays open. |
+| `monthly/` (`01-january` to `12-december`) | Home, beside the greeting before 6pm when the resume still has gaps |
+| `fun-screen/` (pixel alien, playful error, tiny bird game, pixel cat, pixel heart, achievement) | Not used yet |
 
 ## Introduction
 
-`intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. Home shows `meet-pico-animated.svg` above the welcome to someone with no master resume yet, or `meet-pico.png` when motion is reduced. `meet-pico.svg` and `pico-wave-cutout.png` are not used.
+`intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. Home shows `meet-pico.png` above the welcome to someone with no master resume yet. The other three files are not used.
