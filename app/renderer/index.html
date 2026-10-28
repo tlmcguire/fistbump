@@ -222,6 +222,7 @@
                                     </div>
                                     <button type="button" id="settings-reset-form">Reset</button>
                                 </div>
+                                <p id="history-status" class="setting-status" role="status"></p>
                             </div>
                         </section>
 
@@ -347,7 +348,7 @@
                         </div>
 
                         <div id="state-loading" class="state state-message" hidden>
-                            <img class="mascot working" src="views/graphics/mascots/25-thinking-loading.png" alt="">
+                            <div class="spinner" aria-hidden="true"></div>
                             <p id="loading-message" role="status"></p>
                             <button id="cancel-search" type="button" hidden>Cancel</button>
                         </div>
@@ -386,6 +387,7 @@
                     <!--Detail pane: the open listing, or a placeholder, its loading message or its error.-->
                     <section id="detail-pane" class="pane detail-pane" aria-label="Job listing">
                         <div id="detail-empty" class="detail-state state-message">
+                            <img id="detail-mascot" class="mascot" alt="" hidden>
                             <p id="detail-empty-message"></p>
                         </div>
 
