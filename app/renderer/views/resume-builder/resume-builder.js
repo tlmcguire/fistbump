@@ -471,6 +471,7 @@
     let showing = null;  //{id, content} of the version whose text is open
  
     function renderVersions() {
+      window.dispatchEvent(new CustomEvent("fistbump:versions", {detail: versions}));
       if (versions.length === 0) {
         versionsList.replaceChildren(el("li", {class: "empty", text: "No saved versions yet. Save one to keep this resume as it is now."}));
         return;
