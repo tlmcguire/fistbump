@@ -39,8 +39,7 @@ The originals are raster images, so a pose's colours are close to the app's pale
 
 | Asset | Where |
 |---|---|
-| `02-cozy-break` | Home, beside the greeting from 6pm |
-| `04-little-victory` | Home, beside the greeting once the master resume has nothing missing |
+| `02-cozy-break` · `04-little-victory` | Not used (Home's greeting shows a monthly or fun-screen pose) |
 | `03-youve-got-this` | Home, beside "Finish your resume" when one or two things are left |
 | `01-morning-hello` | Not used (Home shows the month's pose instead) |
 | `animations/*.svg` | Not used. The app shows still poses only for now. |
@@ -51,9 +50,9 @@ These three folders hold 400px poses scaled from the full 1254px canvas without 
 
 | Folder | Where |
 |---|---|
-| `away/` (`01-one-week` to `05-six-months-plus`) | Home, beside "Welcome back" after a week, two weeks, a month, three months or six months without opening Fistbump. This pose comes before any other, for as long as the app stays open. |
-| `monthly/` (`01-january` to `12-december`) | Home, beside the greeting before 6pm when the resume still has gaps |
-| `fun-screen/` (pixel alien, playful error, tiny bird game, pixel cat, pixel heart, achievement) | Not used yet |
+| `monthly/` (`01-january` to `12-december`) | Home, beside the greeting, half the time: the pose for the current month |
+| `fun-screen/` (pixel alien, playful error, tiny bird game, pixel cat, pixel heart, achievement) | Home, beside the greeting, the other half of the time: one picked at random each time Home is shown |
+| `away/` (`01-one-week` to `05-six-months-plus`) | Not used. Home still says "Welcome back" after a week or more away, beside a monthly or fun-screen pose. |
 
 ## Introduction
 
