@@ -145,7 +145,9 @@
     function render(master, versions) {
       const p = master.profile;
       const gaps = resumeGaps(master);
-      const listing = readJSON(LISTING_KEY);
+      //A listing remembered before its text was kept cannot be shown without Greenhouse, so it is not offered.
+      const kept = readJSON(LISTING_KEY);
+      const listing = typeof kept?.raw_text === "string" ? kept : null;
       const today = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
       const firstName = (p?.full_name || "").split(/\s+/)[0];
 
