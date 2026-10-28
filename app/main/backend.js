@@ -143,6 +143,8 @@ class Backend extends EventEmitter {
     try {
       const res = await this.request(method, urlPath, body, signal);
       if (res.json) return res.json;
+      // A delete answers 204 with no body.
+      if (res.status === 204) return { ok: true };
       return { error: { code: 'internal', message: 'The backend sent an unreadable response', details: null } };
     } catch {
       if (signal?.aborted) return { error: { code: 'canceled', message: 'Search canceled', details: null } };

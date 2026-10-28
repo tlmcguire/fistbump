@@ -106,7 +106,7 @@ The master resume is `profile` plus `experiences` plus `education`. One profile 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
 | `GET /v1/resume` | none | `{ "profile": Profile \| null, "experiences": [Experience], "education": [Education], "skills": ["go"] }`. `skills` is derived: the de-duplicated union of `profile.skills` and `experiences.skills`. | SELECT `profile`, `experiences` and `education` (each by `sort_order`) |
-| `PUT /v1/resume/profile` | Profile fields without read-only fields. `full_name` required. | Profile. Creates the row if none exists. | UPSERT `profile`, sets `updated_at` |
+| `PUT /v1/resume/profile` | Profile fields without read-only fields. Every field may be blank, `full_name` included. | Profile. Creates the row if none exists. | UPSERT `profile`, sets `updated_at` |
 | `GET /v1/resume/experiences` | none | `[Experience]` ordered by `sort_order` | SELECT `experiences` |
 | `POST /v1/resume/experiences` | Experience without read-only fields or `profile_id`. `company_name` and `job_title` required. A `null` `end_date` means the role is current. | `201` Experience. `sort_order` defaults to the next value. `409` if no profile exists. | INSERT `experiences` |
 | `PUT /v1/resume/experiences/{id}` | Experience fields (full replace) | Experience. `404` if missing. | UPDATE `experiences` |
@@ -116,13 +116,17 @@ The master resume is `profile` plus `experiences` plus `education`. One profile 
 | `PUT /v1/resume/education/{id}` | Education fields (full replace) | Education | UPDATE `education` |
 | `DELETE /v1/resume/education/{id}` | none | `204` | DELETE `education` |
 
+Dates sent as `YYYY-MM` are stored as `YYYY-MM-01`; blank strings are stored as `null`. A `PUT` to an experience or education entry keeps its `sort_order` unless the body sends one. Reordering is two `PUT`s.
+
+When `POST /v1/connectors/greenhouse/fetch` has no keywords and nothing else to search by (location, industry, boards, company), it uses `profile.target_positions`, else the title of the latest experience (a current role first, then the newest start date). `keywords_used` reports what was searched.
+
 Validation: `end_date` must not precede `start_date`. `gpa` is between 0 and 5. Skills are trimmed, lower-cased for matching, and de-duplicated. Experience `description` and `impact` are the text AI suggestions target.
 
 ## Resume import and generation (`resume_import.go`)
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `POST /v1/resume/import` | `{ "filename": "cv.pdf", "data_base64": "..." }` or `{ "text": "..." }`, plus `"engine": "rules"` (default) or `"auto"`. PDF, `.txt` and `.md`, at most 5 MB. | `{ "text", "draft": { "profile", "experiences", "education", "skills", "warnings" }, "engine", "notice" }`. `422` for a PDF without a text layer. With `auto`, a model structures the text when one is available; values not found in the text are dropped, and failures fall back to rules with a `notice`. | None (preview) |
+| `POST /v1/resume/import` | `{ "filename": "cv.pdf", "data_base64": "..." }` or `{ "text": "..." }`, plus `"engine": "rules"` (default) or `"auto"`. PDF, `.txt` and `.md`, at most 5 MB. | `{ "text", "draft": { "profile", "experiences", "education", "skills", "warnings" }, "hidden_text", "size_warnings", "engine", "notice" }`. `hidden_text` is `{ "words", "reasons", "sample" }`, or `null` when nothing was hidden. `size_warnings` is a list, empty unless the file is over 1 MiB or the text is over about four pages; neither blocks the import. `422` for a PDF without a text layer. With `auto`, a model structures the text when one is available; values not found in the text are dropped, and failures fall back to rules with a `notice`. | None (preview) |
 | `POST /v1/resume/import/apply` | `{ "draft": {...}, "replace": false, "save_copy"?: { "version_label", "content" } }` | Same as `GET /v1/resume`. Empty draft fields keep current values. `replace` deletes existing experience and education first. `422` names the bad entry with `details.experience_index` or `details.education_index`. | UPSERT `profile`, INSERT `experiences`, `education`, optionally `resumes` |
 | `POST /v1/resume/summary` | `{ "engine"?: "auto" }` | `{ "summary", "engine" }`. A draft summary for review; not saved. Rules fallback: latest title, years, top skills. | Reads master tables |
 | `GET /v1/resume/preview` | none | `{ "markdown" }` rendered master resume | Reads master tables |

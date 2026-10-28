@@ -8,20 +8,45 @@
     </head>
     <body>
         <div class="app">
-            <!--Sidebar: app navigation. Its top is a drag region, and on macOS leaves room for the window buttons.-->
+            <!--Sidebar: app navigation as a tree, in the manner of a notes app. Its top is a drag region that leaves
+                room for the macOS window buttons; Fistbump's name and Settings sit at the foot.-->
             <aside class="sidebar">
-                <div class="sidebar-top drag">
-                    <img src="views/graphics/logo.png" alt="Fistbump" class="logo">
+                <div class="sidebar-top drag"></div>
+                <nav class="tree" aria-label="App">
+                    <button type="button" id="nav-home" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Home</button>
+
+                    <div class="tree-group" data-group="jobs">
+                        <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-jobs"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Jobs</button>
+                        <div id="tree-jobs" class="tree-body" role="tablist" aria-label="Jobs">
+                            <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Find jobs</button>
+                            <ul id="tree-searches" class="tree-children" aria-label="Recent searches"></ul>
+                            <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>Open a link</button>
+                        </div>
+                    </div>
+
+                    <div class="tree-group" data-group="resume">
+                        <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-resume"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Resume</button>
+                        <div id="tree-resume" class="tree-body">
+                            <button type="button" id="nav-resume" class="nav-item" data-route="resume"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Master resume</button>
+                            <ul id="tree-versions" class="tree-children" aria-label="Saved versions"></ul>
+                        </div>
+                    </div>
+                </nav>
+                <div class="sidebar-foot" role="tablist" aria-label="App">
+                    <span class="workspace"><img src="views/graphics/mark.png" alt="" class="mark">Fistbump</span>
+                    <button type="button" id="tab-settings" class="icon-button" role="tab" aria-selected="false" aria-label="Settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
                 </div>
-                <nav class="nav" role="tablist" aria-label="Jobs">
-                    <p class="nav-heading" aria-hidden="true">Jobs</p>
-                    <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true">Find jobs</button>
-                    <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false">Open a link</button>
-                </nav>
-                <nav class="nav nav-bottom" role="tablist" aria-label="App">
-                    <button type="button" id="tab-settings" class="nav-item" role="tab" aria-selected="false">Settings<span id="update-dot" class="dot" title="An update is available" hidden></span></button>
-                </nav>
             </aside>
+
+            <!--The sidebar's icons: one set, drawn as 1.6px strokes on a 24px grid.-->
+            <svg class="icon-sprite" aria-hidden="true">
+                <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5.5h4V20"/></symbol>
+                <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+                <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+                <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H6.5v17h11V7z"/><path d="M14 3.5V7h3.5"/><path d="M9.5 12h5M9.5 15.5h5"/></symbol>
+                <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9.5M18.5 7H20M4 17h3.5M12.5 17H20"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></symbol>
+                <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+            </svg>
 
             <main id="main" class="main view-find">
                 <!--Toolbar: the search bar for Find jobs, or the link box for Open a link. It doubles as a drag region.-->
@@ -391,12 +416,18 @@
                     </section>
                 </div>
             </main>
+            <!-- phase 3 resume view-->
+            <main id="view-home" class="main" hidden></main>
+            <main id="view-resume" class="main" hidden></main>
         </div>
 
         <script src="js/prefs.js" defer></script>
         <script src="js/api.js" defer></script>
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
+        <script src="views/resume-builder/resume-builder.js" defer></script>
+        <script src="views/home/home.js" defer></script>
+        <script src="js/sidebar.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
     </body>

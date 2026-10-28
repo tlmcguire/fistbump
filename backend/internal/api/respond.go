@@ -15,11 +15,14 @@ type apiError struct {
 	Code    string
 	Message string
 	Details map[string]any
+	cause   error // what led to it, for errors.As; never sent
 }
 
 func (e *apiError) Error() string {
 	return e.Code + ": " + e.Message
 }
+
+func (e *apiError) Unwrap() error { return e.cause }
 
 func unauthorized() *apiError {
 	return &apiError{
@@ -48,6 +51,21 @@ func validationFailed(msg string) *apiError {
 	return &apiError{
 		Status:  http.StatusUnprocessableEntity,
 		Code:    "validation_failed",
+		Message: msg,
+	}
+}
+
+// validationError is a 422 that names the JSON field at fault, so the form can mark it.
+func validationError(field, msg string) *apiError {
+	e := validationFailed(msg)
+	e.Details = map[string]any{"field": field}
+	return e
+}
+
+func conflict(msg string) *apiError {
+	return &apiError{
+		Status:  http.StatusConflict,
+		Code:    "conflict",
 		Message: msg,
 	}
 }
