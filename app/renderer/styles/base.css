@@ -1065,6 +1065,9 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 }
  
 button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
+
+/* A secondary action that sits apart from Save, on the left of the row. */
+.form-actions .form-actions-start { margin-right: auto; }
  
 .chip-row:empty { display: none; }
  
@@ -1236,7 +1239,9 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
 .version-rename .field-error { flex-basis: 100%; }
  
 @media (max-width: 860px) {
-  .resume-content { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  /* Stacked, each part is as tall as its content and the whole view scrolls; otherwise the rows would
+     shrink to the window and the preview would draw over the bottom of the form. */
+  .resume-content { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; overflow-y: auto; }
   .resume-content .pane { overflow: visible; }
   .resume-editor { border-right: 0; }
 }

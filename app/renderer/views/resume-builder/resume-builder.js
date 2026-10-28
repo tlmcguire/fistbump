@@ -275,8 +275,41 @@
       const form = forms.profile(master.profile);
       profileForm = form;
       const save = el("button", {type: "submit", class: "primary"}, master.profile ? "Save profile" : "Create profile");
+
+      // Clear all empties every field at once. Nothing is saved until Save profile, and until the next
+      // edit the button offers to put the cleared values back.
+      const clear = el("button", {type: "button", class: "form-actions-start"}, "Clear all");
+      let cleared = null;
+      const setValue = (input, value) => {
+        input.value = value;
+        input.dispatchEvent(new Event("input", {bubbles: true})); //list fields redraw their chips
+      };
+      const resetClear = () => {
+        cleared = null;
+        clear.textContent = "Clear all";
+      };
+      clear.addEventListener("click", () => {
+        const inputs = Object.values(form.inputs);
+        if (cleared) {
+          inputs.forEach((input, i) => setValue(input, cleared[i]));
+          resetClear();
+          say("");
+          return;
+        }
+        const values = inputs.map(input => input.value);
+        if (values.every(v => v === "")) return;
+        inputs.forEach(input => setValue(input, ""));
+        form.clearErrors();
+        cleared = values;
+        clear.textContent = "Undo clear";
+        say("Fields cleared. Save profile to keep it this way.");
+        form.focus();
+      });
       const formEl = el("form", {class: "resume-form", novalidate: true},
-        form.el, el("div", {class: "form-actions"}, save));
+        form.el, el("div", {class: "form-actions"}, clear, save));
+      formEl.addEventListener("input", event => {
+        if (event.isTrusted && cleared) resetClear();
+      });
       formEl.addEventListener("submit", async event => {
         event.preventDefault();
         save.disabled = true;
@@ -286,6 +319,7 @@
         if (!profile || disposed) return;
         master.profile = profile;
         form.clearErrors();
+        resetClear();
         say("Profile saved.");
         if (created) {
           renderProfile();
