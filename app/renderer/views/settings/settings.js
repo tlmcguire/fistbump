@@ -62,6 +62,23 @@ window.Settings = {
     bind("pref-show-logos", "showLogos", ...checked);
     bind("pref-check-updates", "checkUpdatesOnLaunch", ...checked);
 
+    //A status line under a card. After a cleanup it shows the mascot tidying up beside what was cleared.
+    const setStatus = (id, text, {cleaned = false} = {}) => {
+      const line = $(id);
+      line.classList.toggle("cleaned", cleaned);
+      if (!cleaned) {
+        line.textContent = text;
+        return;
+      }
+      const mascot = document.createElement("img");
+      mascot.className = "mascot";
+      mascot.src = "views/graphics/mascots/28-cleaning-up.png";
+      mascot.alt = "";
+      const message = document.createElement("span");
+      message.textContent = text;
+      line.replaceChildren(mascot, message);
+    };
+
     // ---------- History ----------
 
     const showHistory = () => {
@@ -74,14 +91,16 @@ window.Settings = {
     confirmFirst($("settings-clear-history"), "Clear all?", async () => {
       window.JobParser?.clearHistory?.();
       showHistory();
+      setStatus("history-status", "Recent searches and suggestions cleared.", {cleaned: true});
     });
     confirmFirst($("settings-reset-form"), "Reset?", async () => {
       window.JobParser?.resetForm?.();
+      setStatus("history-status", "Search form cleared. Fistbump will open with it blank.", {cleaned: true});
     });
 
     // ---------- Storage ----------
 
-    const storageStatus = text => { $("storage-status").textContent = text; };
+    const storageStatus = (text, options) => setStatus("storage-status", text, options);
 
     const showStorage = async () => {
       if (!api?.storage) {
@@ -104,7 +123,8 @@ window.Settings = {
     confirmFirst($("clear-cache"), "Clear cache?", async () => {
       if (!api?.storage) return;
       const result = await api.storage.cleanup(["cache"]);
-      storageStatus(result?.error ? result.error.message : `Cleared ${formatBytes(result.freed_bytes)}. The next search will take a little longer.`);
+      if (result?.error) storageStatus(result.error.message);
+      else storageStatus(`Cleared ${formatBytes(result.freed_bytes)}. The next search will take a little longer.`, {cleaned: true});
       await showStorage();
     });
 
