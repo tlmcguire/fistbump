@@ -10,8 +10,6 @@ The originals are raster images, so a pose's colours are close to the app's pale
 
 | Pose | Where |
 |---|---|
-| `02-welcome` | Home, beside the greeting |
-| `03-fistbump` | Home, once the master resume has nothing missing |
 | `05-searching-wide` | Find jobs, before a search |
 | `09-search-stopped` | Find jobs, after a search is canceled |
 | `08-no-results` | Find jobs, when a search finds nothing |
@@ -25,7 +23,7 @@ The originals are raster images, so a pose's colours are close to the app's pale
 
 | Poses | Meant for |
 |---|---|
-| `01-neutral` | A default companion |
+| `01-neutral` · `02-welcome` · `03-fistbump` | A default companion, a welcome, the signature fistbump (Home now uses the Home set) |
 | `04-offer-win` | An offer or other big win |
 | `25-thinking-loading` | Work that takes a while (a search is too quick for it, so it keeps a spinner) |
 | `11-reading-resume` · `12-cant-read-resume` · `13-hidden-text` | Importing a resume and its warnings |
@@ -37,10 +35,18 @@ The originals are raster images, so a pose's colours are close to the app's pale
 
 ## Home set
 
-`home/` holds four more poses for the Home view, cropped and scaled the same way: `01-morning-hello` for a welcome or return visit, `02-cozy-break` for a quiet moment, `03-youve-got-this` for a nudge or a finished step, and `04-little-victory` for a small win.
+`home/` holds four more poses for the Home view, cropped and scaled the same way, and `home/animations/` six looping SVGs. Each SVG embeds its own artwork, scaled down to 480px, so it works as a plain `<img src>`, and holds still when the system asks for reduced motion.
 
-`home/animations/` holds six looping SVGs: `idle`, `cozy`, `victory`, `searching`, `loading` and `thinking`. Each embeds its own artwork, scaled down to 480px, so it works as a plain `<img src>`. They show a still pose when reduced motion is on. None is used yet.
+| Asset | Where |
+|---|---|
+| `animations/idle.svg` (still: `01-morning-hello`) | Home, beside the greeting |
+| `animations/cozy.svg` (still: `02-cozy-break`) | Home, beside the greeting from 6pm |
+| `animations/victory.svg` (still: `04-little-victory`) | Home, beside the greeting once the master resume has nothing missing |
+| `03-youve-got-this` | Home, beside "Finish your resume" when one or two things are left |
+| `animations/searching.svg` · `loading.svg` · `thinking.svg` | Not used yet |
+
+Home shows the still pose in place of an animation when Reduce motion is on in Settings.
 
 ## Introduction
 
-`intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. None is used yet.
+`intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. Home shows `meet-pico-animated.svg` above the welcome to someone with no master resume yet, or `meet-pico.png` when motion is reduced. `meet-pico.svg` and `pico-wave-cutout.png` are not used.

@@ -50,8 +50,24 @@
       chevron());
   const rows = items => el("ul", {class: "home-rows"}, items.map(item => el("li", {}, row(item))));
 
-  //The mascot beside the greeting: it waves, and gives a fistbump once the resume is ready.
-  const mascot = pose => el("img", {class: "mascot", src: `views/graphics/mascots/${pose}.png`, alt: ""});
+  //Pico, the mascot. Home shows its looping animations, or the matching still pose when motion is reduced
+  //in Settings (the animations already hold still when the system asks for reduced motion).
+  const MASCOTS = "views/graphics/mascots";
+  const still = () => document.documentElement.classList.contains("reduce-motion");
+  const LOOPS = {idle: "01-morning-hello", cozy: "02-cozy-break", victory: "04-little-victory"};
+  const pico = loop => el("img", {
+    class: still() ? "mascot" : "mascot loop",
+    src: still() ? `${MASCOTS}/home/${LOOPS[loop]}.png` : `${MASCOTS}/home/animations/${loop}.svg`,
+    alt: "",
+  });
+  //A small still pose that cheers on the last step or two of the resume.
+  const nudge = () => el("img", {class: "mascot home-nudge", src: `${MASCOTS}/home/03-youve-got-this.png`, alt: ""});
+  //New users meet Pico first. The picture carries its own words, so they are its alt text.
+  const intro = () => el("img", {
+    class: "home-intro",
+    src: still() ? `${MASCOTS}/intro/meet-pico.png` : `${MASCOTS}/intro/meet-pico-animated.svg`,
+    alt: "Meet Pico, your job-search sidekick. Here to help you keep going.",
+  });
 
   // ---------- Where each row goes ----------
 
@@ -120,11 +136,12 @@
   // ---------- The view ----------
 
   function mount(container) {
+    const introSlot = el("div", {class: "home-intro-slot"});
     const welcome = el("section", {class: "home-welcome", "aria-labelledby": "home-greeting"});
     const resumeSection = el("section", {class: "home-section", "aria-labelledby": "home-resume-h"});
     const versionsSection = el("section", {class: "home-section", "aria-labelledby": "home-versions-h"});
     const searchSection = el("section", {class: "home-section", "aria-labelledby": "home-search-h"});
-    const home = el("div", {class: "home"}, welcome,
+    const home = el("div", {class: "home"}, introSlot, welcome,
       el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
 
     container.replaceChildren(
@@ -152,14 +169,17 @@
       const firstName = (p?.full_name || "").split(/\s+/)[0];
 
       // Welcome: the greeting, where things stand, and the one thing worth doing next.
+      // A new user meets Pico above it; after that Pico sits beside the greeting.
       if (!p) {
+        introSlot.hidden = false;
+        if (!introSlot.firstChild) fill(introSlot, intro());
         fill(welcome,
           el("div", {class: "home-welcome-text"},
             el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
             el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
-            row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})})),
-          mascot("02-welcome"));
+            row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})})));
       } else {
+        introSlot.hidden = true;
         const status = gaps.length === 0 ? "Your resume is ready to tailor."
           : gaps.length <= 2 ? "Your resume is nearly there."
           : "Your resume has a few gaps left to fill.";
@@ -177,12 +197,14 @@
                 window.JobParser.openListing(listing);
               },
             }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
-          mascot(gaps.length ? "02-welcome" : "03-fistbump"));
+          //A small hop once the resume is ready; otherwise a wave, or a cozy break in the evening.
+          pico(gaps.length === 0 ? "victory" : new Date().getHours() >= 18 ? "cozy" : "idle"));
       }
 
       // Finish your resume
       const done = p ? resumeDone(master) : "";
       fill(resumeSection,
+        p && gaps.length > 0 && gaps.length <= 2 ? nudge() : null,
         el("h3", {id: "home-resume-h", text: gaps.length || !p ? "Finish your resume" : "Your resume"}),
         !p ? el("p", {text: "Nothing here yet. Your profile, jobs and schools will show up as you add them."})
           : gaps.length ? el("p", {text: `${done ? `${done} ` : ""}${gaps.length === 1 ? "One thing left:" : `${gaps.length} things left:`}`})
