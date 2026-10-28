@@ -909,6 +909,7 @@ window.JobParser = {
           item.append(run, remove);
           return item;
         }));
+        window.dispatchEvent(new Event("fistbump:history"));
       };
 
       //called when a search starts; a search already in the list moves to the top

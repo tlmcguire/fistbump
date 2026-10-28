@@ -94,10 +94,10 @@
   // ---------- Recent searches ----------
 
   //The search history the Jobs view keeps, described in a line: what, then where and how.
-  function recentSearches() {
+  function recentSearches(limit = 4) {
     const list = readJSON(HISTORY_KEY);
     if (!Array.isArray(list)) return [];
-    return list.filter(entry => entry?.fields && typeof entry.fields === "object").slice(0, 4).map(entry => {
+    return list.filter(entry => entry?.fields && typeof entry.fields === "object").slice(0, limit).map(entry => {
       const f = entry.fields;
       const text = id => String(f[id] ?? "").trim();
       const title = text("search-keywords") || (text("search-company") && `Jobs at ${text("search-company")}`) || entry.industry || "All jobs";
@@ -203,5 +203,6 @@
     return refresh;
   }
 
-  window.Home = {mount};
+  //The sidebar lists the same searches and opens versions the same way.
+  window.Home = {mount, recentSearches, openResume};
 })();

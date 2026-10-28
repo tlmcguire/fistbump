@@ -12,6 +12,7 @@
   --text: #f2f5fb;
   --muted: rgba(242, 245, 251, 0.62);
   --faint: rgba(242, 245, 251, 0.42);
+  --dim: rgba(242, 245, 251, 0.56);  /* small secondary text that still reads at 5:1 */
   --accent: #cea615;
   --accent-hover: #e2b92a;
   --accent-ink: #0a255c;
@@ -28,7 +29,7 @@
   --note: rgba(206, 166, 21, 0.09);
   --note-line: rgba(206, 166, 21, 0.32);
   --radius: 6px;
-  --sidebar-width: 188px;
+  --sidebar-width: 212px;
   --toolbar-height: 52px;
 }
 
@@ -198,54 +199,152 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   border-right: 1px solid var(--line);
 }
 
+/* The top is left clear: it is where the window is dragged. On macOS it holds the window buttons and is
+   the sidebar's half of the title bar, so it is as tall as the toolbar and shares its dividing line. */
 .sidebar-top {
-  display: flex;
-  justify-content: center;
-  padding: 20px 16px 16px;
+  flex: none;
+  height: 14px;
+}
+.platform-darwin .sidebar-top {
+  height: calc(var(--toolbar-height) + 1px);
+  margin-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
 
-/* macOS draws its window buttons over the top left of the sidebar, so the logo starts below them. */
-.platform-darwin .sidebar-top {
-  padding-top: 46px;
-}
-
-.logo {
-  display: block;
-  width: 108px;
-  height: auto;
-  -webkit-user-drag: none;
-}
-
-.nav {
+/* The tree, in the manner of a notes app: small type, line icons, folders that fold, and a guide line
+   down the side of what is nested. */
+.tree {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 14px 10px;
+  gap: 1px;
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 12px;
+  overflow-y: auto;
 }
 
-.nav-heading {
-  padding: 0 10px 6px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.nav-item {
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.nav-item, .tree-head, .tree-leaf {
   justify-content: flex-start;
-  height: 30px;
-  padding: 0 10px;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 450;
 }
 
-.nav-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.nav-item .icon { color: var(--faint); }
+.nav-item:hover:not(:disabled), .tree-leaf:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.nav-item:hover .icon { color: var(--muted); }
+
 .nav-item[aria-selected="true"],
 .nav-item[aria-selected="true"]:hover:not(:disabled) {
   background: var(--select);
   color: var(--text);
 }
+.nav-item[aria-selected="true"] .icon, .nav-item[aria-current="page"] .icon { color: var(--accent-hover); }
+
+/* A group's name folds it open and closed; the chevron turns to show which. */
+.tree-group { margin-top: 12px; }
+
+.tree-head {
+  height: 24px;
+  gap: 4px;
+  padding-left: 4px;
+  color: var(--dim);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.tree-head:hover:not(:disabled) { background: transparent; color: var(--muted); }
+.tree-head .chevron { width: 14px; height: 14px; transition: transform 120ms ease; }
+.tree-group.folded .chevron { transform: rotate(-90deg); }
+.tree-group.folded .tree-body { display: none; }
+
+.tree-body { display: flex; flex-direction: column; gap: 1px; }
+
+/* Searches and versions sit under the item they belong to, on a faint guide line. */
+.tree-children {
+  margin: 1px 0 3px 15px;
+  padding: 0 0 0 9px;
+  border-left: 1px solid var(--line);
+  list-style: none;
+}
+.tree-leaf {
+  display: block;
+  height: 24px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 12.5px;
+  line-height: 24px;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+/* The foot: Fistbump's mark and name, as a notes app shows its vault, and Settings beside it. */
+.sidebar-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 14px;
+  border-top: 1px solid var(--line);
+}
+
+.workspace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Sized by height with a cap on width, so a squarer or wider mark drops in without moving anything. */
+.mark {
+  width: auto;
+  max-width: 40px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.9;
+  -webkit-user-drag: none;
+}
+
+.icon-button {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  color: var(--faint);
+}
+.icon-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.icon-button[aria-selected="true"] { background: var(--select); color: var(--accent-hover); }
+.icon-button .dot { position: absolute; top: 5px; right: 5px; margin: 0; }
 
 .main {
   display: flex;
@@ -386,7 +485,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 /* A narrow window shows one pane at a time: the list, or the listing with a way back. */
 @media (max-width: 860px) {
-  :root { --sidebar-width: 156px; }
+  :root { --sidebar-width: 180px; }
   .content { grid-template-columns: minmax(0, 1fr); }
   .main.view-find:not(.has-detail) .detail-pane { display: none; }
   .main.view-find.has-detail .results-pane { display: none; }
@@ -862,10 +961,13 @@ label.sort select {
 }
  
 /* Outside the Jobs view its tabs keep their state but do not look selected. */
-.app:not([data-route="jobs"]) .nav-item[aria-selected="true"] {
+.app:not([data-route="jobs"]) .nav-item[aria-selected="true"],
+.app:not([data-route="jobs"]) .icon-button[aria-selected="true"] {
   background: transparent;
   color: var(--muted);
 }
+.app:not([data-route="jobs"]) .nav-item[aria-selected="true"] .icon { color: var(--faint); }
+.app:not([data-route="jobs"]) .icon-button[aria-selected="true"] { color: var(--faint); }
  
 .view-title {
   margin: 0;
@@ -1145,8 +1247,6 @@ li.result * {
 }
 /* ---------- Home ---------- */
 
-.nav-top { padding-bottom: 2px; }
-
 .home-pane { flex: 1; }
 
 .home {
@@ -1231,11 +1331,6 @@ li.result * {
 .home-rows > li:hover, .home-rows > li:hover + li { border-top-color: transparent; }
 
 /* ---------- Settings ---------- */
-
-.nav-bottom {
-  margin-top: auto;
-  border-top: 1px solid var(--line);
-}
 
 .dot {
   width: 7px;
@@ -1411,6 +1506,7 @@ input.switch:checked::after { transform: translateX(16px); }
 .high-contrast {
   --muted: rgba(242, 245, 251, 0.88);
   --faint: rgba(242, 245, 251, 0.72);
+  --dim: rgba(242, 245, 251, 0.8);
   --line: rgba(255, 255, 255, 0.28);
   --line-strong: rgba(255, 255, 255, 0.42);
   --control: rgba(255, 255, 255, 0.18);
