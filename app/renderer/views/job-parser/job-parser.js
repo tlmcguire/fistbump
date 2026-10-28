@@ -62,13 +62,30 @@ window.JobParser = {
       const setSearchBusy = busy => { searchButton.disabled = busy; };
       const setLinkBusy = busy => { loadButton.disabled = busy; };
 
+      //The listing each of Find jobs and Open a link had open, and how far each tab's panes were
+      //scrolled, so switching back shows them as they were.
+      const openListings = {};
+      const scrolls = {};
+      const listPane = main.querySelector(".results-pane");
+      const detailPane = $("detail-pane");
+
       //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
         //Find jobs and Open a link each show their own listing; Settings leaves the open one as it was.
+        if (activeTab !== "settings") scrolls[activeTab] = {list: listPane.scrollTop, detail: detailPane.scrollTop};
         activeTab = name;
         if (name !== "settings" && name !== lastJobsTab) {
+          openListings[lastJobsTab] = posting && !$("state-success").hidden
+            ? {posting, fromResults, shown: main.classList.contains("has-detail")}
+            : null;
           lastJobsTab = name;
-          showDetailEmpty();
+          const saved = openListings[name];
+          if (saved) {
+            displayPosting(saved.posting, saved.fromResults);
+            main.classList.toggle("has-detail", saved.shown);
+          } else {
+            showDetailEmpty();
+          }
         }
         for (const key in tabs) {
           tabs[key].setAttribute("aria-selected", String(key === name));
@@ -80,6 +97,11 @@ window.JobParser = {
         $("settings-pane").hidden = name !== "settings";
         setFiltersOpen(false);
         setHistoryOpen(false);
+        //The panes can only be scrolled once they are showing again.
+        if (scrolls[name]) {
+          listPane.scrollTop = scrolls[name].list;
+          detailPane.scrollTop = scrolls[name].detail;
+        }
         if (name === "settings") {
           window.Settings?.refresh();
           return;
@@ -159,6 +181,33 @@ window.JobParser = {
         main.classList.add("has-detail");
         showDetail("state-success");
         $("detail-pane").scrollTop = 0;
+        rememberListing(data);
+      };
+
+      //The last listing opened, for Home's "Keep reading". Only what it needs to show and reload it is kept.
+      const LISTING_KEY = "fistbump.last-listing";
+      function rememberListing(data) {
+        if (!data.board || !data.external_id) return;
+        try {
+          const {board, external_id, position_title, company_name, location, work_mode} = data;
+          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode, at: new Date().toISOString()}));
+        } catch {
+          //Home just won't offer it
+        }
+      }
+
+      //Opens a remembered listing in Find jobs, fresh from Greenhouse.
+      const openSaved = async saved => {
+        detailRetry = () => openSaved(saved);
+        showDetailLoading("Opening the listing\u2026");
+        const mine = detailSeq;
+        try {
+          const data = await window.FistBumpAPI.posting(saved.board, saved.external_id);
+          if (mine !== detailSeq) return;
+          displayPosting(data, Boolean(results?.postings.some(p => keyOf(p) === keyOf(data))));
+        } catch (error) {
+          if (mine === detailSeq) showDetailError(error);
+        }
       };
 
       const showDetailLoading = message => {
@@ -938,7 +987,21 @@ window.JobParser = {
       window.JobParser.clearHistory = () => {
         storeHistory([]);
         window.Suggest.clearRecent();
+        try { localStorage.removeItem(LISTING_KEY); } catch { /* nothing saved to remove */ }
         renderHistory();
+      };
+
+      //What Home needs: run a recent search again, or reopen the last listing.
+      window.JobParser.runSearch = fields => {
+        selectTab("find");
+        if (searchButton.disabled) return;
+        applyFields(fields);
+        saveForm();
+        searchForm.requestSubmit();
+      };
+      window.JobParser.openListing = saved => {
+        selectTab("find");
+        openSaved(saved);
       };
       window.JobParser.resetForm = () => $("clear-search").click();
 

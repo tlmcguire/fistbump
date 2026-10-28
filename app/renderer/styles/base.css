@@ -304,12 +304,16 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   min-width: 0;
 }
 
-.toolbar-form > .field { flex: 0 1 200px; }
-.toolbar-form > .field.grow { flex: 1 1 320px; }
+/* The search fields grow with the window up to a comfortable width; past that the extra space
+   goes between the search and the Filters and History buttons, which stay at the right edge. */
+.toolbar-form > .field { flex: 0 1 220px; }
+.toolbar-form > .field.grow { flex: 1 1 320px; max-width: 560px; }
+#job-form > .field.grow { max-width: 760px; }
+#filters-toggle { margin-left: auto; }
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 240px));
   gap: 10px 14px;
   align-items: end;
   margin: 3px -16px -11px;
@@ -361,7 +365,8 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 .content {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  /* The result list widens with the window, so a full-screen window is not one narrow list and a huge listing. */
+  grid-template-columns: minmax(320px, min(36%, 540px)) minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -374,8 +379,9 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   border-right: 1px solid var(--line);
 }
 
-/* Open a link has no results, so the listing takes the whole width. */
+/* Open a link has no results, so the listing takes the whole width and sits in the middle of it. */
 .main.view-link .content { grid-template-columns: minmax(0, 1fr); }
+.main.view-link .listing { margin-inline: auto; }
 .main.view-link .results-pane { display: none; }
 
 /* A narrow window shows one pane at a time: the list, or the listing with a way back. */
@@ -993,7 +999,10 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
  
 .resume-status.error { color: var(--danger-text); }
  
-.resume-content { grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); }
+.resume-content { grid-template-columns: minmax(0, 1fr) minmax(300px, min(30%, 480px)); }
+
+/* The forms stop at a readable width and sit in the middle of a wide editor; the dividers still run edge to edge. */
+.resume-editor > .resume-section { padding-inline: max(20px, calc((100% - 880px) / 2)); }
  
 .resume-editor { border-right: 1px solid var(--line); }
  
@@ -1134,6 +1143,93 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
 li.result * {
   user-select: none;
 }
+/* ---------- Home ---------- */
+
+.nav-top { padding-bottom: 2px; }
+
+.home-pane { flex: 1; }
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  max-width: 780px;
+  margin-inline: auto;
+  padding: 32px 28px 64px;
+}
+
+/* The welcome: a warm panel with the greeting and the one thing worth doing next. */
+.home-welcome {
+  padding: 26px 28px 22px;
+  border: 1px solid rgba(226, 185, 42, 0.34);
+  border-radius: 12px;
+  background: rgba(206, 166, 21, 0.14);
+}
+
+.home-welcome h2 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.home-welcome > p {
+  max-width: 56ch;
+  margin-top: 6px;
+  color: rgba(242, 245, 251, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-welcome .home-row {
+  margin: 18px -12px 0;
+  background: rgba(8, 27, 68, 0.42);
+}
+.home-welcome .home-row:hover:not(:disabled) { background: rgba(8, 27, 68, 0.62); }
+.home-welcome .home-row small { color: var(--accent-hover); }
+
+.home-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 34px 44px;
+}
+
+.home-section h3 { margin-bottom: 4px; font-size: 14px; }
+.home-section > p { margin-bottom: 8px; color: var(--muted); }
+
+/* A whole row is the button: what it is on the left, a little detail and an arrow on the right. */
+.home-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% + 24px);
+  height: auto;
+  margin-inline: -12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+.home-row:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+.home-row strong { display: block; font-weight: 600; }
+.home-row span, .home-row small { color: var(--muted); font-size: 12px; }
+.home-row small { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.home-row svg { width: 14px; height: 14px; fill: none; stroke: var(--faint); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.home-row:hover svg { stroke: var(--text); }
+
+.home-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-rows > li + li { border-top: 1px solid var(--line); }
+.home-rows > li:hover, .home-rows > li:hover + li { border-top-color: transparent; }
+
 /* ---------- Settings ---------- */
 
 .nav-bottom {
@@ -1168,6 +1264,7 @@ li.result * {
   display: flex;
   flex-direction: column;
   gap: 26px;
+  margin-inline: auto;
   max-width: 720px;
   padding: 24px 28px 48px;
 }

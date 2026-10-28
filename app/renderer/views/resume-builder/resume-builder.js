@@ -133,7 +133,8 @@
           if (field.type === "list") body[field.name] = textToList(input.value);
           else if (field.type === "number") body[field.name] = raw === "" ? null : Number(raw);
           else if (field.type === "month") body[field.name] = input.currentBox?.checked || raw === "" ? null : raw;
-          else if (field.required) body[field.name] = raw;
+          // The name is plain text on the backend, so a blank name is sent as "" rather than null.
+          else if (field.required || field.name === "full_name") body[field.name] = raw;
           else body[field.name] = raw === "" ? null : (field.type === "textarea" ? input.value.replace(/\s+$/, "") : raw);
         }
         return body;
@@ -160,7 +161,7 @@
   }
  
   const PROFILE_FIELDS = [
-    {name: "full_name", label: "Full name", required: true},
+    {name: "full_name", label: "Full name"},
     {name: "email", label: "Email", type: "email"},
     {name: "phone", label: "Phone", type: "tel"},
     {name: "home_location", label: "Location", placeholder: "e.g. Charleston, SC"},
@@ -269,8 +270,10 @@
  
     // --- Profile ---
  
+    let profileForm = null;
     function renderProfile() {
       const form = forms.profile(master.profile);
+      profileForm = form;
       const save = el("button", {type: "submit", class: "primary"}, master.profile ? "Save profile" : "Create profile");
       const formEl = el("form", {class: "resume-form", novalidate: true},
         form.el, el("div", {class: "form-actions"}, save));
@@ -731,15 +734,48 @@
 
     // --- Load ---
  
-    (async () => {
+    const ready = (async () => {
       const loaded = await attempt(() => api().resume.get());
       if (disposed) return;
       if (loaded) master = loaded;
       renderProfile();
       renderEntries();
       refreshPreview();
-      loadVersions();
+      await loadVersions();
     })();
+
+    // Home opens this view at something to fill in or look at: {field} in the profile, {kind, id, field}
+    // for an entry, {add: kind} for a new one, or {version: id}. Work in progress is never thrown away:
+    // during an import review, or with another entry's form open, the view is just shown as it is.
+    window.ResumeBuilder.reveal = async target => {
+      await ready;
+      if (disposed || !target || !importSection.hidden) return;
+      const focus = input => {
+        input?.scrollIntoView({block: "center"});
+        input?.focus();
+      };
+      if (target.version) {
+        const v = versions.find(x => x.id === target.version);
+        if (v && showing?.id !== v.id) await toggleVersion(v);
+        versionsList.querySelector('[aria-expanded="true"]')?.closest(".version")?.scrollIntoView({block: "nearest"});
+        return;
+      }
+      const kind = target.add || target.kind;
+      if (kind) {
+        const id = target.add ? null : target.id;
+        if (editing && !(editing.kind === kind && editing.id === id)) {
+          KINDS[editing.kind].section.scrollIntoView({block: "start"});
+          return;
+        }
+        editing = {kind, id};
+        renderEntries();
+        await new Promise(queueMicrotask); //the form focuses its first field in a microtask
+        const formEl = KINDS[kind].section.querySelector(".entry-form");
+        focus(target.field && formEl?.querySelector(`[id$="-${target.field}"]`) || formEl?.querySelector("input, textarea"));
+        return;
+      }
+      focus(profileForm?.inputs[target.field]);
+    };
  
     return () => {
       disposed = true;

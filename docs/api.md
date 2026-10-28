@@ -106,7 +106,7 @@ The master resume is `profile` plus `experiences` plus `education`. One profile 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
 | `GET /v1/resume` | none | `{ "profile": Profile \| null, "experiences": [Experience], "education": [Education], "skills": ["go"] }`. `skills` is derived: the de-duplicated union of `profile.skills` and `experiences.skills`. | SELECT `profile`, `experiences` and `education` (each by `sort_order`) |
-| `PUT /v1/resume/profile` | Profile fields without read-only fields. `full_name` required. | Profile. Creates the row if none exists. | UPSERT `profile`, sets `updated_at` |
+| `PUT /v1/resume/profile` | Profile fields without read-only fields. Every field may be blank, `full_name` included. | Profile. Creates the row if none exists. | UPSERT `profile`, sets `updated_at` |
 | `GET /v1/resume/experiences` | none | `[Experience]` ordered by `sort_order` | SELECT `experiences` |
 | `POST /v1/resume/experiences` | Experience without read-only fields or `profile_id`. `company_name` and `job_title` required. A `null` `end_date` means the role is current. | `201` Experience. `sort_order` defaults to the next value. `409` if no profile exists. | INSERT `experiences` |
 | `PUT /v1/resume/experiences/{id}` | Experience fields (full replace) | Experience. `404` if missing. | UPDATE `experiences` |
