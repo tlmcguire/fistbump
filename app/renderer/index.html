@@ -13,6 +13,9 @@
                 <div class="sidebar-top drag">
                     <img src="views/graphics/logo.png" alt="Fistbump" class="logo">
                 </div>
+                <nav class="nav nav-top" aria-label="Home">
+                    <button type="button" id="nav-home" class="nav-item">Home</button>
+                </nav>
                 <nav class="nav" role="tablist" aria-label="Jobs">
                     <p class="nav-heading" aria-hidden="true">Jobs</p>
                     <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true">Find jobs</button>
@@ -396,7 +399,8 @@
                 </div>
             </main>
             <!-- phase 3 resume view-->
-             <main id="view-resume" class="main" hidden></main>
+            <main id="view-home" class="main" hidden></main>
+            <main id="view-resume" class="main" hidden></main>
         </div>
 
         <script src="js/prefs.js" defer></script>
@@ -404,6 +408,7 @@
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
         <script src="views/resume-builder/resume-builder.js" defer></script>
+        <script src="views/home/home.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
     </body>

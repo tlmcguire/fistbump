@@ -121,8 +121,9 @@ type profileBody struct {
 func (b profileBody) validate() (models.Profile, error) {
 	var p models.Profile
 	var err error
-	if p.FullName, err = requiredText("full_name", b.FullName); err != nil {
-		return p, err
+	// Every profile field may be blank, the name included, so a profile can be cleared and filled in again.
+	if p.FullName = strings.TrimSpace(b.FullName); len(p.FullName) > maxShortText {
+		return p, validationError("full_name", "full_name is too long")
 	}
 	for _, f := range []struct {
 		field string

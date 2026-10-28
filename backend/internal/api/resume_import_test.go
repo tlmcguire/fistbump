@@ -228,9 +228,13 @@ func TestImportApplyKeepsCurrentValues(t *testing.T) {
 	}
 }
 
-func TestImportApplyNeedsANameForANewProfile(t *testing.T) {
+// A draft the parser found no name in still applies; the name can be filled in afterwards.
+func TestImportApplyWithoutAName(t *testing.T) {
 	s := newResumeServer(t)
-	expectField(t, call(t, s, "POST", "/v1/resume/import/apply", `{"draft":{"profile":{"full_name":""}}}`), "full_name")
+	out := expect(t, call(t, s, "POST", "/v1/resume/import/apply", `{"draft":{"profile":{"full_name":"","email":"ada@example.com"}}}`), 200)
+	if p := out["profile"].(map[string]any); p["full_name"] != "" || p["email"] != "ada@example.com" {
+		t.Errorf("profile = %v", p)
+	}
 }
 
 func TestImportApplyRollsBack(t *testing.T) {

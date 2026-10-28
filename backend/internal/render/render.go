@@ -16,7 +16,9 @@ import (
 func Master(m models.Master) string {
 	var blocks []string
 	if p := m.Profile; p != nil {
-		blocks = append(blocks, "# "+escape(p.FullName))
+		if name := strings.TrimSpace(p.FullName); name != "" {
+			blocks = append(blocks, "# "+escape(name))
+		}
 		var contact []string
 		for _, v := range []*string{p.HomeLocation, p.Email, p.Phone} {
 			if v != nil && strings.TrimSpace(*v) != "" {

@@ -73,10 +73,22 @@ func TestProfilePut(t *testing.T) {
 	}
 }
 
+func TestProfileCanBeCleared(t *testing.T) {
+	s := newResumeServer(t)
+	expect(t, call(t, s, "PUT", "/v1/resume/profile", `{"full_name":"Ada Lovelace","email":"ada@example.com","skills":["sql"]}`), 200)
+	p := expect(t, call(t, s, "PUT", "/v1/resume/profile", `{"full_name":"  ","email":null,"skills":[]}`), 200)
+	if p["full_name"] != "" || p["email"] != nil || len(p["skills"].([]any)) != 0 {
+		t.Errorf("cleared profile = %v", p)
+	}
+	if md := expect(t, call(t, s, "GET", "/v1/resume/preview", ""), 200)["markdown"]; strings.Contains(md.(string), "#") {
+		t.Errorf("preview of a cleared profile = %q, want no heading", md)
+	}
+}
+
 func TestProfileValidation(t *testing.T) {
 	s := newResumeServer(t)
 	for _, tc := range []struct{ body, field string }{
-		{`{}`, "full_name"},
+		{`{"full_name":"` + strings.Repeat("x", 1000) + `"}`, "full_name"},
 		{`{"full_name":"A","preferred_mode":"Sideways"}`, "preferred_mode"},
 		{`{"full_name":"A","min_desired_pay":-1}`, "min_desired_pay"},
 		{`{"full_name":"A","nope":1}`, "nope"},
