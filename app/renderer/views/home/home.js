@@ -50,6 +50,9 @@
       chevron());
   const rows = items => el("ul", {class: "home-rows"}, items.map(item => el("li", {}, row(item))));
 
+  //The mascot beside the greeting: it waves, and gives a fistbump once the resume is ready.
+  const mascot = pose => el("img", {class: "mascot", src: `views/graphics/mascots/${pose}.png`, alt: ""});
+
   // ---------- Where each row goes ----------
 
   const openResume = target => {
@@ -149,26 +152,30 @@
       // Welcome: the greeting, where things stand, and the one thing worth doing next.
       if (!p) {
         fill(welcome,
-          el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
-          el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
-          row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})}));
+          el("div", {class: "home-welcome-text"},
+            el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
+            el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
+            row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})})),
+          mascot("02-welcome"));
       } else {
         const status = gaps.length === 0 ? "Your resume is ready to tailor."
           : gaps.length <= 2 ? "Your resume is nearly there."
           : "Your resume has a few gaps left to fill.";
         const then = listing ? " The listing you were reading is right where you left it." : "";
         fill(welcome,
-          el("h2", {id: "home-greeting", text: firstName ? `${greeting()}, ${firstName}` : greeting()}),
-          el("p", {text: `${today}. ${status}${then}`}),
-          listing ? row({
-            title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
-            detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
-            aside: "Keep reading",
-            onclick: () => {
-              openJobs();
-              window.JobParser.openListing(listing);
-            },
-          }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")}));
+          el("div", {class: "home-welcome-text"},
+            el("h2", {id: "home-greeting", text: firstName ? `${greeting()}, ${firstName}` : greeting()}),
+            el("p", {text: `${today}. ${status}${then}`}),
+            listing ? row({
+              title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
+              detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
+              aside: "Keep reading",
+              onclick: () => {
+                openJobs();
+                window.JobParser.openListing(listing);
+              },
+            }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
+          mascot(gaps.length ? "02-welcome" : "03-fistbump"));
       }
 
       // Finish your resume
