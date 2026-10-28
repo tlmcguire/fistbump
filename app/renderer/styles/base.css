@@ -314,23 +314,15 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   border-top: 1px solid var(--line);
 }
 
-.workspace {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-/* Sized by height with a cap on width, so a squarer or wider mark drops in without moving anything. */
-.mark {
+/* The full logo, sized by height. Its PNG is 1000px wide, so it stays sharp at any display scale. */
+.wordmark {
+  display: block;
   width: auto;
-  max-width: 40px;
-  height: 16px;
+  max-width: 100%;
+  min-width: 0;
+  height: 18px;
   object-fit: contain;
-  opacity: 0.9;
+  object-position: left center;
   -webkit-user-drag: none;
 }
 
@@ -526,6 +518,20 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   .spinner { animation-duration: 2.4s; }
   .logo-tile.reveal > * { animation: none; }
 }
+
+/* The mascot over an empty, working or error message. Its images are 400px squares, drawn here at about a third. */
+.mascot {
+  display: block;
+  flex: none;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.state-message .mascot, .empty .mascot { margin: -8px auto -6px; }
 
 .state-message h2 {
   color: var(--text);
@@ -1265,6 +1271,10 @@ li.result * {
 
 /* The welcome: a warm panel with the greeting and the one thing worth doing next. */
 .home-welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 20px;
   padding: 26px 28px 22px;
   border: 1px solid rgba(226, 185, 42, 0.34);
   border-radius: 12px;
@@ -1277,12 +1287,39 @@ li.result * {
   text-wrap: balance;
 }
 
-.home-welcome > p {
+.home-welcome-text > p {
   max-width: 56ch;
   margin-top: 6px;
   color: rgba(242, 245, 251, 0.78);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.home-welcome .mascot { width: 136px; height: 136px; margin: -14px -8px -10px 0; }
+/* The away and monthly poses keep the art's full canvas, so they are drawn a little larger to match the cropped poses. */
+.home-welcome .mascot.full { width: 150px; height: 150px; margin: -20px -14px -16px 0; }
+
+/* New users meet Pico above the welcome. The picture's navy is the page's own, so it has no frame. */
+.home-intro-slot[hidden] { display: none; }
+.home-intro {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-block: -12px -16px;
+  -webkit-user-drag: none;
+}
+
+/* Pico cheering on the last step or two, beside the resume section's heading. */
+.home-nudge {
+  float: right;
+  width: 76px;
+  height: 76px;
+  margin: -14px -6px 0 12px;
+}
+
+@media (max-width: 640px) {
+  .home-welcome .mascot { display: none; }
 }
 
 .home-welcome .home-row {
@@ -1456,6 +1493,19 @@ li.result * {
   border-top: 1px solid var(--line);
 }
 
+/* After a cleanup: the mascot with its broom, then what was cleared. */
+.setting-status.cleaned {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 6px;
+}
+
+.setting-status.cleaned .mascot {
+  width: 44px;
+  height: 44px;
+}
+
 /* A button that asks to be pressed again before it does something that cannot be undone. */
 button.confirming,
 button.confirming:hover:not(:disabled) {
@@ -1473,6 +1523,8 @@ input.switch {
   height: 22px;
   padding: 0;
   margin: 0;
+  /* No border: inputs get a 1px one, which pushed the knob 1px down and right. */
+  border: 0;
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.22);
   transition: background-color 140ms ease;

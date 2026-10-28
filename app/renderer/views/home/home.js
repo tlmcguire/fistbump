@@ -50,6 +50,53 @@
       chevron());
   const rows = items => el("ul", {class: "home-rows"}, items.map(item => el("li", {}, row(item))));
 
+  // ---------- Time away ----------
+
+  //When Fistbump was last open. It is read once, when the app starts, so Home can welcome someone back
+  //for the rest of that run, and then kept current while the app is open.
+  const SEEN_KEY = "fistbump.last-seen";
+  const AWAY = [
+    {days: 180, text: "It's been over six months. Pico dusted itself off for you."},
+    {days: 90, text: "It's been about three months since you were here."},
+    {days: 30, text: "It's been about a month since you were here."},
+    {days: 14, text: "It's been a couple of weeks since you were here."},
+    {days: 7, text: "It's been a week since you were here."},
+  ];
+  const away = (() => {
+    const last = Date.parse(readJSON(SEEN_KEY) || "");
+    if (Number.isNaN(last)) return null;
+    const days = (Date.now() - last) / 86400000;
+    return AWAY.find(a => days >= a.days) || null;
+  })();
+  const seen = () => {
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify(new Date().toISOString()));
+    } catch {}
+  };
+  seen();
+  setInterval(seen, 10 * 60 * 1000);
+  window.addEventListener("beforeunload", seen);
+
+  //Pico, the mascot. Home shows still poses only.
+  const MASCOTS = "views/graphics/mascots";
+  const MONTHS = ["01-january", "02-february", "03-march", "04-april", "05-may", "06-june",
+    "07-july", "08-august", "09-september", "10-october", "11-november", "12-december"];
+  const FUN = ["01-pixel-alien", "02-playful-error", "03-tiny-bird-game", "04-pixel-cat", "05-pixel-heart", "06-achievement"];
+  //Half the time this month's pose, otherwise one of the fun poses, picked again each time Home is shown.
+  const greetingPose = () => Math.random() < 0.5
+    ? `monthly/${MONTHS[new Date().getMonth()]}`
+    : `fun-screen/${FUN[Math.floor(Math.random() * FUN.length)]}`;
+  //The monthly and fun poses keep the art's full canvas, so they are drawn a little larger to match.
+  const pico = src => el("img", {class: src.startsWith("home/") ? "mascot" : "mascot full", src: `${MASCOTS}/${src}.png`, alt: ""});
+  //A small pose that cheers on the last step or two of the resume.
+  const nudge = () => el("img", {class: "mascot home-nudge", src: `${MASCOTS}/home/03-youve-got-this.png`, alt: ""});
+  //New users meet Pico first. The picture carries its own words, so they are its alt text.
+  const intro = () => el("img", {
+    class: "home-intro",
+    src: `${MASCOTS}/intro/meet-pico.png`,
+    alt: "Meet Pico, your job-search sidekick. Here to help you keep going.",
+  });
+
   // ---------- Where each row goes ----------
 
   const openResume = target => {
@@ -117,11 +164,12 @@
   // ---------- The view ----------
 
   function mount(container) {
+    const introSlot = el("div", {class: "home-intro-slot"});
     const welcome = el("section", {class: "home-welcome", "aria-labelledby": "home-greeting"});
     const resumeSection = el("section", {class: "home-section", "aria-labelledby": "home-resume-h"});
     const versionsSection = el("section", {class: "home-section", "aria-labelledby": "home-versions-h"});
     const searchSection = el("section", {class: "home-section", "aria-labelledby": "home-search-h"});
-    const home = el("div", {class: "home"}, welcome,
+    const home = el("div", {class: "home"}, introSlot, welcome,
       el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
 
     container.replaceChildren(
@@ -142,38 +190,49 @@
     function render(master, versions) {
       const p = master.profile;
       const gaps = resumeGaps(master);
-      const listing = readJSON(LISTING_KEY);
+      //A listing remembered before its text was kept cannot be shown without Greenhouse, so it is not offered.
+      const kept = readJSON(LISTING_KEY);
+      const listing = typeof kept?.raw_text === "string" ? kept : null;
       const today = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
       const firstName = (p?.full_name || "").split(/\s+/)[0];
 
       // Welcome: the greeting, where things stand, and the one thing worth doing next.
+      // A new user meets Pico above it; after that Pico sits beside the greeting.
       if (!p) {
+        introSlot.hidden = false;
+        if (!introSlot.firstChild) fill(introSlot, intro());
         fill(welcome,
-          el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
-          el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
-          row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})}));
+          el("div", {class: "home-welcome-text"},
+            el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
+            el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
+            row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})})));
       } else {
+        introSlot.hidden = true;
         const status = gaps.length === 0 ? "Your resume is ready to tailor."
           : gaps.length <= 2 ? "Your resume is nearly there."
           : "Your resume has a few gaps left to fill.";
         const then = listing ? " The listing you were reading is right where you left it." : "";
+        const hello = away ? "Welcome back" : greeting();
         fill(welcome,
-          el("h2", {id: "home-greeting", text: firstName ? `${greeting()}, ${firstName}` : greeting()}),
-          el("p", {text: `${today}. ${status}${then}`}),
-          listing ? row({
-            title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
-            detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
-            aside: "Keep reading",
-            onclick: () => {
-              openJobs();
-              window.JobParser.openListing(listing);
-            },
-          }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")}));
+          el("div", {class: "home-welcome-text"},
+            el("h2", {id: "home-greeting", text: firstName ? `${hello}, ${firstName}` : hello}),
+            el("p", {text: `${today}. ${away ? `${away.text} ` : ""}${status}${then}`}),
+            listing ? row({
+              title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
+              detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
+              aside: "Keep reading",
+              onclick: () => {
+                openJobs();
+                window.JobParser.openListing(listing);
+              },
+            }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
+          pico(greetingPose()));
       }
 
       // Finish your resume
       const done = p ? resumeDone(master) : "";
       fill(resumeSection,
+        p && gaps.length > 0 && gaps.length <= 2 ? nudge() : null,
         el("h3", {id: "home-resume-h", text: gaps.length || !p ? "Finish your resume" : "Your resume"}),
         !p ? el("p", {text: "Nothing here yet. Your profile, jobs and schools will show up as you add them."})
           : gaps.length ? el("p", {text: `${done ? `${done} ` : ""}${gaps.length === 1 ? "One thing left:" : `${gaps.length} things left:`}`})

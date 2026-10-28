@@ -30,7 +30,20 @@ window.JobParser = {
       let pages = new Map(); //page number -> the backend's response for it
       let currentPage = 1;
 
-      const showState = state => RESULT_STATES.forEach(id => { $(id).hidden = id !== state; });
+      const showState = state => {
+        RESULT_STATES.forEach(id => { $(id).hidden = id !== state; });
+        poseDetailMascot();
+      };
+
+      //The mascot in the empty detail pane: it holds out a link card in Open a link, and a job card beside a
+      //list of results. Next to the search's own message or an empty list there is one mascot already.
+      const poseDetailMascot = () => {
+        const pose = activeTab === "link" ? "06-open-link"
+          : !$("state-results").hidden && results?.postings.length ? "07-results-found"
+          : "";
+        $("detail-mascot").hidden = !pose;
+        if (pose) $("detail-mascot").src = `views/graphics/mascots/${pose}.png`;
+      };
       const showDetail = state => DETAIL_STATES.forEach(id => { $(id).hidden = id !== state; });
 
       //shows the results pane's loading message
@@ -40,8 +53,10 @@ window.JobParser = {
         showState("state-loading");
       };
 
-      const showInitial = message => {
+      //The mascot sets out to search, or puts the magnifier down when a search was canceled.
+      const showInitial = (message, pose = "05-searching-wide") => {
         $("initial-message").textContent = message;
+        $("initial-mascot").src = `views/graphics/mascots/${pose}.png`;
         showState("state-initial");
       };
 
@@ -55,6 +70,7 @@ window.JobParser = {
         selectedKey = "";
         markSelected();
         main.classList.remove("has-detail");
+        poseDetailMascot();
         showDetail("detail-empty");
       };
 
@@ -184,30 +200,23 @@ window.JobParser = {
         rememberListing(data);
       };
 
-      //The last listing opened, for Home's "Keep reading". Only what it needs to show and reload it is kept.
+      //The last listing opened, for Home's "Keep reading". Everything the detail pane shows is kept, so it
+      //opens again as it was without asking Greenhouse; Reload fetches it fresh.
       const LISTING_KEY = "fistbump.last-listing";
       function rememberListing(data) {
         if (!data.board || !data.external_id) return;
         try {
-          const {board, external_id, position_title, company_name, location, work_mode} = data;
-          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode, at: new Date().toISOString()}));
+          const {board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
+          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode,
+            updated_at, raw_text, company_url, listing_url, at: new Date().toISOString()}));
         } catch {
           //Home just won't offer it
         }
       }
 
-      //Opens a remembered listing in Find jobs, fresh from Greenhouse.
-      const openSaved = async saved => {
-        detailRetry = () => openSaved(saved);
-        showDetailLoading("Opening the listing\u2026");
-        const mine = detailSeq;
-        try {
-          const data = await window.FistBumpAPI.posting(saved.board, saved.external_id);
-          if (mine !== detailSeq) return;
-          displayPosting(data, Boolean(results?.postings.some(p => keyOf(p) === keyOf(data))));
-        } catch (error) {
-          if (mine === detailSeq) showDetailError(error);
-        }
+      //Opens a remembered listing in Find jobs as it was kept, without asking Greenhouse.
+      const openSaved = saved => {
+        displayPosting(saved, Boolean(results?.postings.some(p => keyOf(p) === keyOf(saved))));
       };
 
       const showDetailLoading = message => {
@@ -519,7 +528,7 @@ window.JobParser = {
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
-        $("result-empty").textContent = empty;
+        $("result-empty-message").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
         markSelected();
@@ -570,7 +579,7 @@ window.JobParser = {
               renderResults(results);
               showState("state-results");
             } else {
-              showInitial("Search canceled.");
+              showInitial("Search canceled.", "09-search-stopped");
             }
             return;
           }

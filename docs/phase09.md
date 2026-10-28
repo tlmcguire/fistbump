@@ -123,6 +123,7 @@ linux:
 
 - `main.js` finds the backend at `process.resourcesPath/bin/` when packaged and at `bin/<platform>-<arch>/` in development.
 - Icons: `build/icon.icns`, `build/icon.ico`, `build/icon.png` (512 px) from the logo's source artwork, not the crop from the promo video (build-findings section 6).
+- Installer art, found by electron-builder's defaults with no config: `build/background.tiff`, the DMG window's background (540×380 with a 2x copy inside, drawn for the default icon spots at (130, 220) and (410, 220)), and `build/installerSidebar.bmp` (164×314), Pico on the NSIS welcome and finish pages. The sidebar shows only with `nsis: { oneClick: false }`; the default one-click installer has no such pages.
 
 References: [electron-builder configuration](https://www.electron.build/configuration), [file macros](https://www.electron.build/file-patterns#file-macros).
 

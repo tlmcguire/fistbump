@@ -33,7 +33,7 @@
                     </div>
                 </nav>
                 <div class="sidebar-foot" role="tablist" aria-label="App">
-                    <span class="workspace"><img src="views/graphics/mark.png" alt="" class="mark">Fistbump</span>
+                    <img src="views/graphics/logo.png" alt="Fistbump" class="wordmark">
                     <button type="button" id="tab-settings" class="icon-button" role="tab" aria-selected="false" aria-label="Settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
                 </div>
             </aside>
@@ -222,6 +222,7 @@
                                     </div>
                                     <button type="button" id="settings-reset-form">Reset</button>
                                 </div>
+                                <p id="history-status" class="setting-status" role="status"></p>
                             </div>
                         </section>
 
@@ -342,6 +343,7 @@
                     <!--Results pane: the search's states. Only one is shown at a time.-->
                     <section id="results-pane" class="pane results-pane" aria-label="Search results">
                         <div id="state-initial" class="state state-message">
+                            <img id="initial-mascot" class="mascot" src="views/graphics/mascots/05-searching-wide.png" alt="">
                             <p id="initial-message"></p>
                         </div>
 
@@ -362,7 +364,10 @@
                                 </label>
                             </div>
                             <p id="result-note" class="note" hidden></p>
-                            <p id="result-empty" class="empty"></p>
+                            <div id="result-empty" class="empty">
+                                <img class="mascot" src="views/graphics/mascots/08-no-results.png" alt="">
+                                <p id="result-empty-message"></p>
+                            </div>
                             <ul id="result-list" class="results"></ul>
                             <nav id="pager" class="pager" aria-label="Result pages" hidden></nav>
                             <details id="result-errors" class="result-errors" hidden>
@@ -372,6 +377,7 @@
                         </div>
 
                         <div id="state-error" class="state state-message" hidden>
+                            <img class="mascot" src="views/graphics/mascots/10-cant-connect.png" alt="">
                             <h2>Search failed</h2>
                             <p id="error-message"></p>
                             <button id="try-again" type="button">Try again</button>
@@ -381,6 +387,7 @@
                     <!--Detail pane: the open listing, or a placeholder, its loading message or its error.-->
                     <section id="detail-pane" class="pane detail-pane" aria-label="Job listing">
                         <div id="detail-empty" class="detail-state state-message">
+                            <img id="detail-mascot" class="mascot" alt="" hidden>
                             <p id="detail-empty-message"></p>
                         </div>
 
@@ -409,6 +416,7 @@
                         </article>
 
                         <div id="detail-error" class="detail-state state-message" hidden>
+                            <img class="mascot" src="views/graphics/mascots/29-something-went-wrong.png" alt="">
                             <h2>Couldn't load the listing</h2>
                             <p id="detail-error-message"></p>
                             <button id="detail-try-again" type="button">Try again</button>

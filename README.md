@@ -1,5 +1,7 @@
 # fistbump
 
+![Fistbump, with Pico giving a fistbump](docs/images/github-banner.png)
+
 A local-first job application assistant. Stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
 
 Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
