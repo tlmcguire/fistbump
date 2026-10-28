@@ -533,17 +533,6 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 .state-message .mascot, .empty .mascot { margin: -8px auto -6px; }
 
-/* While a search runs the mascot bobs gently, which stands in for the spinner. */
-.mascot.working { animation: bob 1.6s ease-in-out infinite; }
-
-@keyframes bob {
-  50% { transform: translateY(-5px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mascot.working { animation: none; }
-}
-
 .state-message h2 {
   color: var(--text);
   font-size: 15px;
@@ -1481,6 +1470,19 @@ li.result * {
 .setting-status:not(:empty) {
   padding: 10px 16px;
   border-top: 1px solid var(--line);
+}
+
+/* After a cleanup: the mascot with its broom, then what was cleared. */
+.setting-status.cleaned {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 6px;
+}
+
+.setting-status.cleaned .mascot {
+  width: 44px;
+  height: 44px;
 }
 
 /* A button that asks to be pressed again before it does something that cannot be undone. */

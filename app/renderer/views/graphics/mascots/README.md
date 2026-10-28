@@ -14,10 +14,12 @@ The originals are raster images, so a pose's colours are close to the app's pale
 | `03-fistbump` | Home, once the master resume has nothing missing |
 | `05-searching-wide` | Find jobs, before a search |
 | `09-search-stopped` | Find jobs, after a search is canceled |
-| `25-thinking-loading` | Find jobs, while a search runs |
 | `08-no-results` | Find jobs, when a search finds nothing |
 | `10-cant-connect` | Find jobs, when a search fails |
+| `07-results-found` | Find jobs, in the listing pane beside a list of results |
+| `06-open-link` | Open a link, before a link is opened |
 | `29-something-went-wrong` | A listing that could not be loaded |
+| `28-cleaning-up` | Settings, after clearing history, resetting the search form or clearing the cache |
 
 ## Not used yet
 
@@ -25,10 +27,10 @@ The originals are raster images, so a pose's colours are close to the app's pale
 |---|---|
 | `01-neutral` | A default companion |
 | `04-offer-win` | An offer or other big win |
-| `06-open-link` · `07-results-found` | Opening a Greenhouse link, a promising result |
+| `25-thinking-loading` | Work that takes a while (a search is too quick for it, so it keeps a spinner) |
 | `11-reading-resume` · `12-cant-read-resume` · `13-hidden-text` | Importing a resume and its warnings |
 | `14-writing` · `15-saving-version` | The resume editor and saved versions |
 | `16-skill-gap` · `17-tailoring-in-progress` · `18-reviewing-changes` · `19-changes-accepted` · `20-pdf-exported` | Tailoring, review and PDF export |
 | `21-application-sent` · `22-waiting` · `23-interview-day` · `24-on-to-the-next` | The application tracker |
-| `26-private-local` · `27-update-available` · `28-cleaning-up` | Privacy notes, an update notice, storage cleanup in Settings |
+| `26-private-local` · `27-update-available` | Privacy notes, an update notice |
 | `30-mega-error-faceplant` | A serious error |

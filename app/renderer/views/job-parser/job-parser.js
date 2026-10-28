@@ -30,7 +30,20 @@ window.JobParser = {
       let pages = new Map(); //page number -> the backend's response for it
       let currentPage = 1;
 
-      const showState = state => RESULT_STATES.forEach(id => { $(id).hidden = id !== state; });
+      const showState = state => {
+        RESULT_STATES.forEach(id => { $(id).hidden = id !== state; });
+        poseDetailMascot();
+      };
+
+      //The mascot in the empty detail pane: it holds out a link card in Open a link, and a job card beside a
+      //list of results. Next to the search's own message or an empty list there is one mascot already.
+      const poseDetailMascot = () => {
+        const pose = activeTab === "link" ? "06-open-link"
+          : !$("state-results").hidden && results?.postings.length ? "07-results-found"
+          : "";
+        $("detail-mascot").hidden = !pose;
+        if (pose) $("detail-mascot").src = `views/graphics/mascots/${pose}.png`;
+      };
       const showDetail = state => DETAIL_STATES.forEach(id => { $(id).hidden = id !== state; });
 
       //shows the results pane's loading message
@@ -57,6 +70,7 @@ window.JobParser = {
         selectedKey = "";
         markSelected();
         main.classList.remove("has-detail");
+        poseDetailMascot();
         showDetail("detail-empty");
       };
 
