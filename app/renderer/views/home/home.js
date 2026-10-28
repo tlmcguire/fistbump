@@ -56,11 +56,11 @@
   //for the rest of that run, and then kept current while the app is open.
   const SEEN_KEY = "fistbump.last-seen";
   const AWAY = [
-    {days: 180, pose: "05-six-months-plus", text: "It's been over six months. Pico dusted itself off for you."},
-    {days: 90, pose: "04-three-months", text: "It's been about three months since you were here."},
-    {days: 30, pose: "03-one-month", text: "It's been about a month since you were here."},
-    {days: 14, pose: "02-two-weeks", text: "It's been a couple of weeks since you were here."},
-    {days: 7, pose: "01-one-week", text: "It's been a week since you were here."},
+    {days: 180, text: "It's been over six months. Pico dusted itself off for you."},
+    {days: 90, text: "It's been about three months since you were here."},
+    {days: 30, text: "It's been about a month since you were here."},
+    {days: 14, text: "It's been a couple of weeks since you were here."},
+    {days: 7, text: "It's been a week since you were here."},
   ];
   const away = (() => {
     const last = Date.parse(readJSON(SEEN_KEY) || "");
@@ -81,7 +81,12 @@
   const MASCOTS = "views/graphics/mascots";
   const MONTHS = ["01-january", "02-february", "03-march", "04-april", "05-may", "06-june",
     "07-july", "08-august", "09-september", "10-october", "11-november", "12-december"];
-  //The away and monthly poses keep the art's full canvas, so they are drawn a little larger to match.
+  const FUN = ["01-pixel-alien", "02-playful-error", "03-tiny-bird-game", "04-pixel-cat", "05-pixel-heart", "06-achievement"];
+  //Half the time this month's pose, otherwise one of the fun poses, picked again each time Home is shown.
+  const greetingPose = () => Math.random() < 0.5
+    ? `monthly/${MONTHS[new Date().getMonth()]}`
+    : `fun-screen/${FUN[Math.floor(Math.random() * FUN.length)]}`;
+  //The monthly and fun poses keep the art's full canvas, so they are drawn a little larger to match.
   const pico = src => el("img", {class: src.startsWith("home/") ? "mascot" : "mascot full", src: `${MASCOTS}/${src}.png`, alt: ""});
   //A small pose that cheers on the last step or two of the resume.
   const nudge = () => el("img", {class: "mascot home-nudge", src: `${MASCOTS}/home/03-youve-got-this.png`, alt: ""});
@@ -221,12 +226,7 @@
                 window.JobParser.openListing(listing);
               },
             }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
-          //After time away, a pose that shows how long it has been; then a small win once the resume is
-          //ready; otherwise a cozy break in the evening, or the pose for this month.
-          pico(away ? `away/${away.pose}`
-            : gaps.length === 0 ? "home/04-little-victory"
-            : new Date().getHours() >= 18 ? "home/02-cozy-break"
-            : `monthly/${MONTHS[new Date().getMonth()]}`));
+          pico(greetingPose()));
       }
 
       // Finish your resume
