@@ -40,8 +40,10 @@ window.JobParser = {
         showState("state-loading");
       };
 
-      const showInitial = message => {
+      //The mascot sets out to search, or puts the magnifier down when a search was canceled.
+      const showInitial = (message, pose = "05-searching-wide") => {
         $("initial-message").textContent = message;
+        $("initial-mascot").src = `views/graphics/mascots/${pose}.png`;
         showState("state-initial");
       };
 
@@ -519,7 +521,7 @@ window.JobParser = {
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
-        $("result-empty").textContent = empty;
+        $("result-empty-message").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
         $("result-list").replaceChildren(...data.postings.map(resultItem));
         markSelected();
@@ -570,7 +572,7 @@ window.JobParser = {
               renderResults(results);
               showState("state-results");
             } else {
-              showInitial("Search canceled.");
+              showInitial("Search canceled.", "09-search-stopped");
             }
             return;
           }

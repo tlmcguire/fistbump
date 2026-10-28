@@ -527,6 +527,31 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   .logo-tile.reveal > * { animation: none; }
 }
 
+/* The mascot over an empty, working or error message. Its images are 400px squares, drawn here at about a third. */
+.mascot {
+  display: block;
+  flex: none;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.state-message .mascot, .empty .mascot { margin: -8px auto -6px; }
+
+/* While a search runs the mascot bobs gently, which stands in for the spinner. */
+.mascot.working { animation: bob 1.6s ease-in-out infinite; }
+
+@keyframes bob {
+  50% { transform: translateY(-5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot.working { animation: none; }
+}
+
 .state-message h2 {
   color: var(--text);
   font-size: 15px;
@@ -1265,6 +1290,10 @@ li.result * {
 
 /* The welcome: a warm panel with the greeting and the one thing worth doing next. */
 .home-welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 20px;
   padding: 26px 28px 22px;
   border: 1px solid rgba(226, 185, 42, 0.34);
   border-radius: 12px;
@@ -1277,12 +1306,18 @@ li.result * {
   text-wrap: balance;
 }
 
-.home-welcome > p {
+.home-welcome-text > p {
   max-width: 56ch;
   margin-top: 6px;
   color: rgba(242, 245, 251, 0.78);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.home-welcome .mascot { width: 136px; height: 136px; margin: -14px -8px -10px 0; }
+
+@media (max-width: 640px) {
+  .home-welcome .mascot { display: none; }
 }
 
 .home-welcome .home-row {
@@ -1473,6 +1508,8 @@ input.switch {
   height: 22px;
   padding: 0;
   margin: 0;
+  /* No border: inputs get a 1px one, which pushed the knob 1px down and right. */
+  border: 0;
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.22);
   transition: background-color 140ms ease;
