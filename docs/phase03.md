@@ -82,6 +82,7 @@ All as written in [api.md](api.md). The notes below fix details api.md leaves op
              "warnings": ["Could not read a date for \"Research Assistant\""] },
   "hidden_text": { "words": 37, "reasons": ["same color as the background", "font smaller than 1 pt"],
                    "sample": "python kubernetes terraform aws machine learning ..." },
+  "size_warnings": [],                               // past 1 MiB of file or about four pages of text
   "engine": "rules",
   "notice": "Review every field before applying. Nothing is saved yet." }
 
@@ -140,15 +141,15 @@ Not detected, and documented as limits: text covered by an image, text hidden by
 
 Progress:
 
-- [ ] 1. `models.go`
-- [ ] 2. `store.go`
-- [ ] 3. `profile.go`, `experience.go`, `education.go`
-- [ ] 4. `resume.go` (store)
-- [ ] 5. `settings.go` (store)
-- [ ] 6. `render.go`
-- [ ] 7. `decode.go`, `respond.go` additions
-- [ ] 8. `resume.go` (api)
-- [ ] 9. `settings.go` (api)
+- [x] 1. `models.go`
+- [x] 2. `store.go`
+- [x] 3. `profile.go`, `experience.go`, `education.go`
+- [x] 4. `resume.go` (store)
+- [x] 5. `settings.go` (store)
+- [x] 6. `render.go`
+- [x] 7. `decode.go`, `respond.go` additions
+- [x] 8. `resume.go` (api)
+- [x] 9. `settings.go` (api)
 - [ ] 10. `ipc-handlers.js`, `preload.js`
 - [ ] 11. `app.js` router
 - [ ] 12. `resume-builder.js`
@@ -157,9 +158,9 @@ Progress:
 - [ ] 15. `resumeparse/extract.go`
 - [ ] 16. `resumeparse/hidden.go`
 - [ ] 17. `resumeparse/parse.go`
-- [ ] 18. `resume_import.go` (api)
-- [ ] 19. Import in Electron and the Resume view
-- [ ] Tests and tooling
+- [x] 18. `resume_import.go` (api)
+- [x] 19. Import in Electron and the Resume view
+- [ ] Tests and tooling (backend tests and `seed.sql` done; fixtures for import and the Electron and renderer tests remain)
 
 ### Backend
 

@@ -111,6 +111,8 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     register(ipcMain, backend, {
+      dialog,
+      BrowserWindow,
       info: () => ({
         version: app.getVersion(),
         electron: process.versions.electron,

@@ -145,6 +145,10 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	q.Keywords = keywords
+	// With nothing to search by, fall back to the user's target positions, then their latest job title.
+	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" {
+		q.Keywords = s.defaultKeywords(r.Context())
+	}
 	exclude := make([]string, 0, len(q.Exclude))
 	for _, word := range q.Exclude {
 		if word = strings.TrimSpace(word); word != "" {
@@ -314,7 +318,9 @@ func writeNoCompany(w http.ResponseWriter, q connectors.Query) error {
 func bodyError(err error) error {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		return validationFailed("Request is too large")
+		e := validationFailed("Request is too large")
+		e.cause = err
+		return e
 	}
 	var syntax *json.SyntaxError
 	if errors.As(err, &syntax) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
 // jobFetcher is the part of the Greenhouse client the API uses, so tests can pass a fake.
@@ -46,6 +47,7 @@ type Config struct {
 // Server holds the dependencies handlers need. Handlers are methods on it so they can reach them.
 type Server struct {
 	db      *sql.DB
+	store   *store.Store
 	gh      jobFetcher
 	search  jobSearcher
 	logos   logoFinder
@@ -73,6 +75,26 @@ func (s *Server) routes() []route {
 		{"GET /v1/storage", s.storage},
 		{"POST /v1/storage/cleanup", s.storageCleanup},
 		{"GET /v1/connectors/greenhouse/link", s.greenhouseLink},
+		{"GET /v1/resume", s.resumeGet},
+		{"PUT /v1/resume/profile", s.profilePut},
+		{"GET /v1/resume/experiences", s.experienceList},
+		{"POST /v1/resume/experiences", s.experienceCreate},
+		{"PUT /v1/resume/experiences/{id}", s.experienceUpdate},
+		{"DELETE /v1/resume/experiences/{id}", s.experienceDelete},
+		{"GET /v1/resume/education", s.educationList},
+		{"POST /v1/resume/education", s.educationCreate},
+		{"PUT /v1/resume/education/{id}", s.educationUpdate},
+		{"DELETE /v1/resume/education/{id}", s.educationDelete},
+		{"POST /v1/resume/import", s.resumeImport},
+		{"POST /v1/resume/import/apply", s.resumeImportApply},
+		{"GET /v1/resume/preview", s.resumePreview},
+		{"GET /v1/resumes", s.resumeList},
+		{"POST /v1/resumes", s.resumeCreate},
+		{"GET /v1/resumes/{id}", s.resumeGetOne},
+		{"PUT /v1/resumes/{id}", s.resumeUpdate},
+		{"DELETE /v1/resumes/{id}", s.resumeDelete},
+		{"GET /v1/settings", s.settingsGet},
+		{"PUT /v1/settings", s.settingsPut},
 		{"GET /v1/connectors/greenhouse/boards/{board}/jobs/{job_id}", s.greenhouseJob},
 	}
 }
@@ -182,6 +204,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func New(cfg Config) *Server {
 	s := &Server{
 		db:      cfg.DB,
+		store:   store.New(cfg.DB),
 		gh:      cfg.Greenhouse,
 		search:  cfg.Searcher,
 		logos:   cfg.Logos,

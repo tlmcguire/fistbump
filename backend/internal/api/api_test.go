@@ -675,15 +675,6 @@ func storageServer(t *testing.T) (*Server, *sql.DB, *fakeCache, string) {
 	return s, conn, cache, dir
 }
 
-func call(t *testing.T, s *Server, method, path, body string) *httptest.ResponseRecorder {
-	t.Helper()
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+testToken)
-	rec := httptest.NewRecorder()
-	s.ServeHTTP(rec, req)
-	return rec
-}
-
 func TestStorageReportAndCacheCleanup(t *testing.T) {
 	s, conn, cache, dir := storageServer(t)
 	big := strings.Repeat("x", 5000)
