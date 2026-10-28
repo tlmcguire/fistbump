@@ -1,6 +1,6 @@
-# Mascot poses
+# Pico, the Fistbump mascot
 
-Thirty poses of the Fistbump mascot, plus `face-expressions.png`, a sheet of its nine faces for reference.
+Thirty poses of Pico, plus `face-expressions.png`, a sheet of its nine faces for reference.
 Each pose is a 400px transparent PNG, cropped and scaled from the 1254px originals so every pose keeps the same scale.
 The app draws them at about 128px.
 
@@ -34,3 +34,13 @@ The originals are raster images, so a pose's colours are close to the app's pale
 | `21-application-sent` · `22-waiting` · `23-interview-day` · `24-on-to-the-next` | The application tracker |
 | `26-private-local` · `27-update-available` | Privacy notes, an update notice |
 | `30-mega-error-faceplant` | A serious error |
+
+## Home set
+
+`home/` holds four more poses for the Home view, cropped and scaled the same way: `01-morning-hello` for a welcome or return visit, `02-cozy-break` for a quiet moment, `03-youve-got-this` for a nudge or a finished step, and `04-little-victory` for a small win.
+
+`home/animations/` holds six looping SVGs: `idle`, `cozy`, `victory`, `searching`, `loading` and `thinking`. Each embeds its own artwork, scaled down to 480px, so it works as a plain `<img src>`. They show a still pose when reduced motion is on. None is used yet.
+
+## Introduction
+
+`intro/` holds the "Meet Pico" introduction: `meet-pico.png` (a 1200px still), `meet-pico.svg` and `meet-pico-animated.svg` (the same layout, the second with an entrance and idle motion), and `pico-wave-cutout.png`, the waving artwork on its own. None is used yet.
