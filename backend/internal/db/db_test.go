@@ -121,6 +121,18 @@ func TestJobExternalIDUnique(t *testing.T) {
 	}
 }
 
+func TestJobBoardAndCompanyURL(t *testing.T) {
+	conn, _ := openTemp(t)
+	mustExec(t, conn, "INSERT INTO jobs (company_name, position_title, source, external_id, board, company_url) VALUES ('a', 'b', 'greenhouse', '123', 'acme', 'https://acme.com/jobs/123')")
+	var board, url string
+	if err := conn.QueryRow("SELECT board, company_url FROM jobs WHERE id=1").Scan(&board, &url); err != nil {
+		t.Fatal(err)
+	}
+	if board != "acme" || url != "https://acme.com/jobs/123" {
+		t.Errorf("board, company_url = %q, %q", board, url)
+	}
+}
+
 func TestApplicationRestrictsJobDelete(t *testing.T) {
 	conn, _ := openTemp(t)
 	mustExec(t, conn, "INSERT INTO profile (full_name) VALUES ('p')")

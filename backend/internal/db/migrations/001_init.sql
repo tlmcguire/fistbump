@@ -59,6 +59,8 @@ CREATE TABLE jobs (
   listing_url      TEXT,
   source           TEXT NOT NULL DEFAULT 'pasted' CHECK (source IN ('pasted','manual','greenhouse')),
   external_id      TEXT,
+  board            TEXT,  -- Greenhouse board token; NULL for pasted and manual jobs
+  company_url      TEXT,  -- direct link to the company (its own job page or site); NULL when unknown
   work_mode        TEXT,
   employment_type  TEXT,
   location         TEXT,

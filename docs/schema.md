@@ -202,6 +202,8 @@ A job posting, pasted, entered by hand, or imported through a connector.
 | `listing_url` | TEXT | |
 | `source` | TEXT NOT NULL | `pasted` (default), `manual`, or `greenhouse` |
 | `external_id` | TEXT | The connector's id for the posting. NULL for pasted and manual jobs |
+| `board` | TEXT | Greenhouse board token. NULL for pasted and manual jobs |
+| `company_url` | TEXT | Direct link to the company (its own job page or site), so a saved job is reachable without Greenhouse. From the posting for Greenhouse jobs; entered by the user for pasted and manual jobs. NULL when unknown. `listing_url` stays the page the job came from |
 | `work_mode`, `employment_type`, `location` | TEXT | Free text |
 | `pay_min`, `pay_max` | INTEGER | |
 | `description` | TEXT | Cleaned text |

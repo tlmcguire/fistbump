@@ -92,3 +92,33 @@ func (m Master) Skills() []string {
 	}
 	return out
 }
+
+// Job is a saved job posting, pasted, entered by hand, or imported from Greenhouse. Skill lists and
+// Requirements are never nil.
+type Job struct {
+	ID             int64    `json:"id"`
+	CompanyName    string   `json:"company_name"`
+	PositionTitle  string   `json:"position_title"`
+	ListingURL     *string  `json:"listing_url"`
+	Source         string   `json:"source"`
+	ExternalID     *string  `json:"external_id"`
+	Board          *string  `json:"board"`
+	CompanyURL     *string  `json:"company_url"`
+	WorkMode       *string  `json:"work_mode"`
+	EmploymentType *string  `json:"employment_type"`
+	Location       *string  `json:"location"`
+	PayMin         *int64   `json:"pay_min"`
+	PayMax         *int64   `json:"pay_max"`
+	Description    *string  `json:"description"`
+	RawText        *string  `json:"raw_text"`
+	ReqTechSkills  []string `json:"req_tech_skills"`
+	PrefTechSkills []string `json:"pref_tech_skills"`
+	ReqSoftSkills  []string `json:"req_soft_skills"`
+	PrefSoftSkills []string `json:"pref_soft_skills"`
+	Requirements   []string `json:"requirements"`
+	CloseDate      *string  `json:"close_date"`
+	CreatedAt      string   `json:"created_at"`
+	SearchedAt     string   `json:"searched_at"`
+	ArchivedAt     *string  `json:"archived_at"`
+	TrashedAt      *string  `json:"trashed_at"`
+}

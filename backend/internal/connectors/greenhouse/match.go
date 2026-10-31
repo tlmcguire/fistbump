@@ -204,9 +204,14 @@ func LocationScore(location, mode string, terms []string) float64 {
 	return 0
 }
 
-// Score combines title fit and location. Phase 4 adds skill fit and re-weights.
+// Score combines title fit and location, for searches without a resume to compare with.
 func Score(titleScore, locationScore float64) float64 {
 	return round2(0.7*titleScore + 0.3*locationScore)
+}
+
+// SkillFitScore combines title fit, skill fit with the resume, and location.
+func SkillFitScore(titleScore, skillScore, locationScore float64) float64 {
+	return round2(0.5*titleScore + 0.35*skillScore + 0.15*locationScore)
 }
 
 func round2(f float64) float64 { return float64(int(f*100+0.5)) / 100 }

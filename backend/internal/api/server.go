@@ -12,8 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tlmcguire/fistbump/backend/internal/analyze"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
@@ -55,6 +58,9 @@ type Server struct {
 	caches  []CacheClearer
 	token   string
 	version string
+	// parse and analyze are parser.Parse and analyze.Run; tests swap them for fixed results.
+	parse   func(raw string) parser.Result
+	analyze func(job models.Job, m models.Master) analyze.Result
 	handler http.Handler // the mux wrapped in middleware, built once in New
 }
 
@@ -96,6 +102,14 @@ func (s *Server) routes() []route {
 		{"GET /v1/settings", s.settingsGet},
 		{"PUT /v1/settings", s.settingsPut},
 		{"GET /v1/connectors/greenhouse/boards/{board}/jobs/{job_id}", s.greenhouseJob},
+		{"POST /v1/connectors/greenhouse/import", s.greenhouseImport},
+		{"POST /v1/jobs/parse", s.jobParse},
+		{"POST /v1/jobs", s.jobCreate},
+		{"GET /v1/jobs", s.jobList},
+		{"GET /v1/jobs/{id}", s.jobGet},
+		{"PUT /v1/jobs/{id}", s.jobUpdate},
+		{"DELETE /v1/jobs/{id}", s.jobDelete},
+		{"POST /v1/jobs/{id}/analyze", s.jobAnalyze},
 	}
 }
 
@@ -212,6 +226,8 @@ func New(cfg Config) *Server {
 		caches:  cfg.Caches,
 		token:   cfg.Token,
 		version: cfg.Version,
+		parse:   parser.Parse,
+		analyze: analyze.Run,
 	}
 	mux := http.NewServeMux()
 

@@ -86,15 +86,15 @@ api.md describes `POST /v1/connectors/{id}/import` taking `external_ids` from re
 
 Progress:
 
-- [ ] 1. Schema: `jobs.board`
-- [ ] 2. `models.go` Job
+- [x] 1. Schema: `jobs.board`
+- [x] 2. `models.go` Job
 - [ ] 3. `skills.go`
 - [ ] 4. `parser.go`
 - [ ] 5. `analyze.go`
-- [ ] 6. `job.go` (store)
-- [ ] 7. `jobs.go` (api)
-- [ ] 8. `connectors.go` import
-- [ ] 9. Search `skill_score`
+- [x] 6. `job.go` (store)
+- [x] 7. `jobs.go` (api)
+- [x] 8. `connectors.go` import
+- [x] 9. Search `skill_score`
 - [ ] 10. `ipc-handlers.js`, `preload.js`
 - [ ] 11. Jobs view: Paste, Saved, analysis panel
 - [ ] Tests and tooling

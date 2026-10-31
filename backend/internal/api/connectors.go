@@ -1,16 +1,20 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
 // Board tokens are lowercase letters, digits, - and _. Job ids are digits. The length caps sit well
@@ -213,6 +217,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		return validationFailed("No boards match this search")
 	}
 
+	q.SkillScore = s.skillScorer(r.Context())
 	result, err := s.search.Search(r.Context(), q, boards)
 	if guessed && (err != nil || result.BoardsSearched == 0) {
 		return writeNoCompany(w, q) // not a Greenhouse board we can find
@@ -282,6 +287,20 @@ func guessBoards(company string) []string {
 		}
 	}
 	return out
+}
+
+// skillScorer rates posting text against the master resume, for ranking search results by skill
+// fit. It returns nil without a profile, so the search keeps its title and location ranking.
+func (s *Server) skillScorer(ctx context.Context) func(text string) float64 {
+	m, err := s.store.GetMaster(ctx)
+	if err != nil || m.Profile == nil {
+		return nil
+	}
+	return func(text string) float64 {
+		var j models.Job
+		applyParse(&j, s.parse(text))
+		return s.analyze(j, m).Score
+	}
 }
 
 // companyNames is the display name of each board, at most ten.
@@ -384,4 +403,142 @@ func greenhouseError(err error) error {
 	default:
 		return err
 	}
+}
+
+// maxImport caps the postings one import saves.
+const maxImport = 50
+
+// greenhouseImport handles POST /v1/connectors/greenhouse/import: it saves postings as jobs, or
+// refreshes the ones already saved. Every posting is fetched before anything is written, so a closed
+// posting or a Greenhouse failure saves nothing.
+func (s *Server) greenhouseImport(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		Postings []struct {
+			Board      string `json:"board"`
+			ExternalID string `json:"external_id"`
+		} `json:"postings"`
+	}
+	if err := decodeJSONLimit(w, r, &body, maxFetchBody); err != nil {
+		return err
+	}
+	if len(body.Postings) == 0 || len(body.Postings) > maxImport {
+		return validationError("postings", "postings must have 1 to 50 entries")
+	}
+	type key struct{ board, id string }
+	var keys []key
+	seen := map[key]bool{}
+	for _, p := range body.Postings {
+		if err := validateIDs(p.Board, p.ExternalID); err != nil {
+			return err
+		}
+		k := key{p.Board, p.ExternalID}
+		if !seen[k] {
+			seen[k] = true
+			keys = append(keys, k)
+		}
+	}
+
+	// The first failure cancels the other fetches. Greenhouse reports a cancelled fetch as an upstream
+	// error, so the failure kept is the first one seen, not the first in request order.
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	postings := make([]connectors.Posting, len(keys))
+	var (
+		mu       sync.Mutex
+		failed   error
+		failedID string
+		wg       sync.WaitGroup
+		sem      = make(chan struct{}, 8)
+	)
+	for i, k := range keys {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			if ctx.Err() != nil {
+				return
+			}
+			p, err := s.gh.FetchJob(ctx, k.board, k.id)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil && failed == nil {
+				failed, failedID = err, k.id
+				cancel()
+			}
+			postings[i] = p
+		}()
+	}
+	wg.Wait()
+	if err := r.Context().Err(); err != nil {
+		return err // the app stopped waiting
+	}
+	if failed != nil {
+		apiErr := greenhouseError(failed)
+		var e *apiError
+		if errors.As(apiErr, &e) && e.Status == http.StatusNotFound {
+			e.Details = map[string]any{"external_id": failedID}
+		}
+		return apiErr
+	}
+
+	out := struct {
+		Imported  []models.Job `json:"imported"`
+		Refreshed []models.Job `json:"refreshed"`
+	}{[]models.Job{}, []models.Job{}}
+	err := s.store.WithTx(r.Context(), func(tx *store.Store) error {
+		for _, p := range postings {
+			j, created, err := tx.UpsertGreenhouseJob(r.Context(), s.jobFromPosting(p))
+			if err != nil {
+				return err
+			}
+			if created {
+				out.Imported = append(out.Imported, j)
+			} else {
+				out.Refreshed = append(out.Refreshed, j)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}
+
+// jobFromPosting builds the job saved for a Greenhouse posting: the posting's own fields, with the
+// parser's skills and requirements, and its inferred values only where the posting has none.
+func (s *Server) jobFromPosting(p connectors.Posting) models.Job {
+	j := models.Job{
+		CompanyName:   p.CompanyName,
+		PositionTitle: p.PositionTitle,
+		Source:        "greenhouse",
+		ExternalID:    &p.ExternalID,
+		Board:         &p.Board,
+		CompanyURL:    p.CompanyURL,
+		RawText:       &p.RawText,
+	}
+	if p.ListingURL != "" {
+		j.ListingURL = &p.ListingURL
+	}
+	if p.Location != "" {
+		j.Location = &p.Location
+	}
+	mode := greenhouse.WorkMode(p.Location, p.PositionTitle)
+	if described := greenhouse.DescribedMode(p.RawText); mode == connectors.WorkModeOnSite && described != "" {
+		mode = described
+	}
+	j.WorkMode = &mode
+	applyParse(&j, s.parse(p.RawText))
+	if j.CompanyName == "" {
+		j.CompanyName = greenhouse.CompanyFor(p.Board)
+	}
+	if j.CompanyName == "" {
+		j.CompanyName = p.Board
+	}
+	if j.PositionTitle == "" {
+		j.PositionTitle = "Untitled job"
+	}
+	return j
 }

@@ -85,6 +85,10 @@ type Query struct {
 	PayMin       int      `json:"pay_min"`       // yearly USD; a posting must pay at least this much at its top
 	PayMax       int      `json:"pay_max"`       // yearly USD; a posting must start at or under this
 	RequirePay   bool     `json:"require_pay"`   // drop postings that list no pay when a pay range is set
+
+	// SkillScore rates a posting's text against the user's resume, 0 to 1. The API layer sets it when
+	// a profile exists, so connectors need not know about resumes; nil ranks without skill fit.
+	SkillScore func(text string) float64 `json:"-"`
 }
 
 // HasPay reports whether the query filters on pay, which needs each posting's description.
