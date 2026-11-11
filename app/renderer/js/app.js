@@ -111,7 +111,7 @@ function openJobsTab(tab) {
   show("jobs");
   if (firstMount) tab.click();
 }
-for (const id of ["tab-find", "tab-link", "tab-settings"]) {
+for (const id of ["tab-find", "tab-link", "tab-paste", "tab-saved", "tab-settings"]) {
   const tab = document.getElementById(id);
   tab.addEventListener("click", () => openJobsTab(tab));
 }

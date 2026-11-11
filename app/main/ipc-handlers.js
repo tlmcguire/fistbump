@@ -6,7 +6,8 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'education:create', 'education:update', 'education:delete',
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
    'settings:get', 'settings:put',
-   'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases'];
+   'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases',
+   'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import'];
 
 // Cleanup targets the settings page may ask for. The backend validates them again.
 const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
@@ -47,6 +48,18 @@ const ROUTES = {
 
   'settings:get': () => ['GET', '/v1/settings'],
   'settings:put': (values) => isObject(values) ? ['PUT', '/v1/settings', values] : bad('Invalid settings'),
+
+  //new in phase 4 for job management
+  'jobs:parse':   (raw_text) => typeof raw_text === 'string' && raw_text.trim() ? ['POST', '/v1/jobs/parse', { raw_text }] : bad('Paste the job posting.'),
+  'jobs:create':  (body) => isObject(body) ? ['POST', '/v1/jobs', body] : bad('Invalid job'),
+  'jobs:list':    (q) => ['GET', `/v1/jobs${q ? `?q=${encodeURIComponent(String(q))}` : ''}`],
+  'jobs:get':     (id) => isId(id) ? ['GET', `/v1/jobs/${id}`] : bad('Invalid job id'),
+  'jobs:update':  (id, body) => isId(id) && isObject(body) ? ['PUT', `/v1/jobs/${id}`, body] : bad('Invalid job'),
+  'jobs:delete':  (id) => isId(id) ? ['DELETE', `/v1/jobs/${id}`] : bad('Invalid job id'),
+  'jobs:analyze': (id) => isId(id) ? ['POST', `/v1/jobs/${id}/analyze`] : bad('Invalid job id'),
+  'connectors:import': (postings) => Array.isArray(postings) && postings.length &&
+    postings.every(p => isObject(p) && typeof p.board === 'string' && typeof p.external_id === 'string')
+    ? ['POST', '/v1/connectors/greenhouse/import', { postings }] : bad('Invalid posting'),
 };
 
 const extensionOf = (name) => (/\.([^./\\]+)$/.exec(name) || [])[1]?.toLowerCase() || '';

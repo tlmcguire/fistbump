@@ -21,6 +21,9 @@
                             <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Find jobs</button>
                             <ul id="tree-searches" class="tree-children" aria-label="Recent searches"></ul>
                             <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>Open a link</button>
+
+                            <button type="button" id="tab-paste" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Paste a job</button>
+                            <button type="button" id="tab-saved" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Saved jobs</button>
                         </div>
                     </div>
 
@@ -125,6 +128,14 @@
                             <input id="job-url" type="url" aria-label="Greenhouse job link" placeholder="Paste a Greenhouse job link" required>
                         </div>
                         <button type="submit" class="primary">Open</button>
+                    </form>
+
+                    <div id="paste-title" class="toolbar-title" hidden><h1>Paste a job</h1></div>
+
+                    <form id="saved-form" class="toolbar-form" hidden>
+                        <div class="field grow">
+                            <input id="saved-q" type="search" aria-label="Search saved jobs" placeholder="Search saved jobs by company or title">
+                        </div>
                     </form>
                 </header>
 
@@ -339,6 +350,15 @@
                     </div>
                 </section>
 
+                <!---->
+                <section id="paste-pane" class="pane paste-pane" aria-label="Paste a job" hidden>
+                    <textarea id="paste-text" rows="14" placeholder="Paste the full job posting here"></textarea>
+                    <div class="job-actions">
+                        <button id="paste-preview" type="button" class="primary">Preview</button>
+                    </div>
+                    <div id="paste-result"></div>
+                </section>
+
                 <div class="content">
                     <!--Results pane: the search's states. Only one is shown at a time.-->
                     <section id="results-pane" class="pane results-pane" aria-label="Search results">
@@ -384,6 +404,15 @@
                         </div>
                     </section>
 
+                    <!--Saved pane: showcases your saved jobs-->
+                    <section id="saved-pane" class="pane results-pane" aria-label="Saved jobs" hidden>
+                        <ul id="saved-list" class="results"></ul>
+                        <div id="saved-empty" class="empty" hidden>
+                            <img class="mascot" src="views/graphics/mascots/33-empty-tracker.png" alt="">
+                            <p id="saved-empty-message"></p>
+                        </div>
+                    </section>
+
                     <!--Detail pane: the open listing, or a placeholder, its loading message or its error.-->
                     <section id="detail-pane" class="pane detail-pane" aria-label="Job listing">
                         <div id="detail-empty" class="detail-state state-message">
@@ -409,10 +438,16 @@
                             <div class="job-actions">
                                 <a id="job-link" class="button primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
                                 <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
+
+                                <button id="save-listing" type="button" class="primary" hidden>Save job</button>
+
                                 <button id="reload-listing" type="button">Reload</button>
+
+                                <button id="delete-job" type="button" class="danger" hidden>Delete</button>
                             </div>
                             <h3>Description</h3>
                             <p id="job-description"></p>
+                            <section id="analysis" hidden></section>
                         </article>
 
                         <div id="detail-error" class="detail-state state-message" hidden>

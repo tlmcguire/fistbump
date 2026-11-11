@@ -59,6 +59,26 @@ function recorder() {
   return { calls, call: async (method, url, body) => { calls.push({ method, url, body }); return { ok: true }; } };
 }
 
+//phase 4 test
+test('import and job routes check their arguments', async () => {
+  const backend = recorder();
+  const ipc = fakeIpc();
+  register(ipc, backend);
+  const importJobs = ipc.handlers.get('connectors:import');
+
+  assert.strictEqual((await importJobs({}, [])).error.code, 'validation_failed');
+  assert.strictEqual((await importJobs({}, [{ board: 1 }])).error.code, 'validation_failed');
+  assert.strictEqual((await ipc.handlers.get('jobs:get')({}, '1')).error.code, 'validation_failed');
+  assert.strictEqual(backend.calls.length, 0);
+
+  await importJobs({}, [{ board: 'backblaze', external_id: '5287532008' }]);
+  assert.deepStrictEqual(backend.calls, [{
+    method: 'POST',
+    url: '/v1/connectors/greenhouse/import',
+    body: { postings: [{ board: 'backblaze', external_id: '5287532008' }] },
+  }]);
+});
+
 function importSetup({ picked, size = 3, bytes = Buffer.from('Ada') } = {}) {
   const backend = recorder();
   const ipc = fakeIpc();

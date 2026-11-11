@@ -819,6 +819,6 @@
     };
   }
  
-  window.ResumeBuilder = {mount, forms, el, fill, chips};
+  window.ResumeBuilder = {mount, forms, el, fill, chips, makeForm};
 })();
  
