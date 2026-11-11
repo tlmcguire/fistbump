@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('api', {
     categories: () => ipcRenderer.invoke('connectors:categories'),
     logo: (url, board) => ipcRenderer.invoke('connectors:logo', url, board),
     cancelSearch: () => ipcRenderer.invoke('connectors:cancel-search'),
+    //added for phase 
+    import: (postings) => ipcRenderer.invoke('connectors:import', postings),
   },
 
   //Master resume with options for profile, experience, education, and preview
@@ -64,5 +66,16 @@ contextBridge.exposeInMainWorld('api', {
     showDataFolder: () => ipcRenderer.invoke('app:show-data-folder'),
     openReleases: (url) => ipcRenderer.invoke('app:open-releases', url),
     // The menu's Settings item (Cmd/Ctrl+,) asks the page to show its settings.
+  },
+
+  //added for phase 4
+  jobs: {
+    parse: (t) => ipcRenderer.invoke('jobs:parse', t),
+    create: (b) => ipcRenderer.invoke('jobs:create', b),
+    list: (q) => ipcRenderer.invoke('jobs:list', q),
+    get: (id) => ipcRenderer.invoke('jobs:get', id),
+    update: (id, b) => ipcRenderer.invoke('jobs:update', id, b),
+    delete: (id) => ipcRenderer.invoke('jobs:delete', id),
+    analyze: (id) => ipcRenderer.invoke('jobs:analyze', id),
   },
 });

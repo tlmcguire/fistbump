@@ -7,8 +7,9 @@ window.JobParser = {
       const loadButton = form.querySelector('button[type="submit"]');
       const searchForm = $("search-form");
       const searchButton = searchForm.querySelector('button[type="submit"]');
-      const tabs = {find: $("tab-find"), link: $("tab-link"), settings: $("tab-settings")};
-      const forms = {find: searchForm, link: form, settings: $("settings-title")};
+
+      const tabs = {find: $("tab-find"), link: $("tab-link"), paste: $("tab-paste"), saved: $("tab-saved"), settings: $("tab-settings")};
+      const forms = {find: searchForm, link: form, paste: $("paste-title"), saved: $("saved-form"), settings: $("settings-title")};
 
       //The results pane and the detail pane each show one state at a time.
       const RESULT_STATES = ["state-initial", "state-loading", "state-results", "state-error"];
@@ -107,12 +108,18 @@ window.JobParser = {
           tabs[key].setAttribute("aria-selected", String(key === name));
           forms[key].hidden = key !== name;
         }
-        main.classList.toggle("view-find", name === "find");
+
+        main.classList.toggle("view-find", name === "find" || name === "saved");
         main.classList.toggle("view-link", name === "link");
+        main.classList.toggle("view-paste", name === "paste");
         main.classList.toggle("view-settings", name === "settings");
         $("settings-pane").hidden = name !== "settings";
+        $("paste-pane").hidden = name !== "paste";
+        $("results-pane").hidden = name === "saved";
+        $("saved-pane").hidden = name !== "saved";
         setFiltersOpen(false);
         setHistoryOpen(false);
+
         //The panes can only be scrolled once they are showing again.
         if (scrolls[name]) {
           listPane.scrollTop = scrolls[name].list;
@@ -122,6 +129,14 @@ window.JobParser = {
           window.Settings?.refresh();
           return;
         }
+
+        if (name === "saved") loadSaved();
+
+        if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
+          showInitial("Search by job title, location, company or industry. Results appear here.");
+        }
+        ({find: $("search-keywords"), link: input, paste: $("paste-text"), saved: $("saved-q")})[name]?.focus();
+
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
           showInitial("Search by job title, location, company or industry. Results appear here.");
         }
@@ -141,11 +156,11 @@ window.JobParser = {
         showDetail("detail-error");
       };
 
-      const keyOf = result => `${result.board}/${result.external_id}`;
+      const keyOf = result => result.id ? `job/${result.id}` : `${result.board}/${result.external_id}`;
 
       //highlights the open listing in the result list, if it is on this page
       const markSelected = () => {
-        for (const row of $("result-list").children) {
+        for (const row of document.querySelectorAll(".result")) {
           const selected = row.dataset.key === selectedKey;
           row.classList.toggle("selected", selected);
           row.querySelector(".result-open")?.setAttribute("aria-current", selected ? "true" : "false");
@@ -182,7 +197,6 @@ window.JobParser = {
         fromResults = opened;
         selectedKey = opened ? keyOf(data) : "";
         markSelected();
-        $("back-to-results").hidden = !(opened && results);
 
         $("job-title").textContent = data.position_title || "Unknown position";
         $("job-company").textContent = data.company_name || "Unknown company";
@@ -198,6 +212,16 @@ window.JobParser = {
         showDetail("state-success");
         $("detail-pane").scrollTop = 0;
         rememberListing(data);
+
+        const saved = Boolean(data.id);
+        $("save-listing").hidden = saved || !data.board;
+        $("save-listing").textContent = "Save job";
+        $("save-listing").disabled = false;
+        $("delete-job").hidden = !saved;
+        $("reload-listing").hidden = saved || !data.board;
+        $("back-to-results").hidden = !(opened && (results || activeTab === "saved"));
+        renderAnalysis(saved ? data.id : null);
+
       };
 
       //The last listing opened, for Home's "Keep reading". Everything the detail pane shows is kept, so it
@@ -379,7 +403,7 @@ window.JobParser = {
       };
 
       //get one row of the search results and define it's html
-      const resultItem = result => {
+      const resultItem = (result, onOpen = r => displayPosting(r, true)) => {
         const item = document.createElement("li");
         item.className = "result";
         item.dataset.key = keyOf(result);
@@ -409,7 +433,7 @@ window.JobParser = {
           //attempted fix for selection delay?
           item.addEventListener("click", event => {
             if (event.target.closest("a")) return;
-            displayPosting(result, true);
+            onOpen(result);
           });
           
           body.append(open);
@@ -419,7 +443,7 @@ window.JobParser = {
             if (event.target.closest("button, a")) return; //they handle their own clicks
             const selection = window.getSelection();
             if (!selection.isCollapsed && item.contains(selection.anchorNode)) return; //a drag to select text is not a click to open
-            displayPosting(result, true);
+            onOpen(result);
           });
 
           const preview = snippet(result.raw_text);
@@ -665,6 +689,11 @@ window.JobParser = {
       //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
       tabs.find.addEventListener("click", () => selectTab("find"));
       tabs.link.addEventListener("click", () => selectTab("link"));
+
+      tabs.paste.addEventListener("click", () => selectTab("paste"));
+      tabs.saved.addEventListener("click", () => selectTab("saved"));
+
+
       tabs.settings.addEventListener("click", () => selectTab("settings"));
 
       searchForm.addEventListener("submit", event => {
@@ -721,6 +750,141 @@ window.JobParser = {
       $("reload-listing").addEventListener("click", reloadPosting);
       $("try-again").addEventListener("click", () => searchRetry ? searchRetry() : selectTab("find"));
       $("detail-try-again").addEventListener("click", () => detailRetry ? detailRetry() : showDetailEmpty());
+
+      const jobsApi = window.FistBumpAPI.jobs;
+
+      // ---- Save from Greenhouse (Open a link and search results both go through displayPosting) ----
+      $("save-listing").addEventListener("click", async () => {
+        const btn = $("save-listing");
+        btn.disabled = true;
+        try {
+          const {imported} = await window.FistBumpAPI.importJobs([{board: posting.board, external_id: posting.external_id}]);
+          btn.textContent = imported.length ? "Saved" : "Updated";
+        } catch (error) {
+          btn.disabled = false;
+          window.alert(error.message); // for example, the posting has closed (404)
+        }
+      });
+
+      // ---- Saved tab ----
+      const loadSaved = async () => {
+        try {
+          const jobs = await jobsApi.list($("saved-q").value.trim());
+          $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
+          $("saved-empty-message").textContent = "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
+          $("saved-empty").hidden = jobs.length > 0;
+          markSelected();
+        } catch (error) {
+          $("saved-empty-message").textContent = error.message;
+          $("saved-empty").hidden = false;
+        }
+      };
+      $("saved-q").addEventListener("input", loadSaved);
+      $("saved-form").addEventListener("submit", event => event.preventDefault());
+
+      // Same shape as loadPosting
+      const openSavedJob = async row => {
+        detailRetry = () => openSavedJob(row);
+        showDetailLoading("Opening the job\u2026");
+        const mine = detailSeq;
+        try {
+          const job = await jobsApi.get(row.id);
+          if (mine === detailSeq) displayPosting(job, true);
+        } catch (error) {
+          if (mine === detailSeq) showDetailError(error);
+        }
+      };
+
+      // ---- Delete ----
+      $("delete-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        if (!window.confirm(`Delete "${posting.position_title}" at ${posting.company_name}? This cannot be undone.`)) return;
+        try {
+          await jobsApi.delete(posting.id);
+          showDetailEmpty();
+          loadSaved();
+        } catch (error) {
+          window.alert(error.message); // the 409 message when an application uses this job
+        }
+      });
+
+      // ---- Analysis panel: runs whenever a saved job opens ----
+      let analysisSeq = 0;
+      const renderAnalysis = async id => {
+        const {el, fill, chips} = window.ResumeBuilder;
+        const box = $("analysis");
+        const mine = ++analysisSeq;
+        box.hidden = !id;
+        box.replaceChildren();
+        if (!id) return;
+        try {
+          const [a, master] = await Promise.all([jobsApi.analyze(id), window.FistBumpAPI.resume.get()]);
+          if (mine !== analysisSeq) return; // a newer job opened meanwhile
+          const titles = Object.fromEntries(master.experiences.map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
+          const group = (heading, split) => {
+            const matched = [...split.tech.matched, ...split.soft.matched];
+            const missing = [...split.tech.missing, ...split.soft.missing];
+            if (!matched.length && !missing.length) return null;
+            return el("div", {},
+              el("h4", {text: heading}),
+              matched.map(m => el("p", {}, `\u2713 ${m.skill}`,
+                m.experience_ids.length
+                  ? el("small", {text: ` \u2014 ${m.experience_ids.map(i => titles[i]).filter(Boolean).join("; ")}`})
+                  : null)),
+              missing.length ? [el("p", {text: "Missing"}), chips(missing)] : null);
+          };
+          const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !g.missing.length);
+          fill(box,
+            el("h3", {text: noRequired ? "This posting lists no required skills" : `Skill match: ${Math.round(a.score * 100)}% of required skills`}),
+            group("Required", a.required),
+            group("Preferred", a.preferred));
+        } catch (error) {
+          // includes the 409 "create a profile first"
+          if (mine === analysisSeq) fill(box, el("p", {class: "note", text: error.message}));
+        }
+      };      
+
+      const PASTE_SPEC = [
+        {name: "company_name", label: "Company", required: true},
+        {name: "position_title", label: "Title", required: true},
+        {name: "location", label: "Location"},
+        {name: "work_mode", label: "Work mode", type: "select",
+         options: [["", "Not stated"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"]]},
+        {name: "listing_url", label: "Link to the listing", type: "url"},
+        {name: "company_url", label: "Company website", type: "url"},
+      ];
+
+      $("paste-preview").addEventListener("click", async () => {
+        const {el, fill, chips, makeForm} = window.ResumeBuilder;
+        const text = $("paste-text").value;
+        try {
+          const parsed = await jobsApi.parse(text);
+          const form = makeForm(PASTE_SPEC, parsed.inferred, {idPrefix: "paste"});
+          const skills = (label, list) => list.length ? [el("p", {text: label}), chips(list)] : null;
+
+          const save = el("button", {class: "primary", type: "button", text: "Save job", onclick: async () => {
+            // drop blank fields (read() turns them into null)
+            const body = Object.fromEntries(Object.entries(form.read()).filter(([, value]) => value !== null));
+            try {
+              const job = await jobsApi.create({...body, source: "pasted", raw_text: text});
+              selectTab("saved");
+              displayPosting(job, true);
+            } catch (error) {
+              form.showError(error);
+            }
+          }});
+
+          fill($("paste-result"),
+            parsed.hidden_text && el("p", {class: "note", text: "Hidden text was removed from this posting."}),
+            form.el,
+            skills("Required skills", [...parsed.req_tech_skills, ...parsed.req_soft_skills]),
+            skills("Preferred skills", [...parsed.pref_tech_skills, ...parsed.pref_soft_skills]),
+            save);
+        } catch (error) {
+          const {el, fill} = window.ResumeBuilder;
+          fill($("paste-result"), el("p", {class: "note", text: error.message}));
+        }
+      });
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
       const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
