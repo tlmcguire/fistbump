@@ -218,6 +218,9 @@ window.JobParser = {
         $("save-listing").textContent = "Save job";
         $("save-listing").disabled = false;
         $("delete-job").hidden = !saved;
+
+        $("tailor-job").hidden = !saved;
+        
         $("reload-listing").hidden = saved || !data.board;
         $("back-to-results").hidden = !(opened && (results || activeTab === "saved"));
         renderAnalysis(saved ? data.id : null);

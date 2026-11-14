@@ -7,7 +7,10 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
    'settings:get', 'settings:put',
    'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases',
-   'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import'];
+   'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import',
+   'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
+   'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
+   'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',];
 
 // Cleanup targets the settings page may ask for. The backend validates them again.
 const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
@@ -22,6 +25,10 @@ const seg = (s) => encodeURIComponent(String(s));
 // Ids become path segments, so only positive integers pass. Anything else could reach another route.
 const isId = (id) => Number.isSafeInteger(id) && id > 0;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+//helper function for when a user decides to accept or reject suggested changes
+const decide = (verb) => (rid, sid) =>
+  isId(rid) && isId(sid) ? ['POST', `/v1/revisions/${rid}/suggestions/${sid}/${verb}`] : bad('Invalid suggestion');
 
 // Channels that map straight to one route
 // Each builder checks its arguments, so the renderer can only reach a route it was given.
@@ -46,6 +53,25 @@ const ROUTES = {
   'resumes:update': (id, body) => isId(id) && isObject(body) ? ['PUT', `/v1/resumes/${id}`, body] : bad('Invalid resume'),
   'resumes:delete': (id) => isId(id) ? ['DELETE', `/v1/resumes/${id}`] : bad('Invalid resume id'),
 
+  //new routes for handling revisions, suggestions, and the management of tailored resumes
+  'revisions:create': (body) => isObject(body) && isId(body.job_id) ? ['POST', '/v1/revisions', body] : bad('Choose a job first.'),
+  'revisions:list': (jobId) => ['GET', isId(jobId) ? `/v1/revisions?job_id=${jobId}` : '/v1/revisions'],
+  'revisions:get': (id) => isId(id) ? ['GET', `/v1/revisions/${id}`] : bad('Invalid revision id'),
+  'revisions:cancel': (id) => isId(id) ? ['POST', `/v1/revisions/${id}/cancel`] : bad('Invalid revision id'),
+  'revisions:delete': (id) => isId(id) ? ['DELETE', `/v1/revisions/${id}`] : bad('Invalid revision id'),
+  'suggestions:accept': decide('accept'),
+  'suggestions:reject': decide('reject'),
+  'suggestions:edit': (rid, sid, text) => isId(rid) && isId(sid) && typeof text === 'string' && text.trim()
+    ? ['POST', `/v1/revisions/${rid}/suggestions/${sid}/edit`, { edited_text: text }] : bad('Write the edited text.'),
+  'tailored:create': (revisionId) => isId(revisionId) ? ['POST', '/v1/tailored-resumes', { revision_id: revisionId }] : bad('Invalid revision id'),
+  'tailored:list': (jobId) => ['GET', isId(jobId) ? `/v1/tailored-resumes?job_id=${jobId}` : '/v1/tailored-resumes'],
+  'tailored:get': (id) => isId(id) ? ['GET', `/v1/tailored-resumes/${id}`] : bad('Invalid id'),
+  'tailored:diff': (id) => isId(id) ? ['GET', `/v1/tailored-resumes/${id}/diff`] : bad('Invalid id'),
+  'tailored:delete': (id) => isId(id) ? ['DELETE', `/v1/tailored-resumes/${id}`] : bad('Invalid id'), 
+
+
+
+  
   'settings:get': () => ['GET', '/v1/settings'],
   'settings:put': (values) => isObject(values) ? ['PUT', '/v1/settings', values] : bad('Invalid settings'),
 

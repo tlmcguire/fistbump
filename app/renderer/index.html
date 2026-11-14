@@ -32,6 +32,8 @@
                         <div id="tree-resume" class="tree-body">
                             <button type="button" id="nav-resume" class="nav-item" data-route="resume"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Master resume</button>
                             <ul id="tree-versions" class="tree-children" aria-label="Saved versions"></ul>
+                            <!--new tailor button-->
+                            <button type="button" id="nav-tailor" class="nav-item" data-route="tailor"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Tailor</button>
                         </div>
                     </div>
                 </nav>
@@ -462,6 +464,9 @@
             <!-- phase 3 resume view-->
             <main id="view-home" class="main" hidden></main>
             <main id="view-resume" class="main" hidden></main>
+
+            <!--phase 5 tailor view-->
+            <main id="view-tailor" class="main" hidden></main>
         </div>
 
         <script src="js/prefs.js" defer></script>
@@ -469,6 +474,8 @@
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
         <script src="views/resume-builder/resume-builder.js" defer></script>
+        <script src="js/worddiff.js" defer></script>
+        <script src="views/diff-view/diff-view.js" defer></script>
         <script src="views/home/home.js" defer></script>
         <script src="js/sidebar.js" defer></script>
         <script src="views/settings/settings.js" defer></script>

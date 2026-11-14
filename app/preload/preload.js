@@ -50,6 +50,28 @@ contextBridge.exposeInMainWorld('api', {
     delete: (id) => ipcRenderer.invoke('resumes:delete', id),
   },
 
+  //new in phase 5, for revisions suggestions and tailored resumes
+  revisions: {
+    create: (body) => ipcRenderer.invoke('revisions:create', body),
+    list: (jobId) => ipcRenderer.invoke('revisions:list', jobId),
+    get: (id) => ipcRenderer.invoke('revisions:get', id),
+    cancel: (id) => ipcRenderer.invoke('revisions:cancel', id),
+    delete: (id) => ipcRenderer.invoke('revisions:delete', id),
+  },
+  suggestions: {
+    accept: (rid, sid) => ipcRenderer.invoke('suggestions:accept', rid, sid),
+    reject: (rid, sid) => ipcRenderer.invoke('suggestions:reject', rid, sid),
+    edit: (rid, sid, text) => ipcRenderer.invoke('suggestions:edit', rid, sid, text),
+  },
+  tailored: {
+    create: (revisionId) => ipcRenderer.invoke('tailored:create', revisionId),
+    list: (jobId) => ipcRenderer.invoke('tailored:list', jobId),
+    get: (id) => ipcRenderer.invoke('tailored:get', id),
+    diff: (id) => ipcRenderer.invoke('tailored:diff', id),
+    delete: (id) => ipcRenderer.invoke('tailored:delete', id),
+  },
+  
+
   //new in phase 3
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
