@@ -29,6 +29,12 @@ const VIEWS = {
     container: "view-resume",
     mount: container => window.ResumeBuilder.mount(container),
   },
+
+  tailor: {
+    container: "view-tailor",
+    mount: container => window.Tailor.mount(container),
+    redraw: true,
+  },
 };
 
 // A hidden pane forgets how far it was scrolled, so the offsets are noted before hiding and put back after showing.
@@ -78,7 +84,7 @@ function show(name) {
     mounted.get(name)?.();
   }
   app.dataset.route = name;
-  for (const [id, route] of [["nav-home", "home"], ["nav-resume", "resume"]]) {
+  for (const [id, route] of [["nav-home", "home"], ["nav-resume", "resume"], ["nav-tailor", "tailor"]]) {
     const item = document.getElementById(id);
     if (name === route) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
@@ -117,6 +123,7 @@ for (const id of ["tab-find", "tab-link", "tab-paste", "tab-saved", "tab-setting
 }
 document.getElementById("nav-home").addEventListener("click", () => { location.hash = "#/home"; });
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
+document.getElementById("nav-tailor").addEventListener("click", () => { location.hash = "#/tailor"; });
 
 // What Home needs to open the other views: go("resume") shows a view at once, openTab("tab-find") a Jobs tab.
 window.App = {

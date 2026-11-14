@@ -1594,3 +1594,16 @@ input.switch:checked::after { transform: translateX(16px); }
 .underline-links a:not(.button) { text-decoration: underline; }
 .result-link { text-decoration: none; }
 .underline-links .result-link { text-decoration: underline; }
+
+/* tailor view */
+.tailor { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 22px 28px 40px; }
+.tailor-stage { display: flex; flex-direction: column; gap: 14px; }
+.tailor-picker, .tailor-head, .tailor-actions, .tailor-rounds { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tailor-picker select { min-width: 200px; }
+.tailor-round[aria-pressed="true"] { border-color: var(--accent); }
+.tailor-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.diff-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.diff-col { white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-col h4 { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.tailor ins { background: rgba(46, 160, 67, 0.28); color: inherit; text-decoration: none; }
+.tailor del { background: rgba(248, 81, 73, 0.28); color: inherit; }
