@@ -1,0 +1,18 @@
+{
+  "hidden_characters": 124,
+  "inferred": {
+    "company_name": "Palmetto Ledger",
+    "position_title": "Junior Data Engineer",
+    "location": "Columbia, SC",
+    "work_mode": "On-site"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [],
+  "req_soft_skills": [],
+  "req_tech_skills": [
+    "airflow",
+    "python",
+    "sql"
+  ],
+  "requirements": 3
+}

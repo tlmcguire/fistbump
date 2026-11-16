@@ -1,0 +1,27 @@
+Frontend Engineer
+Marshgrass Labs
+Charleston, SC (Hybrid)
+
+About Marshgrass Labs
+We make field-data apps for coastal research teams. Our small product team ships every week.
+
+This is a hybrid role with three days a week in our downtown office.
+
+Responsibilities:
+• Build new screens in React and TypeScript
+• Work with designers in Figma to refine flows
+• Write tests with Jest and Cypress
+
+Qualifications:
+• 3+ years of professional JavaScript or TypeScript
+• Solid HTML and CSS, including accessibility basics
+• Experience with React
+• Git and code review habits
+• Collaborative and curious, comfortable with feedback
+
+Preferred qualifications:
+• React Native
+• GraphQL
+• Node.js on the server side
+
+Salary range: $95,000 to $120,000.
