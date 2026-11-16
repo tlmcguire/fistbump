@@ -1,0 +1,21 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Harborlight Health",
+    "position_title": "IT Support Specialist",
+    "location": "Raleigh, North Carolina",
+    "work_mode": "On-site"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [],
+  "req_soft_skills": [
+    "communication"
+  ],
+  "req_tech_skills": [
+    "azure",
+    "jira",
+    "linux",
+    "powershell"
+  ],
+  "requirements": 0
+}

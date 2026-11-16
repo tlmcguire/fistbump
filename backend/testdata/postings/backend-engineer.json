@@ -1,0 +1,29 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Oakline Software",
+    "position_title": "Senior Backend Engineer",
+    "location": "Remote - US",
+    "work_mode": "Remote"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "hipaa",
+    "kafka",
+    "terraform"
+  ],
+  "req_soft_skills": [
+    "communication"
+  ],
+  "req_tech_skills": [
+    "docker",
+    "go",
+    "grpc",
+    "java",
+    "kubernetes",
+    "postgresql",
+    "rest",
+    "sql"
+  ],
+  "requirements": 5
+}
