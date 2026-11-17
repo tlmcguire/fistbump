@@ -64,7 +64,7 @@ One column, US Letter, 0.6 inch margins. The PDF follows the Markdown structure 
 
 Progress:
 
-- [ ] 1. `pdf/fonts/`
+- [x] 1. `pdf/fonts/`
 - [ ] 2. `pdf.go`
 - [x] 3. `export.go` (api)
 - [ ] 4. `backend.js` binary responses
