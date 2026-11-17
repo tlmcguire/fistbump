@@ -49,6 +49,8 @@ type Config struct {
 
 	// Engines write resume suggestions. Rules is filled in when left nil, so a zero Config works.
 	Engines ai.Engines
+	// PDF turns resume Markdown into a PDF. Without it, PDF export fails and offers Markdown.
+	PDF func(markdown string) ([]byte, error)
 	// BaseContext is the parent of every background round. Cancel it to stop them at shutdown.
 	// Nil means context.Background().
 	BaseContext context.Context
@@ -69,7 +71,9 @@ type Server struct {
 	parse   func(raw string) parser.Result
 	analyze func(job models.Job, m models.Master) analyze.Result
 	rounds  *roundRunner // background suggestion rounds, see revisions.go
-	handler http.Handler // the mux wrapped in middleware, built once in New
+	// renderPDF makes the PDF for the export routes; tests swap it for a fake.
+	renderPDF func(markdown string) ([]byte, error)
+	handler   http.Handler // the mux wrapped in middleware, built once in New
 }
 
 // route pairs a mux pattern ("METHOD /path/{wildcard}") with its handler.
@@ -102,6 +106,7 @@ func (s *Server) routes() []route {
 		{"POST /v1/resume/import", s.resumeImport},
 		{"POST /v1/resume/import/apply", s.resumeImportApply},
 		{"GET /v1/resume/preview", s.resumePreview},
+		{"POST /v1/resume/export", s.resumeExport},
 		{"GET /v1/resumes", s.resumeList},
 		{"POST /v1/resumes", s.resumeCreate},
 		{"GET /v1/resumes/{id}", s.resumeGetOne},
@@ -130,6 +135,7 @@ func (s *Server) routes() []route {
 		{"GET /v1/tailored-resumes", s.tailoredList},
 		{"GET /v1/tailored-resumes/{id}", s.tailoredGet},
 		{"GET /v1/tailored-resumes/{id}/diff", s.tailoredDiff},
+		{"POST /v1/tailored-resumes/{id}/export", s.tailoredExport},
 		{"DELETE /v1/tailored-resumes/{id}", s.tailoredDelete},
 	}
 }
@@ -249,6 +255,8 @@ func New(cfg Config) *Server {
 		version: cfg.Version,
 		parse:   parser.Parse,
 		analyze: analyze.Run,
+
+		renderPDF: cfg.PDF,
 	}
 	engines := cfg.Engines
 	if engines.Rules == nil {
