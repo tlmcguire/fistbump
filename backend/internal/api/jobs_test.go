@@ -272,3 +272,32 @@ func TestSearchSkillScorerNeedsProfile(t *testing.T) {
 		t.Errorf("score for a posting the resume fits = %v, want 1", got)
 	}
 }
+
+// TestJobCreateWithRealParser runs a pasted job through the real parser and analyzer, end to end:
+// inferred fields fill the job, and a posting the parser can infer nothing from is a 422.
+func TestJobCreateWithRealParser(t *testing.T) {
+	s := newTestServer(t, &fakeFetcher{}) // parser.Parse and analyze.Run, not the fakes
+	body, _ := json.Marshal(map[string]string{"raw_text": "Data Analyst\nTidewater Logistics, Inc.\nSavannah, GA\n\n" +
+		"Requirements\n- 2+ years of SQL\n- Advanced Excel\n- Tableau or Power BI\n\nThis position is on-site.​"})
+	out := expect(t, call(t, s, "POST", "/v1/jobs", string(body)), 201)
+	if out["company_name"] != "Tidewater Logistics, Inc." || out["position_title"] != "Data Analyst" ||
+		out["location"] != "Savannah, GA" || out["work_mode"] != "On-site" {
+		t.Errorf("inferred fields = %v", out)
+	}
+	if got := fmt.Sprint(out["req_tech_skills"]); got != "[excel power bi sql tableau]" {
+		t.Errorf("req_tech_skills = %s", got)
+	}
+	if out["hidden_text"].(map[string]any)["characters"] != float64(1) {
+		t.Errorf("hidden_text = %v", out["hidden_text"])
+	}
+
+	putProfile(t, s) // skills: sql, excel
+	res := expect(t, call(t, s, "POST", fmt.Sprintf("/v1/jobs/%v/analyze", out["id"]), ""), 200)
+	if res["score"] != 0.5 {
+		t.Errorf("score = %v, want 0.5 (sql and excel of four)", res["score"])
+	}
+
+	// One long sentence: no title line, no company, so the job cannot be saved.
+	body, _ = json.Marshal(map[string]string{"raw_text": strings.Repeat("we need someone who knows sql and excel well ", 3)})
+	expectField(t, call(t, s, "POST", "/v1/jobs", string(body)), "company_name")
+}

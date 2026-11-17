@@ -14,6 +14,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
@@ -526,7 +527,7 @@ func (s *Server) jobFromPosting(p connectors.Posting) models.Job {
 		j.Location = &p.Location
 	}
 	mode := greenhouse.WorkMode(p.Location, p.PositionTitle)
-	if described := greenhouse.DescribedMode(p.RawText); mode == connectors.WorkModeOnSite && described != "" {
+	if described := parser.DescribedMode(p.RawText); mode == connectors.WorkModeOnSite && described != "" {
 		mode = described
 	}
 	j.WorkMode = &mode

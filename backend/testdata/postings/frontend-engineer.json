@@ -1,0 +1,28 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Marshgrass Labs",
+    "position_title": "Frontend Engineer",
+    "location": "Charleston, SC",
+    "work_mode": "Hybrid"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "graphql",
+    "node.js",
+    "react native"
+  ],
+  "req_soft_skills": [
+    "collaboration",
+    "curiosity"
+  ],
+  "req_tech_skills": [
+    "css",
+    "git",
+    "html",
+    "javascript",
+    "react",
+    "typescript"
+  ],
+  "requirements": 5
+}
