@@ -98,3 +98,13 @@ func TestRulesStopWhenCanceled(t *testing.T) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}
 }
+
+func TestMatchedSkillsListToolsBeforeTraits(t *testing.T) {
+	a := analyze.Result{}
+	a.Required.Soft.Matched = []analyze.Match{{Skill: "communication"}}
+	a.Preferred.Tech.Matched = []analyze.Match{{Skill: "python"}}
+	a.Required.Tech.Matched = []analyze.Match{{Skill: "sql"}}
+	if got := strings.Join(matchedSkills(a), ","); got != "sql,python,communication" {
+		t.Errorf("got %q", got)
+	}
+}

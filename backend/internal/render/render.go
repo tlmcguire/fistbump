@@ -147,7 +147,7 @@ type Change struct {
 }
 
 // Apply returns base with each change applied in order, plus the changes it could not place.
-// A change replaces the first occurrence of its Original. A change with an empty Original is a
+// A change replaces its Original where it stands as a block, else its first occurrence. A change with an empty Original is a
 // new summary and goes under a "## Summary" heading before the first section.
 //
 // A change is not placed when its Original is missing from base, which happens when the base is
@@ -162,13 +162,48 @@ func Apply(base string, changes []Change) (string, []Change) {
 			}
 			continue
 		}
-		if !strings.Contains(base, c.Original) {
+		i := find(base, c.Original)
+		if i < 0 {
 			notFound = append(notFound, c)
 			continue
 		}
-		base = strings.Replace(base, c.Original, c.Final, 1)
+		base = base[:i] + c.Final + base[i+len(c.Original):]
 	}
 	return base, notFound
+}
+
+// find returns where original sits in text, or -1. It prefers a spot where original is a whole
+// block (the way Master writes it), then a spot where it is whole lines, then the first occurrence.
+// Without this, a skills line such as "excel, sql" would be replaced inside an earlier description
+// that happens to contain the same words.
+func find(text, original string) int {
+	first, line := -1, -1
+	for from := 0; from <= len(text); {
+		i := strings.Index(text[from:], original)
+		if i < 0 {
+			break
+		}
+		i += from
+		end := i + len(original)
+		if (i == 0 || text[i-1] == '\n') && (end == len(text) || text[end] == '\n') {
+			blockStart := i == 0 || strings.HasSuffix(text[:i], "\n\n")
+			blockEnd := end == len(text) || strings.HasPrefix(text[end:], "\n\n") || text[end:] == "\n"
+			if blockStart && blockEnd {
+				return i
+			}
+			if line < 0 {
+				line = i
+			}
+		}
+		if first < 0 {
+			first = i
+		}
+		from = i + 1
+	}
+	if line >= 0 {
+		return line
+	}
+	return first
 }
 
 // insertSummary adds a summary section before the first "## " heading, or at the end when there
