@@ -13,14 +13,14 @@
       mount(container) {
         const {el, fill} = window.ResumeBuilder;
         const api = window.FistBumpAPI;
-        const SECTION = {summary: "Summary", experience: "Experience", skills: "Skills"};
+        const SECTION = {header: "Header", summary: "Summary", experience: "Experience", education: "Education", skills: "Skills"};
         const STATUS = {queued: "Starting", running: "Writing", done: "Ready", failed: "Failed", canceled: "Canceled"};
         const ENGINE = {local: "Local AI", remote: "Remote AI", rules: "Rules"};
   
         let jobId = null;
         let revId = null;       //the round being reviewed
         let tailoredId = null;  //set while a tailored resume is open
-        let warnings = [];
+        const warned = new Map(); //warnings from building a tailored resume, by its id
         let rounds = [];        //newest first, each with its number n
         let tailored = [];
         let poll = null;
@@ -177,7 +177,7 @@
               const r = await attempt(() => api.tailored.create(rev.id));
               if (!r) return;
               tailoredId = r.value.id;
-              warnings = r.value.warnings || [];
+              warned.set(tailoredId, r.value.warnings || []);
               await loadRounds();
               drawBody();
             },
@@ -238,6 +238,9 @@
           return tag && text ? el(tag, {text}) : text;
         };
   
+        //"Data Analyst, Acme" for an experience, else the section name
+        const hunkTitle = h => h.heading.replace(/^#+\s*/, "") || SECTION[h.section] || h.section;
+
         const drawTailored = async () => {
           const [t, d] = await Promise.all([attempt(() => api.tailored.get(tailoredId)), attempt(() => api.tailored.diff(tailoredId))]);
           if (!t || !d) { tailoredId = null; return; }
@@ -249,18 +252,18 @@
               return lines ? el("p", {class: "hint", text: `${lines} unchanged line${lines === 1 ? "" : "s"}`}) : null;
             }
             return el("div", {class: "diff-cols"},
-              el("div", {class: "diff-col"}, el("h4", {text: `${SECTION[h.section] || h.section} \u00b7 ${h.status}`}), side(h, "before")),
+              el("div", {class: "diff-col"}, el("h4", {text: `${hunkTitle(h)} \u00b7 ${h.status}`}), side(h, "before")),
               el("div", {class: "diff-col"}, side(h, "after")));
           }));
           fill(stage,
             el("div", {class: "tailor-head"},
               el("strong", {text: "Tailored resume"}),
-              el("button", {type: "button", onclick: () => { tailoredId = null; warnings = []; drawRounds(); drawBody(); }}, "Back to suggestions"),
+              el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, "Back to suggestions"),
               el("button", {type: "button", class: "danger", onclick: async () => {
                 if (!window.confirm("Delete this tailored resume?")) return;
                 if (await attempt(() => api.tailored.delete(t.value.id))) { tailoredId = null; await loadRounds(); drawBody(); }
               }}, "Delete")),
-            warnings.map(w => el("p", {class: "resume-status error", text: String(w)})),
+            (warned.get(tailoredId) || []).map(w => el("p", {class: "resume-status error", text: String(w)})),
             el("label", {class: "hint"},
               el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }}),
               " Show unchanged text"),
