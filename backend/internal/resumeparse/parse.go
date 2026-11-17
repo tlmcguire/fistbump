@@ -255,7 +255,7 @@ func Parse(text string) Draft {
 	cur := secHeader
 	all := strings.Split(strings.ReplaceAll(text, "\r", ""), "\n")
 	for i := range all {
-		all[i] = strings.TrimSpace(all[i])
+		all[i] = markdownLine(strings.TrimSpace(all[i]))
 	}
 	for i, l := range all {
 		// A known heading always counts; a fuzzy one does not when dates follow it, since that is an
@@ -320,6 +320,20 @@ func Parse(text string) Draft {
 		d.Warnings = append(d.Warnings, "No skills section was found. Add your skills by hand.")
 	}
 	return d
+}
+
+var markdownHeadingRe = regexp.MustCompile(`^#{1,6}\s+`)
+
+// markdownLine undoes the Markdown a .md resume carries: a heading mark is dropped, and so is the
+// backslash that render.Escape puts before a leading #, - or * so that text is not read as markup.
+func markdownLine(l string) string {
+	if m := markdownHeadingRe.FindString(l); m != "" {
+		return strings.TrimSpace(l[len(m):])
+	}
+	if len(l) > 1 && l[0] == '\\' && strings.ContainsRune("#-*", rune(l[1])) {
+		return l[1:]
+	}
+	return l
 }
 
 func titleCase(s string) string {
