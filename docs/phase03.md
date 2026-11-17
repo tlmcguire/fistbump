@@ -160,7 +160,7 @@ Progress:
 - [x] 17. `resumeparse/parse.go`
 - [x] 18. `resume_import.go` (api)
 - [x] 19. Import in Electron and the Resume view
-- [ ] Tests and tooling (backend tests and `seed.sql` done; fixtures for import and the Electron and renderer tests remain)
+- [x] Tests and tooling
 
 ### Backend
 
