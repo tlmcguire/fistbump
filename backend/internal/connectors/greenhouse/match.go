@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 )
 
 const minTitleScore = 0.5
@@ -21,9 +22,6 @@ var (
 	phraseFolds = [][2]string{{"front end", "frontend"}, {"back end", "backend"}, {"full stack", "fullstack"}}
 	// Roman numerals fold to digits, so "SOC Analyst I" matches "soc analyst 1".
 	wordFolds = map[string]string{"developer": "engineer", "dev": "engineer", "swe": "engineer", "i": "1", "ii": "2", "iii": "3", "iv": "4"}
-
-	remoteRe = regexp.MustCompile(`\bremote\b`)
-	hybridRe = regexp.MustCompile(`\bhybrid\b`)
 )
 
 // titleWords lower-cases text, folds synonyms and drops seniority words.
@@ -74,14 +72,11 @@ func TitleScore(title string, keywords []string) float64 {
 	return best
 }
 
-// WorkMode reads the mode from the location and title. Remote and Hybrid must be stated.
+// WorkMode reads the mode from the location and title. Remote and Hybrid must be stated
+// (parser.StatedMode); anything else is On-site.
 func WorkMode(location, title string) string {
-	text := strings.ToLower(location + " " + title)
-	switch {
-	case remoteRe.MatchString(text):
-		return connectors.WorkModeRemote
-	case hybridRe.MatchString(text):
-		return connectors.WorkModeHybrid
+	if mode := parser.StatedMode(location + " " + title); mode != "" {
+		return mode
 	}
 	return connectors.WorkModeOnSite
 }
@@ -204,9 +199,14 @@ func LocationScore(location, mode string, terms []string) float64 {
 	return 0
 }
 
-// Score combines title fit and location. Phase 4 adds skill fit and re-weights.
+// Score combines title fit and location, for searches without a resume to compare with.
 func Score(titleScore, locationScore float64) float64 {
 	return round2(0.7*titleScore + 0.3*locationScore)
+}
+
+// SkillFitScore combines title fit, skill fit with the resume, and location.
+func SkillFitScore(titleScore, skillScore, locationScore float64) float64 {
+	return round2(0.5*titleScore + 0.35*skillScore + 0.15*locationScore)
 }
 
 func round2(f float64) float64 { return float64(int(f*100+0.5)) / 100 }
@@ -217,9 +217,6 @@ var (
 	seniorRe = regexp.MustCompile(`\b(senior|sr|iii|iv)\b`)
 	// A manager is a mid-level role unless the title says more: an engineering manager leads a team.
 	leadRe = regexp.MustCompile(`\b(lead|principal|staff|director|head|vp|vice president|chief|associate director|associate vice president|associate general counsel|engineering manager|senior manager|group manager|general manager|managing)\b`)
-
-	describedRemote = regexp.MustCompile(`(?i)\b(fully remote|100% remote|remote[- ]first|this is a remote|remote position|remote role|remote opportunity|work from anywhere|work remotely from)\b`)
-	describedHybrid = regexp.MustCompile(`(?i)\b(hybrid (role|position|work|schedule|model|environment)|this is a hybrid|\d days? (a|per) week (in|at) the office|in[- ]office \d days?)\b`)
 )
 
 // Level reads the experience level from a title. A title that says none is Mid.
@@ -239,18 +236,6 @@ func Level(title string) string {
 }
 
 var nonWordKeepDash = regexp.MustCompile(`[^A-Za-z0-9 -]+`)
-
-// DescribedMode reads a stricter work mode from a description: "fully remote", "hybrid role" and the
-// like. It returns "" when the text does not say, since benefits lists mention "remote" in passing.
-func DescribedMode(text string) string {
-	switch {
-	case describedRemote.MatchString(text):
-		return connectors.WorkModeRemote
-	case describedHybrid.MatchString(text):
-		return connectors.WorkModeHybrid
-	}
-	return ""
-}
 
 // LevelOK applies the requested level.
 func LevelOK(level, want string) bool {

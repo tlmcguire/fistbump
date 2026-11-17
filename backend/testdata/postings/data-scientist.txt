@@ -1,0 +1,18 @@
+Data Scientist, Growth
+Lumen Fields
+Austin, TX
+
+Lumen Fields sells farm sensors. The growth team owns pricing experiments and our go-to-market analytics. We go above and beyond to make results easy to read.
+
+Must have:
+- Python, R and SQL for analysis
+- Statistics and A/B testing experience
+- Machine learning with scikit-style tooling in pandas and NumPy
+- Ability to present results to non-technical teams
+
+Nice-to-have:
+- C or C++ for embedded data collection
+- Experience with Looker
+- Spark
+
+Hybrid: two days a week in our Austin office.

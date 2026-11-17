@@ -1,0 +1,26 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Cobalt Rivers Financial Corp.",
+    "position_title": "Financial Analyst",
+    "location": "Charlotte, NC",
+    "work_mode": "On-site"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "power query",
+    "salesforce",
+    "vba"
+  ],
+  "req_soft_skills": [
+    "stakeholder management"
+  ],
+  "req_tech_skills": [
+    "excel",
+    "financial modeling",
+    "forecasting",
+    "powerpoint",
+    "sql server"
+  ],
+  "requirements": 5
+}

@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('api', {
     categories: () => ipcRenderer.invoke('connectors:categories'),
     logo: (url, board) => ipcRenderer.invoke('connectors:logo', url, board),
     cancelSearch: () => ipcRenderer.invoke('connectors:cancel-search'),
+    //added for phase 
+    import: (postings) => ipcRenderer.invoke('connectors:import', postings),
   },
 
   //Master resume with options for profile, experience, education, and preview
@@ -48,6 +50,28 @@ contextBridge.exposeInMainWorld('api', {
     delete: (id) => ipcRenderer.invoke('resumes:delete', id),
   },
 
+  //new in phase 5, for revisions suggestions and tailored resumes
+  revisions: {
+    create: (body) => ipcRenderer.invoke('revisions:create', body),
+    list: (jobId) => ipcRenderer.invoke('revisions:list', jobId),
+    get: (id) => ipcRenderer.invoke('revisions:get', id),
+    cancel: (id) => ipcRenderer.invoke('revisions:cancel', id),
+    delete: (id) => ipcRenderer.invoke('revisions:delete', id),
+  },
+  suggestions: {
+    accept: (rid, sid) => ipcRenderer.invoke('suggestions:accept', rid, sid),
+    reject: (rid, sid) => ipcRenderer.invoke('suggestions:reject', rid, sid),
+    edit: (rid, sid, text) => ipcRenderer.invoke('suggestions:edit', rid, sid, text),
+  },
+  tailored: {
+    create: (revisionId) => ipcRenderer.invoke('tailored:create', revisionId),
+    list: (jobId) => ipcRenderer.invoke('tailored:list', jobId),
+    get: (id) => ipcRenderer.invoke('tailored:get', id),
+    diff: (id) => ipcRenderer.invoke('tailored:diff', id),
+    delete: (id) => ipcRenderer.invoke('tailored:delete', id),
+  },
+  
+
   //new in phase 3
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -64,5 +88,16 @@ contextBridge.exposeInMainWorld('api', {
     showDataFolder: () => ipcRenderer.invoke('app:show-data-folder'),
     openReleases: (url) => ipcRenderer.invoke('app:open-releases', url),
     // The menu's Settings item (Cmd/Ctrl+,) asks the page to show its settings.
+  },
+
+  //added for phase 4
+  jobs: {
+    parse: (t) => ipcRenderer.invoke('jobs:parse', t),
+    create: (b) => ipcRenderer.invoke('jobs:create', b),
+    list: (q) => ipcRenderer.invoke('jobs:list', q),
+    get: (id) => ipcRenderer.invoke('jobs:get', id),
+    update: (id, b) => ipcRenderer.invoke('jobs:update', id, b),
+    delete: (id) => ipcRenderer.invoke('jobs:delete', id),
+    analyze: (id) => ipcRenderer.invoke('jobs:analyze', id),
   },
 });

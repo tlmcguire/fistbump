@@ -17,7 +17,7 @@ func Master(m models.Master) string {
 	var blocks []string
 	if p := m.Profile; p != nil {
 		if name := strings.TrimSpace(p.FullName); name != "" {
-			blocks = append(blocks, "# "+escape(name))
+			blocks = append(blocks, "# "+Escape(name))
 		}
 		var contact []string
 		for _, v := range []*string{p.HomeLocation, p.Email, p.Phone} {
@@ -30,13 +30,13 @@ func Master(m models.Master) string {
 			blocks = append(blocks, strings.Join(contact, " · "))
 		}
 		if p.Summary != nil && strings.TrimSpace(*p.Summary) != "" {
-			blocks = append(blocks, "## Summary", escape(strings.TrimSpace(*p.Summary)))
+			blocks = append(blocks, "## Summary", Escape(strings.TrimSpace(*p.Summary)))
 		}
 	}
 	if len(m.Experiences) > 0 {
 		blocks = append(blocks, "## Experience")
 		for _, e := range m.Experiences {
-			blocks = append(blocks, "### "+escape(e.JobTitle+", "+e.CompanyName))
+			blocks = append(blocks, "### "+Escape(e.JobTitle+", "+e.CompanyName))
 			meta := []string{}
 			if dates := dateRange(e.StartDate, e.EndDate); dates != "" {
 				meta = append(meta, dates)
@@ -49,7 +49,7 @@ func Master(m models.Master) string {
 			}
 			for _, text := range []*string{e.Description, e.Impact} {
 				if text != nil && strings.TrimSpace(*text) != "" {
-					blocks = append(blocks, escape(*text))
+					blocks = append(blocks, Escape(*text))
 				}
 			}
 		}
@@ -69,7 +69,7 @@ func Master(m models.Master) string {
 			} else if len(degree) == 1 {
 				heading = degree[0] + ", " + e.Institution
 			}
-			blocks = append(blocks, "### "+escape(heading))
+			blocks = append(blocks, "### "+Escape(heading))
 			meta := []string{}
 			if e.GraduationDate != nil {
 				if d := formatDate(*e.GraduationDate); d != "" {
@@ -84,7 +84,7 @@ func Master(m models.Master) string {
 			}
 			for _, text := range []*string{e.Honors, e.Details} {
 				if text != nil && strings.TrimSpace(*text) != "" {
-					blocks = append(blocks, escape(*text))
+					blocks = append(blocks, Escape(*text))
 				}
 			}
 		}
@@ -100,7 +100,7 @@ func Master(m models.Master) string {
 
 // escape backslash-escapes a leading #, - or * on each line, the characters that would turn
 // plain text into a heading or list when the Markdown is read.
-func escape(s string) string {
+func Escape(s string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
@@ -138,4 +138,87 @@ func dateRange(start, end *string) string {
 		return from + " to Present"
 	}
 	return from + " to " + to
+}
+
+// Change is one decided suggestion: the text to find and the text to put there.
+type Change struct {
+	Original string
+	Final    string
+}
+
+// Apply returns base with each change applied in order, plus the changes it could not place.
+// A change replaces its Original where it stands as a block, else its first occurrence. A change with an empty Original is a
+// new summary and goes under a "## Summary" heading before the first section.
+//
+// A change is not placed when its Original is missing from base, which happens when the base is
+// a saved resume the user edited by hand after the suggestions were written.
+func Apply(base string, changes []Change) (string, []Change) {
+	var notFound []Change
+	for _, c := range changes {
+		if c.Original == "" {
+			var ok bool
+			if base, ok = insertSummary(base, c.Final); !ok {
+				notFound = append(notFound, c)
+			}
+			continue
+		}
+		i := find(base, c.Original)
+		if i < 0 {
+			notFound = append(notFound, c)
+			continue
+		}
+		base = base[:i] + c.Final + base[i+len(c.Original):]
+	}
+	return base, notFound
+}
+
+// find returns where original sits in text, or -1. It prefers a spot where original is a whole
+// block (the way Master writes it), then a spot where it is whole lines, then the first occurrence.
+// Without this, a skills line such as "excel, sql" would be replaced inside an earlier description
+// that happens to contain the same words.
+func find(text, original string) int {
+	first, line := -1, -1
+	for from := 0; from <= len(text); {
+		i := strings.Index(text[from:], original)
+		if i < 0 {
+			break
+		}
+		i += from
+		end := i + len(original)
+		if (i == 0 || text[i-1] == '\n') && (end == len(text) || text[end] == '\n') {
+			blockStart := i == 0 || strings.HasSuffix(text[:i], "\n\n")
+			blockEnd := end == len(text) || strings.HasPrefix(text[end:], "\n\n") || text[end:] == "\n"
+			if blockStart && blockEnd {
+				return i
+			}
+			if line < 0 {
+				line = i
+			}
+		}
+		if first < 0 {
+			first = i
+		}
+		from = i + 1
+	}
+	if line >= 0 {
+		return line
+	}
+	return first
+}
+
+// insertSummary adds a summary section before the first "## " heading, or at the end when there
+// is none. It reports false when the base already has a summary, or there is nothing to add.
+func insertSummary(base, summary string) (string, bool) {
+	summary = strings.TrimSpace(summary)
+	if summary == "" || strings.HasPrefix(base, "## Summary\n") || strings.Contains(base, "\n## Summary\n") {
+		return base, false
+	}
+	section := "## Summary\n\n" + summary + "\n\n"
+	if strings.HasPrefix(base, "## ") {
+		return section + base, true
+	}
+	if i := strings.Index(base, "\n## "); i >= 0 {
+		return base[:i+1] + section + base[i+1:], true
+	}
+	return strings.TrimRight(base, "\n") + "\n\n## Summary\n\n" + summary + "\n", true
 }

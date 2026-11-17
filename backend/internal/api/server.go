@@ -12,8 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tlmcguire/fistbump/backend/internal/ai"
+	"github.com/tlmcguire/fistbump/backend/internal/analyze"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
@@ -42,6 +46,12 @@ type Config struct {
 	Caches     []CacheClearer // emptied by storage cleanup
 	Token      string         // per-launch bearer token from FISTBUMP_TOKEN
 	Version    string
+
+	// Engines write resume suggestions. Rules is filled in when left nil, so a zero Config works.
+	Engines ai.Engines
+	// BaseContext is the parent of every background round. Cancel it to stop them at shutdown.
+	// Nil means context.Background().
+	BaseContext context.Context
 }
 
 // Server holds the dependencies handlers need. Handlers are methods on it so they can reach them.
@@ -55,6 +65,10 @@ type Server struct {
 	caches  []CacheClearer
 	token   string
 	version string
+	// parse and analyze are parser.Parse and analyze.Run; tests swap them for fixed results.
+	parse   func(raw string) parser.Result
+	analyze func(job models.Job, m models.Master) analyze.Result
+	rounds  *roundRunner // background suggestion rounds, see revisions.go
 	handler http.Handler // the mux wrapped in middleware, built once in New
 }
 
@@ -96,6 +110,27 @@ func (s *Server) routes() []route {
 		{"GET /v1/settings", s.settingsGet},
 		{"PUT /v1/settings", s.settingsPut},
 		{"GET /v1/connectors/greenhouse/boards/{board}/jobs/{job_id}", s.greenhouseJob},
+		{"POST /v1/connectors/greenhouse/import", s.greenhouseImport},
+		{"POST /v1/jobs/parse", s.jobParse},
+		{"POST /v1/jobs", s.jobCreate},
+		{"GET /v1/jobs", s.jobList},
+		{"GET /v1/jobs/{id}", s.jobGet},
+		{"PUT /v1/jobs/{id}", s.jobUpdate},
+		{"DELETE /v1/jobs/{id}", s.jobDelete},
+		{"POST /v1/jobs/{id}/analyze", s.jobAnalyze},
+		{"POST /v1/revisions", s.revisionCreate},
+		{"GET /v1/revisions", s.revisionList},
+		{"GET /v1/revisions/{id}", s.revisionGet},
+		{"POST /v1/revisions/{id}/cancel", s.revisionCancel},
+		{"DELETE /v1/revisions/{id}", s.revisionDelete},
+		{"POST /v1/revisions/{id}/suggestions/{sid}/accept", s.suggestionAccept},
+		{"POST /v1/revisions/{id}/suggestions/{sid}/reject", s.suggestionReject},
+		{"POST /v1/revisions/{id}/suggestions/{sid}/edit", s.suggestionEdit},
+		{"POST /v1/tailored-resumes", s.tailoredCreate},
+		{"GET /v1/tailored-resumes", s.tailoredList},
+		{"GET /v1/tailored-resumes/{id}", s.tailoredGet},
+		{"GET /v1/tailored-resumes/{id}/diff", s.tailoredDiff},
+		{"DELETE /v1/tailored-resumes/{id}", s.tailoredDelete},
 	}
 }
 
@@ -212,7 +247,18 @@ func New(cfg Config) *Server {
 		caches:  cfg.Caches,
 		token:   cfg.Token,
 		version: cfg.Version,
+		parse:   parser.Parse,
+		analyze: analyze.Run,
 	}
+	engines := cfg.Engines
+	if engines.Rules == nil {
+		engines.Rules = ai.Rules{}
+	}
+	base := cfg.BaseContext
+	if base == nil {
+		base = context.Background()
+	}
+	s.rounds = newRoundRunner(base, engines, s.failRound)
 	mux := http.NewServeMux()
 
 	// A set of built patterns, because registering the same pattern twice panics at startup.

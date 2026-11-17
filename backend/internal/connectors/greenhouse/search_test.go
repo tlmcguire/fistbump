@@ -491,3 +491,34 @@ func TestSearchReportsExactMatches(t *testing.T) {
 		t.Errorf("no keywords: exact %d", r.ExactMatched)
 	}
 }
+
+func TestSearchRanksBySkillFit(t *testing.T) {
+	s := &searchServer{
+		boards: map[string][]fakeJob{"acme": {
+			{1, "Data Analyst", "Austin, TX", "2026-10-05T00:00:00Z"},
+			{2, "Data Analyst II", "Austin, TX", "2026-10-01T00:00:00Z"},
+		}},
+		pay: map[string]string{"acme/2": "Python and SQL."},
+	}
+	c := s.client(t)
+	q := query("data analyst")
+	q.Level = connectors.LevelAny
+	r, _ := c.Search(context.Background(), q, []string{"acme"})
+	if r.Postings[0].ExternalID != "1" {
+		t.Fatalf("without a scorer, order = %v", titles(r))
+	}
+
+	q.SkillScore = func(text string) float64 {
+		if strings.Contains(text, "Python") {
+			return 1
+		}
+		return 0
+	}
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 2 || r.Postings[0].ExternalID != "2" {
+		t.Fatalf("with a scorer, order = %v; the better skill fit should move up", titles(r))
+	}
+	if p := r.Postings[0]; p.SkillScore != 1 || p.Score != SkillFitScore(p.TitleScore, 1, 0) {
+		t.Errorf("scores = %+v", p)
+	}
+}

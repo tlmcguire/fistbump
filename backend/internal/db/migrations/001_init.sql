@@ -59,6 +59,8 @@ CREATE TABLE jobs (
   listing_url      TEXT,
   source           TEXT NOT NULL DEFAULT 'pasted' CHECK (source IN ('pasted','manual','greenhouse')),
   external_id      TEXT,
+  board            TEXT,  -- Greenhouse board token; NULL for pasted and manual jobs
+  company_url      TEXT,  -- direct link to the company (its own job page or site); NULL when unknown
   work_mode        TEXT,
   employment_type  TEXT,
   location         TEXT,
@@ -103,7 +105,9 @@ CREATE TABLE suggestions (
   proposed_text TEXT NOT NULL,
   state         TEXT NOT NULL DEFAULT 'pending'
                 CHECK (state IN ('pending','accepted','rejected','edited')),
-  edited_text   TEXT
+  edited_text   TEXT,
+  engine        TEXT NOT NULL DEFAULT 'rules'
+                CHECK (engine IN ('local','remote','rules'))
 );
 CREATE INDEX idx_suggestions_revision ON suggestions(revision_id);
 

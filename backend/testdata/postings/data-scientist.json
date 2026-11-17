@@ -1,0 +1,29 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Lumen Fields",
+    "position_title": "Data Scientist, Growth",
+    "location": "Austin, TX",
+    "work_mode": "Hybrid"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "c",
+    "c++",
+    "embedded",
+    "looker",
+    "spark"
+  ],
+  "req_soft_skills": [],
+  "req_tech_skills": [
+    "a/b testing",
+    "machine learning",
+    "numpy",
+    "pandas",
+    "python",
+    "r",
+    "sql",
+    "statistics"
+  ],
+  "requirements": 4
+}

@@ -1,0 +1,33 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Anthropic",
+    "position_title": "Applied AI Architect",
+    "location": "Tokyo, Japan",
+    "work_mode": "Hybrid"
+  },
+  "pref_soft_skills": [
+    "mentoring",
+    "teaching"
+  ],
+  "pref_tech_skills": [
+    "cloud computing",
+    "data science",
+    "llm",
+    "machine learning",
+    "python"
+  ],
+  "req_soft_skills": [
+    "communication",
+    "customer-facing",
+    "english",
+    "japanese",
+    "stakeholder management"
+  ],
+  "req_tech_skills": [
+    "sales engineering",
+    "solutions architecture",
+    "technical account management"
+  ],
+  "requirements": 4
+}
