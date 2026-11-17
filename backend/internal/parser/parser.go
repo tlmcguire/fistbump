@@ -51,6 +51,9 @@ func Parse(raw string) Result {
 	secs := sections(lines)
 
 	hasReq := slices.Contains(secs, secRequired)
+	// Text copied from a web page often loses its bullet symbols. When no requirement line has one,
+	// the plain lines of the required section are the requirements.
+	plainReqs := !reqHasBullets(lines, secs)
 	reqT, prefT, reqS, prefS := map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}
 	requirements := []string{}
 	firstHeading := len(lines)
@@ -83,7 +86,7 @@ func Parse(raw string) Result {
 		for _, s := range soft {
 			sDst[s] = true
 		}
-		if sec == secRequired && isBullet(line) && len(requirements) < maxRequirements {
+		if sec == secRequired && len(requirements) < maxRequirements && (isBullet(line) || plainReqs && isRequirementLine(line)) {
 			requirements = append(requirements, strings.TrimPrefix(line, "- "))
 		}
 	}
@@ -147,6 +150,24 @@ func Clean(raw string) (string, int) {
 
 func isBullet(line string) bool { return strings.HasPrefix(line, "- ") }
 
+// reqHasBullets reports whether any line of a required section is a bullet.
+func reqHasBullets(lines []string, secs []section) bool {
+	for i, l := range lines {
+		if secs[i] == secRequired && isBullet(l) {
+			return true
+		}
+	}
+	return false
+}
+
+// isRequirementLine reports whether a plain line reads as a requirement: a few words, not a heading.
+func isRequirementLine(line string) bool {
+	if _, _, isHeading := heading(line); isHeading {
+		return false
+	}
+	return len(strings.Fields(line)) >= 4
+}
+
 type section int
 
 const (
@@ -161,7 +182,7 @@ var (
 	otherFirstRe = regexp.MustCompile(`\b(benefits|perks|compensation|salary|pay range|pay)\b`)
 	preferredRe  = regexp.MustCompile(`\b(preferred|nice[- ]to[- ]haves?|bonus|pluses|desired)\b|^(a |big |huge )?plus$|\ba plus$`)
 	requiredRe   = regexp.MustCompile(`\b(requirements|required|qualifications|what you bring|what you'll bring|what you will bring|must[- ]haves?|what you'll need|what you will need|what we're looking for|what we are looking for|who you are)\b`)
-	otherRe      = regexp.MustCompile(`\b(responsibilities|duties|what you'll do|what you will do|day[- ]to[- ]day|in this role|the role|your role|about|overview|summary|who we are|why join|our team|the team|culture|values|how to apply|equal opportunity|eeo|location|locations)\b`)
+	otherRe      = regexp.MustCompile(`\b(responsibilities|duties|what you'll do|what you will do|day[- ]to[- ]day|in this role|the role|your role|about|overview|summary|who we are|why join|our team|the team|culture|values|how to apply|equal opportunity|eeo|location|locations|logistics|how we(?:'re| are) different|come work with us|life at)\b`)
 	headingTrim  = "#*_=: "
 )
 
@@ -423,7 +444,7 @@ var (
 	hybridRe = regexp.MustCompile(`(?i)\bhybrid\b`)
 
 	describedRemote = regexp.MustCompile(`(?i)\b(fully remote|100% remote|remote[- ]first|this is a remote|remote position|remote role|remote opportunity|work from anywhere|work remotely from)\b`)
-	describedHybrid = regexp.MustCompile(`(?i)\b(hybrid (role|position|work|schedule|model|environment)|this is a hybrid|\d days? (a|per) week (in|at) the office|in[- ]office \d days?)\b`)
+	describedHybrid = regexp.MustCompile(`(?i)\b(hybrid (role|position|work|schedule|model|environment|policy)|this is a hybrid|\d days? (a|per) week (in|at) the office|in[- ]office \d days?)\b`)
 )
 
 // StatedMode reads the work mode from short text that states it outright, such as a location or a

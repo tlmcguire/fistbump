@@ -1,0 +1,47 @@
+Applied AI Architect
+Tokyo, Japan
+About Anthropic
+
+Anthropic's mission is to create reliable, interpretable, and steerable AI systems.
+About the role
+
+As an Applied AI team member, you will be a Pre-Sales architect and trusted technical advisor to large enterprises integrating Claude into their technology stack.
+Key responsibilities
+
+    Partner with account executives across Japan to understand customer requirements and translate them into technical solutions
+
+    Support customers building with both the Claude API and Claude for Work
+
+    Help customers develop evaluation frameworks to measure Claude's performance
+
+    Travel occasionally to customer sites for workshops and technical deep dives
+Minimum qualifications
+
+    Experience in technical customer-facing roles such as Solutions Architect, Sales Engineer, or Technical Account Manager
+
+    Native-level Japanese fluency and business-level English required
+
+    Experience working with enterprise customers, navigating complex buying cycles involving multiple stakeholders
+
+    Strong technical communication skills with the ability to translate customer requirements between technical and business stakeholders
+Preferred qualifications
+
+    5+ years of relevant experience
+
+    Experience designing scalable cloud architectures and integrating with enterprise systems
+
+    Comfortable with python
+
+    Familiarity with common LLM frameworks and tools or a background in machine learning or data science
+
+    A love of teaching, mentoring, and helping others succeed
+Logistics
+
+Minimum education: Bachelor's degree or an equivalent combination of education, training, and/or experience
+
+Location-based hybrid policy: Currently, we expect all staff to be in one of our offices at least 25% of the time.
+
+Visa sponsorship: We do sponsor visas! However, we aren't able to successfully sponsor visas for every role and every candidate.
+How we're different
+
+We're an extremely collaborative group, and we use Java and Kubernetes internally for research tooling.
