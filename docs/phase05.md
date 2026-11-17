@@ -88,22 +88,22 @@ All as written in [api.md](api.md). Notes:
 
 Progress:
 
-- [ ] 1. Schema: `suggestions.engine`
-- [ ] 2. `models.go` Revision, Suggestion, TailoredResume
-- [ ] 3. `render.go` Apply
-- [ ] 4. `provider.go`
-- [ ] 5. `fallback.go`
-- [ ] 6. `engine.go`
-- [ ] 7. `revision.go`, `suggestion.go` (store)
-- [ ] 8. `tailored_resume.go` (store)
-- [ ] 9. `diff.go`
-- [ ] 10. `revisions.go` (api)
-- [ ] 11. `tailored.go` (api)
-- [ ] 12. `main.go`: interrupted rounds
+- [x] 1. Schema: `suggestions.engine`
+- [x] 2. `models.go` Revision, Suggestion, TailoredResume
+- [x] 3. `render.go` Apply
+- [x] 4. `provider.go`
+- [x] 5. `fallback.go`
+- [x] 6. `engine.go`
+- [x] 7. `revision.go`, `suggestion.go` (store)
+- [x] 8. `tailored_resume.go` (store)
+- [x] 9. `diff.go`
+- [x] 10. `revisions.go` (api)
+- [x] 11. `tailored.go` (api)
+- [x] 12. `main.go`: interrupted rounds
 - [ ] 13. `ipc-handlers.js`, `preload.js`
 - [ ] 14. `worddiff.js`
 - [ ] 15. `diff-view.js`
-- [ ] Tests and tooling
+- [ ] Tests and tooling (backend tests done; Electron tests with steps 13 to 15)
 
 ### Backend
 
