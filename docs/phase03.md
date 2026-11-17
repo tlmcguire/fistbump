@@ -150,17 +150,17 @@ Progress:
 - [x] 7. `decode.go`, `respond.go` additions
 - [x] 8. `resume.go` (api)
 - [x] 9. `settings.go` (api)
-- [ ] 10. `ipc-handlers.js`, `preload.js`
-- [ ] 11. `app.js` router
-- [ ] 12. `resume-builder.js`
-- [ ] 13. Vendored `ledongthuc/pdf` with patches
-- [ ] 14. `resumeparse/detect.go`
-- [ ] 15. `resumeparse/extract.go`
-- [ ] 16. `resumeparse/hidden.go`
-- [ ] 17. `resumeparse/parse.go`
+- [x] 10. `ipc-handlers.js`, `preload.js`
+- [x] 11. `app.js` router
+- [x] 12. `resume-builder.js`
+- [x] 13. `ledongthuc/pdf` (used as a module, not vendored; hidden text is handled in `resumeparse/content.go`)
+- [x] 14. `resumeparse/detect.go`
+- [x] 15. `resumeparse/extract.go`
+- [x] 16. `resumeparse/hidden.go`
+- [x] 17. `resumeparse/parse.go`
 - [x] 18. `resume_import.go` (api)
 - [x] 19. Import in Electron and the Resume view
-- [ ] Tests and tooling (backend tests and `seed.sql` done; fixtures for import and the Electron and renderer tests remain)
+- [x] Tests and tooling
 
 ### Backend
 

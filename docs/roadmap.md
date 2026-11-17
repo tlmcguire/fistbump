@@ -30,7 +30,7 @@ Out of scope for the MVP: everything in [build-findings.md](build-findings.md) s
 
 ```mermaid
 flowchart LR
-    P1["1. Listing view<br/>(in progress)"] --> P2["2. Job search"]
+    P1["1. Listing view"] --> P2["2. Job search"]
     P1 --> P3["3. Master resume<br/>and import"]
     P1 --> P4
     P3 --> P4["4. Saved jobs and<br/>skill-gap analysis"]
