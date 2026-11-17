@@ -422,3 +422,54 @@ func TestDescribedMode(t *testing.T) {
 		}
 	}
 }
+
+func TestSpokenLanguages(t *testing.T) {
+	_, soft := FindSkills("Native-level Japanese fluency and business-level English required")
+	if !slices.Equal(soft, []string{"english", "japanese"}) {
+		t.Errorf("soft = %q, want english and japanese", soft)
+	}
+	if _, soft := FindSkills("Japanese-speaking team, Mandarin a plus"); !slices.Equal(soft, []string{"chinese", "japanese"}) {
+		t.Errorf("hyphenated and aliased languages: %q", soft)
+	}
+	// Lower case is a plant, a verb or a part of a phrase, not a language.
+	if tech, soft := FindSkills("pruning the japanese maple, plain english"); len(tech)+len(soft) != 0 {
+		t.Errorf("lower-case words matched: %q %q", tech, soft)
+	}
+	if !IsSoft("Japanese") || Canon("Cantonese") != "chinese" || !slices.Contains(Aliases("chinese"), "mandarin") {
+		t.Error("languages should answer IsSoft, Canon and Aliases")
+	}
+}
+
+func TestLanguageRequirementsLandInTheirSections(t *testing.T) {
+	r := Parse("Analyst at Acme\nRequirements\n- Fluent Japanese\nPreferred\n- Spanish and Python")
+	if !slices.Equal(r.ReqSoftSkills, []string{"japanese"}) || !slices.Equal(r.PrefSoftSkills, []string{"spanish"}) {
+		t.Errorf("soft = %q / %q", r.ReqSoftSkills, r.PrefSoftSkills)
+	}
+}
+
+func TestMoreSectionHeadingsEndPreferred(t *testing.T) {
+	text := "Analyst at Acme\nPreferred qualifications\n- Python\nLogistics\nWe use Java in the office.\nHow we're different\nWe also use Rust."
+	r := Parse(text)
+	if !slices.Equal(r.PrefTechSkills, []string{"python"}) {
+		t.Errorf("preferred = %q; Logistics and How we're different are not requirements", r.PrefTechSkills)
+	}
+}
+
+func TestHybridPolicyIsHybrid(t *testing.T) {
+	r := Parse("Analyst at Acme\nTokyo, Japan\nLocation-based hybrid policy: we expect staff in the office 25% of the time.")
+	if r.Inferred.WorkMode != "Hybrid" {
+		t.Errorf("work mode = %q, want Hybrid", r.Inferred.WorkMode)
+	}
+}
+
+func TestPlainLinesAreRequirementsWhenBulletsWereLost(t *testing.T) {
+	plain := Parse("Analyst at Acme\nMinimum qualifications\n\n    Three years of experience with SQL\n\n    Strong written communication skills\n\n    Python")
+	if len(plain.Requirements) != 2 {
+		t.Errorf("requirements = %q, want the two lines of four words or more", plain.Requirements)
+	}
+	// With real bullets, only the bullets count.
+	bulleted := Parse("Analyst at Acme\nMinimum qualifications\n- Three years of experience with SQL\nAnd some other plain sentence here")
+	if len(bulleted.Requirements) != 1 {
+		t.Errorf("requirements = %q, want only the bullet", bulleted.Requirements)
+	}
+}

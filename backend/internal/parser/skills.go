@@ -149,6 +149,16 @@ var techSkills = map[string][]string{
 	"smartsheet":         {},
 	"asana":              {},
 	"confluence":         {},
+
+	// Customer-facing and AI roles, added after a pre-sales posting went mostly unread.
+	"solutions architecture":       {"solutions architect", "solutions architects", "solution architect", "solution architecture"},
+	"sales engineering":            {"sales engineer", "sales engineers", "pre-sales", "presales"},
+	"technical account management": {"technical account manager", "technical account managers"},
+	"cloud computing":              {"cloud architecture", "cloud architectures", "cloud infrastructure", "cloud platforms", "cloud services"},
+	"data science":                 {"data scientist", "data scientists"},
+	"api":                          {"apis", "api design", "api integration", "api integrations"},
+	"llm evaluation":               {"evals", "llm evals", "model evaluation", "evaluation frameworks"},
+	"prompt engineering":           {"prompting", "prompt design"},
 }
 
 var softSkills = map[string][]string{
@@ -168,6 +178,36 @@ var softSkills = map[string][]string{
 	"curiosity":              {"curious", "continuous learning", "eager to learn"},
 	"empathy":                {"customer-focused", "customer focus", "user-centric"},
 	"project management":     {"program management", "project planning", "roadmap", "pmp"},
+	"customer-facing":        {"customer facing", "client-facing", "client facing"},
+	"relationship building":  {"build relationships", "building relationships", "relationship-building", "relationship management"},
+	"teaching":               {"teach"},
+	"negotiation":            {"negotiate", "negotiating"},
+}
+
+// languageSkills are spoken languages, listed with the soft skills because they describe the person,
+// not a tool. They are matched only when capitalized ("Japanese", never "japanese maple"), and
+// they take no inflections.
+var languageSkills = map[string][]string{
+	"english":    {},
+	"spanish":    {},
+	"french":     {},
+	"german":     {},
+	"italian":    {},
+	"portuguese": {},
+	"dutch":      {},
+	"russian":    {},
+	"japanese":   {},
+	"korean":     {},
+	"chinese":    {"mandarin", "cantonese"},
+	"hindi":      {},
+	"arabic":     {},
+	"turkish":    {},
+	"hebrew":     {},
+	"swedish":    {},
+	"vietnamese": {},
+	"thai":       {},
+	"indonesian": {},
+	"tagalog":    {},
 }
 
 // exactCase lists one-word skills that are also common English words or letters. As a single token
@@ -188,6 +228,7 @@ var inflections = []string{"s", "es", "d", "ed", "ing", "er", "ers", "ion", "ion
 type entry struct {
 	canon string
 	soft  bool
+	lang  bool // a spoken language: matched only when capitalized, never inflected
 }
 
 var (
@@ -201,21 +242,22 @@ var (
 
 func init() {
 	aliases, index = map[string]entry{}, map[string]entry{}
-	add := func(dict map[string][]string, soft bool) {
+	add := func(dict map[string][]string, soft, lang bool) {
 		for c, as := range dict {
 			for _, a := range append([]string{c}, as...) {
-				aliases[key(a)] = entry{c, soft}
+				aliases[key(a)] = entry{c, soft, lang}
 			}
 		}
 	}
-	add(techSkills, false)
-	add(softSkills, true)
+	add(techSkills, false, false)
+	add(softSkills, true, false)
+	add(languageSkills, true, true)
 	for k, e := range aliases {
 		index[k] = e
 		maxWords = max(maxWords, strings.Count(k, " ")+1)
 	}
 	for k, e := range aliases {
-		if !e.soft {
+		if !e.soft || e.lang {
 			continue
 		}
 		stems := []string{k}
@@ -261,17 +303,23 @@ func Aliases(skill string) []string {
 	if as, ok := softSkills[c]; ok {
 		return append([]string{c}, as...)
 	}
+	if as, ok := languageSkills[c]; ok {
+		return append([]string{c}, as...)
+	}
 	return []string{c}
 }
 
-// IsSoft reports whether skill is a known soft skill.
+// IsSoft reports whether skill is a known soft skill or spoken language.
 func IsSoft(skill string) bool {
-	_, ok := softSkills[Canon(skill)]
-	return ok
+	c := Canon(skill)
+	_, soft := softSkills[c]
+	_, lang := languageSkills[c]
+	return soft || lang
 }
 
 // FindSkills returns the canonical tech and soft skills mentioned in text, sorted. Pass text as
-// written, not lower-cased: "Go", "C", "R" and "REST" are recognized by their capitals.
+// written, not lower-cased: "Go", "C", "R", "REST" and spoken languages ("Japanese") are recognized by
+// their capitals.
 func FindSkills(text string) (tech, soft []string) {
 	seenT, seenS := map[string]bool{}, map[string]bool{}
 	for _, h := range scan(text) {
@@ -347,7 +395,7 @@ func scan(text string) []hit {
 			}
 			k := strings.Join(words, " ")
 			e, ok := index[k]
-			if !ok || n == 1 && !caseOK(k, toks[i]) {
+			if !ok || n == 1 && !caseOK(k, e, toks[i]) {
 				continue
 			}
 			hits = append(hits, hit{e.canon, e.soft, toks[i].line})
@@ -362,7 +410,11 @@ func scan(text string) []hit {
 	return withoutLoneLetters(hits)
 }
 
-func caseOK(k string, t token) bool {
+func caseOK(k string, e entry, t token) bool {
+	if e.lang {
+		r, _ := utf8.DecodeRuneInString(t.orig)
+		return unicode.IsUpper(r) // "Japanese-speaking" counts; "japanese maple" does not
+	}
 	forms, ok := exactCase[k]
 	return !ok || !t.hyphen && slices.Contains(forms, t.orig)
 }
