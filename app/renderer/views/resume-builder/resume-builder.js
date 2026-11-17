@@ -18,7 +18,7 @@
       else if (key === "checked" || key === "disabled" || key === "hidden") node[key] = Boolean(value);
       else node.setAttribute(key, value === true ? "" : value);
     }
-    for (const child of children.flat()) {
+    for (const child of children.flat(Infinity)) {
       if (child === null || child === undefined || child === false) continue;
       node.append(child instanceof Node ? child : document.createTextNode(String(child)));
     }
@@ -47,7 +47,8 @@
   const textToList = text => text.split(",").map(s => s.trim()).filter(Boolean);
  
   //replaceChildren with el()'s rules: arrays are flattened, and null, undefined and false are skipped
-  const fill = (node, ...children) => node.replaceChildren(...children.flat().filter(c => c !== null && c !== undefined && c !== false));
+  //lists may be nested (a view can return its cards and a footer together), so they are flattened all the way
+  const fill = (node, ...children) => node.replaceChildren(...children.flat(Infinity).filter(c => c !== null && c !== undefined && c !== false));
  
   const chips = list => el("ul", {class: "chips"}, list.map(item => el("li", {class: "chip", text: item})));
  
