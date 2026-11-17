@@ -250,6 +250,7 @@ One proposed change inside a revision.
 | `proposed_text` | TEXT NOT NULL | What the engine proposed |
 | `state` | TEXT NOT NULL | `pending` (default), `accepted`, `rejected`, `edited` |
 | `edited_text` | TEXT | The user's version when `state = 'edited'` |
+| `engine` | TEXT NOT NULL | `local`, `remote`, or `rules` (default): which engine wrote this suggestion. A model round can include `rules` suggestions that fill targets the model skipped |
 
 Index: `idx_suggestions_revision` on `revision_id`.
 
