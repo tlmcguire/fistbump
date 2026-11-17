@@ -59,6 +59,26 @@ function recorder() {
   return { calls, call: async (method, url, body) => { calls.push({ method, url, body }); return { ok: true }; } };
 }
 
+//phase 4 test
+test('import and job routes check their arguments', async () => {
+  const backend = recorder();
+  const ipc = fakeIpc();
+  register(ipc, backend);
+  const importJobs = ipc.handlers.get('connectors:import');
+
+  assert.strictEqual((await importJobs({}, [])).error.code, 'validation_failed');
+  assert.strictEqual((await importJobs({}, [{ board: 1 }])).error.code, 'validation_failed');
+  assert.strictEqual((await ipc.handlers.get('jobs:get')({}, '1')).error.code, 'validation_failed');
+  assert.strictEqual(backend.calls.length, 0);
+
+  await importJobs({}, [{ board: 'backblaze', external_id: '5287532008' }]);
+  assert.deepStrictEqual(backend.calls, [{
+    method: 'POST',
+    url: '/v1/connectors/greenhouse/import',
+    body: { postings: [{ board: 'backblaze', external_id: '5287532008' }] },
+  }]);
+});
+
 function importSetup({ picked, size = 3, bytes = Buffer.from('Ada') } = {}) {
   const backend = recorder();
   const ipc = fakeIpc();
@@ -129,4 +149,29 @@ test('app actions come from the main process, and say so when missing', async ()
   register(ipc, { call: async () => ({}) }, { info: () => ({ version: '0.1.0' }) });
   assert.deepStrictEqual(await ipc.handlers.get('app:info')(), { version: '0.1.0' });
   assert.strictEqual((await ipc.handlers.get('app:check-updates')()).error.code, 'validation_failed');
+});
+
+//phase 5 tests
+test('revision, suggestion and tailored routes check their arguments', async () => {
+  const backend = recorder();
+  const ipc = fakeIpc();
+  register(ipc, backend);
+
+  assert.strictEqual((await ipc.handlers.get('revisions:create')({}, {})).error.code, 'validation_failed');
+  assert.strictEqual((await ipc.handlers.get('suggestions:edit')({}, 1, 2, '  ')).error.code, 'validation_failed');
+  assert.strictEqual((await ipc.handlers.get('tailored:create')({}, 'x')).error.code, 'validation_failed');
+  assert.strictEqual(backend.calls.length, 0);
+
+  await ipc.handlers.get('suggestions:accept')({}, 4, 11);
+  assert.deepStrictEqual(backend.calls, [{ method: 'POST', url: '/v1/revisions/4/suggestions/11/accept', body: undefined }]);
+});
+
+test('word diff rebuilds both texts', () => {
+  global.window = {};
+  global.document = {};
+  require('../renderer/js/worddiff.js');
+  const words = window.WordDiff.diff('excel python sql', 'sql excel python');
+  const text = side => words.filter(w => w.op === 'eq' || w.op === side).map(w => w.text).join(' ');
+  assert.strictEqual(text('del'), 'excel python sql');
+  assert.strictEqual(text('add'), 'sql excel python');
 });

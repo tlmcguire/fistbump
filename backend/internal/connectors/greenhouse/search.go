@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	perCompanyCap    = 3
 	payScanCap       = 300 // descriptions read at most when a pay range is set
 	payChunk         = 40
+	skillScoreTop    = 40 // top title matches re-ranked by skill fit
 )
 
 // Search lists the given boards, filters and ranks their postings, and fetches full data for the
@@ -138,6 +140,9 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 
 	// The same role posted in several places is one result. The best-ranked copy stays and counts the rest.
 	candidates = foldDuplicates(candidates)
+	if q.SkillScore != nil && !newest {
+		c.rankBySkill(ctx, candidates[:min(skillScoreTop, len(candidates))], q.SkillScore, terms)
+	}
 	result.Matched = len(candidates)
 	result.LocationMatched = 0
 	if len(terms) > 0 {
@@ -225,6 +230,28 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	return result, nil
 }
 
+// rankBySkill fetches the descriptions of top, scores each against the resume, and re-sorts top in
+// place. Exact title matches stay first. A posting whose description fails keeps its score; the
+// failure is not reported, because the page fetch will try it again.
+func (c *Client) rankBySkill(ctx context.Context, top []connectors.Posting, skillScore func(string) float64, terms []string) {
+	var mu sync.Mutex
+	full := c.fill(ctx, top, &mu, map[string]string{})
+	for i, p := range full {
+		if p == nil {
+			continue
+		}
+		p.SkillScore = round2(skillScore(p.RawText))
+		p.Score = SkillFitScore(p.TitleScore, p.SkillScore, LocationScore(p.Location, p.WorkMode, terms))
+		top[i] = *p
+	}
+	sort.SliceStable(top, func(i, j int) bool {
+		if top[i].Exact != top[j].Exact {
+			return top[i].Exact
+		}
+		return top[i].Score > top[j].Score
+	})
+}
+
 // foldDuplicates keeps the first posting of each company and title and counts the others in
 // Duplicates. The input is ranked, so the kept copy is the best one.
 func foldDuplicates(ranked []connectors.Posting) []connectors.Posting {
@@ -279,7 +306,7 @@ func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.
 			}
 			// A posting whose location says nothing may still say in its text that the role is remote or hybrid.
 			if p.WorkMode == connectors.WorkModeOnSite {
-				if mode := DescribedMode(detail.RawText); mode != "" {
+				if mode := parser.DescribedMode(detail.RawText); mode != "" {
 					p.WorkMode = mode
 				}
 			}

@@ -1,0 +1,29 @@
+Senior Backend Engineer
+Oakline Software · Remote - US
+
+Oakline Software builds scheduling tools for clinics and small hospitals. Our platform team owns the APIs that thousands of front desks rely on every morning, and we are hiring a senior engineer to help us scale them.
+
+What you'll do
+- Design and run Go services on Kubernetes in AWS
+- Own our PostgreSQL schema and migrations
+- Improve observability with Prometheus and Grafana
+- Mentor two mid-level engineers
+
+Requirements
+- 5+ years building backend services in Go or Java
+- Strong SQL and PostgreSQL experience
+- Experience running services on Kubernetes and Docker
+- Comfortable with REST APIs and gRPC
+- Clear written communication; we are a distributed team
+
+Nice to have
+- Terraform
+- Kafka or another event streaming system
+- Experience with HIPAA
+
+Benefits
+- Fully remote, with a yearly team week
+- 401(k) with a 4% match
+- Home office stipend
+
+Oakline Software is an equal opportunity employer.

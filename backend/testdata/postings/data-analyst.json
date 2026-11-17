@@ -1,0 +1,26 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Tidewater Logistics, Inc.",
+    "position_title": "Data Analyst",
+    "location": "Savannah, GA",
+    "work_mode": "On-site"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "python",
+    "r",
+    "salesforce"
+  ],
+  "req_soft_skills": [
+    "attention to detail",
+    "time management"
+  ],
+  "req_tech_skills": [
+    "excel",
+    "power bi",
+    "sql",
+    "tableau"
+  ],
+  "requirements": 5
+}

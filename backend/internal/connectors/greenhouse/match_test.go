@@ -137,18 +137,3 @@ func TestLocationAliases(t *testing.T) {
 		}
 	}
 }
-
-func TestDescribedMode(t *testing.T) {
-	cases := map[string]string{
-		"This is a fully remote position.":         "Remote",
-		"We are remote-first.":                     "Remote",
-		"Hybrid role, 3 days a week in the office": "Hybrid",
-		"Benefits include a remote work stipend.":  "",
-		"Great team.": "",
-	}
-	for text, want := range cases {
-		if got := DescribedMode(text); got != want {
-			t.Errorf("DescribedMode(%q) = %q, want %q", text, got, want)
-		}
-	}
-}

@@ -1,0 +1,23 @@
+Data Analyst
+Tidewater Logistics, Inc.
+Savannah, GA
+
+Tidewater Logistics moves freight for retailers across the Southeast. The analytics team turns shipment data into reports that dispatchers and executives use every day.
+
+In this role
+- Build and maintain dashboards in Tableau and Power BI
+- Pull data from SQL Server and Snowflake
+- Present findings to operations leaders each month
+
+Minimum qualifications
+- Bachelor's degree in a quantitative field
+- 2+ years of SQL
+- Advanced Microsoft Excel, including pivot tables
+- Experience with Tableau or Power BI
+- Strong attention to detail and time management
+
+Bonus
+- Python or R for analysis
+- Experience with Salesforce data
+
+This position is on-site at our Savannah office.

@@ -1,0 +1,3 @@
+IT Support Specialist at Harborlight Health
+
+Harborlight Health is a community hospital in Raleigh, North Carolina. We are looking for an IT Support Specialist to keep our clinics running. You will troubleshoot Windows and Linux machines, manage user accounts in Azure, and write small PowerShell scripts to automate routine work. Experience with Jira for ticket tracking is helpful. You should be patient, have strong communication skills, and enjoy working with people who are not technical. The schedule is Monday to Friday, on-site.
