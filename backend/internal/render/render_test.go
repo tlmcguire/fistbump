@@ -126,3 +126,22 @@ func TestApplyWithNoChanges(t *testing.T) {
 		t.Errorf("got %q, %v", got, missed)
 	}
 }
+
+func TestApplyPrefersTheWholeBlock(t *testing.T) {
+	base := "### Analyst, Acme\n\nUsed excel, sql daily.\n\n## Skills\n\nexcel, sql\n"
+	got, missed := Apply(base, []Change{{Original: "excel, sql", Final: "sql, excel"}})
+	want := "### Analyst, Acme\n\nUsed excel, sql daily.\n\n## Skills\n\nsql, excel\n"
+	if got != want || len(missed) != 0 {
+		t.Errorf("the skills block must change, not the sentence before it:\n%q", got)
+	}
+}
+
+func TestApplyFallsBackToALineThenAnyText(t *testing.T) {
+	line := "Built reports.\nexcel, sql\nShipped.\n"
+	if got, _ := Apply("Used excel, sql daily.\n\n"+line, []Change{{Original: "excel, sql", Final: "X"}}); !strings.Contains(got, "Built reports.\nX\nShipped.") {
+		t.Errorf("a whole line beats the middle of a sentence: %q", got)
+	}
+	if got, _ := Apply("Used excel, sql daily.\n", []Change{{Original: "excel, sql", Final: "X"}}); got != "Used X daily.\n" {
+		t.Errorf("with nothing better the first occurrence is used: %q", got)
+	}
+}

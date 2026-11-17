@@ -48,11 +48,12 @@ func (Rules) Suggest(ctx context.Context, r Request) ([]Draft, error) {
 	return out, nil
 }
 
-// matchedSkills lists the job skills the resume shows, required before preferred, without repeats.
+// matchedSkills lists the job skills the resume shows without repeats: tech skills first, required
+// before preferred, then soft skills. The summary names the first five, so tools come before traits.
 func matchedSkills(a analyze.Result) []string {
 	var out []string
 	seen := map[string]bool{}
-	for _, g := range []analyze.Group{a.Required.Tech, a.Required.Soft, a.Preferred.Tech, a.Preferred.Soft} {
+	for _, g := range []analyze.Group{a.Required.Tech, a.Preferred.Tech, a.Required.Soft, a.Preferred.Soft} {
 		for _, m := range g.Matched {
 			key := strings.ToLower(m.Skill)
 			if !seen[key] {
