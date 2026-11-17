@@ -89,19 +89,19 @@ In phase 2, search returns results with their full data, so opening a result nee
 
 Progress:
 
-- [ ] 1. `connector.go`
-- [ ] 2. `textclean.go`, `greenhouse.go`, `boards.go`
-- [ ] 3. `respond.go`
-- [ ] 4. `server.go`
-- [ ] 5. `connectors.go`
-- [ ] 6. `main.go`
-- [ ] 7. `build-go.js`
-- [ ] 8. `backend.js`
-- [ ] 9. `ipc-handlers.js`
-- [ ] 10. `preload.js`
-- [ ] 11. `main.js`
-- [ ] 12. Renderer files
-- [ ] Tests and tooling
+- [x] 1. `connector.go`
+- [x] 2. `textclean.go`, `greenhouse.go`, `boards.go`
+- [x] 3. `respond.go`
+- [x] 4. `server.go`
+- [x] 5. `connectors.go`
+- [x] 6. `main.go`
+- [x] 7. `build-go.js`
+- [x] 8. `backend.js`
+- [x] 9. `ipc-handlers.js`
+- [x] 10. `preload.js`
+- [x] 11. `main.js`
+- [x] 12. Renderer files
+- [x] Tests and tooling
 
 Each step is testable before the next one depends on it. Files that exist on `main` today: `backend/internal/db/` (database open and migrations), `backend/internal/connectors/greenhouse/boards.json`, `scripts/verify-greenhouse-boards.js`, and empty folders held open by `.gitkeep`. Delete a `.gitkeep` when its folder gets a real file.
 
