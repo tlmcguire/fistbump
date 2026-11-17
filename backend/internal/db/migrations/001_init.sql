@@ -105,7 +105,9 @@ CREATE TABLE suggestions (
   proposed_text TEXT NOT NULL,
   state         TEXT NOT NULL DEFAULT 'pending'
                 CHECK (state IN ('pending','accepted','rejected','edited')),
-  edited_text   TEXT
+  edited_text   TEXT,
+  engine        TEXT NOT NULL DEFAULT 'rules'
+                CHECK (engine IN ('local','remote','rules'))
 );
 CREATE INDEX idx_suggestions_revision ON suggestions(revision_id);
 

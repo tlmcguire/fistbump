@@ -204,7 +204,7 @@ A revision is one suggestion-generating pass for a job.
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `POST /v1/revisions` | `{ "job_id": 1, "base_resume_id"?: 1, "engine": "auto" }`. `engine` is `auto` (default), `local`, `remote`, or `rules`. | `202` Revision with `status: "queued"`. `engine` holds the engine chosen at creation. `503 ai_unavailable` if a forced engine cannot run. | INSERT `revisions`. Suggestions are INSERTed as the engine produces them. |
+| `POST /v1/revisions` | `{ "job_id": 1, "base_resume_id"?: 1, "engine": "auto" }`. `engine` is `auto` (default), `local`, `remote`, or `rules`. | `202` Revision with `status: "queued"`. `engine` holds the first engine that will be tried, and is updated to the engine that wrote the suggestions when the round ends. `409` if there is no profile, `404` for an unknown job, `422` for an unknown `engine` or `base_resume_id`, `503 ai_unavailable` if a forced engine cannot run. | INSERT `revisions`. Suggestions are INSERTed as the engine produces them. |
 | `GET /v1/revisions` | Query: `job_id` | `[Revision]` newest first | SELECT `revisions` |
 | `GET /v1/revisions/{id}` | none | Revision plus `"suggestions": [Suggestion]` | SELECT `revisions`, `suggestions` |
 | `POST /v1/revisions/{id}/cancel` | none | Revision with `status: "canceled"`. `409` unless `queued` or `running`. | UPDATE `revisions` (`status`, `completed_at`) |
@@ -219,10 +219,10 @@ Generation runs in the background. Electron polls `GET /v1/revisions/{id}` until
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `POST /v1/tailored-resumes` | `{ "revision_id": 1 }` | `201` TailoredResume. `409 conflict` with `details.pending` (count) if any suggestion is `pending`, or if the revision is not `done`. | Reads `revisions`, `suggestions`, `resumes` (or master tables). INSERT `tailored_resumes` with `job_id` and `base_resume_id` copied from the revision, and `base_content` set to the resume text the revision started from. |
+| `POST /v1/tailored-resumes` | `{ "revision_id": 1 }` | `201` TailoredResume plus `"warnings": [string]`, one per change whose text was not found in the base (empty when all applied). `409 conflict` with `details.pending` (count) if any suggestion is `pending`, or if the revision is not `done`. | Reads `revisions`, `suggestions`, `resumes` (or master tables). INSERT `tailored_resumes` with `job_id` and `base_resume_id` copied from the revision, and `base_content` set to the resume text the revision started from. |
 | `GET /v1/tailored-resumes` | Query: `job_id` | `[TailoredResume]` without `content` and `base_content` | SELECT `tailored_resumes` |
 | `GET /v1/tailored-resumes/{id}` | none | TailoredResume | SELECT `tailored_resumes` |
-| `GET /v1/tailored-resumes/{id}/diff` | none | `{ "hunks": [{ "section", "target_id", "status": "unchanged\|changed\|added\|removed", "before", "after", "words": [{ "op": "eq\|add\|del", "text" }] }] }` | SELECT `tailored_resumes`. Compares `base_content` with `content`. Computed in `diff`, not stored. |
+| `GET /v1/tailored-resumes/{id}/diff` | none | `{ "hunks": [{ "section", "heading", "target_id", "status": "unchanged\|changed\|added\|removed", "before", "after", "words": [{ "op": "eq\|add\|del", "text" }] }] }` | SELECT `tailored_resumes`. Compares `base_content` with `content`. Computed in `diff`, not stored. |
 | `POST /v1/tailored-resumes/{id}/export` | `{ "format": "pdf" }` or `"md"` | Raw bytes. `Content-Type: application/pdf` or `text/markdown`, plus `Content-Disposition: attachment; filename="..."`. | SELECT `tailored_resumes`. No writes. |
 | `DELETE /v1/tailored-resumes/{id}` | none | `204`. Applications that used it keep their rows with `tailored_resume_id` set to `null`. | DELETE `tailored_resumes` |
 

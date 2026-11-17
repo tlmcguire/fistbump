@@ -72,3 +72,57 @@ func TestOnlyOneTrailingNewline(t *testing.T) {
 		t.Errorf("must end with exactly one newline: %q", got[len(got)-5:])
 	}
 }
+
+func TestApplyReplacesFirstOccurrence(t *testing.T) {
+	base := "## Skills\n\nexcel, sql\n\n## Other\n\nexcel, sql\n"
+	got, missed := Apply(base, []Change{{Original: "excel, sql", Final: "sql, excel"}})
+	want := "## Skills\n\nsql, excel\n\n## Other\n\nexcel, sql\n"
+	if got != want || len(missed) != 0 {
+		t.Errorf("got %q, missed %v", got, missed)
+	}
+}
+
+func TestApplyInsertsNewSummaryBeforeFirstSection(t *testing.T) {
+	base := "# Ada\n\nada@example.com\n\n## Experience\n\n### Analyst, Acme\n"
+	got, missed := Apply(base, []Change{{Original: "", Final: "Analyst with SQL."}})
+	want := "# Ada\n\nada@example.com\n\n## Summary\n\nAnalyst with SQL.\n\n## Experience\n\n### Analyst, Acme\n"
+	if got != want || len(missed) != 0 {
+		t.Errorf("got %q, missed %v", got, missed)
+	}
+}
+
+func TestApplyNewSummaryWithoutSections(t *testing.T) {
+	got, _ := Apply("# Ada\n", []Change{{Final: "Analyst."}})
+	if got != "# Ada\n\n## Summary\n\nAnalyst.\n" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestApplyReportsChangesNotFound(t *testing.T) {
+	base := "## Skills\n\nsql\n"
+	changes := []Change{
+		{Original: "gone text", Final: "new"},
+		{Original: "sql", Final: "sql, excel"},
+	}
+	got, missed := Apply(base, changes)
+	if got != "## Skills\n\nsql, excel\n" {
+		t.Errorf("found changes must still apply, got %q", got)
+	}
+	if len(missed) != 1 || missed[0].Original != "gone text" {
+		t.Errorf("missed = %v, want the one absent change", missed)
+	}
+}
+
+func TestApplyKeepsExistingSummary(t *testing.T) {
+	base := "## Summary\n\nOld.\n"
+	got, missed := Apply(base, []Change{{Final: "New."}})
+	if got != base || len(missed) != 1 {
+		t.Errorf("a base with a summary must not get a second one: %q, %v", got, missed)
+	}
+}
+
+func TestApplyWithNoChanges(t *testing.T) {
+	if got, missed := Apply("text\n", nil); got != "text\n" || missed != nil {
+		t.Errorf("got %q, %v", got, missed)
+	}
+}

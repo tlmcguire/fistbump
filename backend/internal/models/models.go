@@ -122,3 +122,51 @@ type Job struct {
 	ArchivedAt     *string  `json:"archived_at"`
 	TrashedAt      *string  `json:"trashed_at"`
 }
+
+// Revision is one round of suggestions for a job. The suggestions are read separately.
+type Revision struct {
+	ID           int64   `json:"id"`
+	JobID        int64   `json:"job_id"`
+	BaseResumeID *int64  `json:"base_resume_id"`
+	Engine       string  `json:"engine"` // local, remote or rules; the engine that ran, once finished
+	Status       string  `json:"status"` // queued, running, done, failed or canceled
+	Error        *string `json:"error"`
+	CreatedAt    string  `json:"created_at"`
+	CompletedAt  *string `json:"completed_at"`
+}
+
+// Suggestion is one proposed change in a revision. State starts as pending.
+type Suggestion struct {
+	ID           int64   `json:"id"`
+	RevisionID   int64   `json:"revision_id"`
+	Section      string  `json:"section"`
+	TargetID     *int64  `json:"target_id"`
+	Engine       string  `json:"engine"`
+	OriginalText string  `json:"original_text"`
+	ProposedText string  `json:"proposed_text"`
+	State        string  `json:"state"` // pending, accepted, rejected or edited
+	EditedText   *string `json:"edited_text"`
+}
+
+// Final is the text the tailored resume uses for this suggestion: the user's edit, the proposal
+// if accepted, or the original if rejected (or still pending).
+func (s Suggestion) Final() string {
+	switch {
+	case s.State == "edited" && s.EditedText != nil:
+		return *s.EditedText
+	case s.State == "accepted":
+		return s.ProposedText
+	}
+	return s.OriginalText
+}
+
+// TailoredResume is the reviewed result of a revision. Content and BaseContent are empty in lists.
+type TailoredResume struct {
+	ID           int64  `json:"id"`
+	JobID        int64  `json:"job_id"`
+	RevisionID   *int64 `json:"revision_id"`
+	BaseResumeID *int64 `json:"base_resume_id"`
+	Content      string `json:"content,omitempty"`
+	BaseContent  string `json:"base_content,omitempty"`
+	CreatedAt    string `json:"created_at"`
+}
