@@ -163,6 +163,7 @@ button:focus-visible, .button:focus-visible {
   outline-offset: 1px;
 }
 button:disabled { opacity: 0.45; }
+a.button[aria-disabled] { opacity: 0.45; pointer-events: none; cursor: default; }
 
 button.primary, .button.primary {
   background: var(--accent);

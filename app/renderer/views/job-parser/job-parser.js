@@ -158,6 +158,9 @@ window.JobParser = {
 
       const keyOf = result => result.id ? `job/${result.id}` : `${result.board}/${result.external_id}`;
 
+      //Saved jobs by their Greenhouse listing, so a listing shown again still reads as saved.
+      const savedByListing = new Map();
+
       //highlights the open listing in the result list, if it is on this page
       const markSelected = () => {
         for (const row of document.querySelectorAll(".result")) {
@@ -177,12 +180,14 @@ window.JobParser = {
         }
       };
   
-      //Sets a link
-      const setLink = (id, value) => {
+      //Sets a link. Without a usable address it is hidden, or with dim it stays in place, dimmed and unclickable.
+      const setLink = (id, value, {dim = false} = {}) => {
         const element = document.getElementById(id);
         const url = value ? safeURL(value) : null;
-        element.hidden = !url;
-  
+        element.hidden = !url && !dim;
+        element.toggleAttribute("aria-disabled", !url);
+        element.tabIndex = url ? 0 : -1;
+
         if (url) {
           element.href = url;
         } else {
@@ -192,6 +197,9 @@ window.JobParser = {
   
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
+        //A listing opened from results or reloaded has no id, but it may already be saved.
+        const savedId = !data.id && data.board && savedByListing.get(`${data.board}/${data.external_id}`);
+        if (savedId) data = {...data, id: savedId};
         detailSeq++;
         posting = data;
         fromResults = opened;
@@ -205,7 +213,7 @@ window.JobParser = {
         $("job-description").textContent = data.raw_text || "No description was given.";
 
         fillLogo($("job-logo"), data.company_name, data.company_url, data.board);
-        setLink("job-link", data.listing_url);
+        setLink("job-link", data.listing_url, {dim: true});
         setLink("company-link", data.company_url);
 
         main.classList.add("has-detail");
@@ -233,8 +241,8 @@ window.JobParser = {
       function rememberListing(data) {
         if (!data.board || !data.external_id) return;
         try {
-          const {board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
-          localStorage.setItem(LISTING_KEY, JSON.stringify({board, external_id, position_title, company_name, location, work_mode,
+          const {id, board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
+          localStorage.setItem(LISTING_KEY, JSON.stringify({id, board, external_id, position_title, company_name, location, work_mode,
             updated_at, raw_text, company_url, listing_url, at: new Date().toISOString()}));
         } catch {
           //Home just won't offer it
@@ -242,8 +250,16 @@ window.JobParser = {
       }
 
       //Opens a remembered listing in Find jobs as it was kept, without asking Greenhouse.
-      const openSaved = saved => {
-        displayPosting(saved, Boolean(results?.postings.some(p => keyOf(p) === keyOf(saved))));
+      const openSaved = async saved => {
+        let data = saved;
+        if (saved.id) {
+          try {
+            data = await jobsApi.get(saved.id); //still saved: show it with its saved state
+          } catch {
+            data = {...saved, id: undefined}; //deleted since
+          }
+        }
+        displayPosting(data, Boolean(results?.postings.some(p => keyOf(p) === keyOf(saved))));
       };
 
       const showDetailLoading = message => {
@@ -759,10 +775,16 @@ window.JobParser = {
       // ---- Save from Greenhouse (Open a link and search results both go through displayPosting) ----
       $("save-listing").addEventListener("click", async () => {
         const btn = $("save-listing");
+        const current = posting;
         btn.disabled = true;
         try {
-          const {imported} = await window.FistBumpAPI.importJobs([{board: posting.board, external_id: posting.external_id}]);
-          btn.textContent = imported.length ? "Saved" : "Updated";
+          const {imported, refreshed} = await window.FistBumpAPI.importJobs([{board: current.board, external_id: current.external_id}]);
+          const job = imported[0] || refreshed[0];
+          if (job) {
+            savedByListing.set(`${job.board}/${job.external_id}`, job.id);
+            if (posting === current) displayPosting({...current, ...job}, fromResults); //now shown as saved
+            loadSaved();
+          }
         } catch (error) {
           btn.disabled = false;
           window.alert(error.message); // for example, the posting has closed (404)
@@ -773,6 +795,7 @@ window.JobParser = {
       const loadSaved = async () => {
         try {
           const jobs = await jobsApi.list($("saved-q").value.trim());
+          for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
           $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
           $("saved-empty-message").textContent = "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
@@ -797,6 +820,11 @@ window.JobParser = {
           if (mine === detailSeq) showDetailError(error);
         }
       };
+
+      // ---- Tailor: open the saved job in the Tailor view ----
+      $("tailor-job").addEventListener("click", () => {
+        if (posting?.id) window.Tailor.open(posting.id);
+      });
 
       // ---- Delete ----
       $("delete-job").addEventListener("click", async () => {
