@@ -100,10 +100,10 @@ Progress:
 - [x] 10. `revisions.go` (api)
 - [x] 11. `tailored.go` (api)
 - [x] 12. `main.go`: interrupted rounds
-- [ ] 13. `ipc-handlers.js`, `preload.js`
-- [ ] 14. `worddiff.js`
-- [ ] 15. `diff-view.js`
-- [ ] Tests and tooling (backend tests done; Electron tests with steps 13 to 15)
+- [x] 13. `ipc-handlers.js`, `preload.js`
+- [x] 14. `worddiff.js`
+- [x] 15. `diff-view.js`
+- [x] Tests and tooling
 
 ### Backend
 
