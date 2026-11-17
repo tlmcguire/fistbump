@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/parser"
 )
 
 const (
@@ -305,7 +306,7 @@ func (c *Client) fill(ctx context.Context, posts []connectors.Posting, mu *sync.
 			}
 			// A posting whose location says nothing may still say in its text that the role is remote or hybrid.
 			if p.WorkMode == connectors.WorkModeOnSite {
-				if mode := DescribedMode(detail.RawText); mode != "" {
+				if mode := parser.DescribedMode(detail.RawText); mode != "" {
 					p.WorkMode = mode
 				}
 			}

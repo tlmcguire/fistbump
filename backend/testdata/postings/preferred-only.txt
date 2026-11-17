@@ -1,0 +1,15 @@
+Machine Learning Engineer
+Brightwater Analytics
+Denver, CO
+
+Brightwater Analytics helps utilities forecast demand. Our ML team trains models on smart-meter data and ships them to production with Python and Airflow.
+
+You will work closely with data engineers to turn research notebooks into reliable pipelines, and you will help us decide which models are worth running.
+
+Nice to have
+- PyTorch or TensorFlow
+- Spark
+- Experience with time series forecasting
+- dbt
+
+We offer a hybrid schedule, two days in the office.

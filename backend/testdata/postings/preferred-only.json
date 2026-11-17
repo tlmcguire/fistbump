@@ -1,0 +1,24 @@
+{
+  "hidden_characters": 0,
+  "inferred": {
+    "company_name": "Brightwater Analytics",
+    "position_title": "Machine Learning Engineer",
+    "location": "Denver, CO",
+    "work_mode": "Hybrid"
+  },
+  "pref_soft_skills": [],
+  "pref_tech_skills": [
+    "dbt",
+    "forecasting",
+    "pytorch",
+    "spark",
+    "tensorflow"
+  ],
+  "req_soft_skills": [],
+  "req_tech_skills": [
+    "airflow",
+    "machine learning",
+    "python"
+  ],
+  "requirements": 0
+}
