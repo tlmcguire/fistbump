@@ -78,6 +78,15 @@ func notImplemented() *apiError {
 	}
 }
 
+// unavailable is a 503 for an AI engine that was asked for but cannot run.
+func unavailable(msg string) *apiError {
+	return &apiError{
+		Status:  http.StatusServiceUnavailable,
+		Code:    "ai_unavailable",
+		Message: msg,
+	}
+}
+
 func upstreamError(msg string) *apiError {
 	return &apiError{
 		Status:  http.StatusBadGateway,

@@ -15,10 +15,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/api"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
 // version is reported by GET /v1/health. Release builds can set it with -ldflags "-X main.version=...".
@@ -58,6 +60,17 @@ func run() error {
 	}
 	defer conn.Close()
 
+	// A round left queued or running by the last launch can never finish, so mark it failed.
+	if n, err := store.New(conn).FailInterrupted(context.Background()); err != nil {
+		slog.Warn("marking interrupted rounds", "error", err)
+	} else if n > 0 {
+		slog.Info("marked interrupted rounds as failed", "rounds", n)
+	}
+
+	// Suggestion rounds run under this context; it is canceled before the server shuts down.
+	roundsCtx, stopRounds := context.WithCancel(context.Background())
+	defer stopRounds()
+
 	// Search results are cached in the database. Files from the earlier on-disk cache are not used.
 	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
 	gh := greenhouse.NewClient()
@@ -95,6 +108,9 @@ func run() error {
 		Caches:     []api.CacheClearer{gh.Cache, logoFetcher},
 		Token:      token,
 		Version:    version,
+		// Phase 8 adds the local and remote engines here.
+		Engines:     ai.Engines{Rules: ai.Rules{}},
+		BaseContext: roundsCtx,
 	})
 
 	// Port 0 lets the OS pick a free port. Binding to 127.0.0.1 keeps the API off the network.
@@ -123,6 +139,7 @@ func run() error {
 	case <-stdinClosed:
 	}
 
+	stopRounds()
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
