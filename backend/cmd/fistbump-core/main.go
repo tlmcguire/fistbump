@@ -20,6 +20,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
+	"github.com/tlmcguire/fistbump/backend/internal/pdf"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
@@ -108,6 +109,7 @@ func run() error {
 		Caches:     []api.CacheClearer{gh.Cache, logoFetcher},
 		Token:      token,
 		Version:    version,
+		PDF:        pdf.RenderFile,
 		// Phase 8 adds the local and remote engines here.
 		Engines:     ai.Engines{Rules: ai.Rules{}},
 		BaseContext: roundsCtx,

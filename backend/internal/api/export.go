@@ -89,7 +89,7 @@ func readFormat(w http.ResponseWriter, r *http.Request) (string, error) {
 func (s *Server) sendExport(w http.ResponseWriter, format, markdown, name string) error {
 	body := []byte(markdown)
 	if format == "pdf" {
-		pdf, err := s.makePDF(markdown)
+		pdf, err := s.makePDF(markdown, name+"."+exportFormats[format].ext)
 		if err != nil {
 			slog.Error("pdf export failed", "error", err)
 			return pdfFailed()
@@ -112,7 +112,7 @@ func (s *Server) sendExport(w http.ResponseWriter, format, markdown, name string
 
 // makePDF runs the PDF renderer. A renderer that is missing, fails or panics is an error, so the
 // caller can offer Markdown instead.
-func (s *Server) makePDF(markdown string) (pdf []byte, err error) {
+func (s *Server) makePDF(markdown, fileName string) (pdf []byte, err error) {
 	if s.renderPDF == nil {
 		return nil, fmt.Errorf("no PDF renderer is configured")
 	}
@@ -121,7 +121,7 @@ func (s *Server) makePDF(markdown string) (pdf []byte, err error) {
 			err = fmt.Errorf("pdf renderer panicked: %v", v)
 		}
 	}()
-	return s.renderPDF(markdown)
+	return s.renderPDF(markdown, fileName)
 }
 
 // pdfFailed is the 500 for a failed PDF. details.fallback tells the app to offer Markdown.

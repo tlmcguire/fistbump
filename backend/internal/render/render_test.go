@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -34,6 +35,8 @@ func TestMasterGolden(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Git on Windows may check the golden file out with CRLF line endings.
+	want = bytes.ReplaceAll(want, []byte("\r\n"), []byte("\n"))
 	if got := Master(fullMaster()); got != string(want) {
 		t.Errorf("render differs from testdata/render/master.md:\n%s", got)
 	}

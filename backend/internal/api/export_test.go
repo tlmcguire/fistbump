@@ -16,10 +16,10 @@ import (
 const pdfMagic = "%PDF-fake"
 
 // fakePDF stands in for the pdf package: it returns a marker followed by the Markdown it was given.
-func fakePDF(markdown string) ([]byte, error) { return []byte(pdfMagic + markdown), nil }
+func fakePDF(markdown, _ string) ([]byte, error) { return []byte(pdfMagic + markdown), nil }
 
 // newExportServer builds a server whose PDF renderer is render.
-func newExportServer(t *testing.T, render func(string) ([]byte, error)) *Server {
+func newExportServer(t *testing.T, render func(string, string) ([]byte, error)) *Server {
 	t.Helper()
 	conn, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -81,6 +81,22 @@ func TestTailoredExportPDF(t *testing.T) {
 	}
 }
 
+// The PDF renderer gets the download file name, so it can title the document after it.
+func TestPDFGetsDownloadFileName(t *testing.T) {
+	var got []string
+	s := newExportServer(t, func(markdown, fileName string) ([]byte, error) {
+		got = append(got, fileName)
+		return fakePDF(markdown, fileName)
+	})
+	id := seedTailored(t, s, "Ada Lovelace", "Acme", "Data Analyst")
+	expect(t, call(t, s, "POST", "/v1/tailored-resumes/"+id+"/export", `{"format":"pdf"}`), 200)
+	expect(t, call(t, s, "POST", "/v1/resume/export", `{"format":"pdf"}`), 200)
+	want := []string{"Ada Lovelace - Acme - Data Analyst.pdf", "Ada Lovelace - Resume.pdf"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("file names = %q, want %q", got, want)
+	}
+}
+
 func TestExportFileNameIsSanitized(t *testing.T) {
 	s := newExportServer(t, fakePDF)
 	id := seedTailored(t, s, "Ada Lovelace", "Acme/Co: Inc", `Data "Analyst"?`)
@@ -136,9 +152,9 @@ func TestExportErrors(t *testing.T) {
 
 // A PDF that cannot be made answers 500 with details.fallback "md", and Markdown still works.
 func TestPDFFailureOffersMarkdown(t *testing.T) {
-	cases := map[string]func(string) ([]byte, error){
-		"error":     func(string) ([]byte, error) { return nil, errors.New("font failed") },
-		"panic":     func(string) ([]byte, error) { panic("fpdf broke") },
+	cases := map[string]func(string, string) ([]byte, error){
+		"error":     func(string, string) ([]byte, error) { return nil, errors.New("font failed") },
+		"panic":     func(string, string) ([]byte, error) { panic("fpdf broke") },
 		"not wired": nil,
 	}
 	for name, render := range cases {

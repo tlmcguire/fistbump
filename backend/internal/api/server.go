@@ -49,8 +49,9 @@ type Config struct {
 
 	// Engines write resume suggestions. Rules is filled in when left nil, so a zero Config works.
 	Engines ai.Engines
-	// PDF turns resume Markdown into a PDF. Without it, PDF export fails and offers Markdown.
-	PDF func(markdown string) ([]byte, error)
+	// PDF turns resume Markdown into a PDF titled after fileName (the download name, extension
+	// included). Without it, PDF export fails and offers Markdown.
+	PDF func(markdown, fileName string) ([]byte, error)
 	// BaseContext is the parent of every background round. Cancel it to stop them at shutdown.
 	// Nil means context.Background().
 	BaseContext context.Context
@@ -72,7 +73,7 @@ type Server struct {
 	analyze func(job models.Job, m models.Master) analyze.Result
 	rounds  *roundRunner // background suggestion rounds, see revisions.go
 	// renderPDF makes the PDF for the export routes; tests swap it for a fake.
-	renderPDF func(markdown string) ([]byte, error)
+	renderPDF func(markdown, fileName string) ([]byte, error)
 	handler   http.Handler // the mux wrapped in middleware, built once in New
 }
 
