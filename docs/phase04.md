@@ -88,16 +88,16 @@ Progress:
 
 - [x] 1. Schema: `jobs.board`
 - [x] 2. `models.go` Job
-- [ ] 3. `skills.go`
-- [ ] 4. `parser.go`
-- [ ] 5. `analyze.go`
+- [x] 3. `skills.go`
+- [x] 4. `parser.go`
+- [x] 5. `analyze.go`
 - [x] 6. `job.go` (store)
 - [x] 7. `jobs.go` (api)
 - [x] 8. `connectors.go` import
 - [x] 9. Search `skill_score`
-- [ ] 10. `ipc-handlers.js`, `preload.js`
-- [ ] 11. Jobs view: Paste, Saved, analysis panel
-- [ ] Tests and tooling
+- [x] 10. `ipc-handlers.js`, `preload.js`
+- [x] 11. Jobs view: Paste, Saved, analysis panel
+- [x] Tests and tooling
 
 ### Backend
 
