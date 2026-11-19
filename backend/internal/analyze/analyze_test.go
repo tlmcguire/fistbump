@@ -224,7 +224,12 @@ func TestRunSpeed(t *testing.T) {
 			t.Errorf("duration_ms = %d for a run of %v", r.DurationMS, elapsed)
 		}
 	}
-	if fastest > 200*time.Millisecond {
-		t.Errorf("the fastest of 5 runs took %v", fastest)
+	// The race detector and shared CI runners slow this loop by 10x or more, so the limit is looser then.
+	limit := 200 * time.Millisecond
+	if raceEnabled {
+		limit = 1500 * time.Millisecond
+	}
+	if fastest > limit {
+		t.Errorf("the fastest of 5 runs took %v, over %v", fastest, limit)
 	}
 }
