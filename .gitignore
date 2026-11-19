@@ -3,3 +3,5 @@ bin/
 *.gguf
 *.db
 .env
+playwright-report/
+test-results/

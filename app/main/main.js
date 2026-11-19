@@ -9,7 +9,8 @@ const updates = require('./updates');
 app.setName('Fistbump');
 // Data stays where earlier builds kept it (named after the package, "fistbump"), so the product name in
 // package.json does not move the database, caches and saved searches on case-sensitive file systems.
-app.setPath('userData', path.join(app.getPath('appData'), 'fistbump'));
+// FISTBUMP_USER_DATA lets the end-to-end tests use a throwaway folder instead of the real one.
+app.setPath('userData', process.env.FISTBUMP_USER_DATA || path.join(app.getPath('appData'), 'fistbump'));
 
 let backend;
 
