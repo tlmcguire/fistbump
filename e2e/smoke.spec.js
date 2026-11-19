@@ -46,7 +46,8 @@ test('web preferences are locked down', async ({ app, window }) => {
 });
 
 test('target=_blank links and window.open never create a window', async ({ app, window }) => {
-  await window.evaluate(() => window.open('https://example.invalid/', '_blank'));
+  // http: links are ignored by the app. An https: link would start the system's browser, which hangs on a CI runner.
+  await window.evaluate(() => window.open('http://example.invalid/', '_blank'));
   await window.waitForTimeout(500);
   expect(app.windows()).toHaveLength(1);
 });
