@@ -214,6 +214,15 @@ golangci-lint run
 
 After running `go mod tidy`, review the resulting changes (`git status`, `git diff`) to confirm that formatting changes, dependency changes, generated files, and test artifacts are intentional before committing.
 
+## Continuous Integration
+
+CI does not run on every push or pull request. It runs at milestones: when a tag starting with `v` (a release, such as `v0.2.0`) or `phase-` (the end of a phase, such as `phase-07`) is pushed, and when started by hand. Run the checks above locally before opening a pull request.
+
+```bash
+git tag phase-07 && git push origin phase-07   # run all workflows on a milestone
+gh workflow run go.yml --ref <branch>          # run one workflow on a branch
+```
+
 ## Pull Requests
 
 Open a pull request when your work is ready for review.
