@@ -1,9 +1,11 @@
 name: Go
 
 on:
+  # CI runs at milestones, not on every push: a version tag (v0.2.0) or a phase tag (phase-07).
   push:
-    branches: [main]
-  pull_request:
+    tags: ['v*', 'phase-*']
+  # Run it by hand from the Actions tab, or: gh workflow run <file> --ref <branch>
+  workflow_dispatch:
 
 permissions:
   contents: read
