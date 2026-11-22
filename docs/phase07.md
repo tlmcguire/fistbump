@@ -60,16 +60,16 @@ All as written in [api.md](api.md): the 9 Applications routes, and `POST /v1/job
 
 Progress:
 
-- [ ] 1. `models.go` Application
-- [ ] 2. `application.go` (store)
-- [ ] 3. `job.go` (store) archive and trash
-- [ ] 4. `applications.go` (api)
-- [ ] 5. `jobs.go` (api) archive and trash
-- [ ] 6. `ipc-handlers.js`, `preload.js`
-- [ ] 7. `tracker.js`
-- [ ] 8. Track buttons and archive actions
-- [ ] 9. Exported PDF path
-- [ ] Tests and tooling
+- [x] 1. `models.go` Application
+- [x] 2. `application.go` (store)
+- [x] 3. `job.go` (store) archive and trash
+- [x] 4. `applications.go` (api)
+- [x] 5. `jobs.go` (api) archive and trash
+- [x] 6. `ipc-handlers.js`, `preload.js`
+- [x] 7. `tracker.js`
+- [x] 8. Track buttons and archive actions
+- [x] 9. Exported PDF path
+- [x] Tests and tooling
 
 ### Backend
 
