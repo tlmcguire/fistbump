@@ -3,8 +3,11 @@
     <head>
         <meta charset="UTF-8"/>
         <title>Fistbump</title>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; frame-src blob:; object-src blob:">
         <link rel="stylesheet" href="styles/base.css" />
+        <link rel="stylesheet" href="styles/views.css" />
+        <link rel="stylesheet" href="styles/finish.css" />
+        <link rel="stylesheet" href="styles/motion.css" />
     </head>
     <body>
         <div class="app">
@@ -23,24 +26,23 @@
                             <ul id="tree-searches" class="tree-children" aria-label="Recent searches"></ul>
                             <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>Open a link</button>
 
-                            <button type="button" id="tab-paste" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Paste a job</button>
-                            <button type="button" id="tab-saved" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Saved jobs</button>
+                            <button type="button" id="tab-paste" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg>Paste a job</button>
+                            <button type="button" id="tab-saved" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg>Saved jobs</button>
                         </div>
                     </div>
 
                     <div class="tree-group" data-group="resume">
                         <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-resume"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Resume</button>
                         <div id="tree-resume" class="tree-body">
-                            <button type="button" id="nav-resume" class="nav-item" data-route="resume"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Master resume</button>
+                            <button type="button" id="nav-resume" class="nav-item" data-route="resume"><svg class="icon" aria-hidden="true"><use href="#i-person"/></svg>Master resume</button>
                             <ul id="tree-versions" class="tree-children" aria-label="Saved versions"></ul>
-                            <!--new tailor button-->
-                            <button type="button" id="nav-tailor" class="nav-item" data-route="tailor"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Tailor</button>
+                                                        <button type="button" id="nav-tailor" class="nav-item" data-route="tailor"><svg class="icon" aria-hidden="true"><use href="#i-wand"/></svg>Tailor</button>
                         </div>
                     </div>
                 </nav>
                 <div class="sidebar-foot" role="tablist" aria-label="App">
                     <img src="views/graphics/logo.png" alt="Fistbump" class="wordmark">
-                    <button type="button" id="tab-settings" class="icon-button" role="tab" aria-selected="false" aria-label="Settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
+                    <button type="button" id="tab-settings" class="icon-button" role="tab" aria-selected="false"  aria-label="Settings" title="Settings (Cmd or Ctrl and comma)"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="icon-button-label">Settings</span><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
                 </div>
             </aside>
 
@@ -52,6 +54,19 @@
                 <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H6.5v17h11V7z"/><path d="M14 3.5V7h3.5"/><path d="M9.5 12h5M9.5 15.5h5"/></symbol>
                 <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9.5M18.5 7H20M4 17h3.5M12.5 17H20"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></symbol>
                 <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+                <symbol id="i-paste" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5h6V5"/><path d="M9 11h6M9 15h4"/></symbol>
+                <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17L12 16.5l-5.5 4z"/></symbol>
+                <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.5-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+                <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 11-11"/><path d="m13.5 4.5.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/><path d="m18.5 12.5.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/></symbol>
+                <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+                <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+                <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+                <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4.5 19.5.8-4L16.5 4.3a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.5 18.7z"/></symbol>
+                <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
+                <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></symbol>
+                <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10a3.8 3.8 0 0 0 .6-7.5A5.5 5.5 0 0 0 7 9.6 4.5 4.5 0 0 0 7 18.5z"/></symbol>
+                <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6"/><path d="m20 4-7 7M4 20l7-7"/></symbol>
+                <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 10h-6V4M4 14h6v6"/><path d="m14 10 7-7M3 21l7-7"/></symbol>
                 <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="m3.5 6.5 1.2 1.2 2-2.4M3.5 12l1.2 1.2 2-2.4M3.5 17.5l1.2 1.2 2-2.4"/></symbol>
             </svg>
 
@@ -73,7 +88,7 @@
                             <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
                             <section id="history" class="history" role="dialog" aria-label="Recent searches" hidden>
                                 <div class="history-head">
-                                    <h3>Recent searches</h3>
+                                    <h2>Recent searches</h2>
                                     <button type="button" id="history-close" class="history-close">Close</button>
                                 </div>
                                 <p class="history-hint">Choose a search to run it again.</p>
@@ -96,10 +111,10 @@
                             </label>
                             <label>Work mode
                                 <select id="search-work-mode">
-                                    <option>Any</option>
-                                    <option>Remote</option>
-                                    <option>Hybrid</option>
-                                    <option>On-site</option>
+                                    <option value="Any">Any</option>
+                                    <option value="Remote">Remote</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                    <option value="On-site">On-site</option>
                                 </select>
                             </label>
                             <label>Posted within
@@ -116,6 +131,24 @@
                                     <input id="search-pay-min" type="text" inputmode="numeric" aria-label="Minimum yearly pay" placeholder="Min, e.g. 90k">
                                     <input id="search-pay-max" type="text" inputmode="numeric" aria-label="Maximum yearly pay" placeholder="Max">
                                 </span>
+                            </label>
+                            <label>Fit with my resume
+                                <select id="search-min-fit">
+                                    <option value="0">Any fit</option>
+                                    <option value="50">At least 50%</option>
+                                    <option value="70">At least 70%</option>
+                                    <option value="90">At least 90%</option>
+                                </select>
+                            </label>
+                            <label>Skills I am missing
+                                <select id="search-max-missing">
+                                    <option value="">Any number</option>
+                                    <option value="0">None</option>
+                                    <option value="1">At most 1</option>
+                                    <option value="2">At most 2</option>
+                                    <option value="3">At most 3</option>
+                                    <option value="5">At most 5</option>
+                                </select>
                             </label>
                             <label>Leave out titles with
                                 <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
@@ -142,8 +175,8 @@
                         </div>
                         <select id="saved-scope" aria-label="Show">
                             <option value="">Active</option>
-                            <option value="archived">Archived</option>
-                            <option value="trash">Trash</option>
+                            <option value="archived">Archived — kept, hidden</option>
+                            <option value="trash">Trash — deleted in 7 days</option>
                         </select>
                     </form>
                 </header>
@@ -153,6 +186,19 @@
                         <section class="settings-group" aria-labelledby="set-appearance">
                             <h2 id="set-appearance">Appearance and accessibility</h2>
                             <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-language">Language</label>
+                                        <p>The language of menus, buttons and the explanations of suggestions. Your resume text stays as you wrote it.</p>
+                                    </div>
+                                    <select id="pref-language" translate="no">
+                                        <option value="system">System</option>
+                                        <option value="en">English</option>
+                                        <option value="es">Español</option>
+                                        <option value="fr">Français</option>
+                                        <option value="de">Deutsch</option>
+                                    </select>
+                                </div>
                                 <div class="setting">
                                     <div class="setting-text">
                                         <label for="pref-text-size">Text size</label>
@@ -168,7 +214,7 @@
                                 <div class="setting">
                                     <div class="setting-text">
                                         <label for="pref-reduce-motion">Reduce motion</label>
-                                        <p>Turns off fades and spinning animations.</p>
+                                        <p>Turns off screen transitions, entrances and spinning animations.</p>
                                     </div>
                                     <select id="pref-reduce-motion">
                                         <option value="system">Match system</option>
@@ -190,6 +236,17 @@
                                     </div>
                                     <input id="pref-underline-links" type="checkbox" class="switch" role="switch">
                                 </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-keys">
+                            <h2 id="set-keys">Keyboard shortcuts</h2>
+                            <div class="settings-card">
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Tracker, Jobs, Resume, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Search, on any view</span></div><span class="keys"><kbd>/</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Move, accept, reject, edit suggestions</span></div><span class="keys"><kbd>J</kbd> <kbd>K</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>E</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Open settings</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>,</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Close dialogs and panels</span></div><span class="keys"><kbd>Esc</kbd></span></div>
                             </div>
                         </section>
 
@@ -222,6 +279,54 @@
                                     </div>
                                     <input id="pref-show-logos" type="checkbox" class="switch" role="switch">
                                 </div>
+                            </div>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-ai">
+                            <h2 id="set-ai">AI suggestions</h2>
+                            <p class="group-note">Resume suggestions are written on this computer unless you turn on a remote provider below. Skill matching never uses AI.</p>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="ai-mode">Who writes suggestions</label>
+                                        <p id="ai-mode-help">Automatic tries the local model first, then your remote provider if you set one, then built-in rules.</p>
+                                    </div>
+                                    <select id="ai-mode" aria-describedby="ai-mode-help">
+                                        <option value="auto">Automatic</option>
+                                        <option value="local">Local model only</option>
+                                        <option value="remote">Remote provider only</option>
+                                        <option value="rules">Built-in rules only</option>
+                                    </select>
+                                </div>
+                                <div class="setting setting-stack">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Local model</span>
+                                        <p id="ai-local-status">Checking...</p>
+                                        <p><span id="models-size" class="size"></span></p>
+                                    </div>
+                                    <button type="button" id="ai-test-local">Test</button>
+                                    <div id="model-list" class="model-list"></div>
+                                </div>
+                                <div class="setting setting-stack">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Remote provider (optional)</span>
+                                        <p>Turning this on sends your resume text and the job posting to the address you enter. It is off until you save one, and the key stays on this computer, encrypted.</p>
+                                    </div>
+                                    <div class="ai-remote">
+                                        <label for="ai-base-url">Address</label>
+                                        <input id="ai-base-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off">
+                                        <label for="ai-model">Model</label>
+                                        <input id="ai-model" type="text" placeholder="Model name" autocomplete="off">
+                                        <label for="ai-key">Key</label>
+                                        <input id="ai-key" type="password" placeholder="Optional. Leave empty for Ollama or another provider on this computer" autocomplete="off">
+                                        <div class="setting-actions">
+                                            <button type="button" id="ai-save-remote" class="primary">Save provider</button>
+                                            <button type="button" id="ai-test-remote">Test</button>
+                                            <button type="button" id="ai-clear-remote">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p id="ai-status" class="setting-status" role="status"></p>
                             </div>
                         </section>
 
@@ -273,55 +378,6 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-saved">
-                            <h2 id="set-saved">Saved data</h2>
-                            <p class="group-note">These clear what you save in Fistbump. Each becomes available when its feature is added.</p>
-                            <div class="settings-card">
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Old saved jobs</span>
-                                        <p>Jobs you saved but never applied to, after they have been kept a while.</p>
-                                    </div>
-                                    <button type="button" class="planned" data-target="old_jobs" disabled>Clear</button>
-                                </div>
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Trash</span>
-                                        <p>Jobs you moved to the trash.</p>
-                                    </div>
-                                    <button type="button" class="planned" data-target="trash" disabled>Empty trash</button>
-                                </div>
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Resumes</span>
-                                        <p>Your saved resumes and their versions.</p>
-                                    </div>
-                                    <button type="button" class="planned" disabled>Delete all</button>
-                                </div>
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Tailored resumes</span>
-                                        <p>Resumes adjusted for a particular job.</p>
-                                    </div>
-                                    <button type="button" class="planned" disabled>Delete all</button>
-                                </div>
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Applications</span>
-                                        <p>The applications you are tracking.</p>
-                                    </div>
-                                    <button type="button" class="planned" disabled>Delete all</button>
-                                </div>
-                                <div class="setting future">
-                                    <div class="setting-text">
-                                        <span class="setting-label">AI models</span>
-                                        <p>Downloaded models, other than the one in use. <span id="models-size" class="size"></span></p>
-                                    </div>
-                                    <button type="button" class="planned" data-target="unused_models" disabled>Remove unused</button>
-                                </div>
-                            </div>
-                        </section>
-
                         <section class="settings-group" aria-labelledby="set-updates">
                             <h2 id="set-updates">Updates</h2>
                             <div class="settings-card">
@@ -359,7 +415,6 @@
                     </div>
                 </section>
 
-                <!---->
                 <section id="paste-pane" class="pane paste-pane" aria-label="Paste a job" hidden>
                     <textarea id="paste-text" rows="14" placeholder="Paste the full job posting here"></textarea>
                     <div class="job-actions">
@@ -444,24 +499,23 @@
                                 </div>
                             </div>
                             <p class="job-meta"><span id="job-location"></span><span id="job-updated"></span></p>
+                            <p id="job-state" class="job-state" hidden></p>
                             <div class="job-actions">
-                                <a id="job-link" class="button primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
-                                <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
-
+                                <!--One gold action per state: Save job, Tailor resume or Restore. The rest are quiet, and what
+                                    removes the job sits apart at the end.-->
                                 <button id="save-listing" type="button" class="primary" hidden>Save job</button>
-
                                 <button id="tailor-job" type="button" class="primary" hidden>Tailor resume</button>
-
+                                <button id="restore-job" type="button" class="primary" hidden title="Take this job out of the Trash. It goes back to Saved jobs.">Restore</button>
                                 <button id="track-job" type="button" hidden>Track</button>
-                                <button id="archive-job" type="button" hidden>Archive</button>
-                                <label id="archive-app-option" class="hint" hidden><input id="archive-app" type="checkbox" checked> Also archive the application</label>
-                                <button id="unarchive-job" type="button" hidden>Unarchive</button>
-                                <button id="trash-job" type="button" hidden>Move to Trash</button>
-                                <button id="restore-job" type="button" class="primary" hidden>Restore</button>
-
-                                <button id="reload-listing" type="button">Reload</button>
-
-                                <button id="delete-job" type="button" class="danger" hidden>Delete</button>
+                                <a id="job-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
+                                <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
+                                <span class="job-actions-gap" aria-hidden="true"></span>
+                                <button id="reload-listing" type="button" class="quiet">Reload</button>
+                                <button id="unarchive-job" type="button" class="quiet" hidden title="Bring this job back to Saved jobs. It stays in your data.">Unarchive</button>
+                                <button id="archive-job" type="button" class="quiet" hidden title="Hide this job from Saved jobs. Nothing is deleted — you can unarchive it at any time.">Archive</button>
+                                <label id="archive-app-option" class="hint" hidden title="Also hide this job's application in the Tracker. It is kept, not deleted."><input id="archive-app" type="checkbox" checked> Also archive the application</label>
+                                <button id="trash-job" type="button" class="quiet danger-text" hidden title="Take this job out of Saved jobs. It is deleted for good after 7 days unless you restore it first.">Move to Trash</button>
+                                <button id="delete-job" type="button" class="quiet danger-text" hidden title="Delete this job right now, for good. It cannot be undone.">Delete now</button>
                             </div>
                             <h3>Description</h3>
                             <p id="job-description"></p>
@@ -477,18 +531,24 @@
                     </section>
                 </div>
             </main>
-            <!-- phase 3 resume view-->
-            <main id="view-home" class="main" hidden></main>
+                        <main id="view-home" class="main" hidden></main>
             <main id="view-resume" class="main" hidden></main>
 
-            <!--phase 5 tailor view-->
-            <main id="view-tailor" class="main" hidden></main>
+                        <main id="view-tailor" class="main" hidden></main>
 
-            <!--phase 7 tracker view-->
-            <main id="view-tracker" class="main" hidden></main>
+                        <main id="view-tracker" class="main" hidden></main>
         </div>
 
         <script src="js/prefs.js" defer></script>
+        <script src="js/i18n.js" defer></script>
+        <script src="js/locales/es.js" defer></script>
+        <script src="js/locales/fr.js" defer></script>
+        <script src="js/locales/de.js" defer></script>
+        <script src="js/i18n-start.js" defer></script>
+        <script src="js/ui.js" defer></script>
+        <script src="js/pdf-preview.js" defer></script>
+        <script src="js/tooltip.js" defer></script>
+        <script src="js/segments.js" defer></script>
         <script src="js/api.js" defer></script>
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>

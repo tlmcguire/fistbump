@@ -1,0 +1,171 @@
+/*
+ * Finish: the material layer over the layout in base.css and views.css.
+ *
+ * Fistbump's world is Pico's: a friendly retro computer on a deep navy desk. Surfaces are flat, solid colours
+ * (no gradients, no texture: Pico's art is drawn on the page's own navy and must sit on it cleanly). Depth comes
+ * only from a hairline highlight on a panel's top edge and a soft shadow below it. Headings speak in Bricolage
+ * Grotesque, a warm grotesque with a little ink-trap character; the body stays in the system face so the app
+ * still feels native.
+ */
+
+/* Bricolage Grotesque, variable (200 to 800), self-hosted. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/bricolage-grotesque-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/bricolage-grotesque-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --display: "Bricolage Grotesque", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --lit: inset 0 1px 0 rgba(255, 255, 255, 0.07);                 /* the top edge catching the light */
+  --lift-1: 0 1px 2px rgba(3, 10, 30, 0.35), 0 6px 14px -6px rgba(3, 10, 30, 0.45);
+  --lift-2: 0 2px 4px rgba(3, 10, 30, 0.3), 0 18px 36px -12px rgba(3, 10, 30, 0.6);
+  --panel: #10306c;          /* a panel on the page */
+  --panel-hover: #143675;
+  --panel-line: rgba(255, 255, 255, 0.085);
+}
+
+/* ---------- Type ---------- */
+
+.view-title, .toolbar-title h1,
+.home-welcome h2, .home-section h3,
+.stage-empty h2, .tracker-empty h2, .state-message h2,
+.round-head h2, .tailor-aside h2, .resume-section > h2, .section-head h2,
+dialog.ask h2, .due-strip h2, .listing h2, #job-title {
+  font-family: var(--display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.012em;
+}
+.view-title, .toolbar-title h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.home-welcome h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+.home-section h3 { font-size: 17px; font-weight: 650; }
+.stage-empty h2, .tracker-empty h2 { font-size: 20px; font-weight: 650; }
+.resume-section > h2, .section-head h2, .round-head h2 { font-size: 17px; font-weight: 650; }
+.tailor-aside h2 { font-size: 19px; font-weight: 700; }
+.score-ring { font-family: var(--display); font-weight: 700; }
+
+/* Settings groups get real headings, not shouted labels */
+.settings-group h2 {
+  margin: 0 0 10px 2px;
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Page, sidebar, toolbar: solid ---------- */
+
+.toolbar {
+  position: relative;
+  z-index: 2;
+  border-bottom-color: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 14px -12px rgba(3, 10, 30, 0.9);
+}
+
+/* ---------- Sidebar ---------- */
+
+.nav-item { border-radius: 8px; }
+.nav-item[aria-selected="true"], .nav-item[aria-current="page"],
+.nav-item[aria-selected="true"]:hover:not(:disabled) {
+  background: var(--select);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color: var(--text);
+}
+.app:not([data-route="jobs"]) .nav-item[aria-selected="true"] { box-shadow: none; }
+
+/* ---------- Buttons ---------- */
+
+button, .button { border-radius: 8px; }
+button.primary:not(:disabled), .button.primary {
+  font-weight: 650;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 2px rgba(3, 10, 30, 0.4);
+}
+
+/* ---------- Fields ---------- */
+
+input:not([type="checkbox"]):not(.switch), select, textarea { border-radius: 8px; }
+input:not([type="checkbox"]):not(.switch):focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 1px;
+}
+
+/* ---------- Panels ---------- */
+
+.settings-card, .tailor-card, .pdf-preview, .due-strip, .tracker-table-wrap, .writing, .decide-bar,
+.home-section .home-rows {
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--lit), var(--lift-1);
+}
+.tailor-card { padding: 16px 18px; }
+.tailor-card.current { background: var(--panel-hover); box-shadow: var(--lit), var(--lift-2); }
+.decide-bar { bottom: 14px; margin: 4px 0 14px; padding: 12px 18px; border-radius: 14px; box-shadow: var(--lit), var(--lift-2); }
+.tracker-table-wrap { padding: 2px 6px 6px; }
+.tracker-table thead th { background: var(--panel); }
+.writing { padding: 16px 18px; }
+
+/* Rows on Home sit in one panel; each row lightens on hover */
+.home-section .home-rows { padding: 4px; }
+.home-section .home-row { width: 100%; margin-inline: 0; padding: 11px 14px; border-radius: 9px; }
+.home-section .home-row:hover:not(:disabled) { background: var(--panel-hover); }
+.home-rows > li + li { border-top-color: rgba(255, 255, 255, 0.06); }
+.home-row strong { font-size: 14px; }
+
+/* The welcome: the one hero, a solid raised panel. Pico stands in it with no frame or shadow. */
+.home-welcome {
+  padding: 30px 30px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: #153678;
+  box-shadow: var(--lit), var(--lift-2);
+}
+.home-welcome .home-row { margin-top: 20px; background: #0f2c66; }
+.home-welcome .home-row:hover:not(:disabled) { background: #0c275d; }
+.home-welcome-text > p { color: rgba(242, 245, 251, 0.82); }
+.home-done { display: block; margin-bottom: 2px; color: var(--muted); }
+
+/* ---------- Jobs ---------- */
+
+.result-open strong { font-size: 14px; }
+.filters-actions { grid-column: -2 / -1; align-self: end; }
+
+/* ---------- Tailor ---------- */
+
+.reason { border: 1px solid rgba(255, 255, 255, 0.07); }
+.score-ring::before { background: var(--bg); }
+
+/* ---------- Dialogs ---------- */
+
+dialog.ask { border-color: rgba(255, 255, 255, 0.12); background: #153678; box-shadow: var(--lit), 0 24px 60px rgba(3, 10, 30, 0.6); }
+
+/* Pico is drawn on the page's own navy, so nothing lighter or darker sits behind it: the panels that hold Pico
+   take the page colour and keep only their edge. */
+.home-welcome { background: var(--bg); }
+.home-welcome .home-row { background: var(--panel); }
+.home-welcome .home-row:hover:not(:disabled) { background: var(--panel-hover); }
+.writing { background: var(--bg); }
+.tracker-table-wrap:has(.tracker-empty) { padding: 0; border-color: transparent; background: none; box-shadow: none; }
+
+/* Narrow windows: the search bar keeps Search, Filters and History on one line with the fields above them */
+@media (max-width: 1000px) {
+  #search-form > .field.grow { flex: 1 1 100%; max-width: none; }
+  #search-form > .field:not(.grow) { flex: 1 1 140px; }
+  #search-form #filters-toggle { margin-left: 0; }
+  .tailor-toolbar .toolbar-actions { margin-left: 0; width: 100%; }
+  .tailor-toolbar .picker { flex: 1 1 160px; }
+  .tailor-toolbar .picker select { width: 100%; min-width: 0; max-width: none; }
+}

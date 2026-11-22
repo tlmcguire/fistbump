@@ -46,7 +46,7 @@ As written in [api.md](api.md).
 - **Targets.** `cache`: phase 2's Greenhouse cache (memory and the two `greenhouse_*_cache` tables). `partial_downloads`: `.part` files with no running download. `old_jobs`: jobs with no application, neither archived nor trashed, whose `searched_at` is older than `older_than_days` (default `jobs.retention_days`). `trash`: trashed jobs older than `jobs.trash_days`. `unused_models`: installed models other than `ai.selected_model`.
 - Deleting jobs cascades to revisions, suggestions and tailored resumes. Jobs with applications are never removed (`RESTRICT`).
 - After removing jobs, run `VACUUM` so the database file shrinks.
-- **Automatic cleanup** at startup: `old_jobs` and `trash` only, logged to stderr. Files are removed only when the user asks.
+- **Automatic cleanup** at startup: `old_jobs` and `trash` only, logged to stderr. Files are removed only when the user asks. The `trash` half is built: `store.PurgeTrashedJobs` deletes the jobs that have been in the Trash for longer than `jobs.trash_days` at every start. `old_jobs` and the models are not built yet.
 
 | Status | `code` | When |
 |--------|--------|------|
@@ -60,7 +60,7 @@ Progress:
 - [ ] 2. `package.json` pins and scripts
 - [ ] 3. `build-go.js` folder names
 - [ ] 4. `electron-builder.yml`
-- [ ] 5. `gc.go`, `storage.go`
+- [ ] 5. `gc.go`, `storage.go` (the trash purge in `gc.go` is done; `old_jobs` and the models are not)
 - [ ] 6. Storage section in settings (built early on `feature/settings-page`: sizes, cache cleanup, data folder; job and model cleanup wait for those features)
 - [ ] 7. `backend.js` restart, startup error screen
 - [ ] 8. `build.yml` (release job)

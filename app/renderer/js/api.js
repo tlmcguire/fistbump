@@ -11,7 +11,9 @@ window.FistBumpAPI = {
         throw new Error(msg || "Connection error");
       }
       //updated front end error handling for pahse 03
-      if (result?.error) {
+      //a failed request is {error: {code, message}}. A revision or a test result may carry "error" as a plain
+      //string (why a round failed), which is data to show, not a failed request.
+      if (result?.error && typeof result.error === "object") {
         const error = new Error(result.error.message || "An unknown error has occurred");
         error.code = result.error.code;
         error.details = result.error.details;
@@ -73,7 +75,7 @@ window.FistBumpAPI = {
   window.FistBumpAPI.resume = wrap("resume", [
     "get", "putProfile", "preview", "createExperience", "updateExperience", "deleteExperience", 
     "createEducation", "updateEducation", "deleteEducation",
-    "importFile", "importData", "importText", "importApply", "export",
+    "importFile", "importData", "importText", "importApply", "export", "previewPdf",
   ]);
 
   //handles job management in phase 4
@@ -89,7 +91,10 @@ window.FistBumpAPI = {
   //phase 5
   window.FistBumpAPI.revisions = wrap("revisions", ["create", "list", "get", "cancel", "delete"]);
   window.FistBumpAPI.suggestions = wrap("suggestions", ["accept", "reject", "edit"]);
-  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export"]);
+  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export", "previewPdf"]);
+  window.FistBumpAPI.ai = wrap("ai", ["status", "setMode", "setRemote", "clearRemote", "test"]);
+  //phase 8: the local model catalog
+  window.FistBumpAPI.models = wrap("models", ["list", "get", "download", "downloadStatus", "cancelDownload", "delete"]);
 
   //phase 6: show an exported file in its folder
   window.FistBumpAPI.shell = wrap("shell", ["showItem"]);

@@ -3,6 +3,7 @@
 window.Prefs = (() => {
   const KEY = "fistbump.prefs";
   const DEFAULTS = {
+    language: "system",      // system | en | es | fr | de
     textSize: "default",     // small | default | large | larger
     reduceMotion: "system",  // system | on | off
     highContrast: false,
@@ -14,6 +15,7 @@ window.Prefs = (() => {
   };
   const ZOOM = {small: 0.9, default: 1, large: 1.15, larger: 1.3};
   const ALLOWED = {
+    language: ["system", "en", "es", "fr", "de"],
     textSize: Object.keys(ZOOM),
     reduceMotion: ["system", "on", "off"],
     pageSize: [20, 30, 50],

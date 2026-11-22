@@ -1,10 +1,11 @@
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, safeStorage, shell } = require('electron');
 const path = require('path');
 const { Backend } = require('./backend');
 const { register } = require('./ipc-handlers');
 const windowState = require('./window-state');
 const { appMenu, contextMenu } = require('./menus');
 const updates = require('./updates');
+const { createSecrets, restoreRemoteKey } = require('./secrets');
 
 app.setName('Fistbump');
 // Data stays where earlier builds kept it (named after the package, "fistbump"), so the product name in
@@ -111,7 +112,10 @@ if (!app.requestSingleInstanceLock()) {
       app.quit();
       return;
     }
+    const secrets = createSecrets(safeStorage, app.getPath('userData'));
+    await restoreRemoteKey(backend, secrets).catch(() => false);
     register(ipcMain, backend, {
+      secrets,
       dialog,
       BrowserWindow,
       shell,

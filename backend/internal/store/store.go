@@ -75,9 +75,12 @@ func mapErr(err error) error {
 	return err
 }
 
+// stampLayout is the timestamp format the schema uses: RFC 3339 in UTC, to the second.
+const stampLayout = "2006-01-02T15:04:05Z"
+
 // now is the current time as RFC 3339 UTC, the format the schema uses.
 func now() string {
-	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	return time.Now().UTC().Format(stampLayout)
 }
 
 // encodeList stores a string list as a JSON array; nil becomes "[]".

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 )
 
-// Engines holds one provider per engine. Local and Remote stay nil until phase 8.
+// Engines holds one provider per engine. Local and Remote are nil when not built in (tests).
 type Engines struct {
 	Local  Provider
 	Remote Provider
@@ -86,13 +86,15 @@ func (e Engines) fillGaps(ctx context.Context, r Request, drafts []Draft, engine
 	}
 	out := drafts
 	if len(missing) > 0 && e.Rules != nil {
-		gaps, err := e.Rules.Suggest(ctx, Request{Job: r.Job, Analysis: r.Analysis, Profile: r.Profile, Targets: missing})
+		gaps, err := e.Rules.Suggest(ctx, Request{Job: r.Job, Analysis: r.Analysis, Profile: r.Profile, Targets: missing, Language: r.Language})
 		if err != nil {
 			return nil, "", err
 		}
 		out = append(out, gaps...)
 	}
-	if len(drafts) == 0 {
+	// The round is labeled with the engine that wrote most of its suggestions; a tie goes to the
+	// model. A round where the model contributed nothing is labeled rules.
+	if len(drafts) == 0 || len(out)-len(drafts) > len(drafts) {
 		engine = EngineRules
 	}
 	return out, engine, nil

@@ -90,6 +90,7 @@ window.JobParser = {
 
       //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
+        if (name !== activeTab && !main.hidden) window.UI.play(main, "view-enter", 320); //same arrival as a page change
         //Find jobs and Open a link each show their own listing; Settings leaves the open one as it was.
         if (activeTab !== "settings") scrolls[activeTab] = {list: listPane.scrollTop, detail: detailPane.scrollTop};
         activeTab = name;
@@ -199,6 +200,7 @@ window.JobParser = {
   
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
+        window.UI.play(detailPane, "enter", 360);
         //A listing opened from results or reloaded has no id, but it may already be saved.
         const savedId = !data.id && data.board && savedByListing.get(`${data.board}/${data.external_id}`);
         if (savedId) data = {...data, id: savedId};
@@ -215,7 +217,7 @@ window.JobParser = {
         $("job-description").textContent = data.raw_text || "No description was given.";
 
         fillLogo($("job-logo"), data.company_name, data.company_url, data.board);
-        setLink("job-link", data.listing_url, {dim: true});
+        setLink("job-link", data.listing_url); //a pasted job has no listing, so the button is not shown
         setLink("company-link", data.company_url);
 
         main.classList.add("has-detail");
@@ -454,6 +456,13 @@ window.JobParser = {
           open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
+          //says what state the job is in, so an archived job and a trashed job do not look alike
+          if (result.trashed_at || result.archived_at) {
+            const state = el("small", result.trashed_at ? "In the Trash" : "Archived");
+            state.className = "result-state";
+            body.append(state);
+          }
+
           //the logo, preview and padding open the listing too; the button stays for the keyboard
           item.addEventListener("click", event => {
             if (event.target.closest("button, a")) return; //they handle their own clicks
@@ -462,6 +471,7 @@ window.JobParser = {
             onOpen(result);
           });
 
+          if (result.fit) body.append(fitLine(result.fit));
           const preview = snippet(result.raw_text);
           if (preview) body.append(el("p", preview));
           if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
@@ -479,6 +489,23 @@ window.JobParser = {
             body.append(link);
           }
           return item;
+      };
+
+      //how well the resume covers a posting's required skills: a percent with a word, and the gaps
+      const fitLine = fit => {
+        const h = window.ResumeBuilder.el;
+        const level = fit.percent >= 80 ? "high" : fit.percent >= 50 ? "mid" : "low";
+        const word = {high: "Strong fit", mid: "Partial fit", low: "Weak fit"}[level];
+        const shown = fit.missing.slice(0, 3);
+        const line = h("div", {class: "fit-line"},
+          h("span", {class: "fit-badge", "data-level": level, title: `${fit.matched} of ${fit.required} required skills are on your resume`, text: `${fit.percent}% \u00b7 ${word}`}));
+        if (shown.length) {
+          const more = fit.missing.length - shown.length;
+          line.append(h("span", {class: "fit-missing", text: `Missing: ${shown.join(", ")}${more > 0 ? ` +${more}` : ""}`}));
+        } else {
+          line.append(h("span", {class: "fit-missing", text: "No required skills missing"}));
+        }
+        return line;
       };
 
       //explains what the search could and could not find, so a filter that did not apply is never silent.
@@ -572,6 +599,7 @@ window.JobParser = {
         $("result-empty").hidden = data.postings.length > 0;
         //not map(resultItem): map's index argument would land in onOpen
         $("result-list").replaceChildren(...data.postings.map(result => resultItem(result)));
+        window.UI.stagger($("result-list"), 22, 10);
         markSelected();
 
         renderPager();
@@ -610,6 +638,7 @@ window.JobParser = {
           renderResults(data);
           showState("state-results");
           $("results-pane").scrollTop = 0;
+          return true;
         } catch (error) {
           if (mine !== searchSeq) return;
           if (error.message === "Search canceled") {
@@ -719,6 +748,8 @@ window.JobParser = {
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
         const pay = id => parsePay($(id).value);
+        //"data analyst, " is "data analyst": stray commas and spaces are tidied in the box as well
+        $("search-keywords").value = words("search-keywords").join(", ");
         const query = {
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
@@ -730,6 +761,8 @@ window.JobParser = {
           pay_min: pay("search-pay-min"),
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
+          min_fit: number("search-min-fit"),
+          max_missing: $("search-max-missing").value === "" ? null : number("search-max-missing"),
           sort: $("result-sort").value,
           limit: window.Prefs.get("pageSize")
         };
@@ -747,11 +780,14 @@ window.JobParser = {
           return;
         }
         saveForm();
-        recordSearch();
-        window.Suggest.remember("keywords", query.keywords);
-        window.Suggest.remember("location", [query.location]);
-        window.Suggest.remember("company", [query.company]);
-        runSearch(query);
+        //only a search that worked goes into the history and the suggestions
+        runSearch(query).then(ok => {
+          if (!ok) return;
+          recordSearch();
+          window.Suggest.remember("keywords", query.keywords);
+          window.Suggest.remember("location", [query.location]);
+          window.Suggest.remember("company", [query.company]);
+        });
       });
 
       form.addEventListener("submit", event => {
@@ -785,21 +821,41 @@ window.JobParser = {
           }
         } catch (error) {
           btn.disabled = false;
-          window.alert(error.message); // for example, the posting has closed (404)
+          window.UI.alert(error.message); // for example, the posting has closed (404)
         }
       });
 
       // ---- Saved tab ----
       //Active, Archived or Trash
       const savedScope = () => ({archived: {archived: "only"}, trash: {trashed: "only"}})[$("saved-scope").value] || {};
+
+      //How long a job stays in the Trash before the app deletes it for good. The wording names the
+      //real number, so the Trash and the archive never sound like the same thing.
+      let trashDays = 7;
+      const applyTrashDays = () => {
+        const option = [...$("saved-scope").options].find(o => o.value === "trash");
+        if (option) option.textContent = `Trash — deleted in ${trashDays} days`;
+        $("trash-job").title = `Take this job out of Saved jobs. It is deleted for good after ${trashDays} days unless you restore it first.`;
+      };
+      const loadTrashDays = async () => {
+        try {
+          const values = await window.api.settings.get();
+          const days = Number(values?.["jobs.trash_days"]);
+          if (Number.isFinite(days) && days > 0) trashDays = days;
+        } catch {
+          //the settings are not there, so the default of a week stands
+        }
+        applyTrashDays();
+      };
+      loadTrashDays();
       const loadSaved = async () => {
         try {
           const jobs = await jobsApi.list($("saved-q").value.trim(), savedScope());
           for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
           $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
           $("saved-empty-message").textContent = ({
-            archived: "No archived jobs.",
-            trash: "The Trash is empty.",
+            archived: "No archived jobs. Archived jobs are hidden from Saved jobs, but nothing is deleted — you can bring them back any time.",
+            trash: `The Trash is empty. A job you move to the Trash is deleted for good after ${trashDays} days, unless you restore it before then.`,
           })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
           markSelected();
@@ -833,12 +889,31 @@ window.JobParser = {
         return (await window.FistBumpAPI.applications.list({archived: "include"})).find(a => a.job_id === jobId) || null;
       }
 
+      //says what the open job's own state means: archived is kept, trashed is on its way out
+      const stateNote = job => {
+        const note = $("job-state");
+        note.dataset.state = "";
+        if (job?.trashed_at) {
+          note.dataset.state = "trash";
+          note.textContent = `This job is in the Trash. It is deleted for good after ${trashDays} days, unless you restore it before then.`;
+        } else if (job?.archived_at) {
+          note.dataset.state = "archive";
+          note.textContent = "This job is archived. It is hidden from Saved jobs, but nothing is deleted — unarchive it to bring it back.";
+        } else {
+          note.textContent = "";
+          note.hidden = true;
+          return;
+        }
+        note.hidden = false;
+      };
+
       //shows the buttons that fit the open saved job: trashed jobs only offer Restore
       async function drawLifecycle(job) {
         const mine = ++lifecycleSeq;
         trackedApp = null;
         const trashed = Boolean(job?.trashed_at);
         const archived = Boolean(job?.archived_at);
+        stateNote(job);
         $("track-job").hidden = !job || trashed;
         $("track-job").textContent = "Track";
         $("archive-job").hidden = !job || trashed || archived;
@@ -880,7 +955,7 @@ window.JobParser = {
           //409: tracked already, for example from another window; open that row
           const id = error.details?.application_id;
           if (id) return window.Tracker.open(id);
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -894,7 +969,7 @@ window.JobParser = {
         try {
           await archiveJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -904,25 +979,34 @@ window.JobParser = {
           await jobsApi.unarchive(posting.id);
           await refreshJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
+      //A job with an application cannot go to the Trash, so the archive is offered instead.
+      const archiveInstead = async () => {
+        if (!await window.UI.ask("This job has an application in the Tracker, so it cannot go to the Trash.\n\nArchive keeps the job hidden without deleting it, and can be undone. Archive it instead?",
+          {confirm: "Archive it", title: "Cannot trash — job has an application"})) return;
+        try {
+          await archiveJob();
+        } catch (archiveError) {
+          window.UI.alert(archiveError.message);
+        }
+      };
+
       $("trash-job").addEventListener("click", async () => {
         if (!posting?.id) return;
+        if (trackedApp) return archiveInstead();
+        const question = `Move "${posting.position_title}" at ${posting.company_name} to the Trash?\n\nIt leaves Saved jobs now, and it is deleted for good after ${trashDays} days, unless you restore it before then.`;
+        if (!await window.UI.ask(question, {confirm: "Move to Trash", danger: true, title: "Move to Trash"})) return;
         try {
           await jobsApi.trash(posting.id);
           showDetailEmpty();
           loadSaved();
         } catch (error) {
           //409: the job has an application, so it can be archived instead
-          if (error.code !== "conflict") return window.alert(error.message);
-          if (!window.confirm(`${error.message}, so it cannot go to the Trash. Archive it instead?`)) return;
-          try {
-            await archiveJob();
-          } catch (archiveError) {
-            window.alert(archiveError.message);
-          }
+          if (error.code !== "conflict") return window.UI.alert(error.message);
+          await archiveInstead();
         }
       });
 
@@ -932,7 +1016,7 @@ window.JobParser = {
           await jobsApi.restore(posting.id);
           await refreshJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -950,13 +1034,14 @@ window.JobParser = {
       // ---- Delete ----
       $("delete-job").addEventListener("click", async () => {
         if (!posting?.id) return;
-        if (!window.confirm(`Delete "${posting.position_title}" at ${posting.company_name}? This cannot be undone.`)) return;
+        const question = `Delete "${posting.position_title}" at ${posting.company_name} now?\n\nThis cannot be undone. To keep the job for a while and delete it later, move it to the Trash instead.`;
+        if (!await window.UI.ask(question, {confirm: "Delete now", danger: true, title: "Delete job"})) return;
         try {
           await jobsApi.delete(posting.id);
           showDetailEmpty();
           loadSaved();
         } catch (error) {
-          window.alert(error.message); // the 409 message when an application uses this job
+          window.UI.alert(error.message); // the 409 message when an application uses this job
         }
       });
 
@@ -1040,19 +1125,23 @@ window.JobParser = {
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
       const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
-        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
       const filterInUse = id => {
         const field = $(id);
         if (field.type === "checkbox") return field.checked;
         const value = field.value.trim();
         return value !== "" && value !== "Any" && value !== "0";
       };
+      let shownCount = 0;
       const updateFilterCount = () => {
         const count = FILTER_IDS.filter(filterInUse).length;
+        if (count !== shownCount && count > 0) window.UI.play($("filters-count"), "pop", 420); //the badge answers each change
+        shownCount = count;
         $("filters-count").hidden = count === 0;
         $("filters-count").textContent = String(count);
-        $("filters-toggle").title = count ? `${count} ${count === 1 ? "filter" : "filters"} in use` : "Filters";
+        $("filters-toggle").title = count ? (count === 1 ? "1 filter in use" : `${count} filters in use`) : "Show or hide search filters";
       };
+      //The filters open as a drawer under the search bar; motion.css grows and shrinks it (see #filters there).
       const setFiltersOpen = open => {
         $("filters").hidden = !open;
         $("filters-toggle").setAttribute("aria-expanded", String(open));
@@ -1084,7 +1173,7 @@ window.JobParser = {
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
-        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
       const FORM_KEY = "fistbump.search-form";
 
       //the form as an object, and back
@@ -1146,8 +1235,10 @@ window.JobParser = {
 
       //Describes a search in full: a title (what was searched for) and every option that narrowed it.
       //The industry's name is kept with the entry, since the select may not be filled when the list is drawn.
+      //keywords as a clean, comma-separated line
+      const tidy = value => String(value ?? "").split(",").map(w => w.trim()).filter(Boolean).join(", ");
       const describeFields = (fields, industryName = "") => {
-        const text = id => String(fields[id] ?? "").trim();
+        const text = id => id === "search-keywords" ? tidy(fields[id]) : String(fields[id] ?? "").trim();
         const optionText = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(value)}"]`)?.textContent || "").trim();
         const industry = text("search-industry")
           ? (industryName || optionText("search-industry", text("search-industry")).replace(/\s*\(\d+\)$/, "")).trim()
@@ -1173,6 +1264,8 @@ window.JobParser = {
         if (fields["search-require-pay"] === true) details.push("only postings that list pay");
         const exclude = text("search-exclude");
         if (exclude) details.push(`leaving out ${exclude}`);
+        if (text("search-min-fit") && text("search-min-fit") !== "0") details.push(`fit ${optionText("search-min-fit", text("search-min-fit")).toLowerCase()}`);
+        if (text("search-max-missing") !== "" && text("search-max-missing") !== undefined) details.push(text("search-max-missing") === "0" ? "no missing skills" : `${optionText("search-max-missing", text("search-max-missing")).toLowerCase()} missing skills`);
         return {title, details};
       };
 
@@ -1273,17 +1366,16 @@ window.JobParser = {
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
       window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});
 
-      //Keyboard shortcuts: Cmd/Ctrl+F to search, Cmd/Ctrl+1 and 2 to switch views, Esc to close the filters.
+      //Keyboard shortcuts: Cmd/Ctrl+F to search and Cmd/Ctrl+, for settings; Esc closes the filters.
+      //Cmd/Ctrl+1 to 5 belong to the whole app (app.js) and are not handled here.
       document.addEventListener("keydown", event => {
         const mod = window.api?.platform === "darwin" ? event.metaKey : event.ctrlKey;
         if (mod && !event.shiftKey && !event.altKey) {
-          //Suggestion from clanker after adding the Resume view
-          //If resume view is open, this prevents Ctrl+F focusing a hidden box, Cmd/Ctrl+1 and 2 bring Jobs back.
           if (main.hidden) {
-            if (event.key === "1" || event.key === "2" || event.key === ",") {
+            if (event.key === ",") {
               event.preventDefault();
               location.hash = "#/jobs";
-              selectTab({"1": "find", "2": "link", ",": "settings"}[event.key]);
+              selectTab("settings");
             }
             return;
           }
@@ -1295,17 +1387,12 @@ window.JobParser = {
           } else if (event.key === ",") {
             event.preventDefault();
             selectTab("settings");
-          } else if (event.key === "1" || event.key === "2") {
-            event.preventDefault();
-            selectTab(event.key === "1" ? "find" : "link");
           }
         } else if (event.key === "Escape" && !event.defaultPrevented && !$("filters").hidden) {
           setFiltersOpen(false);
           $("filters-toggle").focus();
         }
       });
-      $("tab-find").title = `Find jobs (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}1)`;
-      $("tab-link").title = `Open a link (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}2)`;
 
       //What the settings page needs from this view.
       window.JobParser.selectTab = selectTab;

@@ -30,13 +30,17 @@
   //"2022-06-01" -> "Jun 2022", as render.Master writes it
   const formatMonth = date => {
     const m = /^(\d{4})-(\d{2})/.exec(date || "");
-    return m ? `${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`.trim() : date || "";
+    if (!m) return date || "";
+    const code = window.I18n?.locale();
+    if (code && code !== "en") return new Date(Number(m[1]), Number(m[2]) - 1, 1).toLocaleDateString(code, {month: "short", year: "numeric"});
+    return `${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`.trim();
   };
  
   const dateRange = (start, end) => {
     if (!start && !end) return "";
     if (!start) return end ? formatMonth(end) : "";
-    return `${formatMonth(start)} to ${end ? formatMonth(end) : "Present"}`;
+    const t = window.I18n?.translate || (s => s);
+    return `${formatMonth(start)} ${t("to")} ${end ? formatMonth(end) : t("Present")}`;
   };
  
   //A month input holds "2024-06". Stored dates are "2024-06-01"; the API accepts either.
@@ -213,7 +217,7 @@
       return await run("pdf");
     } catch (err) {
       if (err.details?.fallback !== "md") throw err;
-      if (!window.confirm("PDF export failed. Save as Markdown instead?")) return {saved: false};
+      if (!await window.UI.ask("PDF export failed. Save as Markdown instead?", {confirm: "Save Markdown", title: "PDF export failed"})) return {saved: false};
       return run("md");
     }
   }
@@ -230,6 +234,29 @@
       }
     });
     return el("p", {class: "export-saved", role: "status"}, el("span", {text: `Saved to ${path}`}), show);
+  };
+
+  //The resume's Markdown read as a document: headings, bullets and lines, not symbols. Text only, never HTML.
+  const readable = markdown => {
+    const unescape = line => line.replace(/\\([#*\-_])/g, "$1").replace(/\*\*(.+?)\*\*/g, "$1");
+    const out = [];
+    let list = null;
+    for (const raw of markdown.split("\n")) {
+      const line = unescape(raw.trimEnd());
+      let m;
+      if (!line.trim()) { list = null; continue; }
+      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+        list = null;
+        out.push(el(m[1].length === 1 ? "h3" : "h4", {class: "doc-h", text: m[2]}));
+      } else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) {
+        if (!list) { list = el("ul", {class: "doc-list"}); out.push(list); }
+        list.append(el("li", {text: m[1]}));
+      } else {
+        list = null;
+        out.push(el("p", {class: "doc-p", text: line}));
+      }
+    }
+    return out;
   };
 
   // ---------- The view ----------
@@ -274,17 +301,45 @@
     const importSection = el("section", {class: "resume-section import-review", "aria-labelledby": "resume-import-h", hidden: true});
     const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection);
  
-    const previewText = el("pre", {class: "preview-text"});
+    const previewText = el("div", {class: "resume-doc"});
     const exportNote = el("div");
     const exportButton = el("button", {type: "button"}, "Export PDF");
     const versionsList = el("ul", {class: "versions"});
     const versionForm = el("form", {class: "version-form", hidden: true});
+
+    //the preview as text or as the PDF it exports
+    const pdf = window.PdfPreview.create(async () => (await api().resume.previewPdf()).data_base64, {title: "Master resume as a PDF"});
+    const previewPanels = {
+      text: el("div", {class: "panel", id: "resume-panel-text", role: "tabpanel", "aria-labelledby": "resume-tab-text"},
+        el("p", {class: "hint", text: "This text is what saved versions, tailoring and PDF export start from."}), previewText),
+      pdf: el("div", {class: "panel", id: "resume-panel-pdf", role: "tabpanel", "aria-labelledby": "resume-tab-pdf", hidden: true}, pdf.node),
+    };
+    const previewTabs = [["text", "Text"], ["pdf", "PDF"]].map(([key, label]) => el("button", {
+      type: "button", role: "tab", id: `resume-tab-${key}`, "aria-controls": `resume-panel-${key}`,
+      "aria-selected": String(key === "text"), tabindex: key === "text" ? "0" : "-1",
+      onclick: () => showPreview(key),
+    }, label));
+    let previewKind = "text";
+    const showPreview = key => {
+      previewKind = key;
+      previewTabs.forEach((tab, i) => {
+        const on = ["text", "pdf"][i] === key;
+        tab.setAttribute("aria-selected", String(on));
+        tab.tabIndex = on ? 0 : -1;
+      });
+      previewPanels.text.hidden = key !== "text";
+      previewPanels.pdf.hidden = key !== "pdf";
+      if (key === "pdf") pdf.load();
+      else window.UI.play(previewPanels.text, "enter", 400);
+    };
+
     const side = el("div", {class: "pane resume-side"},
       el("section", {class: "resume-section"},
         el("div", {class: "section-head"}, el("h2", {text: "Preview"}), exportButton),
-        el("p", {class: "hint", text: "This text is what saved versions, tailoring and PDF export start from."}),
+        el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
         exportNote,
-        previewText),
+        previewPanels.text,
+        previewPanels.pdf),
       el("section", {class: "resume-section"},
         el("h2", {text: "Saved versions"}),
         versionForm,
@@ -297,7 +352,8 @@
     const refreshPreview = () => attempt(async () => {
       const {markdown} = await api().resume.preview();
       if (disposed) return;
-      previewText.textContent = markdown.trim() ? markdown : "Your resume appears here once you save your profile.";
+      fill(previewText, markdown.trim() ? readable(markdown) : el("p", {class: "hint", text: "Your resume appears here once you save your profile."}));
+      if (previewKind === "pdf") pdf.load(); //the PDF follows the text
     });
  
     // --- Export ---
@@ -494,7 +550,7 @@
  
     async function removeEntry(kind, entry) {
       const k = KINDS[kind];
-      if (!window.confirm(`Delete "${k.title(entry)}"? This cannot be undone.`)) return;
+      if (!await window.UI.ask(`Delete "${k.title(entry)}"? This cannot be undone.`, {confirm: "Delete", danger: true, title: "Delete entry"})) return;
       const ok = await attempt(() => k.remove(entry.id));
       if (!ok || disposed) return;
       k.set(k.list().filter(e => e.id !== entry.id));
@@ -601,7 +657,7 @@
     }
  
     async function deleteVersion(v) {
-      if (!window.confirm(`Delete the saved version "${v.version_label}"? This cannot be undone.`)) return;
+      if (!await window.UI.ask(`Delete the saved version "${v.version_label}"? This cannot be undone.`, {confirm: "Delete", danger: true, title: "Delete version"})) return;
       const ok = await attempt(() => api().resumes.delete(v.id));
       if (!ok || disposed) return;
       versions = versions.filter(x => x.id !== v.id);

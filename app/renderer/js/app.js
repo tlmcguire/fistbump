@@ -84,6 +84,7 @@ function show(name) {
   const view = VIEWS[name];
   const container = document.getElementById(view.container);
   window.ViewState.show(container);
+  if (current !== null) window.UI.play(container, "view-enter", 320);
   if (!mounted.has(name)) {
     const redraw = view.mount(container);
     mounted.set(name, view.redraw ? redraw : null);
@@ -148,6 +149,42 @@ window.api?.app?.onOpenSettings?.(() => {
   if (routeName() === "jobs") tab.click();
   else openJobsTab(tab);
 });
+
+// Keyboard: Cmd/Ctrl+1..5 go to Home, Tracker, Jobs, Resume and Tailor; "/" goes to the search box on the view.
+const SHORTCUTS = {1: "home", 2: "tracker", 3: "jobs", 4: "resume", 5: "tailor"};
+document.addEventListener("keydown", event => {
+  if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && SHORTCUTS[event.key]) {
+    event.preventDefault();
+    window.App.go(SHORTCUTS[event.key]);
+    return;
+  }
+  if (event.key === "/" && !event.metaKey && !event.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) {
+    const view = document.getElementById(VIEWS[routeName()]?.container);
+    const box = view?.querySelector('input[type="search"]');
+    if (box) {
+      event.preventDefault();
+      box.focus();
+      box.select();
+    }
+  }
+});
+
+// The sidebar's tooltips name each place and its shortcut.
+{
+  const mod = window.api?.platform === "darwin" ? "\u2318" : "Ctrl+";
+  for (const [id, key, label] of [["nav-home", 1, "Home"], ["nav-tracker", 2, "Tracker"], ["tab-find", 3, "Find jobs"],
+    ["nav-resume", 4, "Master resume"], ["nav-tailor", 5, "Tailor"]]) {
+    const item = document.getElementById(id);
+    item.title = label;
+    item.dataset.shortcut = `${mod}${key}`;
+  }
+  const settingsTab = document.getElementById("tab-settings");
+  settingsTab.title = "Settings";
+  settingsTab.dataset.shortcut = `${mod},`;
+  const filters = document.getElementById("filters-toggle");
+  filters.title = "Show or hide search filters";
+  document.getElementById("history-toggle").dataset.tip = "Recent searches you can run again";
+}
 
 window.Settings.mount();
 route();

@@ -32,5 +32,6 @@ The full planned tree is in [docs/architecture.md](docs/architecture.md#planned-
 |---------|---------|
 | `cd backend && go test ./...` | Run Go tests |
 | `node scripts/verify-greenhouse-boards.js` | Validate the Greenhouse board lists against the live API (`--offline` checks structure only) |
+| `npm run fetch:llama` | Put a pinned `llama-server` next to the backend, so the local AI engine can run (`--all` for every platform) |
 
-`npm run dev`, `npm run build:go`, and `npm test` are defined in `package.json`. The scripts they call are not implemented yet.
+`npm run dev`, `npm run build:go`, `npm run fetch:llama`, and `npm test` are defined in `package.json`. `npm run dev` starts the app, `npm run build:go` builds the Go backend into `bin/`, and `npm run fetch:llama` puts the `llama-server` the local engine needs beside it.

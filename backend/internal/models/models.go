@@ -144,7 +144,8 @@ type Suggestion struct {
 	Engine       string  `json:"engine"`
 	OriginalText string  `json:"original_text"`
 	ProposedText string  `json:"proposed_text"`
-	State        string  `json:"state"` // pending, accepted, rejected or edited
+	Reason       string  `json:"reason"` // a short explanation of why the engine suggested this
+	State        string  `json:"state"`  // pending, accepted, rejected or edited
 	EditedText   *string `json:"edited_text"`
 }
 

@@ -69,21 +69,23 @@ As written in [api.md](api.md), except the Hugging Face token routes, which stay
 
 Progress:
 
-- [ ] 1. `catalog.json`, `models.go`
-- [ ] 2. `mem_*.go`
-- [ ] 3. `download.go`
-- [ ] 4. `remote.go`
-- [ ] 5. `prompt.go`
-- [ ] 6. `guard.go`
-- [ ] 7. `local.go`
-- [ ] 8. `engine.go` wiring
-- [ ] 9. `ai.go`, `models.go` (api)
-- [ ] 10. `fetch-llama-server.js`
-- [ ] 11. `secrets.js`, `backend.js`
-- [ ] 12. `ipc-handlers.js`, `preload.js`
-- [ ] 13. `settings.js`
-- [ ] 14. Engine labels in Tailor
-- [ ] Tests and tooling
+- [x] 1. `catalog.json`, `models.go`
+- [x] 2. `mem_*.go`
+- [x] 3. `download.go`
+- [x] 4. `remote.go`
+- [x] 5. `prompt.go`
+- [x] 6. `guard.go`
+- [x] 7. `local.go`
+- [x] 8. `engine.go` wiring
+- [x] 9. `ai.go`, `models.go` (api)
+- [x] 10. `fetch-llama-server.js`
+- [x] 11. `secrets.js`, `backend.js`
+- [x] 12. `ipc-handlers.js`, `preload.js`
+- [x] 13. `settings.js`
+- [x] 14. Engine labels in Tailor
+- [x] Tests and tooling
+
+The automated tests are in place. The manual check still waits for a machine with `llama-server`: `npm run fetch:llama` puts it beside the backend, and the model itself is downloaded in the app.
 
 ### Backend
 
@@ -175,6 +177,8 @@ References: [llama.cpp server README](https://github.com/ggml-org/llama.cpp/tree
 
 #### 10. `scripts/fetch-llama-server.js`
 
+Built: `scripts/fetch-llama-server.js` pins llama.cpp `b12633`, with the asset and its SHA-256 for each platform, and writes `llama-server` and the libraries beside it into `bin/<os>-<arch>/`. The tar and zip archives are read with Node's own zlib, so the script has no dependencies. `npm run fetch:llama` runs it for this computer; `--all` for every platform.
+
 **Goal:** a reproducible `llama-server` for each platform.
 
 - A table of one pinned llama.cpp release tag and, per platform, the asset name and its SHA-256 (for example `llama-<tag>-bin-macos-arm64.zip`, `-bin-win-cpu-x64.zip`, `-bin-ubuntu-x64.zip`). Update the tag on purpose, never automatically (build-findings 7.2, item 15).
@@ -187,6 +191,8 @@ References: [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases)
 
 #### 11. `app/main/secrets.js` and `backend.js`
 
+Built: the key is encrypted with `safeStorage` and kept in `userData`, the backend only ever holds it in memory, and main hands it over again at every launch.
+
 **Goal:** keep the remote key encrypted on disk and in Go memory only.
 
 - `setRemoteKey(key)`: `safeStorage.encryptString`, write the ciphertext to `userData/secrets/remote.bin`. On Linux, if `safeStorage.getSelectedStorageBackend()` returns `basic_text`, do not write it; keep it for this session and tell the user it will not be remembered.
@@ -198,12 +204,16 @@ References: [safeStorage](https://www.electronjs.org/docs/latest/api/safe-storag
 
 #### 12. `app/main/ipc-handlers.js` and `app/preload/preload.js`
 
+Built: the `models:*` channels reach the model routes, and the model id is escaped before it goes into a path.
+
 - Channels: `ai:status`, `ai:setMode`, `ai:setRemote` (base URL, model, key; the key goes to `secrets.js` and Go, never stored by the renderer), `ai:clearRemote`, `ai:test`, `models:list`, `models:download`, `models:downloadStatus`, `models:cancelDownload`, `models:delete`.
 - Preload: `api.ai.*`, `api.models.*`.
 
 ### Renderer
 
 #### 13. `app/renderer/views/settings/settings.js`
+
+Built: the settings view lists the catalog with the size, the memory each model needs, its license and whether it fits this computer. A model is downloaded from the app, the progress bar follows the bytes, and the download can be cancelled and resumed. The model in use is a setting, so it is saved like the others.
 
 **Goal:** the settings view, starting with AI.
 
@@ -214,6 +224,8 @@ References: [safeStorage](https://www.electronjs.org/docs/latest/api/safe-storag
 - Phase 9 adds a storage section here.
 
 #### 14. `app/renderer/views/diff-view/diff-view.js`
+
+Built: every suggestion says which engine wrote it, and the review tells the user which host will receive their resume before a round in Remote mode.
 
 - Label each suggestion with its engine ("Local model", "Remote", "Rules").
 - Before a round in Remote mode, show which host will receive the resume and the job text.

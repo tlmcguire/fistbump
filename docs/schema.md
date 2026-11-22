@@ -215,7 +215,7 @@ A job posting, pasted, entered by hand, or imported through a connector.
 | `created_at` | TEXT | First import |
 | `searched_at` | TEXT | Refreshed on every re-import. Drives garbage collection |
 | `archived_at` | TEXT | When the user archived the job, or NULL. Archive means keep but hide: archived jobs are hidden from lists and pickers, keep their revisions, drafts and applications, and are never removed by garbage collection |
-| `trashed_at` | TEXT | When the user moved the job to the Trash, or NULL. Trashed jobs are hidden and can be restored until garbage collection deletes them, `jobs.trash_days` after this time. A job with an application cannot be trashed |
+| `trashed_at` | TEXT | When the user moved the job to the Trash, or NULL. Trashed jobs are hidden and can be restored until the app deletes them at its next start, `jobs.trash_days` after they were trashed. A job with an application cannot be trashed |
 
 Indexes:
 - `idx_jobs_source_external`: unique on `(source, external_id)` where `external_id IS NOT NULL`. A re-imported connector posting updates the existing row instead of duplicating it.
@@ -250,6 +250,7 @@ One proposed change inside a revision.
 | `proposed_text` | TEXT NOT NULL | What the engine proposed |
 | `state` | TEXT NOT NULL | `pending` (default), `accepted`, `rejected`, `edited` |
 | `edited_text` | TEXT | The user's version when `state = 'edited'` |
+| `reason` | TEXT NOT NULL | A short explanation of the change, written by the engine in the language the round was started with. Empty when a model gave none (migration 004) |
 | `engine` | TEXT NOT NULL | `local`, `remote`, or `rules` (default): which engine wrote this suggestion. A model round can include `rules` suggestions that fill targets the model skipped |
 
 Index: `idx_suggestions_revision` on `revision_id`.
@@ -302,7 +303,7 @@ Key-value store for non-secret preferences. `store/settings.go` returns defaults
 | `ai.selected_model` | empty | Catalog id of the chosen local model |
 | `ai.idle_minutes` | `5` | Minutes of inactivity before `llama-server` is stopped. Minimum 1 |
 | `jobs.retention_days` | `30` | Jobs not seen for this long are eligible for GC. Minimum 1, since 0 would make every untracked job eligible |
-| `jobs.trash_days` | `7` | Days a trashed job can be restored before GC deletes it. Minimum 1 |
+| `jobs.trash_days` | `7` | Days a trashed job can be restored before the app deletes it at its next start. Minimum 1 |
 | `ai.remote.base_url` | empty | Remote engine endpoint. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
 | `ai.remote.model` | empty | Remote model name. Not seeded. Same default behavior |
 | `connectors.greenhouse.boards` | `[]` | JSON array of custom Greenhouse board tokens |

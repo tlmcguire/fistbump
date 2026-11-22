@@ -12,11 +12,17 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
    'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',
    'resume:export', 'tailored:export', 'shell:showItem',
+   'resume:previewPdf', 'tailored:previewPdf',
+   'ai:status', 'ai:setMode', 'ai:setRemote', 'ai:clearRemote', 'ai:test',
+   'models:list', 'models:get', 'models:download', 'models:downloadStatus', 'models:cancelDownload', 'models:delete',
    'applications:list', 'applications:create', 'applications:get', 'applications:update', 'applications:delete',
    'applications:bulkStatus', 'applications:archive', 'applications:unarchive', 'applications:bulkArchive',
    'jobs:archive', 'jobs:unarchive', 'jobs:trash', 'jobs:restore',];
 
 const path = require('node:path');
+
+const AI_MODES = ['auto', 'local', 'remote', 'rules'];
+const AI_ENGINES = ['local', 'remote'];
 
 // Cleanup targets the settings page may ask for. The backend validates them again.
 const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
@@ -56,6 +62,8 @@ const ROUTES = {
   'resume:get': () => ['GET', '/v1/resume'],
   'resume:putProfile': (profile) => isObject(profile) ? ['PUT', '/v1/resume/profile', profile] : bad('Invalid profile'),
   'resume:preview': () => ['GET', '/v1/resume/preview'],
+  'ai:status': () => ['GET', '/v1/ai/status'],
+  'ai:setMode': (mode) => AI_MODES.includes(mode) ? ['PUT', '/v1/ai/mode', { mode }] : bad('Choose automatic, local, remote or rules.'),
   'resume:importText': (text) => typeof text === 'string' && text.trim() ? ['POST', '/v1/resume/import', { text }] : bad('Paste the text of your resume.'),
   'resume:importApply': (body) => isObject(body) && isObject(body.draft) ? ['POST', '/v1/resume/import/apply', body] : bad('Invalid import'),
 
@@ -92,6 +100,14 @@ const ROUTES = {
 
 
   
+  //phase 8: the local model catalog. The model id goes into the path, so it is escaped.
+  'models:list': () => ['GET', '/v1/models'],
+  'models:get': (id) => typeof id === 'string' && id ? ['GET', `/v1/models/${seg(id)}`] : bad('Invalid model id'),
+  'models:download': (id) => typeof id === 'string' && id ? ['POST', `/v1/models/${seg(id)}/download`] : bad('Invalid model id'),
+  'models:downloadStatus': (id) => typeof id === 'string' && id ? ['GET', `/v1/models/downloads/${seg(id)}`] : bad('Invalid download id'),
+  'models:cancelDownload': (id) => typeof id === 'string' && id ? ['DELETE', `/v1/models/downloads/${seg(id)}`] : bad('Invalid download id'),
+  'models:delete': (id) => typeof id === 'string' && id ? ['DELETE', `/v1/models/${seg(id)}`] : bad('Invalid model id'),
+
   'settings:get': () => ['GET', '/v1/settings'],
   'settings:put': (values) => isObject(values) ? ['PUT', '/v1/settings', values] : bad('Invalid settings'),
 
@@ -304,6 +320,50 @@ function register(ipcMain, backend, deps = {}) {
       if (applicationId) result.application_id = applicationId;
     }
     return result;
+  });
+
+  // PDF preview: the same PDF the export makes, handed to the page as bytes to show in place. Nothing is saved.
+  async function previewPdf(urlPath) {
+    const res = await backend.requestRaw('POST', urlPath, { format: 'pdf' });
+    if (res.error) return res;
+    return { data_base64: Buffer.from(res.bytes).toString('base64') };
+  }
+  ipcMain.handle('resume:previewPdf', () => previewPdf('/v1/resume/export'));
+  ipcMain.handle('tailored:previewPdf', (_event, id) => (isId(id) ? previewPdf(`/v1/tailored-resumes/${id}/export`) : bad('Invalid id')));
+
+  // Remote AI: the provider's address and model go to the backend; the key is also kept encrypted by main,
+  // so it survives a restart. The renderer can set the key but never read it back.
+  ipcMain.handle('ai:setRemote', async (_event, remote) => {
+    if (!isObject(remote) || typeof remote.base_url !== 'string' || !remote.base_url.trim()) return bad('Enter the provider address.');
+    const body = { base_url: remote.base_url.trim(), model: typeof remote.model === 'string' ? remote.model.trim() : '' };
+    const key = typeof remote.api_key === 'string' ? remote.api_key.trim() : '';
+    if (key) body.api_key = key;
+    const result = await backend.call('PUT', '/v1/ai/remote', body);
+    if (result?.error) return result;
+    let remembered = false;
+    if (key && deps.secrets) {
+      try {
+        remembered = deps.secrets.set(key);
+      } catch {
+        remembered = false;
+      }
+    }
+    return { ...result, key_remembered: remembered };
+  });
+  // A failed test is still a 200 with "error" holding the reason; the page reads any "error" as a failed
+  // request, so the reason is passed on as "problem".
+  ipcMain.handle('ai:test', async (_event, engine) => {
+    if (!AI_ENGINES.includes(engine)) return bad('Test the local or the remote engine.');
+    const result = await backend.call('POST', '/v1/ai/test', { engine });
+    if (result?.error && typeof result.error === 'object') return result; // the request itself failed
+    const { error, ...rest } = result || {};
+    return { ...rest, problem: error || null };
+  });
+
+  ipcMain.handle('ai:clearRemote', async () => {
+    const result = await backend.call('DELETE', '/v1/ai/remote');
+    if (!result?.error) deps.secrets?.clear?.();
+    return result?.error ? result : { ok: true };
   });
 
   // Reveals a file Fistbump saved: the last export, or a PDF an application recorded. Main checks the
