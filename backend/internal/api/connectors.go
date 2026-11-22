@@ -219,6 +219,10 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	q.SkillScore = s.skillScorer(r.Context())
+	q.FitOf = s.fitOf(r.Context())
+	if q.HasFit() && q.FitOf == nil {
+		return conflict("Add your resume first, so jobs can be filtered by how well you fit")
+	}
 	result, err := s.search.Search(r.Context(), q, boards)
 	if guessed && (err != nil || result.BoardsSearched == 0) {
 		return writeNoCompany(w, q) // not a Greenhouse board we can find
@@ -301,6 +305,27 @@ func (s *Server) skillScorer(ctx context.Context) func(text string) float64 {
 		var j models.Job
 		applyParse(&j, s.parse(text))
 		return s.analyze(j, m).Score
+	}
+}
+
+// fitOf compares posting text with the master resume's skills: the share of required skills shown, and
+// the ones missing. It returns nil without a profile, and a nil result for a posting that lists no required skills.
+func (s *Server) fitOf(ctx context.Context) func(text string) *connectors.Fit {
+	m, err := s.store.GetMaster(ctx)
+	if err != nil || m.Profile == nil {
+		return nil
+	}
+	return func(text string) *connectors.Fit {
+		var j models.Job
+		applyParse(&j, s.parse(text))
+		res := s.analyze(j, m)
+		missing := append(append([]string{}, res.Required.Tech.Missing...), res.Required.Soft.Missing...)
+		matched := len(res.Required.Tech.Matched) + len(res.Required.Soft.Matched)
+		required := matched + len(missing)
+		if required == 0 {
+			return nil
+		}
+		return &connectors.Fit{Percent: int(res.Score*100 + 0.5), Matched: matched, Required: required, Missing: missing}
 	}
 }
 

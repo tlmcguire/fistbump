@@ -27,6 +27,18 @@ type Posting struct {
 	TitleScore float64 `json:"title_score,omitempty"`
 	SkillScore float64 `json:"skill_score,omitempty"`
 	Dropped    Dropped `json:"-"` // what cleaning removed; phase 4 reports it when the job is saved
+	// Fit is how the posting's required skills compare with the user's resume. Search results only, and
+	// nil when there is no resume or the posting lists no required skills.
+	Fit *Fit `json:"fit,omitempty"`
+}
+
+// Fit compares a posting's required skills with the master resume. It is the same deterministic
+// analysis the Jobs view shows, never a model's opinion.
+type Fit struct {
+	Percent  int      `json:"percent"`  // matched required skills over all required, 0 to 100
+	Matched  int      `json:"matched"`  // required skills the resume shows
+	Required int      `json:"required"` // required skills the posting lists
+	Missing  []string `json:"missing"`  // required skills the resume does not show
 }
 
 // Dropped counts what was removed from a posting before it was kept.
@@ -85,10 +97,29 @@ type Query struct {
 	PayMin       int      `json:"pay_min"`       // yearly USD; a posting must pay at least this much at its top
 	PayMax       int      `json:"pay_max"`       // yearly USD; a posting must start at or under this
 	RequirePay   bool     `json:"require_pay"`   // drop postings that list no pay when a pay range is set
+	MinFit       int      `json:"min_fit"`       // percent of required skills the resume must show; 0 for any
+	MaxMissing   *int     `json:"max_missing"`   // most required skills the resume may lack; nil for any
 
 	// SkillScore rates a posting's text against the user's resume, 0 to 1. The API layer sets it when
 	// a profile exists, so connectors need not know about resumes; nil ranks without skill fit.
 	SkillScore func(text string) float64 `json:"-"`
+	// FitOf compares a posting's text with the resume. The API layer sets it when a profile exists.
+	FitOf func(text string) *Fit `json:"-"`
+}
+
+// HasFit reports whether the query filters on fit, which needs each posting's description.
+func (q Query) HasFit() bool { return q.MinFit > 0 || q.MaxMissing != nil }
+
+// FitOK reports whether a posting passes the fit filters. A posting with no rating (it lists no
+// required skills) is kept, because there is nothing to hold against it.
+func (q Query) FitOK(f *Fit) bool {
+	if f == nil {
+		return true
+	}
+	if q.MinFit > 0 && f.Percent < q.MinFit {
+		return false
+	}
+	return q.MaxMissing == nil || len(f.Missing) <= *q.MaxMissing
 }
 
 // HasPay reports whether the query filters on pay, which needs each posting's description.
@@ -121,6 +152,12 @@ func (q Query) Validate() error {
 	}
 	if q.PayMax > 0 && q.PayMin > q.PayMax {
 		return errors.New("Minimum pay cannot be above maximum pay")
+	}
+	if q.MinFit < 0 || q.MinFit > 100 {
+		return errors.New("Minimum fit must be between 0 and 100 percent")
+	}
+	if q.MaxMissing != nil && (*q.MaxMissing < 0 || *q.MaxMissing > 50) {
+		return errors.New("Missing skills must be between 0 and 50")
 	}
 	if len(q.Exclude) > 10 {
 		return errors.New("Too many words to exclude")

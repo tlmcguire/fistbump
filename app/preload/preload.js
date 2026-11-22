@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('api', {
     importApply: (body) => ipcRenderer.invoke('resume:importApply', body),
     // Export: main shows the save dialog and writes the file. format is 'pdf' or 'md'.
     export: (format) => ipcRenderer.invoke('resume:export', format),
+    // The PDF as base64, to show in the page. Nothing is saved.
+    previewPdf: () => ipcRenderer.invoke('resume:previewPdf'),
   },
 
   //Saved resume versions
@@ -72,6 +74,16 @@ contextBridge.exposeInMainWorld('api', {
     diff: (id) => ipcRenderer.invoke('tailored:diff', id),
     delete: (id) => ipcRenderer.invoke('tailored:delete', id),
     export: (id, format) => ipcRenderer.invoke('tailored:export', id, format),
+    previewPdf: (id) => ipcRenderer.invoke('tailored:previewPdf', id),
+  },
+
+  // Which engine writes suggestions, and the opt-in remote provider. The key is sent in and never read back.
+  ai: {
+    status: () => ipcRenderer.invoke('ai:status'),
+    setMode: (mode) => ipcRenderer.invoke('ai:setMode', mode),
+    setRemote: (remote) => ipcRenderer.invoke('ai:setRemote', remote),
+    clearRemote: () => ipcRenderer.invoke('ai:clearRemote'),
+    test: (engine) => ipcRenderer.invoke('ai:test', engine),
   },
 
   // Reveals a file the last export saved; main refuses any other path.

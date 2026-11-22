@@ -179,15 +179,19 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	}
 
 	var page []connectors.Posting
-	if q.HasPay() {
-		// A pay range is in the description, so descriptions are read in rank order, a chunk at a
+	if q.HasPay() || q.HasFit() {
+		// A pay range or a skill fit needs the description, so descriptions are read in rank order, a chunk at a
 		// time, until the page and one posting more are found or the scan cap is reached.
 		var passing []connectors.Posting
 		scanned := 0
 		for scanned < len(ranked) && scanned < payScanCap && len(passing) < q.Offset+q.Limit+1 && ctx.Err() == nil {
 			chunk := ranked[scanned:min(scanned+payChunk, len(ranked), payScanCap)]
 			for _, p := range fill(chunk) {
-				if p != nil && PayOK(p.PayMin, p.PayMax, q.PayMin, q.PayMax, q.RequirePay) {
+				if p == nil {
+					continue
+				}
+				annotateFit(p, q)
+				if PayOK(p.PayMin, p.PayMax, q.PayMin, q.PayMax, q.RequirePay) && q.FitOK(p.Fit) {
 					passing = append(passing, *p)
 				}
 			}
@@ -212,6 +216,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		end := min(start+q.Limit, len(ranked))
 		for _, p := range fill(ranked[start:end]) {
 			if p != nil {
+				annotateFit(p, q)
 				page = append(page, *p)
 			}
 		}
@@ -228,6 +233,13 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		return result, fmt.Errorf("%w: every board failed", ErrorUpstream)
 	}
 	return result, nil
+}
+
+// annotateFit rates a posting whose description is loaded against the resume, when there is one.
+func annotateFit(p *connectors.Posting, q connectors.Query) {
+	if q.FitOf != nil && p.RawText != "" {
+		p.Fit = q.FitOf(p.RawText)
+	}
 }
 
 // rankBySkill fetches the descriptions of top, scores each against the resume, and re-sorts top in

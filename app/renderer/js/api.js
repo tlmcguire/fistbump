@@ -73,7 +73,7 @@ window.FistBumpAPI = {
   window.FistBumpAPI.resume = wrap("resume", [
     "get", "putProfile", "preview", "createExperience", "updateExperience", "deleteExperience", 
     "createEducation", "updateEducation", "deleteEducation",
-    "importFile", "importData", "importText", "importApply", "export",
+    "importFile", "importData", "importText", "importApply", "export", "previewPdf",
   ]);
 
   //handles job management in phase 4
@@ -89,7 +89,8 @@ window.FistBumpAPI = {
   //phase 5
   window.FistBumpAPI.revisions = wrap("revisions", ["create", "list", "get", "cancel", "delete"]);
   window.FistBumpAPI.suggestions = wrap("suggestions", ["accept", "reject", "edit"]);
-  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export"]);
+  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export", "previewPdf"]);
+  window.FistBumpAPI.ai = wrap("ai", ["status", "setMode", "setRemote", "clearRemote", "test"]);
 
   //phase 6: show an exported file in its folder
   window.FistBumpAPI.shell = wrap("shell", ["showItem"]);

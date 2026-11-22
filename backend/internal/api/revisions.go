@@ -119,6 +119,7 @@ func (s *Server) revisionCreate(w http.ResponseWriter, r *http.Request) error {
 		JobID        int64  `json:"job_id"`
 		BaseResumeID *int64 `json:"base_resume_id"`
 		Engine       string `json:"engine"`
+		Language     string `json:"language"` // the language explanations are written in; en when empty or unknown
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		return err
@@ -167,13 +168,13 @@ func (s *Server) revisionCreate(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return storeError(err, "Revision")
 	}
-	s.rounds.start(rev.ID, func(ctx context.Context) error { return s.runRound(ctx, rev, mode) })
+	s.rounds.start(rev.ID, func(ctx context.Context) error { return s.runRound(ctx, rev, mode, ai.NormalizeLanguage(req.Language)) })
 	writeJSON(w, http.StatusAccepted, rev)
 	return nil
 }
 
 // runRound writes the suggestions for one revision. It runs in the background.
-func (s *Server) runRound(ctx context.Context, rev models.Revision, mode string) error {
+func (s *Server) runRound(ctx context.Context, rev models.Revision, mode, language string) error {
 	if err := s.store.StartRevision(ctx, rev.ID); err != nil {
 		if errors.Is(err, store.ErrConflict) {
 			return nil // canceled while it waited
@@ -195,6 +196,7 @@ func (s *Server) runRound(ctx context.Context, rev models.Revision, mode string)
 		Profile:  master.Profile,
 		Targets:  ai.BuildTargets(master),
 		Resume:   render.Master(master),
+		Language: language,
 	})
 	if err != nil {
 		return err
@@ -211,6 +213,7 @@ func (s *Server) runRound(ctx context.Context, rev models.Revision, mode string)
 			Engine:       d.Engine,
 			OriginalText: d.Original,
 			ProposedText: d.Proposed,
+			Reason:       d.Reason,
 		}
 	}
 	if err := s.store.CompleteRevision(ctx, rev.ID, engine, suggestions); errors.Is(err, store.ErrConflict) {

@@ -53,6 +53,9 @@ window.Settings = {
       control.addEventListener("change", () => window.Prefs.set(key, read(control)));
     };
     const checked = [control => control.checked, (control, value) => { control.checked = value === true; }];
+    bind("pref-language", "language");
+    //the whole page is drawn in the new language, so it is simplest to draw it again
+    $("pref-language").addEventListener("change", () => location.reload());
     bind("pref-text-size", "textSize");
     bind("pref-reduce-motion", "reduceMotion");
     bind("pref-high-contrast", "highContrast", ...checked);
@@ -135,11 +138,78 @@ window.Settings = {
     if (api?.platform === "darwin") $("show-data-folder").textContent = "Show in Finder";
     if (api?.platform === "win32") $("show-data-folder").textContent = "Show in Explorer";
 
-    //The saved-data buttons stay off until their features exist. Their targets are already named so the
-    //backend's cleanup route can take them as soon as it supports them.
-    for (const button of document.querySelectorAll(".setting.future button.planned")) {
-      button.title = "Available when this feature is added";
-    }
+    // ---------- AI suggestions ----------
+
+    const ai = window.FistBumpAPI.ai;
+    const aiStatus = (text, isError = false) => {
+      const line = $("ai-status");
+      line.textContent = text;
+      line.classList.toggle("error", isError);
+    };
+    const aiLocalText = s => {
+      if (!s.local.available) return "The local model is not included in this build, so suggestions use your remote provider or built-in rules.";
+      if (!s.local.installed) return "Not downloaded yet. It downloads the first time you generate suggestions.";
+      return s.local.running ? "Ready and running on this computer." : "Installed on this computer. It starts when you generate suggestions.";
+    };
+    const showAi = async () => {
+      if (!api?.ai) return;
+      try {
+        const s = await ai.status();
+        $("ai-mode").value = s.mode;
+        $("ai-local-status").textContent = aiLocalText(s);
+        $("ai-test-local").disabled = !s.local.available;
+        $("ai-base-url").value = s.remote.base_url || "";
+        $("ai-model").value = s.remote.model || "";
+        $("ai-key").value = "";
+        $("ai-key").placeholder = s.remote.has_key ? "A key is saved. Type to replace it." : "Leave empty for a provider on this computer";
+        $("ai-test-remote").disabled = !s.remote.configured;
+        $("ai-clear-remote").disabled = !s.remote.configured;
+        window.dispatchEvent(new CustomEvent("fistbump:ai", {detail: s}));
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+    };
+    $("ai-mode").addEventListener("change", async () => {
+      try {
+        await ai.setMode($("ai-mode").value);
+        aiStatus("Saved.");
+        showAi();
+      } catch (error) {
+        aiStatus(error.message, true);
+        showAi();
+      }
+    });
+    $("ai-save-remote").addEventListener("click", async () => {
+      try {
+        const result = await ai.setRemote({base_url: $("ai-base-url").value, model: $("ai-model").value, api_key: $("ai-key").value});
+        aiStatus($("ai-key").value && !result.key_remembered
+          ? "Saved for this session. This computer cannot store the key securely, so enter it again after restarting."
+          : "Remote provider saved. Suggestions will use it when the mode allows.");
+        showAi();
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+    });
+    const runTest = async engine => {
+      aiStatus("Testing...");
+      try {
+        const r = await ai.test(engine);
+        aiStatus(r.ok ? `The ${engine} engine answered in ${(r.latency_ms / 1000).toFixed(1)} seconds.` : `The ${engine} engine did not answer: ${r.error}`, !r.ok);
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+    };
+    $("ai-test-local").addEventListener("click", () => runTest("local"));
+    $("ai-test-remote").addEventListener("click", () => runTest("remote"));
+    confirmFirst($("ai-clear-remote"), "Remove provider?", async () => {
+      try {
+        await ai.clearRemote();
+        aiStatus("Remote provider and its saved key removed.");
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+      showAi();
+    });
 
     // ---------- Updates ----------
 
@@ -182,6 +252,7 @@ window.Settings = {
     window.Settings.refresh = () => {
       showHistory();
       showStorage();
+      showAi();
     };
 
     showAbout();

@@ -462,6 +462,7 @@ window.JobParser = {
             onOpen(result);
           });
 
+          if (result.fit) body.append(fitLine(result.fit));
           const preview = snippet(result.raw_text);
           if (preview) body.append(el("p", preview));
           if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
@@ -479,6 +480,23 @@ window.JobParser = {
             body.append(link);
           }
           return item;
+      };
+
+      //how well the resume covers a posting's required skills: a percent with a word, and the gaps
+      const fitLine = fit => {
+        const h = window.ResumeBuilder.el;
+        const level = fit.percent >= 80 ? "high" : fit.percent >= 50 ? "mid" : "low";
+        const word = {high: "Strong fit", mid: "Partial fit", low: "Weak fit"}[level];
+        const shown = fit.missing.slice(0, 3);
+        const line = h("div", {class: "fit-line"},
+          h("span", {class: "fit-badge", "data-level": level, title: `${fit.matched} of ${fit.required} required skills are on your resume`, text: `${fit.percent}% \u00b7 ${word}`}));
+        if (shown.length) {
+          const more = fit.missing.length - shown.length;
+          line.append(h("span", {class: "fit-missing", text: `Missing: ${shown.join(", ")}${more > 0 ? ` +${more}` : ""}`}));
+        } else {
+          line.append(h("span", {class: "fit-missing", text: "No required skills missing"}));
+        }
+        return line;
       };
 
       //explains what the search could and could not find, so a filter that did not apply is never silent.
@@ -730,6 +748,8 @@ window.JobParser = {
           pay_min: pay("search-pay-min"),
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
+          min_fit: number("search-min-fit"),
+          max_missing: $("search-max-missing").value === "" ? null : number("search-max-missing"),
           sort: $("result-sort").value,
           limit: window.Prefs.get("pageSize")
         };
@@ -785,7 +805,7 @@ window.JobParser = {
           }
         } catch (error) {
           btn.disabled = false;
-          window.alert(error.message); // for example, the posting has closed (404)
+          window.UI.alert(error.message); // for example, the posting has closed (404)
         }
       });
 
@@ -880,7 +900,7 @@ window.JobParser = {
           //409: tracked already, for example from another window; open that row
           const id = error.details?.application_id;
           if (id) return window.Tracker.open(id);
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -894,7 +914,7 @@ window.JobParser = {
         try {
           await archiveJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -904,7 +924,7 @@ window.JobParser = {
           await jobsApi.unarchive(posting.id);
           await refreshJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -916,12 +936,12 @@ window.JobParser = {
           loadSaved();
         } catch (error) {
           //409: the job has an application, so it can be archived instead
-          if (error.code !== "conflict") return window.alert(error.message);
-          if (!window.confirm(`${error.message}, so it cannot go to the Trash. Archive it instead?`)) return;
+          if (error.code !== "conflict") return window.UI.alert(error.message);
+          if (!await window.UI.ask(`${error.message}, so it cannot go to the Trash. Archive it instead?`, {confirm: "Archive it", title: "Cannot trash"})) return;
           try {
             await archiveJob();
           } catch (archiveError) {
-            window.alert(archiveError.message);
+            window.UI.alert(archiveError.message);
           }
         }
       });
@@ -932,7 +952,7 @@ window.JobParser = {
           await jobsApi.restore(posting.id);
           await refreshJob();
         } catch (error) {
-          window.alert(error.message);
+          window.UI.alert(error.message);
         }
       });
 
@@ -950,13 +970,13 @@ window.JobParser = {
       // ---- Delete ----
       $("delete-job").addEventListener("click", async () => {
         if (!posting?.id) return;
-        if (!window.confirm(`Delete "${posting.position_title}" at ${posting.company_name}? This cannot be undone.`)) return;
+        if (!await window.UI.ask(`Delete "${posting.position_title}" at ${posting.company_name}? This cannot be undone.`, {confirm: "Delete", danger: true, title: "Delete job"})) return;
         try {
           await jobsApi.delete(posting.id);
           showDetailEmpty();
           loadSaved();
         } catch (error) {
-          window.alert(error.message); // the 409 message when an application uses this job
+          window.UI.alert(error.message); // the 409 message when an application uses this job
         }
       });
 
@@ -1040,7 +1060,7 @@ window.JobParser = {
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
       const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
-        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
       const filterInUse = id => {
         const field = $(id);
         if (field.type === "checkbox") return field.checked;
@@ -1084,7 +1104,7 @@ window.JobParser = {
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
-        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay"];
+        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
       const FORM_KEY = "fistbump.search-form";
 
       //the form as an object, and back
@@ -1173,6 +1193,8 @@ window.JobParser = {
         if (fields["search-require-pay"] === true) details.push("only postings that list pay");
         const exclude = text("search-exclude");
         if (exclude) details.push(`leaving out ${exclude}`);
+        if (text("search-min-fit") && text("search-min-fit") !== "0") details.push(`fit ${optionText("search-min-fit", text("search-min-fit")).toLowerCase()}`);
+        if (text("search-max-missing") !== "" && text("search-max-missing") !== undefined) details.push(text("search-max-missing") === "0" ? "no missing skills" : `${optionText("search-max-missing", text("search-max-missing")).toLowerCase()} missing skills`);
         return {title, details};
       };
 

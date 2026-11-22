@@ -1,0 +1,157 @@
+/*
+ * Motion. Everything here is switched off by the Reduce motion setting (base.css turns every animation and
+ * transition off under .reduce-motion) and scripts ask window.UI.motion() before they play anything of their own.
+ *
+ * One idea runs through it: things arrive from a little below, sharpen, and settle on an exponential ease-out,
+ * and each state change answers where it was made (a card breathes when you decide it, the stage chip pops when
+ * you change it, the bar fills as you go). Nothing loops except waiting.
+ */
+
+@property --pct {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* ---------- Arrivals ---------- */
+
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+@keyframes arrive-soft {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A view as it is shown */
+.view-enter { animation: arrive 320ms var(--ease-out) both; }
+/* A panel, stage or note as it is filled */
+.enter { animation: arrive-soft 260ms var(--ease-out) both; }
+/* A list, one child after another (the script sets --i on each) */
+.stagger > * { animation: arrive 380ms var(--ease-out) both; animation-delay: var(--i, 0ms); }
+.tailor-aside.in > * { animation: arrive-soft 360ms var(--ease-out) both; }
+.tailor-aside.in > *:nth-child(2) { animation-delay: 40ms; }
+.tailor-aside.in > *:nth-child(3) { animation-delay: 80ms; }
+.tailor-aside.in > *:nth-child(4) { animation-delay: 120ms; }
+.tailor-aside.in > *:nth-child(5) { animation-delay: 160ms; }
+
+/* ---------- Pico ---------- */
+
+@keyframes pop {
+  0%   { opacity: 0; transform: scale(0.8) translateY(6px); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.stage-empty .mascot, .tracker-empty .mascot, .aside-empty .mascot, .exported .mascot, .pdf-state .mascot {
+  animation: pop 520ms var(--ease-out) both, float 4.8s ease-in-out 700ms infinite;
+}
+
+/* ---------- Waiting ---------- */
+
+@keyframes shimmer {
+  from { background-position: 160% 0; }
+  to   { background-position: -60% 0; }
+}
+.skeleton {
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.035) 30%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.035) 70%);
+  background-size: 220% 100%;
+  animation: shimmer 1.6s ease-in-out infinite, arrive-soft 300ms var(--ease-out) both;
+}
+.skeleton:nth-child(2) { animation-delay: 0s, 80ms; }
+.skeleton:nth-child(3) { animation-delay: 0s, 160ms; }
+
+/* ---------- Deciding ---------- */
+
+/* A card breathes once when it is decided */
+@keyframes decided {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
+  35%  { transform: scale(1.006); box-shadow: 0 0 0 5px rgba(143, 227, 176, 0.14); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
+}
+.tailor-card.decided { animation: decided 650ms var(--ease-out); }
+.tailor-card.decided[data-state="rejected"] { animation-name: decided-quiet; }
+@keyframes decided-quiet {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.994); }
+  100% { transform: scale(1); }
+}
+
+/* The check draws itself */
+@keyframes draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+.decided .state-chip[data-state="accepted"] svg path,
+.decided .state-chip[data-state="rejected"] svg path {
+  stroke-dasharray: 24;
+  animation: draw 420ms var(--ease-out) 80ms both;
+}
+.decided .state-chip { animation: pop 420ms var(--ease-out) both; }
+
+.tailor-card { transition: border-color 200ms ease, background-color 200ms ease, opacity 200ms ease; }
+
+.meter-fill { transition: width 520ms var(--ease-out), background-color 300ms ease; }
+
+/* When everything is decided the Build button gets one ring of attention */
+@keyframes ready {
+  0%   { box-shadow: 0 0 0 0 rgba(206, 166, 21, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(206, 166, 21, 0); }
+}
+button.ready { animation: ready 900ms var(--ease-out) 2; }
+
+/* The match score fills round as it counts up */
+@keyframes fill-ring { from { --pct: 0; } }
+.score-ring { animation: fill-ring 900ms var(--ease-out) both; }
+
+/* ---------- The tracker ---------- */
+
+@keyframes flash {
+  0%, 100% { background-color: transparent; }
+  25%, 60% { background-color: rgba(185, 208, 255, 0.22); }
+}
+.tracker-table tr.flash td { animation: flash 1.4s ease; }
+.stage-select.pop { animation: pop 380ms var(--ease-out); }
+.stage-chip, .tracker-scope, .tabs button, .tailor-round { transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
+.stage-dot { transition: transform 200ms var(--ease-out); }
+.stage-chip[aria-pressed="true"] .stage-dot { transform: scale(1.35); }
+@keyframes pulse-once { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+.due-strip:not([hidden]) { animation: arrive-soft 360ms var(--ease-out) both; }
+.due-strip .icon { animation: pulse-once 900ms var(--ease-out) 400ms 2; }
+
+/* ---------- The PDF ---------- */
+
+@keyframes unroll {
+  from { clip-path: inset(0 0 100% 0); opacity: 0.4; }
+  to   { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+.pdf-frame.reveal { animation: unroll 620ms var(--ease-out) both; }
+
+/* ---------- Dialogs ---------- */
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+dialog.ask[open] { animation: dialog-in 220ms var(--ease-out) both; }
+dialog.ask[open]::backdrop { animation: backdrop-in 220ms ease both; }
+
+/* ---------- Controls ---------- */
+
+button, .button { transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--ease-out), box-shadow 200ms ease, filter 120ms ease; }
+button:active:not(:disabled), .button:active { transform: scale(0.97); }
+button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 10px rgba(206, 166, 21, 0.28); }
+.nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
+.nav-item:hover:not(:disabled) .icon { transform: scale(1.1); }
+.tree-body { animation: arrive-soft 220ms var(--ease-out) both; }
+.settings-group { animation: arrive-soft 360ms var(--ease-out) both; }
+.settings-group:nth-child(2) { animation-delay: 40ms; }
+.settings-group:nth-child(3) { animation-delay: 80ms; }
+.settings-group:nth-child(4) { animation-delay: 120ms; }
+
+/* The PDF grows out of its place */
+@keyframes expand-in { from { opacity: 0.6; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.pdf-preview.expanded { animation: expand-in 260ms var(--ease-out) both; }
+.pdf-backdrop:not([hidden]) { animation: backdrop-in 220ms ease both; }
