@@ -37,6 +37,8 @@ type Request struct {
 	// Resume is the whole master resume as text (render.Master). The guard checks model
 	// proposals against it, so they cannot claim what the resume does not show.
 	Resume string
+	// Language is the two-letter code the explanations are written in ("en" when empty).
+	Language string
 }
 
 // Draft is a proposed change before it is stored as a suggestion.
@@ -45,6 +47,7 @@ type Draft struct {
 	TargetID *int64
 	Original string
 	Proposed string
+	Reason   string // a short explanation of the change, in the request's language
 	Engine   string
 }
 

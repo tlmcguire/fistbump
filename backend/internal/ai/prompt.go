@@ -16,7 +16,8 @@ Rules:
 - Keep every fact. Do not add skills, tools, numbers, job titles, employers, dates or achievements that are not in the text you are given.
 - Do not mention the job posting or the company you are applying to.
 - Write in the same voice and tense as the original.
-- Reply with JSON only, in exactly this form: {"proposed": "the rewritten text"}`
+- Also give a "reason": one short sentence (at most 25 words) telling the person why this change helps them for this job, for example why skills were reordered or why a line was reworded. Do not claim anything the original does not show.
+- Reply with JSON only, in exactly this form: {"proposed": "the rewritten text", "reason": "why you changed it"}`
 
 // sectionRule is the extra instruction for each kind of target.
 func sectionRule(t Target) string {
@@ -45,6 +46,7 @@ func BuildPrompt(t Target, r Request) []Message {
 	}
 	fmt.Fprintf(&b, "Part of the resume: %s\n", oneLine(t.Label))
 	b.WriteString(sectionRule(t))
+	fmt.Fprintf(&b, "\nWrite the reason in %s. Keep the rewritten text in the language of the original.", languageRule(r.Language))
 	b.WriteString("\n\nOriginal text:\n")
 	b.WriteString(plainText(t.Original))
 	return []Message{
@@ -56,12 +58,18 @@ func BuildPrompt(t Target, r Request) []Message {
 // ParseReply reads {"proposed": "..."} from a reply. Small models often wrap the JSON in prose or
 // a code fence, so the first {...} in the text is tried when the whole reply does not parse.
 func ParseReply(reply string) (string, bool) {
-	if p, ok := decodeProposed(reply); ok {
-		return p, true
+	p, _, ok := ParseReplyWithReason(reply)
+	return p, ok
+}
+
+// ParseReplyWithReason is ParseReply that also gives the model's short explanation, empty when it sent none.
+func ParseReplyWithReason(reply string) (string, string, bool) {
+	if p, why, ok := decodeProposed(reply); ok {
+		return p, why, true
 	}
 	start := strings.Index(reply, "{")
 	if start < 0 {
-		return "", false
+		return "", "", false
 	}
 	// Find the end of the first complete object, respecting strings.
 	depth, inString, escaped := 0, false, false
@@ -84,18 +92,19 @@ func ParseReply(reply string) (string, bool) {
 			}
 		}
 	}
-	return "", false
+	return "", "", false
 }
 
-func decodeProposed(s string) (string, bool) {
+func decodeProposed(s string) (string, string, bool) {
 	var v struct {
 		Proposed *string `json:"proposed"`
+		Reason   string  `json:"reason"`
 	}
 	if err := json.Unmarshal([]byte(strings.TrimSpace(s)), &v); err != nil || v.Proposed == nil {
-		return "", false
+		return "", "", false
 	}
 	p := strings.TrimSpace(*v.Proposed)
-	return p, p != ""
+	return p, cleanReason(v.Reason), p != ""
 }
 
 // plainText removes the backslash render.Escape puts before a leading #, - or *, so the model

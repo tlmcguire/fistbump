@@ -363,3 +363,43 @@ test('the tracker puts steps due today or overdue first, using the local date', 
   const d = new Date();
   assert.strictEqual(localToday(), `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
 });
+
+test('PDF preview gives the PDF as base64 without opening a save dialog', async () => {
+  const calls = [];
+  const backend = {
+    call: async () => ({}),
+    requestRaw: async (method, url, body) => { calls.push([method, url, body]); return { bytes: Buffer.from('%PDF-1.4 test'), headers: new Map() }; },
+  };
+  const ipc = fakeIpc();
+  register(ipc, backend, { dialog: { showSaveDialog: () => { throw new Error('no dialog'); } } });
+  const mine = await ipc.handlers.get('resume:previewPdf')({});
+  assert.equal(Buffer.from(mine.data_base64, 'base64').toString(), '%PDF-1.4 test');
+  const tailored = await ipc.handlers.get('tailored:previewPdf')({}, 7);
+  assert.ok(tailored.data_base64);
+  assert.deepEqual(calls[1], ['POST', '/v1/tailored-resumes/7/export', { format: 'pdf' }]);
+  assert.ok((await ipc.handlers.get('tailored:previewPdf')({}, '7/../x')).error);
+});
+
+test('AI settings check their arguments, and the remote key is stored by main and never sent back', async () => {
+  const calls = [];
+  const backend = { call: async (method, url, body) => { calls.push([method, url, body]); return method === 'DELETE' ? { ok: true } : { remote: { configured: true } }; } };
+  const stored = [];
+  const secrets = { set: (k) => { stored.push(k); return true; }, clear: () => stored.push('cleared') };
+  const ipc = fakeIpc();
+  register(ipc, backend, { secrets });
+
+  assert.ok((await ipc.handlers.get('ai:setMode')({}, 'cloud')).error);
+  await ipc.handlers.get('ai:setMode')({}, 'rules');
+  assert.deepEqual(calls.at(-1), ['PUT', '/v1/ai/mode', { mode: 'rules' }]);
+  assert.ok((await ipc.handlers.get('ai:test')({}, 'rules')).error);
+
+  assert.ok((await ipc.handlers.get('ai:setRemote')({}, { base_url: '  ' })).error);
+  const saved = await ipc.handlers.get('ai:setRemote')({}, { base_url: ' https://api.example.com/v1 ', model: 'm', api_key: ' sk-1 ' });
+  assert.deepEqual(calls.at(-1), ['PUT', '/v1/ai/remote', { base_url: 'https://api.example.com/v1', model: 'm', api_key: 'sk-1' }]);
+  assert.equal(saved.key_remembered, true);
+  assert.deepEqual(stored, ['sk-1']);
+  assert.ok(!JSON.stringify(saved).includes('sk-1'));
+
+  await ipc.handlers.get('ai:clearRemote')({});
+  assert.deepEqual(stored, ['sk-1', 'cleared']);
+});

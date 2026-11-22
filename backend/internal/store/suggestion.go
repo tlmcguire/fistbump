@@ -6,19 +6,19 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/models"
 )
 
-const suggestionCols = `id, revision_id, section, target_id, engine, original_text, proposed_text, state, edited_text`
+const suggestionCols = `id, revision_id, section, target_id, engine, original_text, proposed_text, reason, state, edited_text`
 
 func scanSuggestion(row scanner) (models.Suggestion, error) {
 	var s models.Suggestion
-	err := row.Scan(&s.ID, &s.RevisionID, &s.Section, &s.TargetID, &s.Engine, &s.OriginalText, &s.ProposedText, &s.State, &s.EditedText)
+	err := row.Scan(&s.ID, &s.RevisionID, &s.Section, &s.TargetID, &s.Engine, &s.OriginalText, &s.ProposedText, &s.Reason, &s.State, &s.EditedText)
 	return s, mapErr(err)
 }
 
 // insertSuggestions adds pending suggestions to a revision. Callers wrap it in a transaction.
 func (s *Store) insertSuggestions(ctx context.Context, revisionID int64, list []models.Suggestion) error {
 	for _, sg := range list {
-		if _, err := s.db.ExecContext(ctx, `INSERT INTO suggestions (revision_id, section, target_id, engine, original_text, proposed_text)
-  VALUES (?, ?, ?, ?, ?, ?)`, revisionID, sg.Section, sg.TargetID, sg.Engine, sg.OriginalText, sg.ProposedText); err != nil {
+		if _, err := s.db.ExecContext(ctx, `INSERT INTO suggestions (revision_id, section, target_id, engine, original_text, proposed_text, reason)
+  VALUES (?, ?, ?, ?, ?, ?, ?)`, revisionID, sg.Section, sg.TargetID, sg.Engine, sg.OriginalText, sg.ProposedText, sg.Reason); err != nil {
 			return mapErr(err)
 		}
 	}

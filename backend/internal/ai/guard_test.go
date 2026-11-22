@@ -242,3 +242,33 @@ func TestModelThatSkipsGetsRulesGapFillWithLabels(t *testing.T) {
 		t.Errorf("labels = %v", labels)
 	}
 }
+
+func TestParseReplyWithReason(t *testing.T) {
+	p, why, ok := ParseReplyWithReason("Sure! ```json\n{\"proposed\": \"Go, SQL\", \"reason\": \"  Puts   SQL first because the job asks for it.  \"}\n```")
+	if !ok || p != "Go, SQL" || why != "Puts SQL first because the job asks for it." {
+		t.Fatalf("got %q, %q, %v", p, why, ok)
+	}
+	if _, why, ok := ParseReplyWithReason(`{"proposed": "x"}`); !ok || why != "" {
+		t.Fatalf("a reply with no reason still works: %q, %v", why, ok)
+	}
+	long := strings.Repeat("word ", 200)
+	if _, why, _ := ParseReplyWithReason(`{"proposed": "x", "reason": "` + long + `"}`); len(why) > maxReasonLen+4 {
+		t.Fatalf("reason not shortened: %d", len(why))
+	}
+}
+
+func TestRulesExplainTheirChangesInTheUsersLanguage(t *testing.T) {
+	if NormalizeLanguage("fr-CA") != "fr" || NormalizeLanguage("xx") != "en" || NormalizeLanguage("") != "en" {
+		t.Fatal("NormalizeLanguage")
+	}
+	for _, lang := range []string{"en", "es", "fr", "de"} {
+		for _, key := range []string{"skills", "lines", "summary", "newsummary"} {
+			if reasonFor(lang, key, "go") == "" {
+				t.Errorf("%s/%s has no text", lang, key)
+			}
+		}
+	}
+	if reasonFor("es", "skills") == reasonFor("en", "skills") {
+		t.Error("Spanish reason is the English one")
+	}
+}

@@ -24,15 +24,23 @@ func (Rules) Suggest(ctx context.Context, r Request) ([]Draft, error) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		var proposed string
+		var proposed, reason string
 		var ok bool
 		switch t.Section {
 		case "skills":
 			proposed, ok = reorderSkills(t.Original, skills)
+			reason = reasonFor(r.Language, "skills")
 		case "experience":
 			proposed, ok = reorderLines(t.Original, skills)
+			reason = reasonFor(r.Language, "lines")
 		case "summary":
 			proposed, ok = summaryText(t.Original, r, skills)
+			list := strings.Join(skills[:min(len(skills), 5)], ", ")
+			if strings.TrimSpace(t.Original) == "" {
+				reason = reasonFor(r.Language, "newsummary", list)
+			} else {
+				reason = reasonFor(r.Language, "summary", list)
+			}
 		}
 		if !ok || proposed == t.Original {
 			continue
@@ -42,6 +50,7 @@ func (Rules) Suggest(ctx context.Context, r Request) ([]Draft, error) {
 			TargetID: t.TargetID,
 			Original: t.Original,
 			Proposed: proposed,
+			Reason:   reason,
 			Engine:   EngineRules,
 		})
 	}

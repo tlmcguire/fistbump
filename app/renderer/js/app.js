@@ -84,6 +84,7 @@ function show(name) {
   const view = VIEWS[name];
   const container = document.getElementById(view.container);
   window.ViewState.show(container);
+  if (current !== null) window.UI.play(container, "view-enter", 400);
   if (!mounted.has(name)) {
     const redraw = view.mount(container);
     mounted.set(name, view.redraw ? redraw : null);
@@ -147,6 +148,25 @@ window.api?.app?.onOpenSettings?.(() => {
   const tab = document.getElementById("tab-settings");
   if (routeName() === "jobs") tab.click();
   else openJobsTab(tab);
+});
+
+// Keyboard: Cmd/Ctrl+1..5 go to Home, Tracker, Jobs, Resume and Tailor; "/" goes to the search box on the view.
+const SHORTCUTS = {1: "home", 2: "tracker", 3: "jobs", 4: "resume", 5: "tailor"};
+document.addEventListener("keydown", event => {
+  if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && SHORTCUTS[event.key]) {
+    event.preventDefault();
+    window.App.go(SHORTCUTS[event.key]);
+    return;
+  }
+  if (event.key === "/" && !event.metaKey && !event.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) {
+    const view = document.getElementById(VIEWS[routeName()]?.container);
+    const box = view?.querySelector('input[type="search"]');
+    if (box) {
+      event.preventDefault();
+      box.focus();
+      box.select();
+    }
+  }
 });
 
 window.Settings.mount();

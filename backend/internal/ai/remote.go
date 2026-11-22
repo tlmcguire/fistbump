@@ -272,7 +272,7 @@ func suggestWith(ctx context.Context, engine string, chat chatFunc, req Request)
 			slog.Warn("model call failed", "engine", engine, "target", t.Label, "error", err)
 			continue
 		}
-		proposed, ok := ParseReply(reply)
+		proposed, why, ok := ParseReplyWithReason(reply)
 		if !ok {
 			logDrop(engine, t, "reply was not the expected JSON")
 			continue
@@ -282,7 +282,7 @@ func suggestWith(ctx context.Context, engine string, chat chatFunc, req Request)
 			logDrop(engine, t, reason)
 			continue
 		}
-		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Engine: engine})
+		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Reason: why, Engine: engine})
 	}
 	if calls > 0 && failures == calls {
 		return nil, lastErr
