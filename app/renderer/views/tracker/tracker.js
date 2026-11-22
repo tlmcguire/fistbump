@@ -4,6 +4,12 @@
   const STAGES = ["Saved", "Applied", "Interviewing", "Offered", "Rejected"];
   const EXCLUSIVE = {Offered: "Rejected", Rejected: "Offered"};
   const SCOPES = [["", "Active"], ["only", "Archived"], ["include", "All"]];
+  //what each scope holds: an archived application is kept, only hidden
+  const SCOPE_HINTS = {
+    "": "The applications you are working on.",
+    only: "Archived applications. They are hidden from Active, but nothing is deleted.",
+    include: "Every application, archived or not.",
+  };
 
   //today as YYYY-MM-DD on this computer's clock, so a step due today is not overdue in the evening
   const localToday = () => {
@@ -74,7 +80,7 @@
         },
       }, el("span", {class: "stage-dot", "aria-hidden": "true"}), s, el("span", {class: "stage-count", "aria-hidden": "true"})));
       const scopeButtons = SCOPES.map(([value, label]) => el("button", {
-        type: "button", class: "tracker-scope", "aria-pressed": String(value === scope),
+        type: "button", class: "tracker-scope", "aria-pressed": String(value === scope), title: SCOPE_HINTS[value],
         onclick: () => {
           scope = value;
           scopeButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(SCOPES[i][0] === scope)));
@@ -88,8 +94,8 @@
       const bulkCount = el("span");
       const bulkStatus = el("select", {"aria-label": "New status for the selected applications"},
         el("option", {value: "", text: "Set status…"}), STAGES.map(s => el("option", {value: s, text: s})));
-      const bulkArchive = el("button", {type: "button"}, "Archive");
-      const bulkRestore = el("button", {type: "button"}, "Unarchive");
+      const bulkArchive = el("button", {type: "button", title: "Hide these applications from Active. They are kept, not deleted."}, "Archive");
+      const bulkRestore = el("button", {type: "button", title: "Bring these applications back to Active."}, "Unarchive");
       const bulkBar = el("div", {class: "tracker-bulk", hidden: true}, bulkCount, bulkStatus, bulkArchive, bulkRestore,
         el("button", {type: "button", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
 
@@ -275,7 +281,9 @@
             : el("button", {type: "button", class: "primary", onclick: () => window.App.openTab("tab-saved")}, "Open saved jobs");
           fill(table, el("div", {class: "empty tracker-empty"}, pico("33-empty-tracker.png"),
             el("h2", {text: scope === "only" ? "No archived applications" : searching ? "No applications match your search" : "Nothing tracked yet"}),
-            el("p", {text: scope === "only" || searching ? "Try another search or view."
+            el("p", {text: scope === "only"
+              ? "Archived applications are hidden from Active, but nothing is deleted — unarchive them to bring them back."
+              : searching ? "Try another search or view."
               : "Track a job from its listing, or from a tailored resume, and its next step shows up here."}),
             go));
           play(table, "enter", 500);

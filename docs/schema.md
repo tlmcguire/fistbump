@@ -215,7 +215,7 @@ A job posting, pasted, entered by hand, or imported through a connector.
 | `created_at` | TEXT | First import |
 | `searched_at` | TEXT | Refreshed on every re-import. Drives garbage collection |
 | `archived_at` | TEXT | When the user archived the job, or NULL. Archive means keep but hide: archived jobs are hidden from lists and pickers, keep their revisions, drafts and applications, and are never removed by garbage collection |
-| `trashed_at` | TEXT | When the user moved the job to the Trash, or NULL. Trashed jobs are hidden and can be restored until garbage collection deletes them, `jobs.trash_days` after this time. A job with an application cannot be trashed |
+| `trashed_at` | TEXT | When the user moved the job to the Trash, or NULL. Trashed jobs are hidden and can be restored until the app deletes them at its next start, `jobs.trash_days` after they were trashed. A job with an application cannot be trashed |
 
 Indexes:
 - `idx_jobs_source_external`: unique on `(source, external_id)` where `external_id IS NOT NULL`. A re-imported connector posting updates the existing row instead of duplicating it.
@@ -303,7 +303,7 @@ Key-value store for non-secret preferences. `store/settings.go` returns defaults
 | `ai.selected_model` | empty | Catalog id of the chosen local model |
 | `ai.idle_minutes` | `5` | Minutes of inactivity before `llama-server` is stopped. Minimum 1 |
 | `jobs.retention_days` | `30` | Jobs not seen for this long are eligible for GC. Minimum 1, since 0 would make every untracked job eligible |
-| `jobs.trash_days` | `7` | Days a trashed job can be restored before GC deletes it. Minimum 1 |
+| `jobs.trash_days` | `7` | Days a trashed job can be restored before the app deletes it at its next start. Minimum 1 |
 | `ai.remote.base_url` | empty | Remote engine endpoint. Not seeded by `001_init.sql`. The store returns this default when the row is absent |
 | `ai.remote.model` | empty | Remote model name. Not seeded. Same default behavior |
 | `connectors.greenhouse.boards` | `[]` | JSON array of custom Greenhouse board tokens |
