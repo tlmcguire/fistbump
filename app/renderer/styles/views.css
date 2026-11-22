@@ -49,7 +49,7 @@ dialog.ask {
 }
 dialog.ask::backdrop { background: rgba(4, 12, 32, 0.55); }
 dialog.ask h2 { margin-bottom: 6px; }
-dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-select: text; -webkit-user-select: text; }
+dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-select: text; -webkit-user-select: text; white-space: pre-line; }
 .ask-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
 /* ---------- Tailor ---------- */

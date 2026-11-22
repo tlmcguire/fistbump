@@ -456,6 +456,13 @@ window.JobParser = {
           open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
+          //says what state the job is in, so an archived job and a trashed job do not look alike
+          if (result.trashed_at || result.archived_at) {
+            const state = el("small", result.trashed_at ? "In the Trash" : "Archived");
+            state.className = "result-state";
+            body.append(state);
+          }
+
           //the logo, preview and padding open the listing too; the button stays for the keyboard
           item.addEventListener("click", event => {
             if (event.target.closest("button, a")) return; //they handle their own clicks
@@ -821,14 +828,34 @@ window.JobParser = {
       // ---- Saved tab ----
       //Active, Archived or Trash
       const savedScope = () => ({archived: {archived: "only"}, trash: {trashed: "only"}})[$("saved-scope").value] || {};
+
+      //How long a job stays in the Trash before the app deletes it for good. The wording names the
+      //real number, so the Trash and the archive never sound like the same thing.
+      let trashDays = 7;
+      const applyTrashDays = () => {
+        const option = [...$("saved-scope").options].find(o => o.value === "trash");
+        if (option) option.textContent = `Trash — deleted in ${trashDays} days`;
+        $("trash-job").title = `Take this job out of Saved jobs. It is deleted for good after ${trashDays} days unless you restore it first.`;
+      };
+      const loadTrashDays = async () => {
+        try {
+          const values = await window.api.settings.get();
+          const days = Number(values?.["jobs.trash_days"]);
+          if (Number.isFinite(days) && days > 0) trashDays = days;
+        } catch {
+          //the settings are not there, so the default of a week stands
+        }
+        applyTrashDays();
+      };
+      loadTrashDays();
       const loadSaved = async () => {
         try {
           const jobs = await jobsApi.list($("saved-q").value.trim(), savedScope());
           for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
           $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
           $("saved-empty-message").textContent = ({
-            archived: "No archived jobs.",
-            trash: "The Trash is empty.",
+            archived: "No archived jobs. Archived jobs are hidden from Saved jobs, but nothing is deleted — you can bring them back any time.",
+            trash: `The Trash is empty. A job you move to the Trash is deleted for good after ${trashDays} days, unless you restore it before then.`,
           })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
           markSelected();
@@ -862,12 +889,31 @@ window.JobParser = {
         return (await window.FistBumpAPI.applications.list({archived: "include"})).find(a => a.job_id === jobId) || null;
       }
 
+      //says what the open job's own state means: archived is kept, trashed is on its way out
+      const stateNote = job => {
+        const note = $("job-state");
+        note.dataset.state = "";
+        if (job?.trashed_at) {
+          note.dataset.state = "trash";
+          note.textContent = `This job is in the Trash. It is deleted for good after ${trashDays} days, unless you restore it before then.`;
+        } else if (job?.archived_at) {
+          note.dataset.state = "archive";
+          note.textContent = "This job is archived. It is hidden from Saved jobs, but nothing is deleted — unarchive it to bring it back.";
+        } else {
+          note.textContent = "";
+          note.hidden = true;
+          return;
+        }
+        note.hidden = false;
+      };
+
       //shows the buttons that fit the open saved job: trashed jobs only offer Restore
       async function drawLifecycle(job) {
         const mine = ++lifecycleSeq;
         trackedApp = null;
         const trashed = Boolean(job?.trashed_at);
         const archived = Boolean(job?.archived_at);
+        stateNote(job);
         $("track-job").hidden = !job || trashed;
         $("track-job").textContent = "Track";
         $("archive-job").hidden = !job || trashed || archived;
@@ -937,8 +983,22 @@ window.JobParser = {
         }
       });
 
+      //A job with an application cannot go to the Trash, so the archive is offered instead.
+      const archiveInstead = async () => {
+        if (!await window.UI.ask("This job has an application in the Tracker, so it cannot go to the Trash.\n\nArchive keeps the job hidden without deleting it, and can be undone. Archive it instead?",
+          {confirm: "Archive it", title: "Cannot trash — job has an application"})) return;
+        try {
+          await archiveJob();
+        } catch (archiveError) {
+          window.UI.alert(archiveError.message);
+        }
+      };
+
       $("trash-job").addEventListener("click", async () => {
         if (!posting?.id) return;
+        if (trackedApp) return archiveInstead();
+        const question = `Move "${posting.position_title}" at ${posting.company_name} to the Trash?\n\nIt leaves Saved jobs now, and it is deleted for good after ${trashDays} days, unless you restore it before then.`;
+        if (!await window.UI.ask(question, {confirm: "Move to Trash", danger: true, title: "Move to Trash"})) return;
         try {
           await jobsApi.trash(posting.id);
           showDetailEmpty();
@@ -946,12 +1006,7 @@ window.JobParser = {
         } catch (error) {
           //409: the job has an application, so it can be archived instead
           if (error.code !== "conflict") return window.UI.alert(error.message);
-          if (!await window.UI.ask(`${error.message}, so it cannot go to the Trash. Archive it instead?`, {confirm: "Archive it", title: "Cannot trash"})) return;
-          try {
-            await archiveJob();
-          } catch (archiveError) {
-            window.UI.alert(archiveError.message);
-          }
+          await archiveInstead();
         }
       });
 
@@ -979,7 +1034,8 @@ window.JobParser = {
       // ---- Delete ----
       $("delete-job").addEventListener("click", async () => {
         if (!posting?.id) return;
-        if (!await window.UI.ask(`Delete "${posting.position_title}" at ${posting.company_name}? This cannot be undone.`, {confirm: "Delete", danger: true, title: "Delete job"})) return;
+        const question = `Delete "${posting.position_title}" at ${posting.company_name} now?\n\nThis cannot be undone. To keep the job for a while and delete it later, move it to the Trash instead.`;
+        if (!await window.UI.ask(question, {confirm: "Delete now", danger: true, title: "Delete job"})) return;
         try {
           await jobsApi.delete(posting.id);
           showDetailEmpty();

@@ -630,6 +630,14 @@ label.sort select {
   min-width: 0;
 }
 
+/*says what state a saved job is in: archived is kept, trashed is on its way out */
+.result-state {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* The open button is the row's title and details, for the keyboard. A click anywhere on the row opens the listing. */
 .result-open {
   display: flex;
@@ -800,6 +808,19 @@ label.sort select {
   gap: 4px 16px;
   color: var(--muted);
   font-size: 12px;
+}
+
+/*What the open job's own state means: archived is kept, trashed is on its way out. */
+.job-state {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 62ch;
+}
+
+.job-state[data-state="trash"] {
+  color: var(--danger-text);
 }
 
 .job-actions {

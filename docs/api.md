@@ -87,7 +87,7 @@ AI routes do not fail on a missing model in `auto` mode. They fall back to the `
   "exported_pdf_path": null, "notes": null, "archived_at": null, "created_at": "", "updated_at": "" }
 ```
 
-`archived_at` and `trashed_at` are timestamps or `null`. Archive means keep but hide; it never changes an application's `status`, so restoring returns it to its stage. A trashed job can be restored until `jobs.trash_days` have passed, then storage cleanup deletes it.
+`archived_at` and `trashed_at` are timestamps or `null`. Archive means keep but hide; it never changes an application's `status`, so restoring returns it to its stage. A trashed job can be restored until `jobs.trash_days` have passed, then the app deletes it the next time it starts.
 
 `target_id` on a suggestion is a row id in the table named by `section` (`experiences.id` or `education.id`). It is `null` for `summary` and `skills`.
 
@@ -339,6 +339,8 @@ Built so far: `GET /v1/storage`, and cleanup of `cache` (the Greenhouse and logo
 | `POST /v1/storage/cleanup` | `{ "targets": ["cache", "partial_downloads", "old_jobs", "trash", "unused_models"], "older_than_days"?: 30, "dry_run": false }`. `older_than_days` defaults to `jobs.retention_days` and must be at least 1. | `{ "freed_bytes": 0, "removed": { "old_jobs": 12, "trash": 2, "files": 3 }, "dry_run": false }` | `old_jobs`: DELETE from `jobs` where `searched_at` is older than the cutoff, the job is neither archived nor trashed, and no `applications` row references it. `trash`: DELETE trashed jobs whose `trashed_at` is older than `jobs.trash_days` (`older_than_days` does not apply). To empty the Trash at once, the UI deletes each trashed job with `DELETE /v1/jobs/{id}`. Cascades to `revisions`, `suggestions`, `tailored_resumes`. Then `VACUUM`. |
 
 The UI calls with `dry_run: true` first to preview removals.
+
+The app also empties the Trash on its own, without the route: at every start it deletes the jobs that have been in the Trash for longer than `jobs.trash_days`, so the Trash never grows without end. The check runs at startup only, so a job waits for the next launch rather than for a background timer.
 
 ## Route summary
 

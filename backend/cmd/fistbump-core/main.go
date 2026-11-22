@@ -61,11 +61,30 @@ func run() error {
 	}
 	defer conn.Close()
 
+	st := store.New(conn)
+
 	// A round left queued or running by the last launch can never finish, so mark it failed.
-	if n, err := store.New(conn).FailInterrupted(context.Background()); err != nil {
+	if n, err := st.FailInterrupted(context.Background()); err != nil {
 		slog.Warn("marking interrupted rounds", "error", err)
 	} else if n > 0 {
 		slog.Info("marked interrupted rounds as failed", "rounds", n)
+	}
+
+	// A job in the Trash is deleted once it has been there for jobs.trash_days. The check runs at
+	// startup only: the app is not always on, and a job can wait for the next launch.
+	values, err := st.GetSettings(context.Background())
+	if err != nil {
+		slog.Warn("reading the settings for the trash", "error", err)
+	} else {
+		days, _ := values["jobs.trash_days"].(int)
+		if days < 1 {
+			days = 1
+		}
+		if n, err := st.PurgeTrashedJobs(context.Background(), days); err != nil {
+			slog.Warn("purging the trash", "error", err)
+		} else if n > 0 {
+			slog.Info("purged the trash", "jobs", n)
+		}
 	}
 
 	// Suggestion rounds run under this context; it is canceled before the server shuts down.
@@ -102,7 +121,7 @@ func run() error {
 
 	// The AI engines. The remote key is not stored here; Electron sends it with PUT /v1/ai/remote
 	// after every start. A keyless provider on this computer (Ollama) works from the settings alone.
-	settings := store.New(conn)
+	settings := st
 	remote := ai.NewRemote()
 	if values, err := settings.GetSettings(context.Background()); err == nil {
 		baseURL, _ := values["ai.remote.base_url"].(string)

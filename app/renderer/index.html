@@ -175,8 +175,8 @@
                         </div>
                         <select id="saved-scope" aria-label="Show">
                             <option value="">Active</option>
-                            <option value="archived">Archived</option>
-                            <option value="trash">Trash</option>
+                            <option value="archived">Archived — kept, hidden</option>
+                            <option value="trash">Trash — deleted in 7 days</option>
                         </select>
                     </form>
                 </header>
@@ -498,22 +498,23 @@
                                 </div>
                             </div>
                             <p class="job-meta"><span id="job-location"></span><span id="job-updated"></span></p>
+                            <p id="job-state" class="job-state" hidden></p>
                             <div class="job-actions">
                                 <!--One gold action per state: Save job, Tailor resume or Restore. The rest are quiet, and what
                                     removes the job sits apart at the end.-->
                                 <button id="save-listing" type="button" class="primary" hidden>Save job</button>
                                 <button id="tailor-job" type="button" class="primary" hidden>Tailor resume</button>
-                                <button id="restore-job" type="button" class="primary" hidden>Restore</button>
+                                <button id="restore-job" type="button" class="primary" hidden title="Take this job out of the Trash. It goes back to Saved jobs.">Restore</button>
                                 <button id="track-job" type="button" hidden>Track</button>
                                 <a id="job-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
                                 <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
                                 <span class="job-actions-gap" aria-hidden="true"></span>
                                 <button id="reload-listing" type="button" class="quiet">Reload</button>
-                                <button id="unarchive-job" type="button" class="quiet" hidden>Unarchive</button>
-                                <button id="archive-job" type="button" class="quiet" hidden>Archive</button>
-                                <label id="archive-app-option" class="hint" hidden><input id="archive-app" type="checkbox" checked> Also archive the application</label>
-                                <button id="trash-job" type="button" class="quiet" hidden>Move to Trash</button>
-                                <button id="delete-job" type="button" class="quiet danger-text" hidden>Delete</button>
+                                <button id="unarchive-job" type="button" class="quiet" hidden title="Bring this job back to Saved jobs. It stays in your data.">Unarchive</button>
+                                <button id="archive-job" type="button" class="quiet" hidden title="Hide this job from Saved jobs. Nothing is deleted — you can unarchive it at any time.">Archive</button>
+                                <label id="archive-app-option" class="hint" hidden title="Also hide this job's application in the Tracker. It is kept, not deleted."><input id="archive-app" type="checkbox" checked> Also archive the application</label>
+                                <button id="trash-job" type="button" class="quiet danger-text" hidden title="Take this job out of Saved jobs. It is deleted for good after 7 days unless you restore it first.">Move to Trash</button>
+                                <button id="delete-job" type="button" class="quiet danger-text" hidden title="Delete this job right now, for good. It cannot be undone.">Delete now</button>
                             </div>
                             <h3>Description</h3>
                             <p id="job-description"></p>
