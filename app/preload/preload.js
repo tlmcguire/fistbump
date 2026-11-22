@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('api', {
     importData: (filename, bytes) => ipcRenderer.invoke('resume:importData', filename, bytes),
     importText: (text) => ipcRenderer.invoke('resume:importText', text),
     importApply: (body) => ipcRenderer.invoke('resume:importApply', body),
+    // Export: main shows the save dialog and writes the file. format is 'pdf' or 'md'.
+    export: (format) => ipcRenderer.invoke('resume:export', format),
   },
 
   //Saved resume versions
@@ -69,6 +71,12 @@ contextBridge.exposeInMainWorld('api', {
     get: (id) => ipcRenderer.invoke('tailored:get', id),
     diff: (id) => ipcRenderer.invoke('tailored:diff', id),
     delete: (id) => ipcRenderer.invoke('tailored:delete', id),
+    export: (id, format) => ipcRenderer.invoke('tailored:export', id, format),
+  },
+
+  // Reveals a file the last export saved; main refuses any other path.
+  shell: {
+    showItem: (filePath) => ipcRenderer.invoke('shell:showItem', filePath),
   },
   
 
@@ -94,10 +102,28 @@ contextBridge.exposeInMainWorld('api', {
   jobs: {
     parse: (t) => ipcRenderer.invoke('jobs:parse', t),
     create: (b) => ipcRenderer.invoke('jobs:create', b),
-    list: (q) => ipcRenderer.invoke('jobs:list', q),
+    list: (q, opts) => ipcRenderer.invoke('jobs:list', q, opts),
     get: (id) => ipcRenderer.invoke('jobs:get', id),
     update: (id, b) => ipcRenderer.invoke('jobs:update', id, b),
     delete: (id) => ipcRenderer.invoke('jobs:delete', id),
     analyze: (id) => ipcRenderer.invoke('jobs:analyze', id),
+    //phase 7: list takes (q, { archived, trashed }); archive takes (id, { archive_application })
+    archive: (id, opts) => ipcRenderer.invoke('jobs:archive', id, opts),
+    unarchive: (id) => ipcRenderer.invoke('jobs:unarchive', id),
+    trash: (id) => ipcRenderer.invoke('jobs:trash', id),
+    restore: (id) => ipcRenderer.invoke('jobs:restore', id),
+  },
+
+  //phase 7: the application tracker
+  applications: {
+    list: (filters) => ipcRenderer.invoke('applications:list', filters),
+    create: (body) => ipcRenderer.invoke('applications:create', body),
+    get: (id) => ipcRenderer.invoke('applications:get', id),
+    update: (id, patch) => ipcRenderer.invoke('applications:update', id, patch),
+    delete: (id) => ipcRenderer.invoke('applications:delete', id),
+    bulkStatus: (ids, status) => ipcRenderer.invoke('applications:bulkStatus', ids, status),
+    archive: (id) => ipcRenderer.invoke('applications:archive', id),
+    unarchive: (id) => ipcRenderer.invoke('applications:unarchive', id),
+    bulkArchive: (ids, archived) => ipcRenderer.invoke('applications:bulkArchive', ids, archived),
   },
 });

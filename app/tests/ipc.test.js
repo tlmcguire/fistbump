@@ -175,3 +175,191 @@ test('word diff rebuilds both texts', () => {
   assert.strictEqual(text('del'), 'excel python sql');
   assert.strictEqual(text('add'), 'sql excel python');
 });
+//phase 6 tests: export
+function exportSetup({ raw, picked } = {}) {
+  const writes = [];
+  const shown = [];
+  const dialogs = [];
+  const requests = [];
+  const backend = {
+    call: async () => ({}),
+    requestRaw: async (method, url, body) => {
+      requests.push({ method, url, body });
+      return raw || {
+        status: 200,
+        headers: new Headers({ 'content-disposition': `attachment; filename="Ada Lovelace - Acme.pdf"; filename*=UTF-8''Ada%20Lovelace%20-%20Acme.pdf` }),
+        bytes: new TextEncoder().encode('%PDF').buffer,
+      };
+    },
+  };
+  const ipc = fakeIpc();
+  register(ipc, backend, {
+    dialog: { showSaveDialog: async (...args) => { dialogs.push(args.at(-1)); return picked || { canceled: false, filePath: '/Users/ada/Documents/out.pdf' }; } },
+    BrowserWindow: { fromWebContents: () => null },
+    fs: { writeFile: async (file, data) => writes.push({ file, data: Buffer.from(data).toString() }) },
+    shell: { showItemInFolder: (file) => shown.push(file) },
+    documentsDir: () => '/Users/ada/Documents',
+  });
+  return { writes, shown, dialogs, requests, handler: (channel) => ipc.handlers.get(channel) };
+}
+
+test('export asks where to save, starting in Documents with the suggested name, and writes there', async () => {
+  const { writes, dialogs, requests, handler } = exportSetup();
+  const result = await handler('tailored:export')({ sender: {} }, 7, 'pdf');
+  assert.deepStrictEqual(result, { saved: true, path: '/Users/ada/Documents/out.pdf' });
+  assert.deepStrictEqual(requests, [{ method: 'POST', url: '/v1/tailored-resumes/7/export', body: { format: 'pdf' } }]);
+  assert.strictEqual(dialogs[0].defaultPath, path.join('/Users/ada/Documents', 'Ada Lovelace - Acme.pdf'));
+  assert.deepStrictEqual(dialogs[0].filters, [{ name: 'PDF', extensions: ['pdf'] }]);
+  assert.deepStrictEqual(writes, [{ file: '/Users/ada/Documents/out.pdf', data: '%PDF' }]);
+});
+
+test('export reports a canceled dialog and writes nothing', async () => {
+  const { writes, handler } = exportSetup({ picked: { canceled: true } });
+  assert.deepStrictEqual(await handler('resume:export')({ sender: {} }, 'md'), { saved: false });
+  assert.strictEqual(writes.length, 0);
+});
+
+test('export passes back a PDF failure and refuses bad arguments without calling the backend', async () => {
+  const failure = { error: { code: 'internal', message: 'The PDF could not be made', details: { fallback: 'md' } } };
+  const { writes, dialogs, requests, handler } = exportSetup({ raw: failure });
+  assert.deepStrictEqual(await handler('resume:export')({ sender: {} }, 'pdf'), failure);
+  assert.strictEqual(dialogs.length + writes.length, 0);
+
+  assert.strictEqual((await handler('resume:export')({ sender: {} }, 'docx')).error.code, 'validation_failed');
+  assert.strictEqual((await handler('tailored:export')({ sender: {} }, '7', 'pdf')).error.code, 'validation_failed');
+  assert.strictEqual(requests.length, 1);
+});
+
+test('a suggested name can never choose the folder', async () => {
+  const raw = { status: 200, headers: new Headers({ 'content-disposition': 'attachment; filename="../../evil.pdf"' }), bytes: new ArrayBuffer(1) };
+  const { dialogs, handler } = exportSetup({ raw });
+  await handler('resume:export')({ sender: {} }, 'pdf');
+  assert.strictEqual(dialogs[0].defaultPath, path.join('/Users/ada/Documents', 'evil.pdf'));
+});
+
+test('show in folder only reveals the file the last export wrote', async () => {
+  const { shown, handler } = exportSetup();
+  const show = handler('shell:showItem');
+  assert.strictEqual((await show({}, '/Users/ada/Documents/out.pdf')).error.code, 'validation_failed');
+  await handler('resume:export')({ sender: {} }, 'pdf');
+  assert.strictEqual((await show({}, '/etc/passwd')).error.code, 'validation_failed');
+  assert.deepStrictEqual(await show({}, '/Users/ada/Documents/out.pdf'), { ok: true });
+  assert.deepStrictEqual(shown, ['/Users/ada/Documents/out.pdf']);
+});
+
+test('requestRaw gives bytes on success and the error shape for a JSON answer', async () => {
+  const { Backend } = require('../main/backend');
+  const backend = new Backend({ binDir: '', dataDir: '' });
+  Object.assign(backend, { port: 1, state: 'ready', token: 't' });
+  const realFetch = global.fetch;
+  try {
+    global.fetch = async () => new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'application/pdf' } });
+    const ok = await backend.requestRaw('POST', '/v1/resume/export', { format: 'pdf' });
+    assert.strictEqual(ok.status, 200);
+    assert.deepStrictEqual([...new Uint8Array(ok.bytes)], [1, 2, 3]);
+
+    const body = { error: { code: 'internal', message: 'The PDF could not be made', details: { fallback: 'md' } } };
+    global.fetch = async () => new Response(JSON.stringify(body), { status: 500, headers: { 'content-type': 'application/json' } });
+    assert.deepStrictEqual(await backend.requestRaw('POST', '/v1/resume/export', { format: 'pdf' }), body);
+
+    global.fetch = async () => { throw new Error('refused'); };
+    assert.strictEqual((await backend.requestRaw('POST', '/v1/resume/export', {})).error.code, 'unreachable');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+//phase 7 tests: applications and job lifecycle
+test('application and job lifecycle routes check their arguments and build the right URLs', async () => {
+  const backend = recorder();
+  const ipc = fakeIpc();
+  register(ipc, backend);
+  const h = (channel) => ipc.handlers.get(channel);
+
+  assert.strictEqual((await h('applications:create')({}, {})).error.code, 'validation_failed');
+  assert.strictEqual((await h('applications:update')({}, 1, 'x')).error.code, 'validation_failed');
+  assert.strictEqual((await h('applications:bulkStatus')({}, [], 'Applied')).error.code, 'validation_failed');
+  assert.strictEqual((await h('applications:bulkStatus')({}, [1, '2'], 'Applied')).error.code, 'validation_failed');
+  assert.strictEqual((await h('applications:bulkArchive')({}, [1], 'yes')).error.code, 'validation_failed');
+  assert.strictEqual((await h('jobs:trash')({}, 0)).error.code, 'validation_failed');
+  assert.strictEqual(backend.calls.length, 0);
+
+  await h('applications:list')({}, { status: 'Applied', q: 'a&b', archived: 'only', other: 'x' });
+  await h('applications:list')({});
+  await h('applications:bulkStatus')({}, [1, 2], 'Rejected');
+  await h('applications:bulkArchive')({}, [3], false);
+  await h('applications:update')({}, 4, { notes: null });
+  await h('jobs:archive')({}, 5, { archive_application: true });
+  await h('jobs:archive')({}, 5);
+  await h('jobs:restore')({}, 5);
+  await h('jobs:list')({}, 'acme', { trashed: 'only' });
+  await h('jobs:list')({}, '');
+  assert.deepStrictEqual(backend.calls, [
+    { method: 'GET', url: '/v1/applications?status=Applied&q=a%26b&archived=only', body: undefined },
+    { method: 'GET', url: '/v1/applications', body: undefined },
+    { method: 'POST', url: '/v1/applications/bulk-status', body: { ids: [1, 2], status: 'Rejected' } },
+    { method: 'POST', url: '/v1/applications/bulk-archive', body: { ids: [3], archived: false } },
+    { method: 'PUT', url: '/v1/applications/4', body: { notes: null } },
+    { method: 'POST', url: '/v1/jobs/5/archive', body: { archive_application: true } },
+    { method: 'POST', url: '/v1/jobs/5/archive', body: { archive_application: false } },
+    { method: 'POST', url: '/v1/jobs/5/restore', body: undefined },
+    { method: 'GET', url: '/v1/jobs?q=acme&trashed=only', body: undefined },
+    { method: 'GET', url: '/v1/jobs', body: undefined },
+  ]);
+});
+
+test('a saved tailored PDF is recorded on the application that uses it', async () => {
+  const calls = [];
+  const backend = {
+    call: async (method, url, body) => {
+      calls.push({ method, url, body });
+      if (method === 'GET') return [{ id: 9, tailored_resume_id: 7 }, { id: 10, tailored_resume_id: null }];
+      return { id: 9 };
+    },
+    requestRaw: async () => ({ status: 200, headers: new Headers(), bytes: new ArrayBuffer(1) }),
+  };
+  const ipc = fakeIpc();
+  const shown = [];
+  register(ipc, backend, {
+    dialog: { showSaveDialog: async () => ({ canceled: false, filePath: '/docs/out.pdf' }) },
+    fs: { writeFile: async () => {} },
+    shell: { showItemInFolder: (file) => shown.push(file) },
+  });
+  const result = await ipc.handlers.get('tailored:export')({ sender: {} }, 7, 'pdf');
+  assert.deepStrictEqual(result, { saved: true, path: '/docs/out.pdf', application_id: 9 });
+  assert.deepStrictEqual(calls.at(-1), { method: 'PUT', url: '/v1/applications/9', body: { exported_pdf_path: '/docs/out.pdf' } });
+
+  // Markdown is not recorded as the exported PDF.
+  calls.length = 0;
+  await ipc.handlers.get('tailored:export')({ sender: {} }, 7, 'md');
+  assert.strictEqual(calls.length, 0);
+});
+
+test('show in folder also reveals a PDF an application recorded', async () => {
+  const backend = { call: async () => [{ id: 1, exported_pdf_path: '/docs/Ada - Acme.pdf' }] };
+  const ipc = fakeIpc();
+  const shown = [];
+  register(ipc, backend, { shell: { showItemInFolder: (file) => shown.push(file) } });
+  const show = ipc.handlers.get('shell:showItem');
+  assert.deepStrictEqual(await show({}, '/docs/Ada - Acme.pdf'), { ok: true });
+  assert.strictEqual((await show({}, '/etc')).error.code, 'validation_failed');
+  assert.deepStrictEqual(shown, ['/docs/Ada - Acme.pdf']);
+});
+
+test('the tracker puts steps due today or overdue first, using the local date', () => {
+  global.window = {};
+  require('../renderer/views/tracker/tracker.js');
+  const { order, localToday } = window.Tracker;
+  const today = '2026-11-22';
+  const list = [
+    { id: 1, next_step_date: null },
+    { id: 2, next_step_date: '2026-11-30' },
+    { id: 3, next_step_date: '2026-11-22' },
+    { id: 4, next_step_date: '2026-11-20' },
+  ];
+  assert.deepStrictEqual(order(list, today).map((a) => a.id), [4, 3, 1, 2]);
+
+  // localToday reads the computer's own clock, not UTC.
+  const d = new Date();
+  assert.strictEqual(localToday(), `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+});

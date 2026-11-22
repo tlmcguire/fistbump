@@ -135,3 +135,48 @@ func TestDeleteJobWithApplication(t *testing.T) {
 		t.Errorf("application id = %d, %v; want %d", got, err, appID)
 	}
 }
+
+func TestJobArchiveRestoreKeepsArchive(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	withProfile(t, s)
+	job, _ := s.CreateJob(ctx, models.Job{CompanyName: "Acme", PositionTitle: "Analyst", Source: "manual"})
+	app, err := s.CreateApplication(ctx, models.Application{JobID: job.ID, Status: "Interviewing"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Archive with the application, then unarchive: both come back and the stage is unchanged.
+	if err := s.ArchiveJob(ctx, job.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UnarchiveJob(ctx, job.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetApplication(ctx, app.ID); got.ArchivedAt != nil || got.Status != "Interviewing" {
+		t.Errorf("application after unarchive = %+v", got)
+	}
+
+	// An archived job that is trashed and restored goes back to the archived list, not the active one.
+	if err := s.DeleteApplication(ctx, app.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ArchiveJob(ctx, job.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.TrashJob(ctx, job.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.ListJobs(ctx, JobFilter{Archived: "only"}); len(got) != 0 {
+		t.Errorf("trashed job still listed as archived: %+v", got)
+	}
+	if err := s.RestoreJob(ctx, job.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.ListJobs(ctx, JobFilter{Archived: "only"}); len(got) != 1 || got[0].ID != job.ID {
+		t.Errorf("archived list after restore = %+v, want the job", got)
+	}
+	if got, _ := s.ListJobs(ctx, JobFilter{}); len(got) != 0 {
+		t.Errorf("active list after restore = %+v, want empty", got)
+	}
+}

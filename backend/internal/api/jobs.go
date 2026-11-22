@@ -389,3 +389,87 @@ func (s *Server) jobAnalyze(w http.ResponseWriter, r *http.Request) error {
 	writeJSON(w, http.StatusOK, res)
 	return nil
 }
+
+// jobArchive handles POST /v1/jobs/{id}/archive: sets job to archived
+func (s *Server) jobArchive(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	var body struct {
+		ArchiveApplication bool `json:"archive_application"`
+	}
+	if r.ContentLength != 0 { // the body is optional
+		if err := decodeJSON(w, r, &body); err != nil {
+			return err
+		}
+	}
+	if err := s.store.ArchiveJob(r.Context(), id, body.ArchiveApplication); err != nil {
+		return storeError(err, "Job")
+	}
+	out, err := s.store.GetJob(r.Context(), id)
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}
+
+// jobUnarchive handles POST /v1/jobs/{id}/unarchive: clears archived_at from job
+func (s *Server) jobUnarchive(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	if err := s.store.UnarchiveJob(r.Context(), id); err != nil {
+		return storeError(err, "Job")
+	}
+	out, err := s.store.GetJob(r.Context(), id)
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}
+
+// jobTrash handles POST /v1/jobs/{id}/trash: sets job to trashed
+func (s *Server) jobTrash(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	err = s.store.TrashJob(r.Context(), id)
+	if errors.Is(err, store.ErrConflict) {
+		e := conflict("job has an application")
+		if appID, err := s.store.JobApplicationID(r.Context(), id); err == nil {
+			e.Details = map[string]any{"application_id": appID}
+		}
+		return e
+	}
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	out, err := s.store.GetJob(r.Context(), id)
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}
+
+// jobRestore handles POST /v1/jobs/{id}/restore: clears trashed_at from job
+func (s *Server) jobRestore(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	if err := s.store.RestoreJob(r.Context(), id); err != nil {
+		return storeError(err, "Job")
+	}
+	out, err := s.store.GetJob(r.Context(), id)
+	if err != nil {
+		return storeError(err, "Job")
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}

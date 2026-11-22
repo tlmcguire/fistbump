@@ -11,7 +11,7 @@
       },
   
       mount(container) {
-        const {el, fill} = window.ResumeBuilder;
+        const {el, fill, exportFile, savedNote} = window.ResumeBuilder;
         const api = window.FistBumpAPI;
         const SECTION = {header: "Header", summary: "Summary", experience: "Experience", education: "Education", skills: "Skills"};
         const STATUS = {queued: "Starting", running: "Writing", done: "Ready", failed: "Failed", canceled: "Canceled"};
@@ -255,14 +255,46 @@
               el("div", {class: "diff-col"}, el("h4", {text: `${hunkTitle(h)} \u00b7 ${h.status}`}), side(h, "before")),
               el("div", {class: "diff-col"}, side(h, "after")));
           }));
+          const exportNote = el("div");
+          const exportButton = el("button", {type: "button", class: "primary"}, "Export PDF");
+          exportButton.addEventListener("click", async () => {
+            exportButton.disabled = true;
+            exportNote.replaceChildren();
+            const r = await attempt(() => exportFile(format => api.tailored.export(t.value.id, format)));
+            exportButton.disabled = false;
+            if (r?.value?.saved) exportNote.replaceChildren(savedNote(r.value.path));
+          });
+
+          //phase 7: track the job with this tailored resume, or set it on the job's application
+          const trackButton = el("button", {type: "button"}, "Track with this resume");
+          trackButton.addEventListener("click", async () => {
+            const tailoredResumeId = t.value.id;
+            const list = await attempt(() => api.applications.list({archived: "include"}));
+            if (!list) return;
+            const existing = list.value.find(a => a.job_id === t.value.job_id);
+            let done = null;
+            if (!existing) {
+              done = await attempt(() => api.applications.create({job_id: t.value.job_id, tailored_resume_id: tailoredResumeId}));
+            } else if (existing.tailored_resume_id === tailoredResumeId) {
+              done = {value: existing};
+            } else {
+              if (!window.confirm("This job is already tracked. Use this tailored resume for its application?")) return;
+              done = await attempt(() => api.applications.update(existing.id, {tailored_resume_id: tailoredResumeId}));
+            }
+            if (done) say("Tracked with this resume.");
+            if (done) trackButton.replaceWith(el("button", {type: "button", onclick: () => window.Tracker.open(done.value.id)}, "Open in tracker"));
+          });
           fill(stage,
             el("div", {class: "tailor-head"},
               el("strong", {text: "Tailored resume"}),
+              exportButton,
+              trackButton,
               el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, "Back to suggestions"),
               el("button", {type: "button", class: "danger", onclick: async () => {
                 if (!window.confirm("Delete this tailored resume?")) return;
                 if (await attempt(() => api.tailored.delete(t.value.id))) { tailoredId = null; await loadRounds(); drawBody(); }
               }}, "Delete")),
+            exportNote,
             (warned.get(tailoredId) || []).map(w => el("p", {class: "resume-status error", text: String(w)})),
             el("label", {class: "hint"},
               el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }}),

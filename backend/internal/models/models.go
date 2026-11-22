@@ -170,3 +170,24 @@ type TailoredResume struct {
 	BaseContent  string `json:"base_content,omitempty"`
 	CreatedAt    string `json:"created_at"`
 }
+
+// Application tracks one job through the pipeline. A job has at most one application. Archiving
+// sets ArchivedAt and leaves Status unchanged. CompanyName and PositionTitle are read-only, joined
+// from the job by every store read, and always sent (no omitempty) so the tracker can show them.
+type Application struct {
+	ID               int64   `json:"id"`
+	JobID            int64   `json:"job_id"`
+	ProfileID        int64   `json:"profile_id"`
+	BaseResumeID     *int64  `json:"base_resume_id"`
+	TailoredResumeID *int64  `json:"tailored_resume_id"`
+	Status           string  `json:"status"` // Saved, Applied, Interviewing, Offered or Rejected
+	DateApplied      *string `json:"date_applied"`
+	NextStepDate     *string `json:"next_step_date"`
+	ExportedPDFPath  *string `json:"exported_pdf_path"`
+	Notes            *string `json:"notes"`
+	ArchivedAt       *string `json:"archived_at"`
+	CreatedAt        string  `json:"created_at"`
+	UpdatedAt        string  `json:"updated_at"`
+	CompanyName      string  `json:"company_name"`
+	PositionTitle    string  `json:"position_title"`
+}
