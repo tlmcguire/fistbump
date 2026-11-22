@@ -35,6 +35,13 @@ const VIEWS = {
     mount: container => window.Tailor.mount(container),
     redraw: true,
   },
+
+  //phase 7: the application tracker, loaded again each time it is shown
+  tracker: {
+    container: "view-tracker",
+    mount: container => window.Tracker.mount(container),
+    redraw: true,
+  },
 };
 
 // A hidden pane forgets how far it was scrolled, so the offsets are noted before hiding and put back after showing.
@@ -84,7 +91,7 @@ function show(name) {
     mounted.get(name)?.();
   }
   app.dataset.route = name;
-  for (const [id, route] of [["nav-home", "home"], ["nav-resume", "resume"], ["nav-tailor", "tailor"]]) {
+  for (const [id, route] of [["nav-home", "home"], ["nav-tracker", "tracker"], ["nav-resume", "resume"], ["nav-tailor", "tailor"]]) {
     const item = document.getElementById(id);
     if (name === route) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
@@ -124,6 +131,7 @@ for (const id of ["tab-find", "tab-link", "tab-paste", "tab-saved", "tab-setting
 document.getElementById("nav-home").addEventListener("click", () => { location.hash = "#/home"; });
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
 document.getElementById("nav-tailor").addEventListener("click", () => { location.hash = "#/tailor"; });
+document.getElementById("nav-tracker").addEventListener("click", () => { location.hash = "#/tracker"; });
 
 // What Home needs to open the other views: go("resume") shows a view at once, openTab("tab-find") a Jobs tab.
 window.App = {

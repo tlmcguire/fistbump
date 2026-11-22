@@ -11,7 +11,10 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
    'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',
-   'resume:export', 'tailored:export', 'shell:showItem',];
+   'resume:export', 'tailored:export', 'shell:showItem',
+   'applications:list', 'applications:create', 'applications:get', 'applications:update', 'applications:delete',
+   'applications:bulkStatus', 'applications:archive', 'applications:unarchive', 'applications:bulkArchive',
+   'jobs:archive', 'jobs:unarchive', 'jobs:trash', 'jobs:restore',];
 
 const path = require('node:path');
 
@@ -28,6 +31,20 @@ const seg = (s) => encodeURIComponent(String(s));
 // Ids become path segments, so only positive integers pass. Anything else could reach another route.
 const isId = (id) => Number.isSafeInteger(id) && id > 0;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const isIdList = (ids) => Array.isArray(ids) && ids.length > 0 && ids.length <= 1000 && ids.every(isId);
+
+// A query string from the allowed keys only. Empty values are left out.
+function query(values, allowed) {
+  const params = new URLSearchParams();
+  if (isObject(values)) {
+    for (const key of allowed) {
+      const value = values[key];
+      if (typeof value === 'string' && value !== '') params.set(key, value);
+    }
+  }
+  const text = params.toString();
+  return text ? `?${text}` : '';
+}
 
 //helper function for when a user decides to accept or reject suggested changes
 const decide = (verb) => (rid, sid) =>
@@ -81,11 +98,32 @@ const ROUTES = {
   //new in phase 4 for job management
   'jobs:parse':   (raw_text) => typeof raw_text === 'string' && raw_text.trim() ? ['POST', '/v1/jobs/parse', { raw_text }] : bad('Paste the job posting.'),
   'jobs:create':  (body) => isObject(body) ? ['POST', '/v1/jobs', body] : bad('Invalid job'),
-  'jobs:list':    (q) => ['GET', `/v1/jobs${q ? `?q=${encodeURIComponent(String(q))}` : ''}`],
+  // jobs:list takes the search text and, optionally, { archived: 'include'|'only', trashed: 'only' }.
+  'jobs:list':    (q, opts) => ['GET', `/v1/jobs${query({ ...(isObject(opts) ? opts : {}), q: q ? String(q) : '' }, ['q', 'archived', 'trashed'])}`],
   'jobs:get':     (id) => isId(id) ? ['GET', `/v1/jobs/${id}`] : bad('Invalid job id'),
   'jobs:update':  (id, body) => isId(id) && isObject(body) ? ['PUT', `/v1/jobs/${id}`, body] : bad('Invalid job'),
   'jobs:delete':  (id) => isId(id) ? ['DELETE', `/v1/jobs/${id}`] : bad('Invalid job id'),
   'jobs:analyze': (id) => isId(id) ? ['POST', `/v1/jobs/${id}/analyze`] : bad('Invalid job id'),
+
+  //phase 7: job archive and trash
+  'jobs:archive':   (id, opts) => isId(id)
+    ? ['POST', `/v1/jobs/${id}/archive`, { archive_application: Boolean(isObject(opts) && opts.archive_application) }] : bad('Invalid job id'),
+  'jobs:unarchive': (id) => isId(id) ? ['POST', `/v1/jobs/${id}/unarchive`] : bad('Invalid job id'),
+  'jobs:trash':     (id) => isId(id) ? ['POST', `/v1/jobs/${id}/trash`] : bad('Invalid job id'),
+  'jobs:restore':   (id) => isId(id) ? ['POST', `/v1/jobs/${id}/restore`] : bad('Invalid job id'),
+
+  //phase 7: the application tracker
+  'applications:list':   (filters) => ['GET', `/v1/applications${query(filters, ['status', 'q', 'archived'])}`],
+  'applications:create': (body) => isObject(body) && isId(body.job_id) ? ['POST', '/v1/applications', body] : bad('Choose a job first.'),
+  'applications:get':    (id) => isId(id) ? ['GET', `/v1/applications/${id}`] : bad('Invalid application id'),
+  'applications:update': (id, patch) => isId(id) && isObject(patch) ? ['PUT', `/v1/applications/${id}`, patch] : bad('Invalid application'),
+  'applications:delete': (id) => isId(id) ? ['DELETE', `/v1/applications/${id}`] : bad('Invalid application id'),
+  'applications:bulkStatus': (ids, status) => isIdList(ids) && typeof status === 'string'
+    ? ['POST', '/v1/applications/bulk-status', { ids, status }] : bad('Choose 1 to 1000 applications and a status.'),
+  'applications:archive':   (id) => isId(id) ? ['POST', `/v1/applications/${id}/archive`] : bad('Invalid application id'),
+  'applications:unarchive': (id) => isId(id) ? ['POST', `/v1/applications/${id}/unarchive`] : bad('Invalid application id'),
+  'applications:bulkArchive': (ids, archived) => isIdList(ids) && typeof archived === 'boolean'
+    ? ['POST', '/v1/applications/bulk-archive', { ids, archived }] : bad('Choose 1 to 1000 applications.'),
   'connectors:import': (postings) => Array.isArray(postings) && postings.length &&
     postings.every(p => isObject(p) && typeof p.board === 'string' && typeof p.external_id === 'string')
     ? ['POST', '/v1/connectors/greenhouse/import', { postings }] : bad('Invalid posting'),
@@ -247,13 +285,37 @@ function register(ipcMain, backend, deps = {}) {
     return { saved: true, path: picked.filePath };
   }
 
-  ipcMain.handle('resume:export', (event, format) => saveExport(event, '/v1/resume/export', format));
-  ipcMain.handle('tailored:export', (event, id, format) =>
-    isId(id) ? saveExport(event, `/v1/tailored-resumes/${id}/export`, format) : bad('Invalid id'));
+  // After a tailored resume's PDF is saved, the application that uses it records where it went.
+  // The file is already saved, so a failure here does not fail the export.
+  async function recordExport(tailoredId, filePath) {
+    const list = await backend.call('GET', '/v1/applications?archived=include');
+    const app = Array.isArray(list) && list.find((a) => a.tailored_resume_id === tailoredId);
+    if (!app) return null;
+    const updated = await backend.call('PUT', `/v1/applications/${app.id}`, { exported_pdf_path: filePath });
+    return updated?.error ? null : app.id;
+  }
 
-  // Reveals the file the last export wrote, and nothing else.
-  ipcMain.handle('shell:showItem', (_event, filePath) => {
-    if (typeof filePath !== 'string' || !lastSaved || filePath !== lastSaved) return bad('Only a file Fistbump just saved can be shown.');
+  ipcMain.handle('resume:export', (event, format) => saveExport(event, '/v1/resume/export', format));
+  ipcMain.handle('tailored:export', async (event, id, format) => {
+    if (!isId(id)) return bad('Invalid id');
+    const result = await saveExport(event, `/v1/tailored-resumes/${id}/export`, format);
+    if (result.saved && format === 'pdf') {
+      const applicationId = await recordExport(id, result.path).catch(() => null);
+      if (applicationId) result.application_id = applicationId;
+    }
+    return result;
+  });
+
+  // Reveals a file Fistbump saved: the last export, or a PDF an application recorded. Main checks the
+  // path itself, so the renderer cannot open an arbitrary folder.
+  ipcMain.handle('shell:showItem', async (_event, filePath) => {
+    if (typeof filePath !== 'string' || !filePath) return bad('Only a file Fistbump saved can be shown.');
+    let known = filePath === lastSaved;
+    if (!known) {
+      const list = await backend.call('GET', '/v1/applications?archived=include').catch(() => null);
+      known = Array.isArray(list) && list.some((a) => a.exported_pdf_path === filePath);
+    }
+    if (!known) return bad('Only a file Fistbump saved can be shown.');
     if (!deps.shell?.showItemInFolder) return bad('Not available');
     deps.shell.showItemInFolder(filePath);
     return { ok: true };

@@ -70,6 +70,17 @@ func TestApplicationListAndArchive(t *testing.T) {
 	a, _ := s.CreateApplication(ctx, models.Application{JobID: newJob(t, s, "Acme")})
 	b, _ := s.CreateApplication(ctx, models.Application{JobID: newJob(t, s, "Globex"), Status: "Applied"})
 
+	// Most recently updated first: touching a moves it ahead of b.
+	if got, _ := s.ListApplications(ctx, ApplicationFilter{}); len(got) != 2 || got[0].ID != b.ID {
+		t.Errorf("order = %+v, want newest first", got)
+	}
+	time.Sleep(1100 * time.Millisecond) // updated_at has one-second resolution
+	if _, err := s.UpdateApplication(ctx, a.ID, a); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.ListApplications(ctx, ApplicationFilter{}); got[0].ID != a.ID || got[0].CompanyName != "Acme" || got[0].PositionTitle != "Analyst" {
+		t.Errorf("after update = %+v, want a first with the job's company and title", got)
+	}
 	if got, _ := s.ListApplications(ctx, ApplicationFilter{Status: "Applied"}); len(got) != 1 || got[0].ID != b.ID {
 		t.Errorf("status filter = %+v", got)
 	}

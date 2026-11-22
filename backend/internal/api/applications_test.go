@@ -142,3 +142,51 @@ func TestApplicationDelete(t *testing.T) {
 	expect(t, call(t, s, "DELETE", fmt.Sprintf("/v1/applications/%d", id), ""), 204)
 	expect(t, call(t, s, "GET", fmt.Sprintf("/v1/applications/%d", id), ""), 404)
 }
+
+func TestApplicationRoutes(t *testing.T) {
+	s := newJobServer(t, &fakeFetcher{})
+	id1 := trackJob(t, s, trackableJob(t, s))
+	id2 := trackJob(t, s, trackableJob(t, s))
+
+	// PUT changes only the fields sent; null clears one; read-only fields are ignored.
+	out := expect(t, call(t, s, "PUT", fmt.Sprintf("/v1/applications/%d", id1),
+		`{"notes":"call Friday","next_step_date":"2026-12-01","company_name":"ignored"}`), 200)
+	if out["notes"] != "call Friday" || out["next_step_date"] != "2026-12-01" || out["company_name"] == "ignored" {
+		t.Errorf("update = %v", out)
+	}
+	out = expect(t, call(t, s, "PUT", fmt.Sprintf("/v1/applications/%d", id1), `{"notes":null}`), 200)
+	if out["notes"] != nil || out["next_step_date"] != "2026-12-01" {
+		t.Errorf("clear notes = %v", out)
+	}
+	expectField(t, call(t, s, "PUT", fmt.Sprintf("/v1/applications/%d", id1), `{"shoe_size":9}`), "shoe_size")
+
+	// list filters
+	expect(t, call(t, s, "PUT", fmt.Sprintf("/v1/applications/%d", id2), `{"status":"Offered"}`), 200)
+	if got := listApplications(t, s, "?status=Offered"); len(got) != 1 || got[0]["id"] != float64(id2) {
+		t.Errorf("status filter = %v", got)
+	}
+	if got := listApplications(t, s, "?q=acme"); len(got) != 2 {
+		t.Errorf("q filter = %d rows, want 2", len(got))
+	}
+	expectField(t, call(t, s, "GET", "/v1/applications?archived=maybe", ""), "archived")
+	expectField(t, call(t, s, "GET", "/v1/applications?status=Hired", ""), "status")
+
+	// bulk archive and restore
+	rec := call(t, s, "POST", "/v1/applications/bulk-archive", fmt.Sprintf(`{"ids":[%d,%d],"archived":true}`, id1, id2))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("bulk archive = %d; body %s", rec.Code, rec.Body)
+	}
+	if n := len(listApplications(t, s, "")); n != 0 {
+		t.Errorf("active list has %d after bulk archive, want 0", n)
+	}
+	if n := len(listApplications(t, s, "?archived=include")); n != 2 {
+		t.Errorf("archived=include has %d, want 2", n)
+	}
+	// An unknown id writes nothing.
+	expect(t, call(t, s, "POST", "/v1/applications/bulk-archive", fmt.Sprintf(`{"ids":[%d,999999],"archived":false}`, id1)), 404)
+	if n := len(listApplications(t, s, "")); n != 0 {
+		t.Errorf("a failed bulk restore changed %d rows", n)
+	}
+	expect(t, call(t, s, "POST", "/v1/applications/999999/archive", ""), 404)
+	expect(t, call(t, s, "GET", "/v1/applications/999999", ""), 404)
+}
