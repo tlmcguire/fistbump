@@ -11,9 +11,11 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/models"
 )
 
-// trackableJob saves a pasted job and returns its id.
+// trackableJob saves a pasted job and returns its id. It also makes sure a profile exists,
+// since an application belongs to the profile and creating one without a profile is 409.
 func trackableJob(t *testing.T, s *Server) int64 {
 	t.Helper()
+	expect(t, call(t, s, "PUT", "/v1/resume/profile", `{"full_name":"Ada Lovelace"}`), 200)
 	out := expect(t, call(t, s, "POST", "/v1/jobs", `{"raw_text":"Analyst at Acme\nSQL"}`), 201)
 	return int64(out["id"].(float64))
 }
