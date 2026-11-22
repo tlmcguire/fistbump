@@ -1,10 +1,15 @@
 /*
- * Motion. Everything here is switched off by the Reduce motion setting (base.css turns every animation and
- * transition off under .reduce-motion) and scripts ask window.UI.motion() before they play anything of their own.
+ * Motion.
  *
- * One idea runs through it: things arrive from a little below, sharpen, and settle on an exponential ease-out,
- * and each state change answers where it was made (a card breathes when you decide it, the stage chip pops when
- * you change it, the bar fills as you go). Nothing loops except waiting.
+ * The idea: the window is a desk, not a stage. Things that are already there stay put (the sidebar, the
+ * toolbar); what changes arrives from a few pixels below on one exponential ease-out and leaves faster than it
+ * came. Each state change answers where it was made (a card breathes when you decide it, the badge pops when a
+ * filter changes, the pill slides to the tab you chose). The one authored moment is a language change: the
+ * whole interface softly re-sets itself in the new words. Nothing loops except waiting.
+ *
+ * Reduce motion: base.css turns animation and transition off under .reduce-motion. The rules at the end of this
+ * file put back what carries meaning without movement: short opacity fades for pages, panels, the filters,
+ * dialogs, tooltips and the language change. Scripts ask window.UI.motion() before playing anything of their own.
  */
 
 @property --pct {
@@ -16,39 +21,125 @@
 /* ---------- Arrivals ---------- */
 
 @keyframes arrive {
-  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
-  to   { opacity: 1; transform: none; filter: none; }
-}
-@keyframes arrive-soft {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
 
-/* A view as it is shown */
-.view-enter { animation: arrive 320ms var(--ease-out) both; }
+/* A page as it is shown: the content arrives, the toolbar it sits under stays where it is */
+.view-enter > :not(.toolbar) { animation: arrive 220ms var(--ease-out) both; }
 /* A panel, stage or note as it is filled */
-.enter { animation: arrive-soft 260ms var(--ease-out) both; }
-/* A list, one child after another (the script sets --i on each) */
-.stagger > * { animation: arrive 380ms var(--ease-out) both; animation-delay: var(--i, 0ms); }
-.tailor-aside.in > * { animation: arrive-soft 360ms var(--ease-out) both; }
-.tailor-aside.in > *:nth-child(2) { animation-delay: 40ms; }
-.tailor-aside.in > *:nth-child(3) { animation-delay: 80ms; }
-.tailor-aside.in > *:nth-child(4) { animation-delay: 120ms; }
-.tailor-aside.in > *:nth-child(5) { animation-delay: 160ms; }
+.enter { animation: arrive 240ms var(--ease-out) both; }
+/* A list, one child after another (the script sets --i on each and caps it) */
+.stagger > * { animation: arrive 260ms var(--ease-out) both; animation-delay: var(--i, 0ms); }
+.tailor-aside.in > * { animation: arrive 300ms var(--ease-out) both; }
+.tailor-aside.in > *:nth-child(2) { animation-delay: 30ms; }
+.tailor-aside.in > *:nth-child(3) { animation-delay: 60ms; }
+.tailor-aside.in > *:nth-child(4) { animation-delay: 90ms; }
+.tailor-aside.in > *:nth-child(5) { animation-delay: 120ms; }
+
+/* ---------- Search filters: a drawer that opens under the search bar ---------- */
+
+/* The drawer's height eases from nothing to its content and back; `hidden` still decides whether it is shown,
+   so the form works the same with motion off. Its fields follow it down one after another. */
+#filters {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition:
+    height 280ms var(--ease-out),
+    padding-block 280ms var(--ease-out),
+    opacity 200ms ease,
+    display 280ms allow-discrete;
+}
+#filters[hidden] {
+  display: none !important;
+  height: 0;
+  padding-block: 0;
+  opacity: 0;
+  transition-duration: 170ms, 170ms, 120ms, 170ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+@starting-style {
+  #filters:not([hidden]) { height: 0; padding-block: 0; opacity: 0; }
+}
+@keyframes field-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+#filters:not([hidden]) > * { animation: field-in 260ms var(--ease-out) both; }
+#filters:not([hidden]) > :nth-child(2) { animation-delay: 18ms; }
+#filters:not([hidden]) > :nth-child(3) { animation-delay: 36ms; }
+#filters:not([hidden]) > :nth-child(4) { animation-delay: 54ms; }
+#filters:not([hidden]) > :nth-child(5) { animation-delay: 72ms; }
+#filters:not([hidden]) > :nth-child(6) { animation-delay: 90ms; }
+#filters:not([hidden]) > :nth-child(7) { animation-delay: 108ms; }
+#filters:not([hidden]) > :nth-child(n+8) { animation-delay: 126ms; }
+#filters-toggle[aria-expanded="true"] { background: var(--control-hover); }
+
+/* The sidebar's groups fold the same way */
+.tree-body {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition: height 240ms var(--ease-out), opacity 180ms ease, display 240ms allow-discrete;
+}
+.tree-group.folded .tree-body {
+  height: 0;
+  opacity: 0;
+  transition-duration: 160ms, 120ms, 160ms;
+}
+@starting-style {
+  .tree-group:not(.folded) .tree-body { height: 0; opacity: 0; }
+}
+.tree-head .chevron { transition: transform 200ms var(--ease-out); }
+
+/* ---------- The language changes: the interface re-sets itself in the new words ---------- */
+
+html[data-vt]::view-transition-group(root) { animation-duration: 420ms; }
+html[data-vt="language"]::view-transition-old(root) {
+  animation: lang-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+html[data-vt="language"]::view-transition-new(root) {
+  animation: lang-in 420ms var(--ease-out) 90ms both;
+}
+@keyframes lang-out { to { opacity: 0; filter: blur(5px); } }
+@keyframes lang-in { from { opacity: 0; filter: blur(5px); } }
+
+/* ---------- Segmented controls: the pill slides to the chosen option ---------- */
+
+.tabs, .tracker-scopes { position: relative; isolation: isolate; }
+.tabs.has-pill::before, .tracker-scopes.has-pill::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: var(--pill-w);
+  transform: translateX(var(--pill-x));
+  border-radius: 6px;
+  background: var(--raised);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 240ms var(--ease-out), width 240ms var(--ease-out);
+}
+.pill-still::before { transition: none !important; }
+.tabs.has-pill button[aria-selected="true"],
+.tracker-scopes.has-pill .tracker-scope[aria-pressed="true"] { background: transparent; box-shadow: none; }
 
 /* ---------- Pico ---------- */
 
 @keyframes pop {
-  0%   { opacity: 0; transform: scale(0.8) translateY(6px); }
-  60%  { opacity: 1; transform: scale(1.04); }
+  0%   { opacity: 0; transform: scale(0.85) translateY(4px); }
+  60%  { opacity: 1; transform: scale(1.03); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes float {
+@keyframes settle {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-4px); }
+  50%      { transform: translateY(-3px); }
 }
+/* Pico pops in and settles once; it does not keep moving while you read */
 .stage-empty .mascot, .tracker-empty .mascot, .aside-empty .mascot, .exported .mascot, .pdf-state .mascot {
-  animation: pop 520ms var(--ease-out) both, float 4.8s ease-in-out 700ms infinite;
+  animation: pop 460ms var(--ease-out) both, settle 1.6s ease-in-out 600ms 1;
 }
 
 /* ---------- Waiting ---------- */
@@ -60,20 +151,20 @@
 .skeleton {
   background: linear-gradient(100deg, rgba(255, 255, 255, 0.035) 30%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.035) 70%);
   background-size: 220% 100%;
-  animation: shimmer 1.6s ease-in-out infinite, arrive-soft 300ms var(--ease-out) both;
+  animation: shimmer 1.6s ease-in-out infinite, arrive 260ms var(--ease-out) both;
 }
-.skeleton:nth-child(2) { animation-delay: 0s, 80ms; }
-.skeleton:nth-child(3) { animation-delay: 0s, 160ms; }
+.skeleton:nth-child(2) { animation-delay: 0s, 60ms; }
+.skeleton:nth-child(3) { animation-delay: 0s, 120ms; }
 
 /* ---------- Deciding ---------- */
 
 /* A card breathes once when it is decided */
 @keyframes decided {
   0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
-  35%  { transform: scale(1.006); box-shadow: 0 0 0 5px rgba(143, 227, 176, 0.14); }
+  35%  { transform: scale(1.006); box-shadow: 0 2px 0 5px rgba(143, 227, 176, 0.14); }
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
 }
-.tailor-card.decided { animation: decided 650ms var(--ease-out); }
+.tailor-card.decided { animation: decided 560ms var(--ease-out); }
 .tailor-card.decided[data-state="rejected"] { animation-name: decided-quiet; }
 @keyframes decided-quiet {
   0%   { transform: scale(1); }
@@ -86,47 +177,47 @@
 .decided .state-chip[data-state="accepted"] svg path,
 .decided .state-chip[data-state="rejected"] svg path {
   stroke-dasharray: 24;
-  animation: draw 420ms var(--ease-out) 80ms both;
+  animation: draw 380ms var(--ease-out) 60ms both;
 }
-.decided .state-chip { animation: pop 420ms var(--ease-out) both; }
+.decided .state-chip { animation: pop 380ms var(--ease-out) both; }
 
 .tailor-card { transition: border-color 200ms ease, background-color 200ms ease, opacity 200ms ease; }
-
-.meter-fill { transition: width 520ms var(--ease-out), background-color 300ms ease; }
+.meter-fill { transition: width 480ms var(--ease-out), background-color 300ms ease; }
 
 /* When everything is decided the Build button gets one ring of attention */
 @keyframes ready {
   0%   { box-shadow: 0 0 0 0 rgba(206, 166, 21, 0.55); }
   100% { box-shadow: 0 0 0 14px rgba(206, 166, 21, 0); }
 }
-button.ready { animation: ready 900ms var(--ease-out) 2; }
+button.ready { animation: ready 900ms var(--ease-out) 1; }
 
 /* The match score fills round as it counts up */
 @keyframes fill-ring { from { --pct: 0; } }
-.score-ring { animation: fill-ring 900ms var(--ease-out) both; }
+.score-ring { animation: fill-ring 800ms var(--ease-out) both; }
 
 /* ---------- The tracker ---------- */
 
 @keyframes flash {
   0%, 100% { background-color: transparent; }
-  25%, 60% { background-color: rgba(185, 208, 255, 0.22); }
+  30%      { background-color: rgba(185, 208, 255, 0.2); }
 }
-.tracker-table tr.flash td { animation: flash 1.4s ease; }
-.stage-select.pop { animation: pop 380ms var(--ease-out); }
+.tracker-table tr.flash td { animation: flash 900ms ease; }
+.stage-select.pop, .badge.pop { animation: pop 380ms var(--ease-out); }
 .stage-chip, .tracker-scope, .tabs button, .tailor-round { transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
 .stage-dot { transition: transform 200ms var(--ease-out); }
 .stage-chip[aria-pressed="true"] .stage-dot { transform: scale(1.35); }
-@keyframes pulse-once { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
-.due-strip:not([hidden]) { animation: arrive-soft 360ms var(--ease-out) both; }
-.due-strip .icon { animation: pulse-once 900ms var(--ease-out) 400ms 2; }
+.due-strip:not([hidden]) { animation: arrive 300ms var(--ease-out) both; }
 
 /* ---------- The PDF ---------- */
 
 @keyframes unroll {
-  from { clip-path: inset(0 0 100% 0); opacity: 0.4; }
-  to   { clip-path: inset(0 0 0 0); opacity: 1; }
+  from { clip-path: inset(0 0 100% 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
-.pdf-frame.reveal { animation: unroll 620ms var(--ease-out) both; }
+.pdf-frame.reveal { animation: unroll 320ms var(--ease-out) both; }
+@keyframes expand-in { from { opacity: 0.6; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+.pdf-preview.expanded { animation: expand-in 260ms var(--ease-out) both; }
+.pdf-backdrop { animation: fade-in 220ms ease both; }
 
 /* ---------- Dialogs ---------- */
 
@@ -134,9 +225,20 @@ button.ready { animation: ready 900ms var(--ease-out) 2; }
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to   { opacity: 1; transform: none; }
 }
-@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
 dialog.ask[open] { animation: dialog-in 220ms var(--ease-out) both; }
-dialog.ask[open]::backdrop { animation: backdrop-in 220ms ease both; }
+dialog.ask[open]::backdrop { animation: fade-in 220ms ease both; }
+dialog.ask.closing { animation: dialog-out 130ms cubic-bezier(0.4, 0, 1, 1) both; }
+dialog.ask.closing::backdrop { animation: fade-out 130ms ease both; }
+
+/* ---------- Tooltips ---------- */
+
+@keyframes tip-in-below { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@keyframes tip-in-above { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.tip.in[data-side="below"] { animation: tip-in-below 140ms var(--ease-out) both; }
+.tip.in[data-side="above"] { animation: tip-in-above 140ms var(--ease-out) both; }
 
 /* ---------- Controls ---------- */
 
@@ -145,13 +247,18 @@ button:active:not(:disabled), .button:active { transform: scale(0.97); }
 button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 10px rgba(206, 166, 21, 0.28); }
 .nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
 .nav-item:hover:not(:disabled) .icon { transform: scale(1.1); }
-.tree-body { animation: arrive-soft 220ms var(--ease-out) both; }
-.settings-group { animation: arrive-soft 360ms var(--ease-out) both; }
-.settings-group:nth-child(2) { animation-delay: 40ms; }
-.settings-group:nth-child(3) { animation-delay: 80ms; }
-.settings-group:nth-child(4) { animation-delay: 120ms; }
 
-/* The PDF grows out of its place */
-@keyframes expand-in { from { opacity: 0.6; transform: scale(0.96); } to { opacity: 1; transform: none; } }
-.pdf-preview.expanded { animation: expand-in 260ms var(--ease-out) both; }
-.pdf-backdrop:not([hidden]) { animation: backdrop-in 220ms ease both; }
+/* ---------- Reduce motion: the meaning stays, the movement goes ---------- */
+
+.reduce-motion .view-enter > :not(.toolbar),
+.reduce-motion .enter,
+.reduce-motion .stagger > *,
+.reduce-motion .tailor-aside.in > *,
+.reduce-motion #filters:not([hidden]),
+.reduce-motion .tip.in,
+.reduce-motion dialog.ask[open],
+.reduce-motion .pdf-preview.expanded,
+.reduce-motion .pdf-frame.reveal { animation: fade-in 140ms ease both !important; }
+.reduce-motion dialog.ask.closing { animation: fade-out 90ms ease both !important; }
+html.reduce-motion[data-vt]::view-transition-old(root) { animation: fade-out 120ms ease both; filter: none; }
+html.reduce-motion[data-vt]::view-transition-new(root) { animation: fade-in 160ms ease both; filter: none; }

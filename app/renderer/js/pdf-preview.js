@@ -1,5 +1,14 @@
 // An inline PDF preview. The backend makes the same PDF the export saves; main hands it over as base64 and the
 // page shows it in the system's PDF viewer inside the window. Nothing is written to disk.
+//Esc closes an expanded preview. One listener serves every preview, so drawing a preview again adds none.
+document.addEventListener("keydown", event => {
+  const open = document.querySelector(".pdf-preview.expanded");
+  if (event.key === "Escape" && open) {
+    event.stopPropagation();
+    open.collapse?.();
+  }
+}, true);
+
 window.PdfPreview = {
   //getBase64() gives the PDF as base64 (it may throw). Returns {node, load, dispose}.
   create(getBase64, {title = "PDF preview"} = {}) {
@@ -22,9 +31,7 @@ window.PdfPreview = {
     };
     expand.addEventListener("click", () => setExpanded(!node.classList.contains("expanded")));
     backdrop.addEventListener("click", () => setExpanded(false));
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && node.classList.contains("expanded")) { event.stopPropagation(); setExpanded(false); }
-    }, true);
+    node.collapse = () => setExpanded(false);
     let url = null;
     let token = 0;
 

@@ -21,7 +21,7 @@ window.Settings = {
 
     //A button for something that cannot be undone asks to be pressed again within a few seconds.
     const confirmFirst = (button, label, action) => {
-      const original = button.textContent;
+      let original = button.textContent;
       let timer = null;
       const reset = () => {
         clearTimeout(timer);
@@ -30,6 +30,7 @@ window.Settings = {
       };
       button.addEventListener("click", async () => {
         if (!button.classList.contains("confirming")) {
+          original = button.textContent;
           button.classList.add("confirming");
           button.textContent = label;
           timer = setTimeout(reset, 4000);
@@ -53,9 +54,13 @@ window.Settings = {
       control.addEventListener("change", () => window.Prefs.set(key, read(control)));
     };
     const checked = [control => control.checked, (control, value) => { control.checked = value === true; }];
+    //the shortcut list names this computer's modifier key
+    if (api?.platform !== "darwin") document.querySelectorAll(".mod-key").forEach(k => { k.textContent = "Ctrl"; });
     bind("pref-language", "language");
-    //the whole page is drawn in the new language, so it is simplest to draw it again
-    $("pref-language").addEventListener("change", () => location.reload());
+    //the page changes language in place, crossfading from the old words to the new ones
+    $("pref-language").addEventListener("change", () => {
+      window.UI.transition(() => window.I18n.change($("pref-language").value), "language");
+    });
     bind("pref-text-size", "textSize");
     bind("pref-reduce-motion", "reduceMotion");
     bind("pref-high-contrast", "highContrast", ...checked);
@@ -161,8 +166,12 @@ window.Settings = {
         $("ai-base-url").value = s.remote.base_url || "";
         $("ai-model").value = s.remote.model || "";
         $("ai-key").value = "";
-        $("ai-key").placeholder = s.remote.has_key ? "A key is saved. Type to replace it." : "Leave empty for a provider on this computer";
+        $("ai-key").placeholder = s.remote.has_key ? "A key is saved. Type to replace it." : "Optional. Leave empty for Ollama or another provider on this computer";
         $("ai-test-remote").disabled = !s.remote.configured;
+        //"Remote provider only" cannot run until there is a provider to run on
+        const remoteOnly = $("ai-mode").querySelector('option[value="remote"]');
+        remoteOnly.disabled = !s.remote.configured && s.mode !== "remote";
+        remoteOnly.title = remoteOnly.disabled ? "Add a remote provider first" : "";
         $("ai-clear-remote").disabled = !s.remote.configured;
         window.dispatchEvent(new CustomEvent("fistbump:ai", {detail: s}));
       } catch (error) {
@@ -194,7 +203,7 @@ window.Settings = {
       aiStatus("Testing...");
       try {
         const r = await ai.test(engine);
-        aiStatus(r.ok ? `The ${engine} engine answered in ${(r.latency_ms / 1000).toFixed(1)} seconds.` : `The ${engine} engine did not answer: ${r.error}`, !r.ok);
+        aiStatus(r.ok ? `The ${engine} engine answered in ${(r.latency_ms / 1000).toFixed(1)} seconds.` : `The ${engine} engine did not answer: ${r.problem}`, !r.ok);
       } catch (error) {
         aiStatus(error.message, true);
       }

@@ -84,7 +84,7 @@ function show(name) {
   const view = VIEWS[name];
   const container = document.getElementById(view.container);
   window.ViewState.show(container);
-  if (current !== null) window.UI.play(container, "view-enter", 400);
+  if (current !== null) window.UI.play(container, "view-enter", 320);
   if (!mounted.has(name)) {
     const redraw = view.mount(container);
     mounted.set(name, view.redraw ? redraw : null);
@@ -168,6 +168,23 @@ document.addEventListener("keydown", event => {
     }
   }
 });
+
+// The sidebar's tooltips name each place and its shortcut.
+{
+  const mod = window.api?.platform === "darwin" ? "\u2318" : "Ctrl+";
+  for (const [id, key, label] of [["nav-home", 1, "Home"], ["nav-tracker", 2, "Tracker"], ["tab-find", 3, "Find jobs"],
+    ["nav-resume", 4, "Master resume"], ["nav-tailor", 5, "Tailor"]]) {
+    const item = document.getElementById(id);
+    item.title = label;
+    item.dataset.shortcut = `${mod}${key}`;
+  }
+  const settingsTab = document.getElementById("tab-settings");
+  settingsTab.title = "Settings";
+  settingsTab.dataset.shortcut = `${mod},`;
+  const filters = document.getElementById("filters-toggle");
+  filters.title = "Show or hide search filters";
+  document.getElementById("history-toggle").dataset.tip = "Recent searches you can run again";
+}
 
 window.Settings.mount();
 route();

@@ -403,3 +403,14 @@ test('AI settings check their arguments, and the remote key is stored by main an
   await ipc.handlers.get('ai:clearRemote')({});
   assert.deepEqual(stored, ['sk-1', 'cleared']);
 });
+
+test('a failed AI test comes back as a result with its reason, not as a failed request', async () => {
+  const backend = { call: async () => ({ ok: false, latency_ms: 12, sample: '', error: 'connection refused' }) };
+  const ipc = fakeIpc();
+  register(ipc, backend);
+  const r = await ipc.handlers.get('ai:test')({}, 'remote');
+  assert.equal(r.ok, false);
+  assert.equal(r.problem, 'connection refused');
+  assert.equal(r.error, undefined);
+  assert.ok((await ipc.handlers.get('ai:test')({}, 'cloud')).error);
+});

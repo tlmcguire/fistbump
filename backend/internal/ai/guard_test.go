@@ -272,3 +272,23 @@ func TestRulesExplainTheirChangesInTheUsersLanguage(t *testing.T) {
 		t.Error("Spanish reason is the English one")
 	}
 }
+
+func TestAnEnglishReasonIsNotShownInAnotherLanguage(t *testing.T) {
+	english := "This change directly addresses the skill requirement and improves the resume for this role."
+	if got := localizeReason("es", "experience", english); got != reasonFor("es", "rewrite") {
+		t.Errorf("got %q", got)
+	}
+	if got := localizeReason("es", "skills", english); got != reasonFor("es", "skills") {
+		t.Errorf("got %q", got)
+	}
+	if got := localizeReason("en", "experience", english); got != english {
+		t.Errorf("English is kept: %q", got)
+	}
+	spanish := "Pone SQL primero porque el puesto lo pide."
+	if got := localizeReason("es", "skills", spanish); got != spanish {
+		t.Errorf("Spanish is kept: %q", got)
+	}
+	if got := localizeReason("fr", "summary", ""); got != "" {
+		t.Errorf("no reason stays none: %q", got)
+	}
+}

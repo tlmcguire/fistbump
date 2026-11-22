@@ -6,6 +6,7 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; frame-src blob:; object-src blob:">
         <link rel="stylesheet" href="styles/base.css" />
         <link rel="stylesheet" href="styles/views.css" />
+        <link rel="stylesheet" href="styles/finish.css" />
         <link rel="stylesheet" href="styles/motion.css" />
     </head>
     <body>
@@ -110,10 +111,10 @@
                             </label>
                             <label>Work mode
                                 <select id="search-work-mode">
-                                    <option>Any</option>
-                                    <option>Remote</option>
-                                    <option>Hybrid</option>
-                                    <option>On-site</option>
+                                    <option value="Any">Any</option>
+                                    <option value="Remote">Remote</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                    <option value="On-site">On-site</option>
                                 </select>
                             </label>
                             <label>Posted within
@@ -238,6 +239,17 @@
                             </div>
                         </section>
 
+                        <section class="settings-group" aria-labelledby="set-keys">
+                            <h2 id="set-keys">Keyboard shortcuts</h2>
+                            <div class="settings-card">
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Tracker, Jobs, Resume, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Search, on any view</span></div><span class="keys"><kbd>/</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Move, accept, reject, edit suggestions</span></div><span class="keys"><kbd>J</kbd> <kbd>K</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>E</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Open settings</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>,</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Close dialogs and panels</span></div><span class="keys"><kbd>Esc</kbd></span></div>
+                            </div>
+                        </section>
+
                         <section class="settings-group" aria-labelledby="set-search">
                             <h2 id="set-search">Search</h2>
                             <div class="settings-card">
@@ -303,9 +315,9 @@
                                         <label for="ai-base-url">Address</label>
                                         <input id="ai-base-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off">
                                         <label for="ai-model">Model</label>
-                                        <input id="ai-model" type="text" placeholder="model name" autocomplete="off">
+                                        <input id="ai-model" type="text" placeholder="Model name" autocomplete="off">
                                         <label for="ai-key">Key</label>
-                                        <input id="ai-key" type="password" placeholder="Leave empty for a provider on this computer" autocomplete="off">
+                                        <input id="ai-key" type="password" placeholder="Optional. Leave empty for Ollama or another provider on this computer" autocomplete="off">
                                         <div class="setting-actions">
                                             <button type="button" id="ai-save-remote" class="primary">Save provider</button>
                                             <button type="button" id="ai-test-remote">Test</button>
@@ -487,23 +499,21 @@
                             </div>
                             <p class="job-meta"><span id="job-location"></span><span id="job-updated"></span></p>
                             <div class="job-actions">
-                                <a id="job-link" class="button primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
-                                <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
-
+                                <!--One gold action per state: Save job, Tailor resume or Restore. The rest are quiet, and what
+                                    removes the job sits apart at the end.-->
                                 <button id="save-listing" type="button" class="primary" hidden>Save job</button>
-
                                 <button id="tailor-job" type="button" class="primary" hidden>Tailor resume</button>
-
-                                <button id="track-job" type="button" hidden>Track</button>
-                                <button id="archive-job" type="button" hidden>Archive</button>
-                                <label id="archive-app-option" class="hint" hidden><input id="archive-app" type="checkbox" checked> Also archive the application</label>
-                                <button id="unarchive-job" type="button" hidden>Unarchive</button>
-                                <button id="trash-job" type="button" hidden>Move to Trash</button>
                                 <button id="restore-job" type="button" class="primary" hidden>Restore</button>
-
-                                <button id="reload-listing" type="button">Reload</button>
-
-                                <button id="delete-job" type="button" class="danger" hidden>Delete</button>
+                                <button id="track-job" type="button" hidden>Track</button>
+                                <a id="job-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original posting</a>
+                                <a id="company-link" class="button" href="#" target="_blank" rel="noopener noreferrer" hidden>Company website</a>
+                                <span class="job-actions-gap" aria-hidden="true"></span>
+                                <button id="reload-listing" type="button" class="quiet">Reload</button>
+                                <button id="unarchive-job" type="button" class="quiet" hidden>Unarchive</button>
+                                <button id="archive-job" type="button" class="quiet" hidden>Archive</button>
+                                <label id="archive-app-option" class="hint" hidden><input id="archive-app" type="checkbox" checked> Also archive the application</label>
+                                <button id="trash-job" type="button" class="quiet" hidden>Move to Trash</button>
+                                <button id="delete-job" type="button" class="quiet danger-text" hidden>Delete</button>
                             </div>
                             <h3>Description</h3>
                             <p id="job-description"></p>
@@ -532,8 +542,11 @@
         <script src="js/locales/es.js" defer></script>
         <script src="js/locales/fr.js" defer></script>
         <script src="js/locales/de.js" defer></script>
+        <script src="js/i18n-start.js" defer></script>
         <script src="js/ui.js" defer></script>
         <script src="js/pdf-preview.js" defer></script>
+        <script src="js/tooltip.js" defer></script>
+        <script src="js/segments.js" defer></script>
         <script src="js/api.js" defer></script>
         <script src="js/suggestions.js" defer></script>
         <script src="views/job-parser/job-parser.js" defer></script>
@@ -545,6 +558,5 @@
         <script src="js/sidebar.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
-        <script src="js/i18n-start.js" defer></script>
     </body>
 </html>

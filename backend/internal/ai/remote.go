@@ -155,10 +155,16 @@ type chatRequest struct {
 	MaxTokens      int       `json:"max_tokens,omitempty"`
 	Temperature    float64   `json:"temperature"`
 	ResponseFormat any       `json:"response_format,omitempty"`
+	// ReasoningEffort "none" turns off a thinking model's chain of thought. Without it, a small thinking model
+	// (qwen3.5 on Ollama, for one) spends its whole token budget thinking and sends an empty reply. Only sent
+	// to a provider on this computer: a hosted one may not know the field, and a 400 for it is retried without.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 }
 
 // Chat sends one chat completion and returns the reply text. With jsonMode it asks for a JSON
-// object, and retries once without that if the server rejects it with 400.
+// object, and retries once without that if the server rejects it: 400 from most providers, 422, or 501
+// from Ollama ("structured output is unavailable") for models that cannot do it. The prompt asks for JSON
+// anyway, and ParseReply reads it out of a plain reply.
 func (r *Remote) Chat(ctx context.Context, msgs []Message, maxTokens int, jsonMode bool) (string, error) {
 	r.mu.Lock()
 	baseURL, model, key := r.baseURL, r.model, r.key
@@ -167,14 +173,20 @@ func (r *Remote) Chat(ctx context.Context, msgs []Message, maxTokens int, jsonMo
 		return "", ErrUnavailable
 	}
 	reply, status, err := r.post(ctx, baseURL, model, key, msgs, maxTokens, jsonMode)
-	if jsonMode && status == http.StatusBadRequest {
+	if jsonMode && (status == http.StatusBadRequest || status == http.StatusUnprocessableEntity || status == http.StatusNotImplemented) {
 		reply, _, err = r.post(ctx, baseURL, model, key, msgs, maxTokens, false)
+	}
+	if err == nil && strings.TrimSpace(reply) == "" {
+		return "", errors.New("the model sent an empty reply (a model that thinks first may need more room or a non-thinking mode)")
 	}
 	return reply, err
 }
 
 func (r *Remote) post(ctx context.Context, baseURL, model, key string, msgs []Message, maxTokens int, jsonMode bool) (string, int, error) {
 	body := chatRequest{Model: model, Messages: msgs, MaxTokens: maxTokens, Temperature: 0.2}
+	if isLoopbackURL(baseURL) {
+		body.ReasoningEffort = "none"
+	}
 	if jsonMode {
 		body.ResponseFormat = map[string]string{"type": "json_object"}
 	}
@@ -282,7 +294,7 @@ func suggestWith(ctx context.Context, engine string, chat chatFunc, req Request)
 			logDrop(engine, t, reason)
 			continue
 		}
-		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Reason: why, Engine: engine})
+		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Reason: localizeReason(req.Language, t.Section, why), Engine: engine})
 	}
 	if calls > 0 && failures == calls {
 		return nil, lastErr

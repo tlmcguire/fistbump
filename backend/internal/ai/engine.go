@@ -86,7 +86,7 @@ func (e Engines) fillGaps(ctx context.Context, r Request, drafts []Draft, engine
 	}
 	out := drafts
 	if len(missing) > 0 && e.Rules != nil {
-		gaps, err := e.Rules.Suggest(ctx, Request{Job: r.Job, Analysis: r.Analysis, Profile: r.Profile, Targets: missing})
+		gaps, err := e.Rules.Suggest(ctx, Request{Job: r.Job, Analysis: r.Analysis, Profile: r.Profile, Targets: missing, Language: r.Language})
 		if err != nil {
 			return nil, "", err
 		}
