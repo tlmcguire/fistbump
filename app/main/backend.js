@@ -114,8 +114,8 @@ class Backend extends EventEmitter {
     this.start().catch((err) => this.emit('error-state', err));
   }
 
-  // request returns { status, headers, json, buffer }. It throws if the backend is not reachable.
-  async request(method, urlPath, body, signal) {
+  // send makes the authenticated fetch. It throws if the backend is not reachable.
+  send(method, urlPath, body, signal) {
     if (!this.port || (this.state !== 'ready' && this.state !== 'starting')) {
       throw new Error('The backend is not running. It may be restarting; try again in a moment.');
     }
@@ -124,7 +124,12 @@ class Backend extends EventEmitter {
       init.headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(body);
     }
-    const res = await fetch(`http://127.0.0.1:${this.port}${urlPath}`, init);
+    return fetch(`http://127.0.0.1:${this.port}${urlPath}`, init);
+  }
+
+  // request returns { status, headers, json, buffer }. It throws if the backend is not reachable.
+  async request(method, urlPath, body, signal) {
+    const res = await this.send(method, urlPath, body, signal);
     const buffer = Buffer.from(await res.arrayBuffer());
     let json = null;
     if ((res.headers.get('content-type') || '').includes('application/json') && buffer.length) {
@@ -150,6 +155,31 @@ class Backend extends EventEmitter {
       if (signal?.aborted) return { error: { code: 'canceled', message: 'Search canceled', details: null } };
       return { error: { code: 'unreachable', message: 'Could not reach the Fistbump backend. Restart the app and try again.', details: null } };
     }
+  }
+
+  // requestRaw is for routes that answer with file bytes, such as the exports. Success gives
+  // { status, headers, bytes } with bytes an ArrayBuffer. A JSON answer is an error and is returned
+  // in the usual { error } shape; it never throws.
+  async requestRaw(method, urlPath, body) {
+    let res;
+    let bytes;
+    try {
+      res = await this.send(method, urlPath, body);
+      bytes = await res.arrayBuffer();
+    } catch {
+      return { error: { code: 'unreachable', message: 'Could not reach the Fistbump backend. Restart the app and try again.', details: null } };
+    }
+    const isJSON = (res.headers.get('content-type') || '').includes('application/json');
+    if (res.ok && !isJSON) return { status: res.status, headers: res.headers, bytes };
+    if (isJSON) {
+      try {
+        const json = JSON.parse(new TextDecoder().decode(bytes));
+        if (json?.error) return json;
+      } catch {
+        /* falls through to the generic error */
+      }
+    }
+    return { error: { code: 'internal', message: `The backend sent an unexpected response (${res.status})`, details: null } };
   }
 
   kill(child) {

@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('api', {
     importData: (filename, bytes) => ipcRenderer.invoke('resume:importData', filename, bytes),
     importText: (text) => ipcRenderer.invoke('resume:importText', text),
     importApply: (body) => ipcRenderer.invoke('resume:importApply', body),
+    // Export: main shows the save dialog and writes the file. format is 'pdf' or 'md'.
+    export: (format) => ipcRenderer.invoke('resume:export', format),
   },
 
   //Saved resume versions
@@ -69,6 +71,12 @@ contextBridge.exposeInMainWorld('api', {
     get: (id) => ipcRenderer.invoke('tailored:get', id),
     diff: (id) => ipcRenderer.invoke('tailored:diff', id),
     delete: (id) => ipcRenderer.invoke('tailored:delete', id),
+    export: (id, format) => ipcRenderer.invoke('tailored:export', id, format),
+  },
+
+  // Reveals a file the last export saved; main refuses any other path.
+  shell: {
+    showItem: (filePath) => ipcRenderer.invoke('shell:showItem', filePath),
   },
   
 

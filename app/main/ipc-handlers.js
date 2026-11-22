@@ -10,7 +10,10 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import',
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
-   'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',];
+   'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',
+   'resume:export', 'tailored:export', 'shell:showItem',];
+
+const path = require('node:path');
 
 // Cleanup targets the settings page may ask for. The backend validates them again.
 const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
@@ -97,6 +100,33 @@ function checkImport(name, size) {
   if (size === 0) return bad('The file is empty or could not be read.');
   if (size > MAX_IMPORT_BYTES) return bad('The file is larger than 5 MB. Export it again without images, or paste the text instead.');
   return null;
+}
+
+// The export formats, with the save dialog filter for each.
+const EXPORT_FORMATS = {
+  pdf: { name: 'PDF', extensions: ['pdf'] },
+  md: { name: 'Markdown', extensions: ['md'] },
+};
+
+// The file name the backend suggests in Content-Disposition: the UTF-8 filename* when present,
+// else the plain filename. Only the last path part is kept, so a name can never pick a folder.
+function suggestedName(header, fallback) {
+  const h = String(header || '');
+  let name = '';
+  const extended = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(h);
+  if (extended) {
+    try {
+      name = decodeURIComponent(extended[1].trim());
+    } catch {
+      name = '';
+    }
+  }
+  if (!name) {
+    const plain = /filename\s*=\s*"([^"]*)"/i.exec(h) || /filename\s*=\s*([^;]+)/i.exec(h);
+    if (plain) name = plain[1].trim();
+  }
+  name = baseName(name).replace(/[\u0000-\u001f]/g, '').trim();
+  return name && name !== '.' && name !== '..' ? name : fallback;
 }
 
 const importBytes = (backend, filename, bytes) =>
@@ -189,6 +219,46 @@ function register(ipcMain, backend, deps = {}) {
       return backend.call(method, urlPath, body);
     });
   }
+  // Export: the backend makes the file, the user picks where it goes, and main writes it there.
+  // The renderer never sends a path. lastSaved is the one file shell:showItem may reveal.
+  let lastSaved = null;
+  async function saveExport(event, urlPath, format) {
+    const kind = EXPORT_FORMATS[format];
+    if (!kind) return bad('Format must be pdf or md');
+    // A 500 with details.fallback "md" comes back as is; the renderer offers Markdown.
+    const res = await backend.requestRaw('POST', urlPath, { format });
+    if (res.error) return res;
+    const name = suggestedName(res.headers?.get?.('content-disposition'), `Resume.${format}`);
+    const documents = deps.documentsDir?.();
+    const options = {
+      title: `Export ${kind.name}`,
+      defaultPath: documents ? path.join(documents, name) : name,
+      filters: [{ name: kind.name, extensions: kind.extensions }],
+    };
+    const win = deps.BrowserWindow?.fromWebContents(event.sender);
+    const picked = await (win ? deps.dialog.showSaveDialog(win, options) : deps.dialog.showSaveDialog(options));
+    if (picked.canceled || !picked.filePath) return { saved: false };
+    try {
+      await fsp.writeFile(picked.filePath, Buffer.from(res.bytes));
+    } catch (err) {
+      return { error: { code: 'internal', message: `Could not save the file: ${err.message}`, details: null } };
+    }
+    lastSaved = picked.filePath;
+    return { saved: true, path: picked.filePath };
+  }
+
+  ipcMain.handle('resume:export', (event, format) => saveExport(event, '/v1/resume/export', format));
+  ipcMain.handle('tailored:export', (event, id, format) =>
+    isId(id) ? saveExport(event, `/v1/tailored-resumes/${id}/export`, format) : bad('Invalid id'));
+
+  // Reveals the file the last export wrote, and nothing else.
+  ipcMain.handle('shell:showItem', (_event, filePath) => {
+    if (typeof filePath !== 'string' || !lastSaved || filePath !== lastSaved) return bad('Only a file Fistbump just saved can be shown.');
+    if (!deps.shell?.showItemInFolder) return bad('Not available');
+    deps.shell.showItemInFolder(filePath);
+    return { ok: true };
+  });
+
   // Settings: storage use and manual cleanup.
   ipcMain.handle('storage:report', () => backend.call('GET', '/v1/storage'));
   ipcMain.handle('storage:cleanup', (_event, targets) => {

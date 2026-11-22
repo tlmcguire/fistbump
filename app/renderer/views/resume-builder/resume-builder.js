@@ -204,6 +204,34 @@
     education: (values, opts) => makeForm(EDUCATION_FIELDS, values || {}, {idPrefix: "edu", ...opts}),
   };
  
+  // ---------- Export ----------
+
+  //Exports with run(format), PDF first. When the PDF cannot be made, asks before saving Markdown.
+  //Gives {saved, path} from main; errors throw to the caller.
+  async function exportFile(run) {
+    try {
+      return await run("pdf");
+    } catch (err) {
+      if (err.details?.fallback !== "md") throw err;
+      if (!window.confirm("PDF export failed. Save as Markdown instead?")) return {saved: false};
+      return run("md");
+    }
+  }
+
+  //"Saved to <path>" with a Show in folder button
+  const savedNote = path => {
+    const show = el("button", {type: "button", class: "link-button"}, "Show in folder");
+    show.addEventListener("click", async () => {
+      try {
+        await window.FistBumpAPI.shell.showItem(path);
+      } catch (err) {
+        show.textContent = err.message;
+        show.disabled = true;
+      }
+    });
+    return el("p", {class: "export-saved", role: "status"}, el("span", {text: `Saved to ${path}`}), show);
+  };
+
   // ---------- The view ----------
  
   function mount(container) {
@@ -247,12 +275,15 @@
     const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection);
  
     const previewText = el("pre", {class: "preview-text"});
+    const exportNote = el("div");
+    const exportButton = el("button", {type: "button"}, "Export PDF");
     const versionsList = el("ul", {class: "versions"});
     const versionForm = el("form", {class: "version-form", hidden: true});
     const side = el("div", {class: "pane resume-side"},
       el("section", {class: "resume-section"},
-        el("h2", {text: "Preview"}),
+        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), exportButton),
         el("p", {class: "hint", text: "This text is what saved versions, tailoring and PDF export start from."}),
+        exportNote,
         previewText),
       el("section", {class: "resume-section"},
         el("h2", {text: "Saved versions"}),
@@ -269,6 +300,17 @@
       previewText.textContent = markdown.trim() ? markdown : "Your resume appears here once you save your profile.";
     });
  
+    // --- Export ---
+
+    exportButton.addEventListener("click", async () => {
+      exportButton.disabled = true;
+      exportNote.replaceChildren();
+      const result = await attempt(() => exportFile(format => api().resume.export(format)));
+      if (disposed) return;
+      exportButton.disabled = false;
+      if (result?.saved) exportNote.replaceChildren(savedNote(result.path));
+    });
+
     // --- Profile ---
  
     let profileForm = null;
@@ -820,6 +862,6 @@
     };
   }
  
-  window.ResumeBuilder = {mount, forms, el, fill, chips, makeForm};
+  window.ResumeBuilder = {mount, forms, el, fill, chips, makeForm, exportFile, savedNote};
 })();
  

@@ -11,7 +11,7 @@
       },
   
       mount(container) {
-        const {el, fill} = window.ResumeBuilder;
+        const {el, fill, exportFile, savedNote} = window.ResumeBuilder;
         const api = window.FistBumpAPI;
         const SECTION = {header: "Header", summary: "Summary", experience: "Experience", education: "Education", skills: "Skills"};
         const STATUS = {queued: "Starting", running: "Writing", done: "Ready", failed: "Failed", canceled: "Canceled"};
@@ -255,14 +255,25 @@
               el("div", {class: "diff-col"}, el("h4", {text: `${hunkTitle(h)} \u00b7 ${h.status}`}), side(h, "before")),
               el("div", {class: "diff-col"}, side(h, "after")));
           }));
+          const exportNote = el("div");
+          const exportButton = el("button", {type: "button", class: "primary"}, "Export PDF");
+          exportButton.addEventListener("click", async () => {
+            exportButton.disabled = true;
+            exportNote.replaceChildren();
+            const r = await attempt(() => exportFile(format => api.tailored.export(t.value.id, format)));
+            exportButton.disabled = false;
+            if (r?.value?.saved) exportNote.replaceChildren(savedNote(r.value.path));
+          });
           fill(stage,
             el("div", {class: "tailor-head"},
               el("strong", {text: "Tailored resume"}),
+              exportButton,
               el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, "Back to suggestions"),
               el("button", {type: "button", class: "danger", onclick: async () => {
                 if (!window.confirm("Delete this tailored resume?")) return;
                 if (await attempt(() => api.tailored.delete(t.value.id))) { tailoredId = null; await loadRounds(); drawBody(); }
               }}, "Delete")),
+            exportNote,
             (warned.get(tailoredId) || []).map(w => el("p", {class: "resume-status error", text: String(w)})),
             el("label", {class: "hint"},
               el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }}),
