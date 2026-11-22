@@ -240,6 +240,9 @@ dialog.ask.closing::backdrop { animation: fade-out 130ms ease both; }
 .tip.in[data-side="below"] { animation: tip-in-below 140ms var(--ease-out) both; }
 .tip.in[data-side="above"] { animation: tip-in-above 140ms var(--ease-out) both; }
 
+@keyframes tip-in-right { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: none; } }
+.tip.in[data-side="right"] { animation: tip-in-right 140ms var(--ease-out) both; }
+
 /* ---------- Controls ---------- */
 
 button, .button { transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--ease-out), box-shadow 200ms ease, filter 120ms ease; }

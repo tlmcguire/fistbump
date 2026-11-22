@@ -22,6 +22,14 @@
     const r = el.getBoundingClientRect();
     const t = tip.getBoundingClientRect();
     const gap = 8;
+    //in the sidebar the tip goes to the side, so it never covers the items under the one you point at
+    if (el.closest(".sidebar")) {
+      tip.style.left = `${Math.round(r.right + gap)}px`;
+      tip.style.top = `${Math.round(Math.max(6, Math.min(window.innerHeight - t.height - 6, r.top + r.height / 2 - t.height / 2)))}px`;
+      tip.dataset.side = "right";
+      tip.style.setProperty("--arrow", `${Math.round(r.top + r.height / 2 - parseFloat(tip.style.top))}px`);
+      return;
+    }
     let side = "below";
     let top = r.bottom + gap;
     if (top + t.height > window.innerHeight - 6) { top = r.top - gap - t.height; side = "above"; }

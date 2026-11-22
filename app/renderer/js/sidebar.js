@@ -3,7 +3,7 @@
 // remembered on this computer.
 (() => {
   const FOLDED_KEY = "fistbump.sidebar-folded";
-  const SHOWN = 5;
+  const SHOWN = 4;
   const $ = id => document.getElementById(id);
 
   let folded = [];
@@ -50,10 +50,10 @@
   };
 
   const drawSearches = () => fillList($("tree-searches"), window.Home.recentSearches(SHOWN).map(s =>
-    leaf(s.title, `${s.title}, ${s.detail}`, s.onclick)));
+    leaf(s.title, `${s.title} \u00b7 ${s.detail}`, s.onclick)));
 
   const drawVersions = versions => fillList($("tree-versions"), versions.slice(0, SHOWN).map(v =>
-    leaf(v.version_label, v.target_position ? `${v.version_label}, for ${v.target_position} roles` : v.version_label,
+    leaf(v.version_label, v.target_position ? `${v.version_label} \u00b7 for ${v.target_position} roles` : v.version_label,
       () => window.Home.openResume({version: v.id}))));
 
   window.addEventListener("fistbump:history", drawSearches);
