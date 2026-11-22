@@ -166,9 +166,23 @@ jobs:
           draft: true
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          # The installers, wherever the artifact kept them.
+          # The banner of the release page, and the installers wherever the artifact kept them.
           files: |
+            docs/images/github-banner.png
             dist/**/*.dmg
             dist/**/*.exe
             dist/**/*.AppImage
           fail_on_unmatched_files: true
+          body: |
+            ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
+
+            A local-first job application assistant. Your resume, the postings, the skills they
+            ask for that you do not have yet, a tailored resume you can export as a PDF, and a
+            tracker for the applications you sent.
+
+            The builds are unsigned, so the first launch needs one extra click. The
+            [user guide](https://github.com/tlmcguire/fistbump/blob/main/docs/user-guide.md) walks
+            through installing, the first run, the AI settings, and where your data lives.
+
+            The [release notes](https://github.com/tlmcguire/fistbump/blob/main/docs/release-notes.md)
+            record the install size against the 250 MB limit, and what could be done about it.
