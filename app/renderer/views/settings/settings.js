@@ -109,6 +109,16 @@ window.Settings = {
     // ---------- Storage ----------
 
     const storageStatus = (text, options) => setStatus("storage-status", text, options);
+    const cleanupStatus = (text, options) => setStatus("cleanup-status", text, options);
+
+    // The cleanup targets, each with the checkbox that turns it on.
+    const CLEANUP_TARGETS = [
+      { box: "cleanup-cache", target: "cache" },
+      { box: "cleanup-partial-downloads", target: "partial_downloads" },
+      { box: "cleanup-old-jobs", target: "old_jobs" },
+      { box: "cleanup-trash", target: "trash" },
+      { box: "cleanup-unused-models", target: "unused_models" },
+    ];
 
     const showStorage = async () => {
       if (!api?.storage) {
@@ -124,17 +134,56 @@ window.Settings = {
       $("cache-size").textContent = `Using ${formatBytes(report.cache_bytes)}.`;
       $("db-size").textContent = `Using ${formatBytes(report.db_bytes)}.`;
       $("models-size").textContent = report.models_bytes ? `Using ${formatBytes(report.models_bytes)}.` : "";
+      $("partial-size").textContent = report.partial_downloads_bytes ? `Using ${formatBytes(report.partial_downloads_bytes)}.` : "";
+      $("total-size").textContent = `Using ${formatBytes(report.total_bytes)}.`;
       $("data-dir").textContent = report.data_dir;
-      $("clear-cache").disabled = report.cache_bytes === 0;
     };
 
-    confirmFirst($("clear-cache"), "Clear cache?", async () => {
+    // The payload the backend takes. The days a job must be older than are left out when the
+    // field is empty, so the backend uses the app's own setting.
+    const cleanupPayload = dryRun => {
+      const payload = {
+        targets: CLEANUP_TARGETS.filter(t => $(t.box)?.checked).map(t => t.target),
+        dry_run: dryRun,
+      };
+      const days = Number($("cleanup-days")?.value);
+      if (Number.isInteger(days) && days >= 1) payload.older_than_days = days;
+      return payload;
+    };
+
+    // The answer says what would go, or what went. The job targets free no space on their own:
+    // the database file only shrinks after the cleanup that follows.
+    const describeCleanup = (result, dryRun) => {
+      const removed = result.removed || {};
+      const bits = [];
+      if (removed.old_jobs) bits.push(`${removed.old_jobs} old ${removed.old_jobs === 1 ? "job" : "jobs"}`);
+      if (removed.trash) bits.push(`${removed.trash} ${removed.trash === 1 ? "job" : "jobs"} in the Trash`);
+      if (removed.files) bits.push(`${removed.files} ${removed.files === 1 ? "file" : "files"}`);
+      const what = bits.length ? bits.join(", ") : (result.freed_bytes ? `${formatBytes(result.freed_bytes)} of cached files` : "nothing");
+      const space = result.freed_bytes ? ` That ${dryRun ? "frees" : "freed"} ${formatBytes(result.freed_bytes)}.` : "";
+      return `${dryRun ? "Would remove" : "Removed"} ${what}.${space}`;
+    };
+
+    // The preview says what would go without touching anything. The cleanup does it for real.
+    const runCleanup = async dryRun => {
       if (!api?.storage) return;
-      const result = await api.storage.cleanup(["cache"]);
-      if (result?.error) storageStatus(result.error.message);
-      else storageStatus(`Cleared ${formatBytes(result.freed_bytes)}. The next search will take a little longer.`, {cleaned: true});
-      await showStorage();
-    });
+      const payload = cleanupPayload(dryRun);
+      if (!payload.targets.length) {
+        cleanupStatus("Choose what to remove first.");
+        return;
+      }
+      const result = await api.storage.cleanup(payload);
+      if (result?.error) {
+        cleanupStatus(result.error.message);
+        return;
+      }
+      cleanupStatus(describeCleanup(result, dryRun), {cleaned: !dryRun});
+      if (!dryRun) await showStorage();
+    };
+
+    $("cleanup-preview").addEventListener("click", () => runCleanup(true));
+    // Removing cannot be undone, so the button asks to be pressed again.
+    confirmFirst($("cleanup-run"), "Remove this?", () => runCleanup(false));
 
     $("show-data-folder").addEventListener("click", async () => {
       const result = await api?.app?.showDataFolder?.();
@@ -414,6 +463,9 @@ window.Settings = {
       showAi();
       showModels();
     };
+
+    //The backend came back after a crash. It has a new port and token, so the page asks it again.
+    window.api?.onBackendRestarted?.(() => window.Settings.refresh());
 
     showAbout();
     if (window.Prefs.get("checkUpdatesOnLaunch")) checkForUpdates();

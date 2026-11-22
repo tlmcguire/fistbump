@@ -356,15 +356,32 @@
                             <div class="settings-card">
                                 <div class="setting">
                                     <div class="setting-text">
-                                        <span class="setting-label">Search cache</span>
-                                        <p>Job listings, descriptions and logos kept for a day so searches are fast. <span id="cache-size" class="size"></span></p>
+                                        <span class="setting-label">Database</span>
+                                        <p>Everything Fistbump stores, including the cache. <span id="db-size" class="size"></span></p>
                                     </div>
-                                    <button type="button" id="clear-cache">Clear cache</button>
                                 </div>
                                 <div class="setting">
                                     <div class="setting-text">
-                                        <span class="setting-label">Database</span>
-                                        <p>Everything Fistbump stores, including the cache. <span id="db-size" class="size"></span></p>
+                                        <span class="setting-label">Local models</span>
+                                        <p>Models you downloaded to write suggestions on this computer. <span id="models-size" class="size"></span></p>
+                                    </div>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Search cache</span>
+                                        <p>Job listings, descriptions and logos kept for a day so searches are fast. <span id="cache-size" class="size"></span></p>
+                                    </div>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Unfinished downloads</span>
+                                        <p>Parts of a model download that stopped halfway. <span id="partial-size" class="size"></span></p>
+                                    </div>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Total</span>
+                                        <p>What Fistbump keeps on this computer. <span id="total-size" class="size"></span></p>
                                     </div>
                                 </div>
                                 <div class="setting">
@@ -376,6 +393,41 @@
                                 </div>
                                 <p id="storage-status" class="setting-status" role="status"></p>
                             </div>
+                            <p class="group-note">What leaves your computer: a job search asks public job boards for postings, a model is downloaded from the model library, and a remote provider only sees what you send it.</p>
+                        </section>
+
+                        <section class="settings-group" aria-labelledby="set-cleanup">
+                            <h2 id="set-cleanup">Clean up</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">What to remove</span>
+                                        <p>Choose what to clear, then look before anything is deleted.</p>
+                                    </div>
+                                </div>
+                                <div class="setting cleanup-targets">
+                                    <label><input type="checkbox" id="cleanup-cache"> <span>Search cache</span></label>
+                                    <label><input type="checkbox" id="cleanup-partial-downloads"> <span>Unfinished downloads</span></label>
+                                    <label><input type="checkbox" id="cleanup-old-jobs"> <span>Old jobs nobody tracks</span></label>
+                                    <label><input type="checkbox" id="cleanup-trash"> <span>Jobs in the Trash</span></label>
+                                    <label><input type="checkbox" id="cleanup-unused-models"> <span>Models you are not using</span></label>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Older than</span>
+                                        <p>How old a job must be before it is removed. Leave it empty to use the app's own setting.</p>
+                                    </div>
+                                    <input type="number" id="cleanup-days" class="cleanup-days" min="1" step="1" placeholder="30">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-actions">
+                                        <button type="button" id="cleanup-preview">Preview</button>
+                                        <button type="button" id="cleanup-run">Clean up</button>
+                                    </div>
+                                </div>
+                                <p id="cleanup-status" class="setting-status" role="status"></p>
+                            </div>
+                            <p class="group-note">Models you are not using means every downloaded model except the one in use. If no model is selected, they are all removed.</p>
                         </section>
 
                         <section class="settings-group" aria-labelledby="set-updates">
