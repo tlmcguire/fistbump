@@ -360,3 +360,10 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 .resume-doc h3.doc-h { margin-top: 0; padding: 0; border: 0; font-size: 18px; letter-spacing: -0.01em; }
 .resume-doc .doc-p { margin: 2px 0; }
 .resume-doc .doc-list { margin: 2px 0 6px; padding-left: 18px; }
+
+/* A tooltip beside a sidebar item points left at it */
+.tip[data-side="right"]::after { left: -5px; top: calc(var(--arrow, 50%) - 5px); border-top: 0; border-right: 0; }
+
+/* Recent searches and versions under a tree item: one tidy line each */
+.tree-leaf { height: 26px; line-height: 26px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%; }
+.tree-children { margin: 2px 0 4px 15px; }

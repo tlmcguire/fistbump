@@ -741,6 +741,8 @@ window.JobParser = {
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
         const pay = id => parsePay($(id).value);
+        //"data analyst, " is "data analyst": stray commas and spaces are tidied in the box as well
+        $("search-keywords").value = words("search-keywords").join(", ");
         const query = {
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
@@ -1177,8 +1179,10 @@ window.JobParser = {
 
       //Describes a search in full: a title (what was searched for) and every option that narrowed it.
       //The industry's name is kept with the entry, since the select may not be filled when the list is drawn.
+      //keywords as a clean, comma-separated line
+      const tidy = value => String(value ?? "").split(",").map(w => w.trim()).filter(Boolean).join(", ");
       const describeFields = (fields, industryName = "") => {
-        const text = id => String(fields[id] ?? "").trim();
+        const text = id => id === "search-keywords" ? tidy(fields[id]) : String(fields[id] ?? "").trim();
         const optionText = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(value)}"]`)?.textContent || "").trim();
         const industry = text("search-industry")
           ? (industryName || optionText("search-industry", text("search-industry")).replace(/\s*\(\d+\)$/, "")).trim()

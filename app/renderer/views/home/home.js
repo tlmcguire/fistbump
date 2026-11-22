@@ -186,21 +186,32 @@
   function recentSearches(limit = 4) {
     const list = readJSON(HISTORY_KEY);
     if (!Array.isArray(list)) return [];
-    return list.filter(entry => entry?.fields && typeof entry.fields === "object").slice(0, limit).map(entry => {
+    const seen = new Set();
+    const out = [];
+    for (const entry of list.filter(entry => entry?.fields && typeof entry.fields === "object")) {
       const f = entry.fields;
-      const text = id => String(f[id] ?? "").trim();
+      //keywords as a clean line: no stray commas, so a title never reads "data analyst,"
+      const text = id => id === "search-keywords"
+        ? String(f[id] ?? "").split(",").map(w => w.trim()).filter(Boolean).join(", ")
+        : String(f[id] ?? "").trim();
       const title = text("search-keywords") || (text("search-company") && `Jobs at ${text("search-company")}`) || entry.industry || "All jobs";
       const detail = [
         text("search-location"),
         text("search-keywords") && text("search-company") && `at ${text("search-company")}`,
         text("search-work-mode") && text("search-work-mode") !== "Any" && text("search-work-mode"),
         text("search-keywords") && entry.industry,
-      ].filter(Boolean).join(" · ") || "Anywhere";
-      return {title, detail, aside: day(entry.at), onclick: () => {
+      ].filter(Boolean).join(" \u00b7 ") || "Anywhere";
+      //the same search run twice is one line
+      const key = `${title}|${detail}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({title, detail, aside: day(entry.at), onclick: () => {
         openJobs();
         window.JobParser.runSearch(f);
-      }};
-    });
+      }});
+      if (out.length === limit) break;
+    }
+    return out;
   }
 
   // ---------- The view ----------
