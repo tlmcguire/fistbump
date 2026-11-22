@@ -49,6 +49,9 @@ type Config struct {
 
 	// Engines write resume suggestions. Rules is filled in when left nil, so a zero Config works.
 	Engines ai.Engines
+	// PDF turns resume Markdown into a PDF titled after fileName (the download name, extension
+	// included). Without it, PDF export fails and offers Markdown.
+	PDF func(markdown, fileName string) ([]byte, error)
 	// BaseContext is the parent of every background round. Cancel it to stop them at shutdown.
 	// Nil means context.Background().
 	BaseContext context.Context
@@ -69,7 +72,9 @@ type Server struct {
 	parse   func(raw string) parser.Result
 	analyze func(job models.Job, m models.Master) analyze.Result
 	rounds  *roundRunner // background suggestion rounds, see revisions.go
-	handler http.Handler // the mux wrapped in middleware, built once in New
+	// renderPDF makes the PDF for the export routes; tests swap it for a fake.
+	renderPDF func(markdown, fileName string) ([]byte, error)
+	handler   http.Handler // the mux wrapped in middleware, built once in New
 }
 
 // route pairs a mux pattern ("METHOD /path/{wildcard}") with its handler.
@@ -102,6 +107,7 @@ func (s *Server) routes() []route {
 		{"POST /v1/resume/import", s.resumeImport},
 		{"POST /v1/resume/import/apply", s.resumeImportApply},
 		{"GET /v1/resume/preview", s.resumePreview},
+		{"POST /v1/resume/export", s.resumeExport},
 		{"GET /v1/resumes", s.resumeList},
 		{"POST /v1/resumes", s.resumeCreate},
 		{"GET /v1/resumes/{id}", s.resumeGetOne},
@@ -118,6 +124,19 @@ func (s *Server) routes() []route {
 		{"PUT /v1/jobs/{id}", s.jobUpdate},
 		{"DELETE /v1/jobs/{id}", s.jobDelete},
 		{"POST /v1/jobs/{id}/analyze", s.jobAnalyze},
+		{"POST /v1/jobs/{id}/archive", s.jobArchive},
+		{"POST /v1/jobs/{id}/unarchive", s.jobUnarchive},
+		{"POST /v1/jobs/{id}/trash", s.jobTrash},
+		{"POST /v1/jobs/{id}/restore", s.jobRestore},
+		{"GET /v1/applications", s.appList},
+		{"POST /v1/applications", s.appCreate},
+		{"GET /v1/applications/{id}", s.appGet},
+		{"PUT /v1/applications/{id}", s.appUpdate},
+		{"DELETE /v1/applications/{id}", s.appDelete},
+		{"POST /v1/applications/bulk-status", s.appBulkStatus},
+		{"POST /v1/applications/{id}/archive", s.appArchive},
+		{"POST /v1/applications/{id}/unarchive", s.appUnarchive},
+		{"POST /v1/applications/bulk-archive", s.appBulkArchive},
 		{"POST /v1/revisions", s.revisionCreate},
 		{"GET /v1/revisions", s.revisionList},
 		{"GET /v1/revisions/{id}", s.revisionGet},
@@ -130,6 +149,7 @@ func (s *Server) routes() []route {
 		{"GET /v1/tailored-resumes", s.tailoredList},
 		{"GET /v1/tailored-resumes/{id}", s.tailoredGet},
 		{"GET /v1/tailored-resumes/{id}/diff", s.tailoredDiff},
+		{"POST /v1/tailored-resumes/{id}/export", s.tailoredExport},
 		{"DELETE /v1/tailored-resumes/{id}", s.tailoredDelete},
 	}
 }
@@ -249,6 +269,8 @@ func New(cfg Config) *Server {
 		version: cfg.Version,
 		parse:   parser.Parse,
 		analyze: analyze.Run,
+
+		renderPDF: cfg.PDF,
 	}
 	engines := cfg.Engines
 	if engines.Rules == nil {

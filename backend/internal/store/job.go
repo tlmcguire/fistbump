@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/tlmcguire/fistbump/backend/internal/models"
@@ -167,4 +169,66 @@ func (s *Store) JobApplicationID(ctx context.Context, jobID int64) (int64, error
 	var id int64
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM applications WHERE job_id = ? ORDER BY id LIMIT 1`, jobID).Scan(&id)
 	return id, mapErr(err)
+}
+
+// setJobColumn runs a one-row UPDATE on jobs and returns ErrNotFound when no job matched.
+func (s *Store) setJobColumn(ctx context.Context, query string, args ...any) error {
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ArchiveJob stamps archived_at on a job (keeping the first stamp if it is already archived).
+// With archiveApplication, the job's application is archived in the same transaction.
+func (s *Store) ArchiveJob(ctx context.Context, id int64, archiveApplication bool) error {
+	return s.WithTx(ctx, func(tx *Store) error {
+		ts := now()
+		if err := tx.setJobColumn(ctx, `UPDATE jobs SET archived_at = COALESCE(archived_at, ?) WHERE id = ?`, ts, id); err != nil {
+			return err
+		}
+		if !archiveApplication {
+			return nil
+		}
+		_, err := tx.db.ExecContext(ctx, `UPDATE applications SET archived_at = ?, updated_at = ?
+  WHERE job_id = ? AND archived_at IS NULL`, ts, ts, id)
+		return mapErr(err)
+	})
+}
+
+// UnarchiveJob clears archived_at on a job and restores its application if that is archived.
+func (s *Store) UnarchiveJob(ctx context.Context, id int64) error {
+	return s.WithTx(ctx, func(tx *Store) error {
+		if err := tx.setJobColumn(ctx, `UPDATE jobs SET archived_at = NULL WHERE id = ?`, id); err != nil {
+			return err
+		}
+		_, err := tx.db.ExecContext(ctx, `UPDATE applications SET archived_at = NULL, updated_at = ?
+  WHERE job_id = ? AND archived_at IS NOT NULL`, now(), id)
+		return mapErr(err)
+	})
+}
+
+// TrashJob moves a job to the Trash by stamping trashed_at. A job with an application cannot be
+// trashed: that is ErrConflict, and JobApplicationID names the application.
+func (s *Store) TrashJob(ctx context.Context, id int64) error {
+	return s.WithTx(ctx, func(tx *Store) error {
+		if _, err := tx.GetJob(ctx, id); err != nil {
+			return err
+		}
+		if appID, err := tx.JobApplicationID(ctx, id); err == nil {
+			return fmt.Errorf("%w: job has application %d", ErrConflict, appID)
+		} else if !errors.Is(err, ErrNotFound) {
+			return err
+		}
+		return tx.setJobColumn(ctx, `UPDATE jobs SET trashed_at = COALESCE(trashed_at, ?) WHERE id = ?`, now(), id)
+	})
+}
+
+// RestoreJob takes a job out of the Trash. An archived job goes back to the archived list.
+func (s *Store) RestoreJob(ctx context.Context, id int64) error {
+	return s.setJobColumn(ctx, `UPDATE jobs SET trashed_at = NULL WHERE id = ?`, id)
 }
