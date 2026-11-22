@@ -151,3 +151,21 @@ input:not([type="checkbox"]):not(.switch):focus-visible, select:focus-visible, t
 /* ---------- Dialogs ---------- */
 
 dialog.ask { border-color: rgba(255, 255, 255, 0.12); background: #153678; box-shadow: var(--lit), 0 24px 60px rgba(3, 10, 30, 0.6); }
+
+/* Pico is drawn on the page's own navy, so nothing lighter or darker sits behind it: the panels that hold Pico
+   take the page colour and keep only their edge. */
+.home-welcome { background: var(--bg); }
+.home-welcome .home-row { background: var(--panel); }
+.home-welcome .home-row:hover:not(:disabled) { background: var(--panel-hover); }
+.writing { background: var(--bg); }
+.tracker-table-wrap:has(.tracker-empty) { padding: 0; border-color: transparent; background: none; box-shadow: none; }
+
+/* Narrow windows: the search bar keeps Search, Filters and History on one line with the fields above them */
+@media (max-width: 1000px) {
+  #search-form > .field.grow { flex: 1 1 100%; max-width: none; }
+  #search-form > .field:not(.grow) { flex: 1 1 140px; }
+  #search-form #filters-toggle { margin-left: 0; }
+  .tailor-toolbar .toolbar-actions { margin-left: 0; width: 100%; }
+  .tailor-toolbar .picker { flex: 1 1 160px; }
+  .tailor-toolbar .picker select { width: 100%; min-width: 0; max-width: none; }
+}
