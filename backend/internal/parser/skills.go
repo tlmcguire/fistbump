@@ -161,6 +161,35 @@ var techSkills = map[string][]string{
 	"prompt engineering":           {"prompting", "prompt design"},
 }
 
+// impliedSkills maps a skill to the skills that cover it. A resume that shows "rest" shows
+// "api", and a resume that shows "sql server" shows "sql". The rules are a list, never a guess:
+// a skill not named here only matches itself.
+var impliedSkills = map[string][]string{
+	"api":              {"rest", "graphql", "grpc"},
+	"sql":              {"sql server", "postgresql", "mysql", "sqlite", "snowflake", "dbt"},
+	"cloud computing":  {"aws", "gcp", "azure"},
+	"data analysis":    {"data visualization", "statistics", "excel", "tableau", "power bi", "spss", "stata"},
+	"data engineering": {"etl", "spark", "airflow", "dbt", "sql"},
+	"data science":     {"machine learning", "statistics", "pandas", "nlp"},
+	"machine learning": {"pytorch", "tensorflow", "deep learning", "llm"},
+	"deep learning":    {"pytorch", "tensorflow", "machine learning"},
+	"nlp":              {"llm", "machine learning"},
+	"docker":           {"kubernetes"},
+	"microservices":    {"docker", "kubernetes", "rest", "api"},
+	"javascript":       {"node.js", "react", "vue", "angular", "svelte", "typescript"},
+	"typescript":       {"javascript"},
+	"rest":             {"api"},
+	"etl":              {"airflow", "spark", "dbt"},
+	"crm":              {"salesforce", "hubspot"},
+	"excel":            {"vba", "power query"},
+	"reporting":        {"tableau", "power bi", "looker", "qlik", "excel"},
+	"data modeling":    {"sql", "etl"},
+	"problem solving":  {"analytical"},
+	"analytics":        {"data analysis", "data visualization", "tableau", "power bi", "spss", "statistics"},
+	"cloud":            {"aws", "gcp", "azure"},
+	"testing":          {"pytest", "jest", "cypress", "selenium", "junit", "tdd"},
+}
+
 var softSkills = map[string][]string{
 	"communication":          {"communication skills", "written and verbal communication", "communicate", "written communication", "verbal communication"},
 	"leadership":             {"lead teams", "team lead", "technical leadership"},
@@ -238,6 +267,8 @@ var (
 	index map[string]entry
 	// maxWords is the longest key in index, in words.
 	maxWords int
+	// canonical is every technical skill with its words, for the implied-skill rules.
+	canonical [][]string
 )
 
 func init() {
@@ -255,6 +286,9 @@ func init() {
 	for k, e := range aliases {
 		index[k] = e
 		maxWords = max(maxWords, strings.Count(k, " ")+1)
+	}
+	for c := range techSkills {
+		canonical = append(canonical, strings.Fields(key(c)))
 	}
 	for k, e := range aliases {
 		if !e.soft || e.lang {
@@ -307,6 +341,57 @@ func Aliases(skill string) []string {
 		return append([]string{c}, as...)
 	}
 	return []string{c}
+}
+
+// Implied returns the skills that cover a skill: a resume that shows "rest" shows "api", and a
+// resume that shows "google analytics" shows "analytics". The first rule is the dictionary; the
+// second holds when every word of the skill is in the words of the other one. A skill never covers
+// itself, and a one-letter skill covers nothing.
+func Implied(skill string) []string {
+	c := Canon(skill)
+	if len(c) < 2 {
+		return nil
+	}
+	want := strings.Fields(c)
+	out := []string{}
+	seen := map[string]bool{c: true}
+	for _, cover := range impliedSkills[c] {
+		cover = Canon(cover)
+		if cover == "" || seen[cover] {
+			continue
+		}
+		seen[cover] = true
+		out = append(out, cover)
+	}
+	for _, words := range canonical {
+		cover := strings.Join(words, " ")
+		if seen[cover] || len(words) <= len(want) {
+			continue
+		}
+		if !containsAll(words, want) {
+			continue
+		}
+		seen[cover] = true
+		out = append(out, cover)
+	}
+	return out
+}
+
+// containsAll reports whether every word of want is one of the words.
+func containsAll(words, want []string) bool {
+	for _, w := range want {
+		found := false
+		for _, x := range words {
+			if x == w {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // IsSoft reports whether skill is a known soft skill or spoken language.

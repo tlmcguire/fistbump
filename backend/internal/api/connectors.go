@@ -218,8 +218,15 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		return validationFailed("No boards match this search")
 	}
 
-	q.SkillScore = s.skillScorer(r.Context())
-	q.FitOf = s.fitOf(r.Context())
+	// The user can turn the resume off: the postings are then neither rated against it nor
+	// ranked by it, and the fit filters do not apply.
+	if !q.MatchesResume() {
+		q.MinFit = 0
+		q.MaxMissing = nil
+	} else {
+		q.SkillScore = s.skillScorer(r.Context())
+		q.FitOf = s.fitOf(r.Context())
+	}
 	if q.HasFit() && q.FitOf == nil {
 		return conflict("Add your resume first, so jobs can be filtered by how well you fit")
 	}
@@ -319,8 +326,10 @@ func (s *Server) fitOf(ctx context.Context) func(text string) *connectors.Fit {
 		var j models.Job
 		applyParse(&j, s.parse(text))
 		res := s.analyze(j, m)
-		missing := append(append([]string{}, res.Required.Tech.Missing...), res.Required.Soft.Missing...)
-		matched := len(res.Required.Tech.Matched) + len(res.Required.Soft.Matched)
+		// The technical skills count. A soft skill nobody writes on a resume is not evidence
+		// against the person, so a posting that lists only soft skills is not rated at all.
+		missing := append([]string{}, res.Required.Tech.Missing...)
+		matched := len(res.Required.Tech.Matched)
 		required := matched + len(missing)
 		if required == 0 {
 			return nil

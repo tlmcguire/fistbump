@@ -67,8 +67,9 @@ func TestRun(t *testing.T) {
 	if m := matched(r.Required.Soft); len(m) != 1 || !slices.Equal(m["mentoring"], []int64{10}) {
 		t.Errorf("required soft matched = %v (mentoring from \"Mentored\" in impact)", m)
 	}
-	if !slices.Equal(r.Required.Soft.Missing, []string{"leadership"}) {
-		t.Errorf("required soft missing = %v", r.Required.Soft.Missing)
+	// A soft skill the resume does not name is not missing: a resume rarely lists them.
+	if len(r.Required.Soft.Missing) != 0 || !slices.Equal(r.Required.Soft.Unmentioned, []string{"leadership"}) {
+		t.Errorf("required soft missing = %v, unmentioned = %v", r.Required.Soft.Missing, r.Required.Soft.Unmentioned)
 	}
 
 	pref := matched(r.Preferred.Tech)
@@ -82,8 +83,8 @@ func TestRun(t *testing.T) {
 		t.Error("empty groups must not be nil")
 	}
 
-	// 5 of 6 tech and 1 of 2 soft required skills; preferred skills do not count.
-	if want := 6.0 / 8.0; r.Score != want {
+	// 5 of the 6 required technical skills. The soft skills do not count against the person.
+	if want := 5.0 / 6.0; r.Score != want {
 		t.Errorf("score = %v, want %v", r.Score, want)
 	}
 }
@@ -135,11 +136,54 @@ func TestMatchedByExperienceTextOnly(t *testing.T) {
 func TestMissing(t *testing.T) {
 	m := models.Master{Profile: &models.Profile{Skills: []string{"SQL"}}}
 	r := Run(models.Job{ReqTechSkills: []string{"sql", "rust"}, ReqSoftSkills: []string{"leadership"}}, m)
-	if !slices.Equal(r.Required.Tech.Missing, []string{"rust"}) || !slices.Equal(r.Required.Soft.Missing, []string{"leadership"}) {
-		t.Errorf("missing = %v, %v", r.Required.Tech.Missing, r.Required.Soft.Missing)
+	if !slices.Equal(r.Required.Tech.Missing, []string{"rust"}) {
+		t.Errorf("missing = %v", r.Required.Tech.Missing)
 	}
-	if want := 1.0 / 3.0; r.Score != want {
+	// The soft skill is reported apart, not as something missing.
+	if len(r.Required.Soft.Missing) != 0 || !slices.Equal(r.Required.Soft.Unmentioned, []string{"leadership"}) {
+		t.Errorf("soft missing = %v, unmentioned = %v", r.Required.Soft.Missing, r.Required.Soft.Unmentioned)
+	}
+	// The score counts the technical skills only.
+	if want := 1.0 / 2.0; r.Score != want {
 		t.Errorf("score = %v, want %v", r.Score, want)
+	}
+}
+
+// A soft skill the resume does not name is no evidence against the person: it is reported, but it
+// never counts as missing and never lowers the score.
+func TestSoftSkillsAreNotMissing(t *testing.T) {
+	m := models.Master{Profile: &models.Profile{Skills: []string{"Python"}}}
+	r := Run(models.Job{ReqTechSkills: []string{"python"}, ReqSoftSkills: []string{"attention to detail", "communication"}}, m)
+	if len(r.Required.Soft.Missing) != 0 {
+		t.Errorf("missing = %v, want none", r.Required.Soft.Missing)
+	}
+	if !slices.Equal(r.Required.Soft.Unmentioned, []string{"attention to detail", "communication"}) {
+		t.Errorf("unmentioned = %v", r.Required.Soft.Unmentioned)
+	}
+	if r.Score != 1 {
+		t.Errorf("score = %v, want 1: the soft skills do not count", r.Score)
+	}
+}
+
+// A resume that shows one skill shows the skills it covers: "rest" covers "api".
+func TestCoveredSkillMatches(t *testing.T) {
+	m := models.Master{Profile: &models.Profile{Skills: []string{"REST"}}}
+	r := Run(models.Job{ReqTechSkills: []string{"api", "kubernetes"}}, m)
+	if got := matched(r.Required.Tech); len(got) != 1 || !slices.Equal(got["api"], []int64{}) {
+		t.Errorf("matched = %v, want the api covered by rest", got)
+	}
+	if !slices.Equal(r.Required.Tech.Missing, []string{"kubernetes"}) {
+		t.Errorf("missing = %v", r.Required.Tech.Missing)
+	}
+}
+
+// A resume that shows a longer skill shows the shorter one inside it: "google analytics" shows
+// "analytics".
+func TestSkillInsideALongerOneMatches(t *testing.T) {
+	m := models.Master{Profile: &models.Profile{Skills: []string{"Google Analytics"}}}
+	r := Run(models.Job{ReqTechSkills: []string{"analytics"}}, m)
+	if got := matched(r.Required.Tech); len(got) != 1 {
+		t.Errorf("matched = %v, want analytics", got)
 	}
 }
 

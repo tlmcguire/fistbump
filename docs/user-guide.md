@@ -60,7 +60,7 @@ Your master resume is the starting point for every tailored version.
 
 ### 2. Find a job, or paste one
 
-- **Find jobs** searches the job boards Fistbump covers. Type a job title, add a location, press **Search**. The **Filters** button opens company, industry, work mode, date posted, pay, fit with your resume, and skills you are missing.
+- **Find jobs** searches the job boards Fistbump covers. Type a job title, add a location, press **Search**. The **Filters** button opens company, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume: the fit filters are greyed out, the postings are not rated or ranked by fit, and no fit badge is shown.
 - **Open a link** opens a Greenhouse posting from its URL.
 - **Paste a job** takes the text of a posting from any site.
 
@@ -69,6 +69,8 @@ Your master resume is the starting point for every tailored version.
 Open a posting. Fistbump shows how well your resume covers it: a percentage with a word such as **Strong fit**, **Partial fit** or **Weak fit**, and the list of required skills you are missing. Below that it lists the technical and soft skills the posting asks for, marking each as matched or missing.
 
 This analysis is done with plain rules on your computer. It never uses AI, so it is instant and it never invents anything.
+
+The comparison is deliberately forgiving, because a resume is not a list of every skill you have. A skill you have under another name still counts: a resume that shows REST also covers API, and a resume that shows Google Analytics covers Analytics. A soft skill your resume does not name — "attention to detail" is the usual one — is listed as **Not mentioned** instead of missing, because resumes rarely list them and they are no evidence against you. The percentage counts the technical skills only.
 
 ### 4. Tailor the resume
 

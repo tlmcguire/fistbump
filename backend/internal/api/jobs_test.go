@@ -273,6 +273,33 @@ func TestSearchSkillScorerNeedsProfile(t *testing.T) {
 	}
 }
 
+// TestSearchCanTurnTheResumeOff checks that a search with use_resume false is neither rated
+// against the resume nor filtered by fit, even when the request still asks for a fit filter.
+func TestSearchCanTurnTheResumeOff(t *testing.T) {
+	f := &fakeSearcher{}
+	s := newSearchServer(t, f)
+	s.parse, s.analyze = fakeParse, fakeAnalyze
+	putProfile(t, s) // skills: sql, excel
+	call(t, s, "POST", "/v1/connectors/greenhouse/fetch", `{"query":{"keywords":["analyst"],"use_resume":false,"min_fit":80,"max_missing":0}}`)
+	if f.gotQuery.SkillScore != nil {
+		t.Error("with the resume off, postings must not be scored against the resume")
+	}
+	if f.gotQuery.FitOf != nil {
+		t.Error("with the resume off, postings must not be rated for fit")
+	}
+	if f.gotQuery.MinFit != 0 || f.gotQuery.MaxMissing != nil {
+		t.Errorf("with the resume off, the fit filters must not apply: min_fit %d, max_missing %v", f.gotQuery.MinFit, f.gotQuery.MaxMissing)
+	}
+	// With the resume on, the same request keeps the fit filters and rates the postings.
+	call(t, s, "POST", "/v1/connectors/greenhouse/fetch", `{"query":{"keywords":["analyst"],"use_resume":true,"min_fit":80,"max_missing":0}}`)
+	if f.gotQuery.SkillScore == nil || f.gotQuery.FitOf == nil {
+		t.Error("with the resume on, postings must be rated")
+	}
+	if f.gotQuery.MinFit != 80 || f.gotQuery.MaxMissing == nil || *f.gotQuery.MaxMissing != 0 {
+		t.Errorf("fit filters = min_fit %d, max_missing %v; want 80 and 0", f.gotQuery.MinFit, f.gotQuery.MaxMissing)
+	}
+}
+
 // TestJobCreateWithRealParser runs a pasted job through the real parser and analyzer, end to end:
 // inferred fields fill the job, and a posting the parser can infer nothing from is a 422.
 func TestJobCreateWithRealParser(t *testing.T) {

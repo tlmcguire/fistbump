@@ -19,6 +19,10 @@ type Match struct {
 type Group struct {
 	Matched []Match  `json:"matched"`
 	Missing []string `json:"missing"`
+	// Unmentioned are the soft skills the resume does not name. A resume rarely lists them, so
+	// they are no evidence against the person and never count as missing. They are reported on
+	// their own, so the user still sees what the posting asked for.
+	Unmentioned []string `json:"unmentioned"`
 }
 
 // Split is the tech and soft halves of the required or preferred skills.
@@ -32,7 +36,7 @@ type Result struct {
 	JobID      int64   `json:"job_id"`
 	Required   Split   `json:"required"`
 	Preferred  Split   `json:"preferred"`
-	Score      float64 `json:"score"` // matched required skills over all required; 1 when none are required
+	Score      float64 `json:"score"` // matched required technical skills over all of them; 1 when there are none
 	DurationMS int64   `json:"duration_ms"`
 }
 
@@ -40,9 +44,14 @@ type Result struct {
 //
 // The resume's skills are m.Skills() (profile and experience skills) plus the profile's clearances
 // and certifications, all canonicalized with parser.Canon. A job skill is matched when it is one of
-// them, or when the parser finds it in an experience's description or impact. Its evidence is the
-// experiences whose skill list or text has it, in resume order; a skill matched only through the
-// profile's own lists has no evidence.
+// them, when the parser finds it in an experience's description or impact, or when another skill
+// covers it: a resume that shows "rest" shows "api", and one that shows "google analytics" shows
+// "analytics". Its evidence is the experiences whose skill list or text has it, in resume order; a
+// skill matched only through the profile's own lists has no evidence.
+//
+// A soft skill the resume does not name is not missing. Resumes rarely list them, so counting them
+// would mark down people for what they did not write down. They are reported as unmentioned, and
+// the score counts the technical skills only.
 func Run(job models.Job, m models.Master) Result {
 	start := time.Now()
 
@@ -82,21 +91,44 @@ func Run(job models.Job, m models.Master) Result {
 		exps = append(exps, exp{e.ID, sk})
 	}
 
+	// The experiences that show a skill, in resume order.
+	evidence := func(skill string) []int64 {
+		ids := []int64{}
+		for _, e := range exps {
+			if e.skills[skill] {
+				ids = append(ids, e.id)
+			}
+		}
+		return ids
+	}
+
+	// The skill the resume shows that covers this one, if there is one.
+	coverOf := func(skill string) (string, bool) {
+		for _, cover := range parser.Implied(skill) {
+			if have[cover] {
+				return cover, true
+			}
+		}
+		return "", false
+	}
+
 	group := func(skills []string) Group {
-		g := Group{Matched: []Match{}, Missing: []string{}}
+		g := Group{Matched: []Match{}, Missing: []string{}, Unmentioned: []string{}}
 		for _, raw := range skills {
 			skill := parser.Canon(raw)
-			if !have[skill] {
-				g.Missing = append(g.Missing, raw)
+			if have[skill] {
+				g.Matched = append(g.Matched, Match{Skill: raw, ExperienceIDs: evidence(skill)})
 				continue
 			}
-			ids := []int64{}
-			for _, e := range exps {
-				if e.skills[skill] {
-					ids = append(ids, e.id)
-				}
+			if parser.IsSoft(skill) {
+				g.Unmentioned = append(g.Unmentioned, raw)
+				continue
 			}
-			g.Matched = append(g.Matched, Match{Skill: raw, ExperienceIDs: ids})
+			if cover, ok := coverOf(skill); ok {
+				g.Matched = append(g.Matched, Match{Skill: raw, ExperienceIDs: evidence(cover)})
+				continue
+			}
+			g.Missing = append(g.Missing, raw)
 		}
 		return g
 	}
@@ -107,9 +139,10 @@ func Run(job models.Job, m models.Master) Result {
 		Preferred: Split{Tech: group(job.PrefTechSkills), Soft: group(job.PrefSoftSkills)},
 		Score:     1,
 	}
-	if total := len(job.ReqTechSkills) + len(job.ReqSoftSkills); total > 0 {
-		matched := len(r.Required.Tech.Matched) + len(r.Required.Soft.Matched)
-		r.Score = float64(matched) / float64(total)
+	// The score counts the technical skills only: a soft skill nobody writes down is not something
+	// to be marked down for.
+	if total := len(r.Required.Tech.Matched) + len(r.Required.Tech.Missing); total > 0 {
+		r.Score = float64(len(r.Required.Tech.Matched)) / float64(total)
 	}
 	r.DurationMS = time.Since(start).Milliseconds()
 	return r

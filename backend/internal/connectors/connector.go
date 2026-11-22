@@ -99,6 +99,10 @@ type Query struct {
 	RequirePay   bool     `json:"require_pay"`   // drop postings that list no pay when a pay range is set
 	MinFit       int      `json:"min_fit"`       // percent of required skills the resume must show; 0 for any
 	MaxMissing   *int     `json:"max_missing"`   // most required skills the resume may lack; nil for any
+	// UseResume tells the search to rate the postings against the user's resume and to rank them
+	// by how well they fit. It is nil when the request does not say, which means yes: the fit
+	// filters and the skill ranking are on unless the user turns them off.
+	UseResume *bool `json:"use_resume"`
 
 	// SkillScore rates a posting's text against the user's resume, 0 to 1. The API layer sets it when
 	// a profile exists, so connectors need not know about resumes; nil ranks without skill fit.
@@ -106,6 +110,10 @@ type Query struct {
 	// FitOf compares a posting's text with the resume. The API layer sets it when a profile exists.
 	FitOf func(text string) *Fit `json:"-"`
 }
+
+// MatchesResume reports whether the search rates the postings against the user's resume. A
+// request that does not say means yes.
+func (q Query) MatchesResume() bool { return q.UseResume == nil || *q.UseResume }
 
 // HasFit reports whether the query filters on fit, which needs each posting's description.
 func (q Query) HasFit() bool { return q.MinFit > 0 || q.MaxMissing != nil }

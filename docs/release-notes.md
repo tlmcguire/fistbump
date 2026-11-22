@@ -51,7 +51,10 @@ image is compressed.
 
 - Greenhouse only: the job board support covers companies that post on a Greenhouse board.
 - Skill matching is strongest for technical roles. It compares the posting's skills with the
-  resume's, so roles with a lot of soft skills get less help.
+  resume's, so roles with a lot of soft skills get less help. It is deliberately lenient: a skill
+  you have under another name counts (REST covers API), and a soft skill your resume does not name
+  is listed as "Not mentioned" rather than missing. The search can also be run without the resume
+  at all, by unticking **Match with my resume** in the filters.
 - The builds are unsigned, so the first launch needs the extra click described above.
 - The local model needs about 4 GB of free memory for the default one, and the model file itself
   is about 1 GB on disk, outside the install size above.
