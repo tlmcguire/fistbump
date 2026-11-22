@@ -1,0 +1,174 @@
+name: Build
+
+on:
+  # CI runs on every push to main and every pull request. A version tag (v0.1.0) builds the installers.
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  # Run it by hand from the Actions tab, or: gh workflow run <file> --ref <branch>
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Every platform runs the Go tests and the app tests. Nothing is uploaded.
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check formatting
+        working-directory: backend
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Test
+        working-directory: backend
+        run: go test ./...
+      - name: Test with the race detector
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: backend
+        run: go test -race ./...
+      - name: Install dependencies
+        run: npm ci
+      - name: Test the app
+        run: npm test
+      - name: Build the Go backend
+        run: npm run build:go
+
+  # A version tag builds the installers for each platform.
+  release:
+    name: Release (${{ matrix.os }})
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node_platform: linux
+            arches: x64
+            installer: dist/*.AppImage
+          - os: macos-latest
+            node_platform: darwin
+            arches: arm64 x64
+            installer: dist/mac-*/FistBump-*.dmg
+          - os: windows-latest
+            node_platform: win32
+            arches: x64
+            installer: dist/*.exe
+    env:
+      # The MVP builds are unsigned, so the build never looks for a signing certificate.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check formatting
+        working-directory: backend
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Test
+        working-directory: backend
+        run: go test ./...
+      - name: Test with the race detector
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: backend
+        run: go test -race ./...
+      - name: Install dependencies
+        run: npm ci
+      - name: Test the app
+        run: npm test
+      # Each platform ships its own binaries: macOS has an arm64 and an x64 build, the others x64 only.
+      # The backend and llama-server are cross-compiled, so one runner builds every architecture.
+      - name: Build the backend for every architecture this platform ships
+        run: |
+          for arch in ${{ matrix.arches }}; do
+            node scripts/build-go.js --platform ${{ matrix.node_platform }} --arch "$arch"
+          done
+      - name: Fetch llama-server for every architecture this platform ships
+        run: |
+          for arch in ${{ matrix.arches }}; do
+            node scripts/fetch-llama-server.js --platform ${{ matrix.node_platform }} --arch "$arch"
+          done
+      - name: Build the installers
+        run: npx electron-builder --publish never
+      - name: Upload the installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.node_platform }}
+          path: ${{ matrix.installer }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # The installers become a draft release. A person publishes it after the checklist.
+  draft-release:
+    name: Draft release
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: installers-*
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          # The installers, wherever the artifact kept them.
+          files: |
+            dist/**/*.dmg
+            dist/**/*.exe
+            dist/**/*.AppImage
+          fail_on_unmatched_files: true

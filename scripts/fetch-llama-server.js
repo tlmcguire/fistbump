@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 // Puts a llama-server next to fistbump-core, so the local engine can run on this computer.
 // The llama.cpp release is pinned: a new version is a decision, never an automatic update.
-//   node scripts/fetch-llama-server.js          this computer
-//   node scripts/fetch-llama-server.js --all    every platform the app is built for
+// The folders use Node's names, so they are the folders the backend is built into.
+//   node scripts/fetch-llama-server.js                                  the platform this computer runs
+//   node scripts/fetch-llama-server.js --platform darwin --arch x64     one platform and architecture
+//   node scripts/fetch-llama-server.js --platform darwin                a platform, with the architectures it ships
+//   node scripts/fetch-llama-server.js --all                            every platform the app ships for
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const https = require('node:https');
+const { parseArgs } = require('node:util');
 const hostArch = require('./host-arch');
 
 // The pinned llama.cpp release, with the asset and its SHA-256 per platform.
@@ -21,7 +25,33 @@ const ASSETS = {
   'windows-amd64': {file: 'llama-' + TAG + '-bin-win-cpu-x64.zip', sha256: 'bad9fe0c1b554bcb1ce5630d66ad34a2285a8b390400513cc02f56feafd62c8e'},
 };
 
+// Each asset lands in the folder the backend for that platform is built into: Node's names, so
+// electron-builder's ${arch} macro finds them.
+const TARGETS = {
+  'darwin-arm64': {asset: 'darwin-arm64', folder: 'darwin-arm64'},
+  'darwin-x64': {asset: 'darwin-amd64', folder: 'darwin-x64'},
+  'linux-arm64': {asset: 'linux-arm64', folder: 'linux-arm64'},
+  'linux-x64': {asset: 'linux-amd64', folder: 'linux-x64'},
+  'win32-arm64': {asset: 'windows-arm64', folder: 'win32-arm64'},
+  'win32-x64': {asset: 'windows-amd64', folder: 'win32-x64'},
+};
+
+// The architectures each platform ships, and the targets the app ships for.
+const SHIPPED_ARCHES = {darwin: ['arm64', 'x64'], win32: ['x64'], linux: ['x64']};
+//the targets the app ships for; the arm64 variants of Linux and Windows are named with --arch
+const ALL_TARGETS = ['darwin-arm64', 'darwin-x64', 'win32-x64', 'linux-x64'];
+
 const root = path.join(__dirname, '..');
+
+const { values } = parseArgs({
+  options: {
+    platform: {type: 'string'},
+    arch: {type: 'string'},
+    all: {type: 'boolean'},
+  },
+  allowPositionals: true, //extra arguments are ignored, as they always were
+  strict: false, //an unknown flag is ignored, as it always was
+});
 
 //follows the redirect GitHub sends to the file itself
 const download = (url, redirects = 0) => new Promise((resolve, reject) => {
@@ -133,7 +163,9 @@ const install = (target, files) => {
 };
 
 const fetchFor = async target => {
-  const asset = ASSETS[target];
+  const mapping = TARGETS[target];
+  if (!mapping) throw new Error('no target for ' + target);
+  const asset = ASSETS[mapping.asset];
   if (!asset) throw new Error('no asset for ' + target);
   const url = 'https://github.com/ggml-org/llama.cpp/releases/download/' + TAG + '/' + asset.file;
   process.stdout.write('fetching ' + asset.file + '... ');
@@ -143,24 +175,36 @@ const fetchFor = async target => {
     throw new Error('the hash is ' + hash + ', but ' + asset.sha256 + ' was expected');
   }
   const files = asset.file.endsWith('.zip') ? unzip(buffer) : untar(zlib.gunzipSync(buffer));
-  const done = install(target, pickServerFiles(files));
+  const done = install(mapping.folder, pickServerFiles(files));
   console.log('ok, ' + done.names.length + ' files in ' + path.relative(root, done.dir));
 };
 
+//the targets one run installs
 const targets = () => {
-  if (process.argv.includes('--all')) return Object.keys(ASSETS);
-  const os = process.platform === 'win32' ? 'windows' : process.platform;
-  const arch = hostArch() === 'arm64' ? 'arm64' : 'amd64';
-  const target = os + '-' + arch;
-  if (!ASSETS[target]) throw new Error('unsupported platform ' + target);
-  return [target];
+  if (values.all) return ALL_TARGETS;
+  const platform = values.platform || process.platform;
+  if (!SHIPPED_ARCHES[platform]) {
+    throw new Error('unsupported platform ' + platform);
+  }
+  //without an architecture: a named platform fetches the architectures it ships,
+  //and this computer's platform also fetches the architecture it runs on
+  const arches = values.arch
+    ? [values.arch]
+    : values.platform
+      ? SHIPPED_ARCHES[platform]
+      : [...new Set([hostArch(), ...SHIPPED_ARCHES[platform]])];
+  const list = arches.map(arch => platform + '-' + arch);
+  for (const target of list) {
+    if (!TARGETS[target]) throw new Error('no target for ' + target);
+  }
+  return list;
 };
 
 const run = async () => {
   for (const target of targets()) await fetchFor(target);
 };
 
-module.exports = {TAG, ASSETS, untar, unzip, pickServerFiles, download, sha256};
+module.exports = {TAG, ASSETS, TARGETS, untar, unzip, pickServerFiles, download, sha256};
 
 if (require.main === module) {
   run().catch(error => {
