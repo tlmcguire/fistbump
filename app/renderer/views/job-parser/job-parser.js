@@ -761,8 +761,9 @@ window.JobParser = {
           pay_min: pay("search-pay-min"),
           pay_max: pay("search-pay-max"),
           require_pay: $("search-require-pay").checked,
-          min_fit: number("search-min-fit"),
-          max_missing: $("search-max-missing").value === "" ? null : number("search-max-missing"),
+          use_resume: $("search-use-resume").checked,
+          min_fit: $("search-use-resume").checked ? number("search-min-fit") : 0,
+          max_missing: !$("search-use-resume").checked || $("search-max-missing").value === "" ? null : number("search-max-missing"),
           sort: $("result-sort").value,
           limit: window.Prefs.get("pageSize")
         };
@@ -1061,16 +1062,20 @@ window.JobParser = {
           const group = (heading, split) => {
             const matched = [...split.tech.matched, ...split.soft.matched];
             const missing = [...split.tech.missing, ...split.soft.missing];
-            if (!matched.length && !missing.length) return null;
+            // Soft skills the resume does not name are not held against the person: a resume
+            // rarely lists them. They are shown apart, so it is clear what the posting asked for.
+            const unmentioned = [...(split.tech.unmentioned || []), ...(split.soft.unmentioned || [])];
+            if (!matched.length && !missing.length && !unmentioned.length) return null;
             return el("div", {},
               el("h4", {text: heading}),
               matched.map(m => el("p", {}, `\u2713 ${m.skill}`,
                 m.experience_ids.length
                   ? el("small", {text: ` \u2014 ${m.experience_ids.map(i => titles[i]).filter(Boolean).join("; ")}`})
                   : null)),
-              missing.length ? [el("p", {text: "Missing"}), chips(missing)] : null);
+              missing.length ? [el("p", {text: "Missing"}), chips(missing)] : null,
+              unmentioned.length ? [el("p", {text: "Not mentioned"}), chips(unmentioned)] : null);
           };
-          const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !g.missing.length);
+          const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !g.missing.length && !(g.unmentioned || []).length);
           fill(box,
             el("h3", {text: noRequired ? "This posting lists no required skills" : `Skill match: ${Math.round(a.score * 100)}% of required skills`}),
             group("Required", a.required),
@@ -1128,6 +1133,8 @@ window.JobParser = {
         "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
       const filterInUse = id => {
         const field = $(id);
+        //With the resume off, the fit filters do not apply, so they do not count as in use.
+        if ((id === "search-min-fit" || id === "search-max-missing") && !$("search-use-resume").checked) return false;
         if (field.type === "checkbox") return field.checked;
         const value = field.value.trim();
         return value !== "" && value !== "Any" && value !== "0";
@@ -1173,7 +1180,8 @@ window.JobParser = {
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
-        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
+        "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-use-resume",
+        "search-min-fit", "search-max-missing"];
       const FORM_KEY = "fistbump.search-form";
 
       //the form as an object, and back
@@ -1188,8 +1196,20 @@ window.JobParser = {
           if ($(id).type === "checkbox") $(id).checked = fields[id] === true;
           else $(id).value = String(fields[id]);
         }
+        applyResumeSwitch();
         updateFilterCount();
       };
+
+      //The resume switch turns the fit filters and the skill ranking off. The two boxes it holds
+      //are greyed out then, and their values are not sent.
+      const applyResumeSwitch = () => {
+        const on = $("search-use-resume").checked;
+        $("search-min-fit").disabled = !on;
+        $("search-max-missing").disabled = !on;
+        updateFilterCount();
+      };
+      $("search-use-resume").addEventListener("change", applyResumeSwitch);
+      applyResumeSwitch();
 
       const saveForm = () => {
         try {
@@ -1264,8 +1284,11 @@ window.JobParser = {
         if (fields["search-require-pay"] === true) details.push("only postings that list pay");
         const exclude = text("search-exclude");
         if (exclude) details.push(`leaving out ${exclude}`);
-        if (text("search-min-fit") && text("search-min-fit") !== "0") details.push(`fit ${optionText("search-min-fit", text("search-min-fit")).toLowerCase()}`);
-        if (text("search-max-missing") !== "" && text("search-max-missing") !== undefined) details.push(text("search-max-missing") === "0" ? "no missing skills" : `${optionText("search-max-missing", text("search-max-missing")).toLowerCase()} missing skills`);
+        //With the resume off, the fit is not part of the search, so it is not part of the summary.
+        if ($("search-use-resume").checked) {
+          if (text("search-min-fit") && text("search-min-fit") !== "0") details.push(`fit ${optionText("search-min-fit", text("search-min-fit")).toLowerCase()}`);
+          if (text("search-max-missing") !== "" && text("search-max-missing") !== undefined) details.push(text("search-max-missing") === "0" ? "no missing skills" : `${optionText("search-max-missing", text("search-max-missing")).toLowerCase()} missing skills`);
+        }
         return {title, details};
       };
 

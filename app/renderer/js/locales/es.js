@@ -16,6 +16,7 @@ window.I18n.add("es", {
   "Last 7 days": "Últimos 7 días", "Last 30 days": "Últimos 30 días", "Last 90 days": "Últimos 90 días",
   "Yearly pay (USD)": "Sueldo anual (USD)", "Minimum yearly pay": "Sueldo anual mínimo", "Min, e.g. 90k": "Mín., p. ej. 90k",
   "Maximum yearly pay": "Sueldo anual máximo", "Max": "Máx.", "Fit with my resume": "Encaje con mi currículum",
+  "Match with my resume": "Comparar con mi currículum", "Not mentioned": "No mencionado",
   "Any fit": "Cualquier encaje", "At least 50%": "Al menos 50 %", "At least 70%": "Al menos 70 %", "At least 90%": "Al menos 90 %",
   "Skills I am missing": "Habilidades que me faltan", "Any number": "Cualquier cantidad", "None": "Ninguna",
   "At most 1": "Como máximo 1", "At most 2": "Como máximo 2", "At most 3": "Como máximo 3", "At most 5": "Como máximo 5",

@@ -14,6 +14,7 @@ window.I18n.add("de", {
   "Last 7 days": "Letzte 7 Tage", "Last 30 days": "Letzte 30 Tage", "Last 90 days": "Letzte 90 Tage",
   "Yearly pay (USD)": "Jahresgehalt (USD)", "Minimum yearly pay": "Mindest-Jahresgehalt", "Min, e.g. 90k": "Min., z. B. 90k",
   "Maximum yearly pay": "Maximales Jahresgehalt", "Max": "Max.", "Fit with my resume": "Passung zu meinem Lebenslauf",
+  "Match with my resume": "Mit meinem Lebenslauf abgleichen", "Not mentioned": "Nicht erwähnt",
   "Any fit": "Jede Passung", "At least 50%": "Mindestens 50 %", "At least 70%": "Mindestens 70 %", "At least 90%": "Mindestens 90 %",
   "Skills I am missing": "Fehlende Fähigkeiten", "Any number": "Beliebig viele", "None": "Keine",
   "At most 1": "Höchstens 1", "At most 2": "Höchstens 2", "At most 3": "Höchstens 3", "At most 5": "Höchstens 5",
