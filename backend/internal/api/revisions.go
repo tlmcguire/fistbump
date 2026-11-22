@@ -12,6 +12,7 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/render"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
@@ -124,7 +125,12 @@ func (s *Server) revisionCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 	mode := req.Engine
 	if mode == "" {
-		mode = "auto"
+		// No engine named: use the mode chosen in Settings, auto by default.
+		m, err := s.aiMode(r.Context())
+		if err != nil {
+			return err
+		}
+		mode = m
 	}
 	switch mode {
 	case "auto", ai.EngineLocal, ai.EngineRemote, ai.EngineRules:
@@ -188,6 +194,7 @@ func (s *Server) runRound(ctx context.Context, rev models.Revision, mode string)
 		Analysis: s.analyze(job, master),
 		Profile:  master.Profile,
 		Targets:  ai.BuildTargets(master),
+		Resume:   render.Master(master),
 	})
 	if err != nil {
 		return err

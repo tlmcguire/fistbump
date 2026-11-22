@@ -69,15 +69,15 @@ As written in [api.md](api.md), except the Hugging Face token routes, which stay
 
 Progress:
 
-- [ ] 1. `catalog.json`, `models.go`
-- [ ] 2. `mem_*.go`
-- [ ] 3. `download.go`
-- [ ] 4. `remote.go`
-- [ ] 5. `prompt.go`
-- [ ] 6. `guard.go`
-- [ ] 7. `local.go`
-- [ ] 8. `engine.go` wiring
-- [ ] 9. `ai.go`, `models.go` (api)
+- [x] 1. `catalog.json`, `models.go`
+- [x] 2. `mem_*.go`
+- [x] 3. `download.go`
+- [x] 4. `remote.go`
+- [x] 5. `prompt.go`
+- [x] 6. `guard.go`
+- [x] 7. `local.go`
+- [x] 8. `engine.go` wiring
+- [x] 9. `ai.go`, `models.go` (api)
 - [ ] 10. `fetch-llama-server.js`
 - [ ] 11. `secrets.js`, `backend.js`
 - [ ] 12. `ipc-handlers.js`, `preload.js`

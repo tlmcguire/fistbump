@@ -48,7 +48,14 @@ type Config struct {
 	Version    string
 
 	// Engines write resume suggestions. Rules is filled in when left nil, so a zero Config works.
+	// Remote and Local are filled from the fields below when left nil.
 	Engines ai.Engines
+	// Remote is the OpenAI-compatible client the AI routes configure. Nil means a new, empty one.
+	Remote *ai.Remote
+	// Local runs llama-server. Nil means no local engine (tests, or a build without the binary).
+	Local *ai.Local
+	// Downloads fetches models into DataDir. Nil means a new manager for DataDir.
+	Downloads *ai.Downloads
 	// PDF turns resume Markdown into a PDF titled after fileName (the download name, extension
 	// included). Without it, PDF export fails and offers Markdown.
 	PDF func(markdown, fileName string) ([]byte, error)
@@ -69,9 +76,12 @@ type Server struct {
 	token   string
 	version string
 	// parse and analyze are parser.Parse and analyze.Run; tests swap them for fixed results.
-	parse   func(raw string) parser.Result
-	analyze func(job models.Job, m models.Master) analyze.Result
-	rounds  *roundRunner // background suggestion rounds, see revisions.go
+	parse     func(raw string) parser.Result
+	analyze   func(job models.Job, m models.Master) analyze.Result
+	rounds    *roundRunner // background suggestion rounds, see revisions.go
+	remote    *ai.Remote
+	local     *ai.Local
+	downloads *ai.Downloads
 	// renderPDF makes the PDF for the export routes; tests swap it for a fake.
 	renderPDF func(markdown, fileName string) ([]byte, error)
 	handler   http.Handler // the mux wrapped in middleware, built once in New
@@ -151,6 +161,17 @@ func (s *Server) routes() []route {
 		{"GET /v1/tailored-resumes/{id}/diff", s.tailoredDiff},
 		{"POST /v1/tailored-resumes/{id}/export", s.tailoredExport},
 		{"DELETE /v1/tailored-resumes/{id}", s.tailoredDelete},
+		{"GET /v1/ai/status", s.aiStatusGet},
+		{"PUT /v1/ai/mode", s.aiModePut},
+		{"PUT /v1/ai/remote", s.aiRemotePut},
+		{"DELETE /v1/ai/remote", s.aiRemoteDelete},
+		{"POST /v1/ai/test", s.aiTest},
+		{"GET /v1/models", s.modelList},
+		{"GET /v1/models/{id}", s.modelGet},
+		{"POST /v1/models/{id}/download", s.modelDownload},
+		{"GET /v1/models/downloads/{download_id}", s.downloadStatus},
+		{"DELETE /v1/models/downloads/{download_id}", s.downloadCancel},
+		{"DELETE /v1/models/{id}", s.modelDelete},
 	}
 }
 
@@ -272,9 +293,24 @@ func New(cfg Config) *Server {
 
 		renderPDF: cfg.PDF,
 	}
+	s.remote = cfg.Remote
+	if s.remote == nil {
+		s.remote = ai.NewRemote()
+	}
+	s.local = cfg.Local
+	s.downloads = cfg.Downloads
+	if s.downloads == nil {
+		s.downloads = ai.NewDownloads(cfg.DataDir)
+	}
 	engines := cfg.Engines
 	if engines.Rules == nil {
 		engines.Rules = ai.Rules{}
+	}
+	if engines.Remote == nil {
+		engines.Remote = s.remote
+	}
+	if engines.Local == nil && s.local != nil {
+		engines.Local = s.local
 	}
 	base := cfg.BaseContext
 	if base == nil {
