@@ -1,5 +1,5 @@
 // Spawns the Go backend, reads its port, authenticates every request, and restarts it after a crash.
-const { spawn } = require('child_process');
+const { spawn: defaultSpawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -9,12 +9,16 @@ const STARTUP_TIMEOUT_MS = 10_000;
 const SHUTDOWN_TIMEOUT_MS = 5_000;
 const MAX_RESTARTS = 3;
 const RESTART_WINDOW_MS = 60_000;
+// The error screen shows the last lines the backend wrote to stderr.
+const STDERR_TAIL_LINES = 40;
 
 class Backend extends EventEmitter {
-  constructor({ binDir, dataDir }) {
+  // spawn is injectable, so a test can hand in a fake child process.
+  constructor({ binDir, dataDir, spawn = defaultSpawn }) {
     super();
     this.binDir = binDir;
     this.dataDir = dataDir;
+    this.spawn = spawn;
     this.state = 'stopped'; // starting | ready | crashed | failed | stopping | stopped
     this.child = null;
     this.port = null;
@@ -22,6 +26,7 @@ class Backend extends EventEmitter {
     this.stderrTail = [];
     this.restarts = [];
     this.quitting = false;
+    this.restarting = false;
   }
 
   binaryPath() {
@@ -35,17 +40,21 @@ class Backend extends EventEmitter {
 
   // start() resolves once the port line was read and /v1/health passed.
   async start() {
+    // A restart is told apart from the first start, so only a restart reports 'restarted'.
+    const wasRestart = this.restarting;
+    this.restarting = false;
     const bin = this.binaryPath();
     if (!fs.existsSync(bin)) {
       throw new Error(`Backend binary not found at ${bin}. Run "npm run build:go".`);
     }
     this.setState('starting');
     this.token = crypto.randomBytes(32).toString('hex');
-    this.stderrTail = [];
+    // The error log is kept across restarts, so the error screen shows what the crashes said.
+    if (!wasRestart) this.stderrTail = [];
     // --llama-server is not passed yet: fistbump-core does not define that flag and exits on it.
     const args = ['--data-dir', this.dataDir];
     // Token goes in the environment, not argv, so it is absent from process listings.
-    const child = spawn(bin, args, { env: { ...process.env, FISTBUMP_TOKEN: this.token }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = this.spawn(bin, args, { env: { ...process.env, FISTBUMP_TOKEN: this.token }, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;
     child.stderr.on('data', (d) => {
       for (const line of d.toString().split('\n')) if (line) this.stderrTail.push(line);
@@ -56,13 +65,24 @@ class Backend extends EventEmitter {
     try {
       this.port = await this.readPort(child);
       await this.health();
+      // The app started quitting while the backend was coming up: it is not needed any more.
+      if (this.quitting) {
+        this.kill(child);
+        if (this.child === child) this.child = null;
+        this.setState('stopped');
+        return;
+      }
     } catch (err) {
       this.kill(child);
-      this.setState('failed');
+      if (this.child === child) this.child = null;
+      // A backend that stops while the app is quitting is not a failure worth a screen.
+      this.setState(this.quitting ? 'stopped' : 'failed');
       throw err;
     }
     this.setState('ready');
     this.emit('ready');
+    // The new process has its own port and token and is healthy: the app can use it again.
+    if (wasRestart) this.emit('restarted');
   }
 
   readPort(child) {
@@ -88,6 +108,11 @@ class Backend extends EventEmitter {
     return this.stderrTail.slice(-20).join('\n');
   }
 
+  // The last n lines the backend wrote to stderr. The error screen shows them.
+  stderrLines(n = STDERR_TAIL_LINES) {
+    return this.stderrTail.slice(-n);
+  }
+
   async health() {
     const res = await this.request('GET', '/v1/health');
     if (res.status !== 200) throw new Error(`Backend health check failed (${res.status}).`);
@@ -101,7 +126,7 @@ class Backend extends EventEmitter {
       this.setState('stopped');
       return;
     }
-    if (this.state === 'starting') return; // start() reports it
+    if (this.state === 'starting' || this.state === 'failed') return; // start() reports it
     this.setState('crashed', { code, signal });
     const now = Date.now();
     this.restarts = this.restarts.filter((t) => now - t < RESTART_WINDOW_MS);
@@ -111,6 +136,7 @@ class Backend extends EventEmitter {
     }
     this.restarts.push(now);
     // New port and token on every restart. Listeners re-send secrets on 'ready'.
+    this.restarting = true;
     this.start().catch((err) => this.emit('error-state', err));
   }
 

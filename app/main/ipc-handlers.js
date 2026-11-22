@@ -7,6 +7,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
    'settings:get', 'settings:put',
    'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases',
+   'error:details', 'error:copyDetails', 'error:quit',
    'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import',
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
@@ -25,7 +26,7 @@ const AI_MODES = ['auto', 'local', 'remote', 'rules'];
 const AI_ENGINES = ['local', 'remote'];
 
 // Cleanup targets the settings page may ask for. The backend validates them again.
-const CLEANUP_TARGETS = ['cache', 'partial_downloads'];
+const CLEANUP_TARGETS = ['cache', 'partial_downloads', 'old_jobs', 'trash', 'unused_models'];
 
 // The backend refuses larger files too; checking here first avoids reading or sending them.
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
@@ -383,11 +384,23 @@ function register(ipcMain, backend, deps = {}) {
 
   // Settings: storage use and manual cleanup.
   ipcMain.handle('storage:report', () => backend.call('GET', '/v1/storage'));
-  ipcMain.handle('storage:cleanup', (_event, targets) => {
+  ipcMain.handle('storage:cleanup', (_event, payload) => {
+    // The renderer sends one object: the targets, and optionally how old and whether to preview.
+    if (!isObject(payload)) return bad('Invalid cleanup request');
+    const { targets, older_than_days: olderThanDays, dry_run: dryRun } = payload;
     if (!Array.isArray(targets) || !targets.length || !targets.every((t) => CLEANUP_TARGETS.includes(t))) {
       return bad('Unknown cleanup target');
     }
-    return backend.call('POST', '/v1/storage/cleanup', { targets });
+    if (olderThanDays !== undefined && (!Number.isInteger(olderThanDays) || olderThanDays < 1)) {
+      return bad('older_than_days must be a whole number of days');
+    }
+    if (dryRun !== undefined && typeof dryRun !== 'boolean') {
+      return bad('dry_run must be true or false');
+    }
+    const body = { targets };
+    if (olderThanDays !== undefined) body.older_than_days = olderThanDays;
+    if (dryRun !== undefined) body.dry_run = dryRun;
+    return backend.call('POST', '/v1/storage/cleanup', body);
   });
 
   // Settings: about the app, updates, and the data folder.
@@ -396,6 +409,12 @@ function register(ipcMain, backend, deps = {}) {
   ipcMain.handle('app:check-updates', () => (deps.checkForUpdates ? deps.checkForUpdates() : missing()));
   ipcMain.handle('app:show-data-folder', () => (deps.showDataFolder ? deps.showDataFolder() : missing()));
   ipcMain.handle('app:open-releases', (_event, url) => (deps.openReleases ? deps.openReleases(url) : missing()));
+
+  // The startup error screen: it shows what happened, and the last words from the backend.
+  // It never calls the backend, because the backend is the thing that broke.
+  ipcMain.handle('error:details', () => (deps.errorDetails ? deps.errorDetails() : missing()));
+  ipcMain.handle('error:copyDetails', () => (deps.copyDetails ? deps.copyDetails() : missing()));
+  ipcMain.handle('error:quit', () => (deps.quit ? deps.quit() : missing()));
 }
 
 module.exports = { CHANNELS, register, MAX_IMPORT_BYTES };
