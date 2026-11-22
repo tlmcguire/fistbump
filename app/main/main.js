@@ -114,6 +114,8 @@ if (!app.requestSingleInstanceLock()) {
     register(ipcMain, backend, {
       dialog,
       BrowserWindow,
+      shell,
+      documentsDir: () => app.getPath('documents'),
       info: () => ({
         version: app.getVersion(),
         electron: process.versions.electron,

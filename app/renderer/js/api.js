@@ -73,15 +73,23 @@ window.FistBumpAPI = {
   window.FistBumpAPI.resume = wrap("resume", [
     "get", "putProfile", "preview", "createExperience", "updateExperience", "deleteExperience", 
     "createEducation", "updateEducation", "deleteEducation",
-    "importFile", "importData", "importText", "importApply",
+    "importFile", "importData", "importText", "importApply", "export",
   ]);
 
   //handles job management in phase 4
   window.FistBumpAPI.resumes = wrap("resumes", ["list", "get", "create","update", "delete"]);
   window.FistBumpAPI.importJobs = postings => window.FistBumpAPI.request(() => window.api.connectors.import(postings));
-  window.FistBumpAPI.jobs = wrap("jobs", ["parse", "create", "list", "get", "update", "delete", "analyze"]);
+  window.FistBumpAPI.jobs = wrap("jobs", ["parse", "create", "list", "get", "update", "delete", "analyze",
+    "archive", "unarchive", "trash", "restore"]);
+
+  //phase 7: the application tracker
+  window.FistBumpAPI.applications = wrap("applications", ["list", "create", "get", "update", "delete",
+    "bulkStatus", "archive", "unarchive", "bulkArchive"]);
 
   //phase 5
   window.FistBumpAPI.revisions = wrap("revisions", ["create", "list", "get", "cancel", "delete"]);
   window.FistBumpAPI.suggestions = wrap("suggestions", ["accept", "reject", "edit"]);
-  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete"]);
+  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export"]);
+
+  //phase 6: show an exported file in its folder
+  window.FistBumpAPI.shell = wrap("shell", ["showItem"]);
