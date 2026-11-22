@@ -232,6 +232,29 @@
     return el("p", {class: "export-saved", role: "status"}, el("span", {text: `Saved to ${path}`}), show);
   };
 
+  //The resume's Markdown read as a document: headings, bullets and lines, not symbols. Text only, never HTML.
+  const readable = markdown => {
+    const unescape = line => line.replace(/\\([#*\-_])/g, "$1").replace(/\*\*(.+?)\*\*/g, "$1");
+    const out = [];
+    let list = null;
+    for (const raw of markdown.split("\n")) {
+      const line = unescape(raw.trimEnd());
+      let m;
+      if (!line.trim()) { list = null; continue; }
+      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+        list = null;
+        out.push(el(m[1].length === 1 ? "h3" : "h4", {class: "doc-h", text: m[2]}));
+      } else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) {
+        if (!list) { list = el("ul", {class: "doc-list"}); out.push(list); }
+        list.append(el("li", {text: m[1]}));
+      } else {
+        list = null;
+        out.push(el("p", {class: "doc-p", text: line}));
+      }
+    }
+    return out;
+  };
+
   // ---------- The view ----------
  
   function mount(container) {
@@ -274,7 +297,7 @@
     const importSection = el("section", {class: "resume-section import-review", "aria-labelledby": "resume-import-h", hidden: true});
     const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection);
  
-    const previewText = el("pre", {class: "preview-text"});
+    const previewText = el("div", {class: "resume-doc"});
     const exportNote = el("div");
     const exportButton = el("button", {type: "button"}, "Export PDF");
     const versionsList = el("ul", {class: "versions"});
@@ -325,7 +348,7 @@
     const refreshPreview = () => attempt(async () => {
       const {markdown} = await api().resume.preview();
       if (disposed) return;
-      previewText.textContent = markdown.trim() ? markdown : "Your resume appears here once you save your profile.";
+      fill(previewText, markdown.trim() ? readable(markdown) : el("p", {class: "hint", text: "Your resume appears here once you save your profile."}));
       if (previewKind === "pdf") pdf.load(); //the PDF follows the text
     });
  
