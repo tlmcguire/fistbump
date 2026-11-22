@@ -34,6 +34,9 @@ type Request struct {
 	Analysis analyze.Result
 	Profile  *models.Profile
 	Targets  []Target
+	// Resume is the whole master resume as text (render.Master). The guard checks model
+	// proposals against it, so they cannot claim what the resume does not show.
+	Resume string
 }
 
 // Draft is a proposed change before it is stored as a suggestion.

@@ -204,7 +204,7 @@ A revision is one suggestion-generating pass for a job.
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `POST /v1/revisions` | `{ "job_id": 1, "base_resume_id"?: 1, "engine": "auto" }`. `engine` is `auto` (default), `local`, `remote`, or `rules`. | `202` Revision with `status: "queued"`. `engine` holds the first engine that will be tried, and is updated to the engine that wrote the suggestions when the round ends. `409` if there is no profile, `404` for an unknown job, `422` for an unknown `engine` or `base_resume_id`, `503 ai_unavailable` if a forced engine cannot run. | INSERT `revisions`. Suggestions are INSERTed as the engine produces them. |
+| `POST /v1/revisions` | `{ "job_id": 1, "base_resume_id"?: 1, "engine": "auto" }`. `engine` is `auto`, `local`, `remote`, or `rules`; when omitted, the `ai.mode` setting is used (`auto` by default). | `202` Revision with `status: "queued"`. `engine` holds the first engine that will be tried, and is updated to the engine that wrote the suggestions when the round ends. `409` if there is no profile, `404` for an unknown job, `422` for an unknown `engine` or `base_resume_id`, `503 ai_unavailable` if a forced engine cannot run. | INSERT `revisions`. Suggestions are INSERTed as the engine produces them. |
 | `GET /v1/revisions` | Query: `job_id` | `[Revision]` newest first | SELECT `revisions` |
 | `GET /v1/revisions/{id}` | none | Revision plus `"suggestions": [Suggestion]` | SELECT `revisions`, `suggestions` |
 | `POST /v1/revisions/{id}/cancel` | none | Revision with `status: "canceled"`. `409` unless `queued` or `running`. | UPDATE `revisions` (`status`, `completed_at`) |
@@ -283,7 +283,7 @@ Errors: `400` for malformed JSON, `422` for a bad query, `502` with the upstream
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `GET /v1/ai/status` | none | `{ "mode": "auto", "active_engine": "local", "local": { "model": "", "installed": true, "running": false }, "remote": { "configured": true, "needs_key": false, "base_url": "", "model": "", "has_key": true } }`. `needs_key` is true for a hosted provider (not loopback) with no key in memory; such a provider is skipped in `auto` mode and a forced `remote` returns `503`. | Reads `settings` |
+| `GET /v1/ai/status` | none | `{ "mode": "auto", "active_engine": "local", "local": { "model": "", "installed": true, "running": false, "available": true }, "remote": { "configured": true, "needs_key": false, "base_url": "", "model": "", "has_key": true } }`. `needs_key` is true for a hosted provider (not loopback) with no key in memory; such a provider is skipped in `auto` mode and a forced `remote` returns `503`. `local.available` is false when `llama-server` is not bundled next to the backend. `active_engine` is `""` when the mode has no engine that can run. | Reads `settings` |
 | `PUT /v1/ai/mode` | `{ "mode": "auto" }`. One of `auto`, `local`, `remote`, `rules`. | Same as status | UPSERT `settings` (`ai.mode`) |
 | `PUT /v1/ai/remote` | `{ "base_url": "https://api.example.com/v1", "model": "name", "api_key": "..." }`. `api_key` is optional (omit for keyless Ollama). `base_url` must be HTTPS unless the host is loopback. | Same as status. The key is never echoed back. | UPSERT `settings` (`ai.remote.base_url`, `ai.remote.model`). **The key is held in memory only and never written to the DB.** |
 | `DELETE /v1/ai/remote` | none | `204` | Clears the remote settings and drops the in-memory key |
@@ -295,16 +295,16 @@ Electron calls `PUT /v1/ai/remote` at every launch to supply the stored key. See
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
-| `GET /v1/models` | none | `[{ "id", "repo", "file", "size_bytes", "min_ram_gb", "installed": false, "fits_this_machine": true, "selected": false }]` | Catalog from embedded `catalog.json`, installed state from disk, `selected` from `settings` (`ai.selected_model`) |
+| `GET /v1/models` | none | `[{ "id", "name", "repo", "file", "size_bytes", "min_ram_gb", "license", "installed": false, "fits_this_machine": true, "selected": false, "downloading": false }]` | Catalog from embedded `catalog.json`, installed state from disk, `selected` from `settings` (`ai.selected_model`) |
 | `GET /v1/models/{id}` | none | One model entry | Same |
 | `POST /v1/models/{id}/download` | none | `202` `{ "download_id": "abc" }`. `409` if already installed or downloading. | None. Writes a `.part` file in the data dir. |
 | `GET /v1/models/downloads/{download_id}` | none | `{ "state": "running\|verifying\|done\|failed\|cancelled", "bytes": 0, "total": 0, "error": null }` | None |
 | `DELETE /v1/models/downloads/{download_id}` | none | `204`. Stops the transfer and keeps the `.part` file so a later download can resume. | None |
-| `DELETE /v1/models/{id}` | none | `204`. Stops the local server first if this model is loaded. | Deletes the file. Clears `ai.selected_model` in `settings` if selected. |
+| `DELETE /v1/models/{id}` | none | `204`. Stops the local server first if this model is loaded. `404` if it is not downloaded, `409` while it is downloading. | Deletes the file. Clears `ai.selected_model` in `settings` if selected. |
 | `PUT /v1/models/token` | `{ "token": "hf_..." }` (optional Hugging Face token for gated models) | `204` | In memory only |
 | `DELETE /v1/models/token` | none | `204` | Drops the in-memory token |
 
-Selecting a model is a settings change: `PUT /v1/settings` with `ai.selected_model`. Downloads use HTTP range requests to resume, verify SHA-256 against the catalog, then rename the `.part` file atomically. A hash mismatch ends in `failed` and the file is deleted.
+Selecting a model is a settings change: `PUT /v1/settings` with `ai.selected_model`; the id must be in the catalog and downloaded, else `422`, and a new selection stops the local server so the next request loads it. Downloads use HTTP range requests to resume, verify SHA-256 against the catalog, then rename the `.part` file atomically. A hash mismatch ends in `failed` and the file is deleted.
 
 ## Settings (`settings.go`)
 

@@ -100,18 +100,46 @@ func run() error {
 		}
 	}()
 
+	// The AI engines. The remote key is not stored here; Electron sends it with PUT /v1/ai/remote
+	// after every start. A keyless provider on this computer (Ollama) works from the settings alone.
+	settings := store.New(conn)
+	remote := ai.NewRemote()
+	if values, err := settings.GetSettings(context.Background()); err == nil {
+		baseURL, _ := values["ai.remote.base_url"].(string)
+		model, _ := values["ai.remote.model"].(string)
+		if baseURL != "" {
+			if err := remote.Configure(baseURL, model, ""); err != nil {
+				slog.Warn("ignoring the saved remote provider", "error", err)
+			}
+		}
+	}
+	local := ai.NewLocal(*dataDir, func() (string, time.Duration) {
+		values, err := settings.GetSettings(context.Background())
+		if err != nil {
+			return "", 0
+		}
+		id, _ := values["ai.selected_model"].(string)
+		minutes, _ := values["ai.idle_minutes"].(int)
+		return id, time.Duration(minutes) * time.Minute
+	})
+	if local.Binary == "" {
+		slog.Info("llama-server is not next to fistbump-core; the local engine is off")
+	}
+	defer local.Stop()
+
 	handler := api.New(api.Config{
-		DB:         conn,
-		Greenhouse: gh,
-		Searcher:   gh,
-		Logos:      logoFetcher,
-		DataDir:    *dataDir,
-		Caches:     []api.CacheClearer{gh.Cache, logoFetcher},
-		Token:      token,
-		Version:    version,
-		PDF:        pdf.RenderFile,
-		// Phase 8 adds the local and remote engines here.
-		Engines:     ai.Engines{Rules: ai.Rules{}},
+		DB:          conn,
+		Greenhouse:  gh,
+		Searcher:    gh,
+		Logos:       logoFetcher,
+		DataDir:     *dataDir,
+		Caches:      []api.CacheClearer{gh.Cache, logoFetcher},
+		Token:       token,
+		Version:     version,
+		PDF:         pdf.RenderFile,
+		Engines:     ai.Engines{Local: local, Remote: remote, Rules: ai.Rules{}},
+		Remote:      remote,
+		Local:       local,
 		BaseContext: roundsCtx,
 	})
 
@@ -142,6 +170,7 @@ func run() error {
 	}
 
 	stopRounds()
+	local.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
