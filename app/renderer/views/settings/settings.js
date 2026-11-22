@@ -153,7 +153,7 @@ window.Settings = {
     };
     const aiLocalText = s => {
       if (!s.local.available) return "The local model is not included in this build, so suggestions use your remote provider or built-in rules.";
-      if (!s.local.installed) return "Not downloaded yet. It downloads the first time you generate suggestions.";
+      if (!s.local.installed) return "Not downloaded yet. Pick a model below and download it.";
       return s.local.running ? "Ready and running on this computer." : "Installed on this computer. It starts when you generate suggestions.";
     };
     const showAi = async () => {
@@ -220,6 +220,156 @@ window.Settings = {
       showAi();
     });
 
+    // ---------- Local models ----------
+
+    const models = window.FistBumpAPI.models;
+    const modelList = $("model-list");
+    let downloadTimer = null;
+    let currentDownload = null; // {modelId, downloadId, percent}
+
+    //The catalog says what a model needs, so the choice is made before the download starts.
+    const modelRow = model => {
+      const row = document.createElement("div");
+      row.className = "model-row";
+
+      const info = document.createElement("div");
+      info.className = "model-info";
+      const name = document.createElement("div");
+      name.className = "model-name";
+      name.textContent = model.name;
+      const meta = document.createElement("p");
+      meta.className = "model-meta";
+      //the parts are joined with a middle dot, which is how the language files split a line
+      meta.textContent = [
+        `${(model.size_bytes / 1e9).toFixed(1)} GB`,
+        `Memory needed: ${model.min_ram_gb} GB`,
+        model.license,
+        model.fits_this_machine ? "" : "More memory than this computer has",
+      ].filter(Boolean).join(" \u00b7 ");
+      const state = document.createElement("p");
+      state.className = "model-state";
+      if (model.selected) state.textContent = "This is the model in use.";
+      else if (model.downloading) state.textContent = `Downloading… ${currentDownload?.modelId === model.id ? currentDownload.percent : 0}%`;
+      else if (model.installed) state.textContent = "Downloaded on this computer.";
+      else state.textContent = "Not downloaded yet.";
+      info.append(name, meta, state);
+
+      const actions = document.createElement("div");
+      actions.className = "setting-actions";
+      const add = (text, className, run) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = text;
+        if (className) button.className = className;
+        button.addEventListener("click", run);
+        actions.append(button);
+        return button;
+      };
+
+      if (!model.installed && !model.downloading) add("Download", "primary", () => startDownload(model));
+      if (model.downloading) add("Cancel", "", () => cancelDownload());
+      if (model.installed) {
+        if (!model.selected) add("Use this model", "", () => useModel(model));
+        const remove = add("Delete", "", () => {});
+        confirmFirst(remove, "Delete?", async () => {
+          try {
+            await models.delete(model.id);
+            aiStatus("Model deleted from this computer.");
+          } catch (error) {
+            aiStatus(error.message, true);
+          }
+          await showModels();
+          showAi();
+        });
+      }
+      row.append(info, actions);
+
+      //The bar of a download in flight, filled in as the bytes arrive.
+      if (model.downloading && currentDownload?.modelId === model.id) {
+        const bar = document.createElement("progress");
+        bar.className = "model-progress";
+        bar.max = 100;
+        bar.value = currentDownload.percent;
+        row.append(bar);
+      }
+      return row;
+    };
+
+    const showModels = async () => {
+      if (!models || !modelList) return;
+      let list = [];
+      try {
+        list = await models.list();
+      } catch (error) {
+        aiStatus(error.message, true);
+        return;
+      }
+      modelList.replaceChildren(...list.map(modelRow));
+    };
+
+    //The download runs in the backend, so the page only asks how far it has come.
+    const startDownload = async model => {
+      try {
+        const result = await models.download(model.id);
+        currentDownload = {modelId: model.id, downloadId: result.download_id, percent: 0};
+        aiStatus(`Downloading ${model.name}. It stays on this computer.`);
+        pollDownload();
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+    };
+
+    const pollDownload = async () => {
+      if (!currentDownload) return;
+      try {
+        const status = await models.downloadStatus(currentDownload.downloadId);
+        const total = status.total || 0;
+        currentDownload.percent = total ? Math.min(100, Math.round((status.bytes || 0) / total * 100)) : 0;
+        if (status.state === "running" || status.state === "verifying") {
+          await showModels();
+          downloadTimer = setTimeout(pollDownload, 1000);
+          return;
+        }
+        clearTimeout(downloadTimer);
+        downloadTimer = null;
+        currentDownload = null;
+        if (status.state === "done") aiStatus("Model downloaded. It is ready to use.");
+        else if (status.state === "failed") aiStatus(status.error || "The download failed.", true);
+        else aiStatus("Download cancelled.");
+        await showModels();
+        showAi();
+      } catch (error) {
+        clearTimeout(downloadTimer);
+        downloadTimer = null;
+        currentDownload = null;
+        aiStatus(error.message, true);
+        await showModels();
+      }
+    };
+
+    const cancelDownload = async () => {
+      if (!currentDownload) return;
+      try {
+        await models.cancelDownload(currentDownload.downloadId);
+        aiStatus("Download cancelled. The part already downloaded is kept, so the next one continues from there.");
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+    };
+
+    //The model in use is a setting, so it is saved the same way as the other ones.
+    const useModel = async model => {
+      try {
+        const result = await api.settings.put({"ai.selected_model": model.id});
+        if (result?.error) throw new Error(result.error.message);
+        aiStatus(`${model.name} is the model in use now.`);
+      } catch (error) {
+        aiStatus(error.message, true);
+      }
+      await showModels();
+      showAi();
+    };
+
     // ---------- Updates ----------
 
     let releaseUrl = "";
@@ -262,6 +412,7 @@ window.Settings = {
       showHistory();
       showStorage();
       showAi();
+      showModels();
     };
 
     showAbout();

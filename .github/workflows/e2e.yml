@@ -1,9 +1,11 @@
 name: End-to-end
 
 on:
-  # CI runs at milestones, not on every push: a version tag (v0.2.0) or a phase tag (phase-07).
+  # CI runs on every push and every pull request, and on a version tag (v0.2.0).
   push:
+    branches: ['**']
     tags: ['v*', 'phase-*']
+  pull_request:
   # Run it by hand from the Actions tab, or: gh workflow run <file> --ref <branch>
   workflow_dispatch:
 

@@ -126,6 +126,16 @@ contextBridge.exposeInMainWorld('api', {
     restore: (id) => ipcRenderer.invoke('jobs:restore', id),
   },
 
+  //phase 8: the local model catalog
+  models: {
+    list: () => ipcRenderer.invoke('models:list'),
+    get: (id) => ipcRenderer.invoke('models:get', id),
+    download: (id) => ipcRenderer.invoke('models:download', id),
+    downloadStatus: (id) => ipcRenderer.invoke('models:downloadStatus', id),
+    cancelDownload: (id) => ipcRenderer.invoke('models:cancelDownload', id),
+    delete: (id) => ipcRenderer.invoke('models:delete', id),
+  },
+
   //phase 7: the application tracker
   applications: {
     list: (filters) => ipcRenderer.invoke('applications:list', filters),

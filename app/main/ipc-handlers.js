@@ -14,6 +14,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'resume:export', 'tailored:export', 'shell:showItem',
    'resume:previewPdf', 'tailored:previewPdf',
    'ai:status', 'ai:setMode', 'ai:setRemote', 'ai:clearRemote', 'ai:test',
+   'models:list', 'models:get', 'models:download', 'models:downloadStatus', 'models:cancelDownload', 'models:delete',
    'applications:list', 'applications:create', 'applications:get', 'applications:update', 'applications:delete',
    'applications:bulkStatus', 'applications:archive', 'applications:unarchive', 'applications:bulkArchive',
    'jobs:archive', 'jobs:unarchive', 'jobs:trash', 'jobs:restore',];
@@ -99,6 +100,14 @@ const ROUTES = {
 
 
   
+  //phase 8: the local model catalog. The model id goes into the path, so it is escaped.
+  'models:list': () => ['GET', '/v1/models'],
+  'models:get': (id) => typeof id === 'string' && id ? ['GET', `/v1/models/${seg(id)}`] : bad('Invalid model id'),
+  'models:download': (id) => typeof id === 'string' && id ? ['POST', `/v1/models/${seg(id)}/download`] : bad('Invalid model id'),
+  'models:downloadStatus': (id) => typeof id === 'string' && id ? ['GET', `/v1/models/downloads/${seg(id)}`] : bad('Invalid download id'),
+  'models:cancelDownload': (id) => typeof id === 'string' && id ? ['DELETE', `/v1/models/downloads/${seg(id)}`] : bad('Invalid download id'),
+  'models:delete': (id) => typeof id === 'string' && id ? ['DELETE', `/v1/models/${seg(id)}`] : bad('Invalid model id'),
+
   'settings:get': () => ['GET', '/v1/settings'],
   'settings:put': (values) => isObject(values) ? ['PUT', '/v1/settings', values] : bad('Invalid settings'),
 

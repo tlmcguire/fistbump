@@ -270,6 +270,23 @@ th[aria-sort="ascending"] .sort-button, th[aria-sort="descending"] .sort-button 
 /* ---------- Settings: AI ---------- */
 
 .setting-stack { flex-direction: column; align-items: stretch; gap: 12px; }
+
+/* The catalog of models the app can download: what each one needs, and what to do with it. */
+.model-list { display: flex; flex-direction: column; gap: 10px; }
+.model-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.model-info { flex: 1 1 260px; min-width: 0; }
+.model-name { color: var(--text); font-size: 13px; font-weight: 600; }
+.model-meta, .model-state { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.model-progress { flex: 1 1 100%; height: 6px; }
 .ai-remote { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
 .ai-remote label { color: var(--muted); font-size: 12px; font-weight: 550; }
 .ai-remote .setting-actions { grid-column: 2; }
