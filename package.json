@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "electron .",
     "build:go": "node scripts/build-go.js",
+    "fetch:llama": "node scripts/fetch-llama-server.js",
     "test": "node --test app/tests/*.test.js",
     "test:e2e": "playwright test"
   },

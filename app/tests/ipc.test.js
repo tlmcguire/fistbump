@@ -269,6 +269,37 @@ test('requestRaw gives bytes on success and the error shape for a JSON answer', 
   }
 });
 
+//phase 8 test: the model catalog
+test('the model channels reach the model routes and refuse a bad id', async () => {
+  const backend = recorder();
+  const ipc = fakeIpc();
+  register(ipc, backend);
+  const h = (channel) => ipc.handlers.get(channel);
+
+  assert.strictEqual((await h('models:get')({}, 0)).error.code, 'validation_failed');
+  assert.strictEqual((await h('models:get')({}, '')).error.code, 'validation_failed');
+  assert.strictEqual((await h('models:download')({}, null)).error.code, 'validation_failed');
+  assert.strictEqual((await h('models:downloadStatus')({}, undefined)).error.code, 'validation_failed');
+  assert.strictEqual((await h('models:cancelDownload')({}, 3)).error.code, 'validation_failed');
+  assert.strictEqual((await h('models:delete')({}, {})).error.code, 'validation_failed');
+  assert.strictEqual(backend.calls.length, 0);
+
+  await h('models:list')({});
+  await h('models:get')({}, 'qwen2.5-1.5b-instruct-q4');
+  await h('models:download')({}, 'qwen2.5-1.5b-instruct-q4');
+  await h('models:downloadStatus')({}, 'abc 123');
+  await h('models:cancelDownload')({}, 'abc123');
+  await h('models:delete')({}, 'qwen2.5-1.5b-instruct-q4');
+  assert.deepStrictEqual(backend.calls, [
+    { method: 'GET', url: '/v1/models', body: undefined },
+    { method: 'GET', url: '/v1/models/qwen2.5-1.5b-instruct-q4', body: undefined },
+    { method: 'POST', url: '/v1/models/qwen2.5-1.5b-instruct-q4/download', body: undefined },
+    { method: 'GET', url: '/v1/models/downloads/abc%20123', body: undefined },
+    { method: 'DELETE', url: '/v1/models/downloads/abc123', body: undefined },
+    { method: 'DELETE', url: '/v1/models/qwen2.5-1.5b-instruct-q4', body: undefined },
+  ]);
+});
+
 //phase 7 tests: applications and job lifecycle
 test('application and job lifecycle routes check their arguments and build the right URLs', async () => {
   const backend = recorder();
