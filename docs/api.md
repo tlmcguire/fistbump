@@ -331,16 +331,32 @@ Settings never hold secrets.
 
 ## Storage (`storage.go`)
 
-Built so far: `GET /v1/storage`, and cleanup of `cache` (the Greenhouse and logo caches) and `partial_downloads`. `old_jobs`, `trash` and `unused_models` answer `422` "not available yet" until saved jobs and models exist; the settings page already lists them, turned off.
+Both routes are built. The cleanup route knows every target: `cache`, `partial_downloads`, `old_jobs`, `trash` and `unused_models`. Any other target is a `422`.
 
 | Route | Request | Response | DB |
 |-------|---------|----------|----|
 | `GET /v1/storage` | none | `{ "data_dir", "db_bytes", "models_bytes", "cache_bytes", "partial_downloads_bytes", "job_count", "total_bytes" }` | `COUNT` on `jobs`, file sizes from disk |
-| `POST /v1/storage/cleanup` | `{ "targets": ["cache", "partial_downloads", "old_jobs", "trash", "unused_models"], "older_than_days"?: 30, "dry_run": false }`. `older_than_days` defaults to `jobs.retention_days` and must be at least 1. | `{ "freed_bytes": 0, "removed": { "old_jobs": 12, "trash": 2, "files": 3 }, "dry_run": false }` | `old_jobs`: DELETE from `jobs` where `searched_at` is older than the cutoff, the job is neither archived nor trashed, and no `applications` row references it. `trash`: DELETE trashed jobs whose `trashed_at` is older than `jobs.trash_days` (`older_than_days` does not apply). To empty the Trash at once, the UI deletes each trashed job with `DELETE /v1/jobs/{id}`. Cascades to `revisions`, `suggestions`, `tailored_resumes`. Then `VACUUM`. |
+| `POST /v1/storage/cleanup` | `{ "targets": ["cache", "partial_downloads", "old_jobs", "trash", "unused_models"], "older_than_days"?: 30, "dry_run": false }`. `older_than_days` must be at least 1 when it is given. | `{ "freed_bytes": 0, "removed": { "files": 3, "old_jobs": 12, "trash": 2 }, "dry_run": false }` | `old_jobs`: DELETE from `jobs` where `searched_at` is older than the cutoff, the job is neither archived nor trashed, and no `applications` row references it. `trash`: DELETE trashed jobs whose `trashed_at` is older than the cutoff and that no `applications` row references. `unused_models`: DELETE the model files in `models/` that belong to a catalog entry other than `ai.selected_model`. Cascades to `revisions`, `suggestions`, `tailored_resumes`. Then `VACUUM`. |
+
+The targets:
+
+- `cache`: the Greenhouse and logo caches. Their size is the size of the cache tables, and every cache is emptied.
+- `partial_downloads`: the `.part` files under `models/` that no download is running.
+- `old_jobs`: jobs with no application, neither archived nor trashed, whose `searched_at` is older than the cutoff.
+- `trash`: trashed jobs with no application whose `trashed_at` is older than the cutoff.
+- `unused_models`: the model files in `models/` that belong to a catalog entry other than `ai.selected_model`. The selected model is never removed, and a model that is not downloaded is not reported.
+
+The cutoff is `older_than_days` when the request sends one. Otherwise `old_jobs` uses the `jobs.retention_days` setting and `trash` uses `jobs.trash_days`.
+
+`removed` counts what went: `old_jobs` and `trash` are the jobs removed for those targets, and `files` is the number of files removed (partial downloads and model files). `files` is always there, `0` when nothing was removed. `freed_bytes` is the space that was freed: the cache bytes for `cache`, the partial download bytes for `partial_downloads`, and the size of the removed model files for `unused_models`. The job targets report `0`, because the database file only shrinks once the `VACUUM` after a real cleanup has run.
+
+Deleting a job takes its revisions, suggestions and tailored resumes with it. A job an application points at is never removed. After a real cleanup that removed anything, `VACUUM` runs outside a transaction, so the database file shrinks.
+
+`422` with `validation_failed`: no targets, an unknown target, `older_than_days` below 1, or an unknown field in the body.
 
 The UI calls with `dry_run: true` first to preview removals.
 
-The app also empties the Trash on its own, without the route: at every start it deletes the jobs that have been in the Trash for longer than `jobs.trash_days`, so the Trash never grows without end. The check runs at startup only, so a job waits for the next launch rather than for a background timer.
+The app also cleans up on its own, without the route: at every start it removes the old jobs (older than `jobs.retention_days`) and the jobs that have been in the Trash for longer than `jobs.trash_days`, so the Trash never grows without end. It writes how many jobs it removed to stderr. The check runs at startup only, so a job waits for the next launch rather than for a background timer.
 
 ## Route summary
 

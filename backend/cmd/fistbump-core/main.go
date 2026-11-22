@@ -24,6 +24,16 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
 
+// settingDays reads a number of days from the settings, falling back to def when it is missing
+// or below one.
+func settingDays(value any, def int) int {
+	n, _ := value.(int)
+	if n < 1 {
+		return def
+	}
+	return n
+}
+
 // version is reported by GET /v1/health. Release builds can set it with -ldflags "-X main.version=...".
 var version = "dev"
 
@@ -70,20 +80,24 @@ func run() error {
 		slog.Info("marked interrupted rounds as failed", "rounds", n)
 	}
 
-	// A job in the Trash is deleted once it has been there for jobs.trash_days. The check runs at
-	// startup only: the app is not always on, and a job can wait for the next launch.
+	// Jobs are cleaned up at startup: an old job nobody tracks is thrown away, and a job in
+	// the Trash is deleted once it has been there for jobs.trash_days. The check runs at startup
+	// only: the app is not always on, and a job can wait for the next launch.
 	values, err := st.GetSettings(context.Background())
 	if err != nil {
-		slog.Warn("reading the settings for the trash", "error", err)
+		slog.Warn("reading the settings for the job cleanup", "error", err)
 	} else {
-		days, _ := values["jobs.trash_days"].(int)
-		if days < 1 {
-			days = 1
+		retentionDays := settingDays(values["jobs.retention_days"], 30)
+		trashDays := settingDays(values["jobs.trash_days"], 7)
+		if n, err := st.OldJobs(context.Background(), retentionDays, false); err != nil {
+			slog.Warn("removing old jobs", "error", err)
+		} else if n > 0 {
+			slog.Info("removed old jobs", "jobs", n, "days", retentionDays)
 		}
-		if n, err := st.PurgeTrashedJobs(context.Background(), days); err != nil {
+		if n, err := st.TrashedJobs(context.Background(), trashDays, false); err != nil {
 			slog.Warn("purging the trash", "error", err)
 		} else if n > 0 {
-			slog.Info("purged the trash", "jobs", n)
+			slog.Info("purged the trash", "jobs", n, "days", trashDays)
 		}
 	}
 
