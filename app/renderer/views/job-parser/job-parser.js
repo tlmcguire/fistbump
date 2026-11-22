@@ -451,13 +451,7 @@ window.JobParser = {
             ].filter(Boolean).join(" \u00b7 "))
           );
 
-          //open.addEventListener("click", () => displayPosting(result, true));
-          //attempted fix for selection delay?
-          item.addEventListener("click", event => {
-            if (event.target.closest("a")) return;
-            onOpen(result);
-          });
-          
+          open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
           //the logo, preview and padding open the listing too; the button stays for the keyboard
@@ -576,7 +570,8 @@ window.JobParser = {
         $("result-note").textContent = note;
         $("result-empty-message").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
-        $("result-list").replaceChildren(...data.postings.map(resultItem));
+        //not map(resultItem): map's index argument would land in onOpen
+        $("result-list").replaceChildren(...data.postings.map(result => resultItem(result)));
         markSelected();
 
         renderPager();
