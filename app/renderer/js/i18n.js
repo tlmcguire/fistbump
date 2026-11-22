@@ -58,7 +58,7 @@ window.I18n = (() => {
       sourceText.set(n, {source, shown: t});
       if (t !== n.nodeValue) n.nodeValue = t;
     } else if (n.nodeType === Node.ELEMENT_NODE) {
-      if (n.matches(SKIP) || n.closest("[translate='no']")) return;
+      if (n.closest("[translate='no']")) return;
       const kept = sourceAttrs.get(n) || {};
       for (const a of ATTRS) {
         const v = n.getAttribute(a);
@@ -69,6 +69,8 @@ window.I18n = (() => {
         if (t !== v) n.setAttribute(a, t);
       }
       sourceAttrs.set(n, kept);
+      //a textarea or your own text keeps its content, but its placeholder and labels are the app's
+      if (n.matches(SKIP)) return;
       for (const child of n.childNodes) node(child);
     }
   };

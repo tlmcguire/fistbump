@@ -30,13 +30,17 @@
   //"2022-06-01" -> "Jun 2022", as render.Master writes it
   const formatMonth = date => {
     const m = /^(\d{4})-(\d{2})/.exec(date || "");
-    return m ? `${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`.trim() : date || "";
+    if (!m) return date || "";
+    const code = window.I18n?.locale();
+    if (code && code !== "en") return new Date(Number(m[1]), Number(m[2]) - 1, 1).toLocaleDateString(code, {month: "short", year: "numeric"});
+    return `${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`.trim();
   };
  
   const dateRange = (start, end) => {
     if (!start && !end) return "";
     if (!start) return end ? formatMonth(end) : "";
-    return `${formatMonth(start)} to ${end ? formatMonth(end) : "Present"}`;
+    const t = window.I18n?.translate || (s => s);
+    return `${formatMonth(start)} ${t("to")} ${end ? formatMonth(end) : t("Present")}`;
   };
  
   //A month input holds "2024-06". Stored dates are "2024-06-01"; the API accepts either.
