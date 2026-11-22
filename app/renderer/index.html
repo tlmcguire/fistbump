@@ -14,6 +14,7 @@
                 <div class="sidebar-top drag"></div>
                 <nav class="tree" aria-label="App">
                     <button type="button" id="nav-home" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Home</button>
+                    <button type="button" id="nav-tracker" class="nav-item" data-route="tracker"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Tracker</button>
 
                     <div class="tree-group" data-group="jobs">
                         <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-jobs"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Jobs</button>
@@ -51,6 +52,7 @@
                 <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H6.5v17h11V7z"/><path d="M14 3.5V7h3.5"/><path d="M9.5 12h5M9.5 15.5h5"/></symbol>
                 <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9.5M18.5 7H20M4 17h3.5M12.5 17H20"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></symbol>
                 <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+                <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="m3.5 6.5 1.2 1.2 2-2.4M3.5 12l1.2 1.2 2-2.4M3.5 17.5l1.2 1.2 2-2.4"/></symbol>
             </svg>
 
             <main id="main" class="main view-find">
@@ -138,6 +140,11 @@
                         <div class="field grow">
                             <input id="saved-q" type="search" aria-label="Search saved jobs" placeholder="Search saved jobs by company or title">
                         </div>
+                        <select id="saved-scope" aria-label="Show">
+                            <option value="">Active</option>
+                            <option value="archived">Archived</option>
+                            <option value="trash">Trash</option>
+                        </select>
                     </form>
                 </header>
 
@@ -445,6 +452,13 @@
 
                                 <button id="tailor-job" type="button" class="primary" hidden>Tailor resume</button>
 
+                                <button id="track-job" type="button" hidden>Track</button>
+                                <button id="archive-job" type="button" hidden>Archive</button>
+                                <label id="archive-app-option" class="hint" hidden><input id="archive-app" type="checkbox" checked> Also archive the application</label>
+                                <button id="unarchive-job" type="button" hidden>Unarchive</button>
+                                <button id="trash-job" type="button" hidden>Move to Trash</button>
+                                <button id="restore-job" type="button" class="primary" hidden>Restore</button>
+
                                 <button id="reload-listing" type="button">Reload</button>
 
                                 <button id="delete-job" type="button" class="danger" hidden>Delete</button>
@@ -469,6 +483,9 @@
 
             <!--phase 5 tailor view-->
             <main id="view-tailor" class="main" hidden></main>
+
+            <!--phase 7 tracker view-->
+            <main id="view-tracker" class="main" hidden></main>
         </div>
 
         <script src="js/prefs.js" defer></script>
@@ -478,6 +495,7 @@
         <script src="views/resume-builder/resume-builder.js" defer></script>
         <script src="js/worddiff.js" defer></script>
         <script src="views/diff-view/diff-view.js" defer></script>
+        <script src="views/tracker/tracker.js" defer></script>
         <script src="views/home/home.js" defer></script>
         <script src="js/sidebar.js" defer></script>
         <script src="views/settings/settings.js" defer></script>

@@ -264,10 +264,31 @@
             exportButton.disabled = false;
             if (r?.value?.saved) exportNote.replaceChildren(savedNote(r.value.path));
           });
+
+          //phase 7: track the job with this tailored resume, or set it on the job's application
+          const trackButton = el("button", {type: "button"}, "Track with this resume");
+          trackButton.addEventListener("click", async () => {
+            const tailoredResumeId = t.value.id;
+            const list = await attempt(() => api.applications.list({archived: "include"}));
+            if (!list) return;
+            const existing = list.value.find(a => a.job_id === t.value.job_id);
+            let done = null;
+            if (!existing) {
+              done = await attempt(() => api.applications.create({job_id: t.value.job_id, tailored_resume_id: tailoredResumeId}));
+            } else if (existing.tailored_resume_id === tailoredResumeId) {
+              done = {value: existing};
+            } else {
+              if (!window.confirm("This job is already tracked. Use this tailored resume for its application?")) return;
+              done = await attempt(() => api.applications.update(existing.id, {tailored_resume_id: tailoredResumeId}));
+            }
+            if (done) say("Tracked with this resume.");
+            if (done) trackButton.replaceWith(el("button", {type: "button", onclick: () => window.Tracker.open(done.value.id)}, "Open in tracker"));
+          });
           fill(stage,
             el("div", {class: "tailor-head"},
               el("strong", {text: "Tailored resume"}),
               exportButton,
+              trackButton,
               el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, "Back to suggestions"),
               el("button", {type: "button", class: "danger", onclick: async () => {
                 if (!window.confirm("Delete this tailored resume?")) return;

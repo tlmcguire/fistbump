@@ -22,6 +22,8 @@ window.JobParser = {
       let detailRetry = null;    //and in the detail pane
       let detailSeq = 0;         //counts what the detail pane was given, so a slow load cannot land over a newer one
       let activeTab = "find";
+      let trackedApp = null; //the open saved job's application, or null (phase 7)
+      let lifecycleSeq = 0;
       let lastJobsTab = "find"; //the last of Find jobs and Open a link that was shown
       let results = null;
       let searchedQuery = {};
@@ -228,7 +230,8 @@ window.JobParser = {
         $("delete-job").hidden = !saved;
 
         $("tailor-job").hidden = !saved;
-        
+        drawLifecycle(saved ? data : null);
+
         $("reload-listing").hidden = saved || !data.board;
         $("back-to-results").hidden = !(opened && (results || activeTab === "saved"));
         renderAnalysis(saved ? data.id : null);
@@ -792,12 +795,17 @@ window.JobParser = {
       });
 
       // ---- Saved tab ----
+      //Active, Archived or Trash
+      const savedScope = () => ({archived: {archived: "only"}, trash: {trashed: "only"}})[$("saved-scope").value] || {};
       const loadSaved = async () => {
         try {
-          const jobs = await jobsApi.list($("saved-q").value.trim());
+          const jobs = await jobsApi.list($("saved-q").value.trim(), savedScope());
           for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
           $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
-          $("saved-empty-message").textContent = "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
+          $("saved-empty-message").textContent = ({
+            archived: "No archived jobs.",
+            trash: "The Trash is empty.",
+          })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
           markSelected();
         } catch (error) {
@@ -806,6 +814,7 @@ window.JobParser = {
         }
       };
       $("saved-q").addEventListener("input", loadSaved);
+      $("saved-scope").addEventListener("change", loadSaved);
       $("saved-form").addEventListener("submit", event => event.preventDefault());
 
       // Same shape as loadPosting
@@ -819,6 +828,123 @@ window.JobParser = {
         } catch (error) {
           if (mine === detailSeq) showDetailError(error);
         }
+      };
+
+      // ---- Track, archive and trash (phase 7) ----
+      const appsApi = window.FistBumpAPI.applications;
+
+      //the application for a job, archived ones included
+      async function applicationFor(jobId) {
+        return (await window.FistBumpAPI.applications.list({archived: "include"})).find(a => a.job_id === jobId) || null;
+      }
+
+      //shows the buttons that fit the open saved job: trashed jobs only offer Restore
+      async function drawLifecycle(job) {
+        const mine = ++lifecycleSeq;
+        trackedApp = null;
+        const trashed = Boolean(job?.trashed_at);
+        const archived = Boolean(job?.archived_at);
+        $("track-job").hidden = !job || trashed;
+        $("track-job").textContent = "Track";
+        $("archive-job").hidden = !job || trashed || archived;
+        $("archive-app-option").hidden = true;
+        $("unarchive-job").hidden = !job || trashed || !archived;
+        $("trash-job").hidden = !job || trashed;
+        $("restore-job").hidden = !trashed;
+        $("tailor-job").hidden = !job || trashed;
+        if (!job || trashed) return;
+        try {
+          const app = await applicationFor(job.id);
+          if (mine !== lifecycleSeq) return;
+          trackedApp = app;
+          $("track-job").textContent = app ? "Open in tracker" : "Track";
+          $("archive-app-option").hidden = !app || archived;
+          $("archive-app").checked = true;
+        } catch {
+          //Track still works; it reports any error itself
+        }
+      }
+
+      //after a change, the open job and the Saved list are read again
+      const refreshJob = async () => {
+        const job = await jobsApi.get(posting.id);
+        displayPosting(job, fromResults);
+        loadSaved();
+      };
+
+      $("track-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        try {
+          const existing = trackedApp || await applicationFor(posting.id);
+          if (existing) return window.Tracker.open(existing.id);
+          const created = await appsApi.create({job_id: posting.id});
+          trackedApp = created;
+          $("track-job").textContent = "Open in tracker";
+          $("archive-app-option").hidden = Boolean(posting.archived_at);
+        } catch (error) {
+          //409: tracked already, for example from another window; open that row
+          const id = error.details?.application_id;
+          if (id) return window.Tracker.open(id);
+          window.alert(error.message);
+        }
+      });
+
+      const archiveJob = async () => {
+        await jobsApi.archive(posting.id, {archive_application: Boolean(trackedApp) && $("archive-app").checked});
+        await refreshJob();
+      };
+
+      $("archive-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        try {
+          await archiveJob();
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+
+      $("unarchive-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        try {
+          await jobsApi.unarchive(posting.id);
+          await refreshJob();
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+
+      $("trash-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        try {
+          await jobsApi.trash(posting.id);
+          showDetailEmpty();
+          loadSaved();
+        } catch (error) {
+          //409: the job has an application, so it can be archived instead
+          if (error.code !== "conflict") return window.alert(error.message);
+          if (!window.confirm(`${error.message}, so it cannot go to the Trash. Archive it instead?`)) return;
+          try {
+            await archiveJob();
+          } catch (archiveError) {
+            window.alert(archiveError.message);
+          }
+        }
+      });
+
+      $("restore-job").addEventListener("click", async () => {
+        if (!posting?.id) return;
+        try {
+          await jobsApi.restore(posting.id);
+          await refreshJob();
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+
+      //the tracker opens a job here: show it in the Saved tab
+      window.JobParser.openJob = id => {
+        if (activeTab !== "saved") selectTab("saved");
+        openSavedJob({id});
       };
 
       // ---- Tailor: open the saved job in the Tailor view ----

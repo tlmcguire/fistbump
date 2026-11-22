@@ -102,10 +102,28 @@ contextBridge.exposeInMainWorld('api', {
   jobs: {
     parse: (t) => ipcRenderer.invoke('jobs:parse', t),
     create: (b) => ipcRenderer.invoke('jobs:create', b),
-    list: (q) => ipcRenderer.invoke('jobs:list', q),
+    list: (q, opts) => ipcRenderer.invoke('jobs:list', q, opts),
     get: (id) => ipcRenderer.invoke('jobs:get', id),
     update: (id, b) => ipcRenderer.invoke('jobs:update', id, b),
     delete: (id) => ipcRenderer.invoke('jobs:delete', id),
     analyze: (id) => ipcRenderer.invoke('jobs:analyze', id),
+    //phase 7: list takes (q, { archived, trashed }); archive takes (id, { archive_application })
+    archive: (id, opts) => ipcRenderer.invoke('jobs:archive', id, opts),
+    unarchive: (id) => ipcRenderer.invoke('jobs:unarchive', id),
+    trash: (id) => ipcRenderer.invoke('jobs:trash', id),
+    restore: (id) => ipcRenderer.invoke('jobs:restore', id),
+  },
+
+  //phase 7: the application tracker
+  applications: {
+    list: (filters) => ipcRenderer.invoke('applications:list', filters),
+    create: (body) => ipcRenderer.invoke('applications:create', body),
+    get: (id) => ipcRenderer.invoke('applications:get', id),
+    update: (id, patch) => ipcRenderer.invoke('applications:update', id, patch),
+    delete: (id) => ipcRenderer.invoke('applications:delete', id),
+    bulkStatus: (ids, status) => ipcRenderer.invoke('applications:bulkStatus', ids, status),
+    archive: (id) => ipcRenderer.invoke('applications:archive', id),
+    unarchive: (id) => ipcRenderer.invoke('applications:unarchive', id),
+    bulkArchive: (ids, archived) => ipcRenderer.invoke('applications:bulkArchive', ids, archived),
   },
 });
