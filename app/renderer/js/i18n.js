@@ -10,6 +10,8 @@ window.I18n = (() => {
   let exact = new Map();
   let patterns = [];
   let busy = false;
+  const sourceText = new WeakMap();  //text node -> its English text
+  const sourceAttrs = new WeakMap(); //element -> {attribute: English value}
 
   const add = (code, entries) => { catalogs[code] = {...(catalogs[code] || {}), ...entries}; };
 
@@ -26,6 +28,7 @@ window.I18n = (() => {
 
   const translate = text => {
     if (lang === "en" || typeof text !== "string") return text;
+    if (!exact.size && !patterns.length) return text;
     const lead = text.match(/^\s*/)[0];
     const tail = text.match(/\s*$/)[0];
     const core = text.trim();
@@ -42,17 +45,30 @@ window.I18n = (() => {
   const SKIP = "script, style, textarea, [translate='no'], .listing, .result-body, .preview-text, .diff-col ins, .diff-col del, .pdf-frame";
   const ATTRS = ["placeholder", "aria-label", "title", "alt"];
 
+  //Translates one node and what is inside it. The English is kept, so the language can change again later.
   const node = n => {
     if (n.nodeType === Node.TEXT_NODE) {
       if (n.parentElement && (n.parentElement.closest(SKIP) || n.parentElement.classList.contains("diff-col"))) return; //your resume text
-      const t = translate(n.nodeValue);
+      //an <option> with no value attribute takes its value from its text, so translating it would change the data sent
+      if (n.parentElement?.tagName === "OPTION" && !n.parentElement.hasAttribute("value")) return;
+      const known = sourceText.get(n);
+      //text a script wrote after the last translation is the new English
+      const source = known && known.shown === n.nodeValue ? known.source : n.nodeValue;
+      const t = translate(source);
+      sourceText.set(n, {source, shown: t});
       if (t !== n.nodeValue) n.nodeValue = t;
     } else if (n.nodeType === Node.ELEMENT_NODE) {
       if (n.matches(SKIP) || n.closest("[translate='no']")) return;
+      const kept = sourceAttrs.get(n) || {};
       for (const a of ATTRS) {
         const v = n.getAttribute(a);
-        if (v) { const t = translate(v); if (t !== v) n.setAttribute(a, t); }
+        if (!v) continue;
+        const source = kept[a] && kept[a].shown === v ? kept[a].source : v;
+        const t = translate(source);
+        kept[a] = {source, shown: t};
+        if (t !== v) n.setAttribute(a, t);
       }
+      sourceAttrs.set(n, kept);
       for (const child of n.childNodes) node(child);
     }
   };
@@ -74,17 +90,30 @@ window.I18n = (() => {
     return LANGUAGES.some(([c]) => c === code) ? code : "en";
   };
 
-  //starts translating the page. Called once, after the page is drawn and the language files are loaded.
-  const init = setting => {
-    lang = pick(setting);
+  const apply = code => {
+    lang = code;
     document.documentElement.lang = lang;
-    if (lang === "en") return;
-    compile(catalogs[lang] || {});
+    compile(lang === "en" ? {} : (catalogs[lang] || {}));
     busy = true;
     node(document.body);
     busy = false;
+  };
+
+  //starts translating the page. Called once, before the views draw, after the language files load.
+  const init = setting => {
+    apply(pick(setting));
     observer.observe(document.body, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS});
   };
 
-  return {LANGUAGES, add, init, translate, locale: () => lang, t: (s, ...args) => translate(s).replace(/\{(\d)\}/g, (_, n) => args[n] ?? "")};
+  //Changes the language in place: every string goes back to its English and on to the new language.
+  //Listeners hear about it, for text a view builds from parts (dates, counts).
+  const listeners = new Set();
+  const change = setting => {
+    const code = pick(setting);
+    if (code === lang) return;
+    apply(code);
+    listeners.forEach(fn => fn(code));
+  };
+
+  return {LANGUAGES, add, init, change, onChange: fn => listeners.add(fn), translate, locale: () => lang, t: (s, ...args) => translate(s).replace(/\{(\d)\}/g, (_, n) => args[n] ?? "")};
 })();

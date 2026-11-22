@@ -289,7 +289,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 .tree-head:hover:not(:disabled) { background: transparent; color: var(--muted); }
 .tree-head .chevron { width: 14px; height: 14px; transition: transform 120ms ease; }
 .tree-group.folded .chevron { transform: rotate(-90deg); }
-.tree-group.folded .tree-body { display: none; }
+.tree-group.folded .tree-body { display: none; } /* motion.css folds it smoothly */
 
 .tree-body { display: flex; flex-direction: column; gap: 1px; }
 
@@ -417,7 +417,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 240px));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 10px 14px;
   align-items: end;
   margin: 3px -16px -11px;

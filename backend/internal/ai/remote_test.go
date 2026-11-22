@@ -125,6 +125,23 @@ func TestChatRetriesWithoutJSONModeOn400(t *testing.T) {
 	}
 }
 
+func TestChatRetriesWithoutJSONModeOn501(t *testing.T) {
+	s := newOpenAIServer(t, func(w http.ResponseWriter, body chatRequest, call int) {
+		if body.ResponseFormat != nil {
+			w.WriteHeader(http.StatusNotImplemented)
+			w.Write([]byte(`{"error":{"message":"structured output is unavailable"}}`))
+			return
+		}
+		reply(w, `{"proposed":"x","reason":"y"}`)
+	})
+	r := NewRemote()
+	r.Configure(s.URL+"/v1", "m", "")
+	got, err := r.Chat(context.Background(), nil, 8, true)
+	if err != nil || got != `{"proposed":"x","reason":"y"}` || len(s.requests) != 2 {
+		t.Fatalf("Chat = %q, %v after %d requests", got, err, len(s.requests))
+	}
+}
+
 func TestRedirectToAnotherHostIsRefused(t *testing.T) {
 	var leaked bool
 	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

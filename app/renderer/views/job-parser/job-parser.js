@@ -90,6 +90,7 @@ window.JobParser = {
 
       //switches between Find jobs and Open a link. Each keeps its own results and listing on screen.
       const selectTab = name => {
+        if (name !== activeTab && !main.hidden) window.UI.play(main, "view-enter", 320); //same arrival as a page change
         //Find jobs and Open a link each show their own listing; Settings leaves the open one as it was.
         if (activeTab !== "settings") scrolls[activeTab] = {list: listPane.scrollTop, detail: detailPane.scrollTop};
         activeTab = name;
@@ -199,6 +200,7 @@ window.JobParser = {
   
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
+        window.UI.play(detailPane, "enter", 360);
         //A listing opened from results or reloaded has no id, but it may already be saved.
         const savedId = !data.id && data.board && savedByListing.get(`${data.board}/${data.external_id}`);
         if (savedId) data = {...data, id: savedId};
@@ -215,7 +217,7 @@ window.JobParser = {
         $("job-description").textContent = data.raw_text || "No description was given.";
 
         fillLogo($("job-logo"), data.company_name, data.company_url, data.board);
-        setLink("job-link", data.listing_url, {dim: true});
+        setLink("job-link", data.listing_url); //a pasted job has no listing, so the button is not shown
         setLink("company-link", data.company_url);
 
         main.classList.add("has-detail");
@@ -590,6 +592,7 @@ window.JobParser = {
         $("result-empty").hidden = data.postings.length > 0;
         //not map(resultItem): map's index argument would land in onOpen
         $("result-list").replaceChildren(...data.postings.map(result => resultItem(result)));
+        window.UI.stagger($("result-list"), 22, 10);
         markSelected();
 
         renderPager();
@@ -628,6 +631,7 @@ window.JobParser = {
           renderResults(data);
           showState("state-results");
           $("results-pane").scrollTop = 0;
+          return true;
         } catch (error) {
           if (mine !== searchSeq) return;
           if (error.message === "Search canceled") {
@@ -767,11 +771,14 @@ window.JobParser = {
           return;
         }
         saveForm();
-        recordSearch();
-        window.Suggest.remember("keywords", query.keywords);
-        window.Suggest.remember("location", [query.location]);
-        window.Suggest.remember("company", [query.company]);
-        runSearch(query);
+        //only a search that worked goes into the history and the suggestions
+        runSearch(query).then(ok => {
+          if (!ok) return;
+          recordSearch();
+          window.Suggest.remember("keywords", query.keywords);
+          window.Suggest.remember("location", [query.location]);
+          window.Suggest.remember("company", [query.company]);
+        });
       });
 
       form.addEventListener("submit", event => {
@@ -1067,12 +1074,16 @@ window.JobParser = {
         const value = field.value.trim();
         return value !== "" && value !== "Any" && value !== "0";
       };
+      let shownCount = 0;
       const updateFilterCount = () => {
         const count = FILTER_IDS.filter(filterInUse).length;
+        if (count !== shownCount && count > 0) window.UI.play($("filters-count"), "pop", 420); //the badge answers each change
+        shownCount = count;
         $("filters-count").hidden = count === 0;
         $("filters-count").textContent = String(count);
-        $("filters-toggle").title = count ? `${count} ${count === 1 ? "filter" : "filters"} in use` : "Filters";
+        $("filters-toggle").title = count ? (count === 1 ? "1 filter in use" : `${count} filters in use`) : "Show or hide search filters";
       };
+      //The filters open as a drawer under the search bar; motion.css grows and shrinks it (see #filters there).
       const setFiltersOpen = open => {
         $("filters").hidden = !open;
         $("filters-toggle").setAttribute("aria-expanded", String(open));
@@ -1295,17 +1306,16 @@ window.JobParser = {
       window.Suggest.attach($("search-keywords"), {key: "keywords", fixed: window.Suggest.TITLES, list: true});
       window.Suggest.attach($("search-location"), {key: "location", fixed: window.Suggest.PLACES});
 
-      //Keyboard shortcuts: Cmd/Ctrl+F to search, Cmd/Ctrl+1 and 2 to switch views, Esc to close the filters.
+      //Keyboard shortcuts: Cmd/Ctrl+F to search and Cmd/Ctrl+, for settings; Esc closes the filters.
+      //Cmd/Ctrl+1 to 5 belong to the whole app (app.js) and are not handled here.
       document.addEventListener("keydown", event => {
         const mod = window.api?.platform === "darwin" ? event.metaKey : event.ctrlKey;
         if (mod && !event.shiftKey && !event.altKey) {
-          //Suggestion from clanker after adding the Resume view
-          //If resume view is open, this prevents Ctrl+F focusing a hidden box, Cmd/Ctrl+1 and 2 bring Jobs back.
           if (main.hidden) {
-            if (event.key === "1" || event.key === "2" || event.key === ",") {
+            if (event.key === ",") {
               event.preventDefault();
               location.hash = "#/jobs";
-              selectTab({"1": "find", "2": "link", ",": "settings"}[event.key]);
+              selectTab("settings");
             }
             return;
           }
@@ -1317,17 +1327,12 @@ window.JobParser = {
           } else if (event.key === ",") {
             event.preventDefault();
             selectTab("settings");
-          } else if (event.key === "1" || event.key === "2") {
-            event.preventDefault();
-            selectTab(event.key === "1" ? "find" : "link");
           }
         } else if (event.key === "Escape" && !event.defaultPrevented && !$("filters").hidden) {
           setFiltersOpen(false);
           $("filters-toggle").focus();
         }
       });
-      $("tab-find").title = `Find jobs (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}1)`;
-      $("tab-link").title = `Open a link (${window.api?.platform === "darwin" ? "\u2318" : "Ctrl+"}2)`;
 
       //What the settings page needs from this view.
       window.JobParser.selectTab = selectTab;

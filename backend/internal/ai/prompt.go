@@ -46,11 +46,16 @@ func BuildPrompt(t Target, r Request) []Message {
 	}
 	fmt.Fprintf(&b, "Part of the resume: %s\n", oneLine(t.Label))
 	b.WriteString(sectionRule(t))
-	fmt.Fprintf(&b, "\nWrite the reason in %s. Keep the rewritten text in the language of the original.", languageRule(r.Language))
+	fmt.Fprintf(&b, "\nWrite the \"reason\" in %s. Keep \"proposed\" in the language of the original text.", languageRule(r.Language))
 	b.WriteString("\n\nOriginal text:\n")
 	b.WriteString(plainText(t.Original))
+	system := systemPrompt
+	if lang := languageRule(r.Language); lang != "English" {
+		//a small model follows this far better in the system message, and with the key spelled out
+		system += fmt.Sprintf("\n- The \"reason\" must be written in %s, not in English, even though the resume text is in another language.", lang)
+	}
 	return []Message{
-		{Role: "system", Content: systemPrompt},
+		{Role: "system", Content: system},
 		{Role: "user", Content: b.String()},
 	}
 }

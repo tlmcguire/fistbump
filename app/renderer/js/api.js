@@ -11,7 +11,9 @@ window.FistBumpAPI = {
         throw new Error(msg || "Connection error");
       }
       //updated front end error handling for pahse 03
-      if (result?.error) {
+      //a failed request is {error: {code, message}}. A revision or a test result may carry "error" as a plain
+      //string (why a round failed), which is data to show, not a failed request.
+      if (result?.error && typeof result.error === "object") {
         const error = new Error(result.error.message || "An unknown error has occurred");
         error.code = result.error.code;
         error.details = result.error.details;

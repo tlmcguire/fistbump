@@ -63,7 +63,6 @@ const ROUTES = {
   'resume:preview': () => ['GET', '/v1/resume/preview'],
   'ai:status': () => ['GET', '/v1/ai/status'],
   'ai:setMode': (mode) => AI_MODES.includes(mode) ? ['PUT', '/v1/ai/mode', { mode }] : bad('Choose automatic, local, remote or rules.'),
-  'ai:test': (engine) => AI_ENGINES.includes(engine) ? ['POST', '/v1/ai/test', { engine }] : bad('Test the local or the remote engine.'),
   'resume:importText': (text) => typeof text === 'string' && text.trim() ? ['POST', '/v1/resume/import', { text }] : bad('Paste the text of your resume.'),
   'resume:importApply': (body) => isObject(body) && isObject(body.draft) ? ['POST', '/v1/resume/import/apply', body] : bad('Invalid import'),
 
@@ -342,6 +341,16 @@ function register(ipcMain, backend, deps = {}) {
     }
     return { ...result, key_remembered: remembered };
   });
+  // A failed test is still a 200 with "error" holding the reason; the page reads any "error" as a failed
+  // request, so the reason is passed on as "problem".
+  ipcMain.handle('ai:test', async (_event, engine) => {
+    if (!AI_ENGINES.includes(engine)) return bad('Test the local or the remote engine.');
+    const result = await backend.call('POST', '/v1/ai/test', { engine });
+    if (result?.error && typeof result.error === 'object') return result; // the request itself failed
+    const { error, ...rest } = result || {};
+    return { ...rest, problem: error || null };
+  });
+
   ipcMain.handle('ai:clearRemote', async () => {
     const result = await backend.call('DELETE', '/v1/ai/remote');
     if (!result?.error) deps.secrets?.clear?.();

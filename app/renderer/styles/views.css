@@ -292,3 +292,64 @@ th[aria-sort="ascending"] .sort-button, th[aria-sort="descending"] .sort-button 
 .link-button { color: var(--text); text-decoration-color: rgba(242, 245, 251, 0.5); }
 .link-button:hover:not(:disabled), .link-button:active:not(:disabled) { background: none; filter: none; text-decoration-color: var(--text); text-decoration-thickness: 2px; }
 .link-button:disabled { color: var(--muted); }
+
+/* ---------- Fixes from the second critique ---------- */
+
+/* The listing's actions: the gold one first, the removals pushed apart to the end */
+.job-actions { align-items: center; }
+.job-actions-gap { flex: 1 1 8px; }
+button.danger-text { color: var(--danger-text); }
+button.danger-text:hover:not(:disabled) { color: #fff; background: rgba(179, 38, 30, 0.55); }
+
+/* A key hint inside a gold button keeps the button's ink, not the dark page's */
+button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12); border-color: rgba(10, 37, 92, 0.32); }
+
+/* Settings selected in the sidebar: the icon carries the gold, the word stays white */
+.icon-button[aria-selected="true"] .icon-button-label { color: var(--text); }
+
+/* A decision already made reads as chosen, not as one more plain button */
+.tailor-actions button[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px currentColor; font-weight: 650; }
+.tailor-card[data-state="accepted"] .tailor-actions button[aria-pressed="true"] { color: var(--good); }
+.tailor-card[data-state="rejected"] .tailor-actions button[aria-pressed="true"] { color: var(--bad); }
+
+.home-done { color: var(--text); }
+
+/* ---------- Tooltips ---------- */
+
+.tip {
+  position: fixed;
+  z-index: 200;
+  max-width: 280px;
+  padding: 6px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #1c3f86;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(4, 12, 32, 0.45), 0 1px 3px rgba(4, 12, 32, 0.35);
+  pointer-events: none;
+}
+.tip::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--arrow, 50%) - 5px);
+  width: 8px;
+  height: 8px;
+  background: #1c3f86;
+  border: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+.tip[data-side="below"]::after { top: -5px; border-right: 0; border-bottom: 0; }
+.tip[data-side="above"]::after { bottom: -5px; border-left: 0; border-top: 0; }
+.tip kbd { margin-left: 6px; color: var(--text); background: rgba(255, 255, 255, 0.1); }
+
+/* ---------- Filters drawer layout ---------- */
+
+.filters-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+
+/* ---------- Keyboard shortcuts in Settings ---------- */
+
+.keys { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); white-space: nowrap; }
+.keys kbd { font-size: 12px; line-height: 20px; min-width: 22px; }

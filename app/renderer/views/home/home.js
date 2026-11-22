@@ -16,6 +16,9 @@
     }
   };
 
+  //dates follow the app's language, not only the system's
+  const locale = () => window.I18n?.locale() || undefined;
+
   //"Today", "Yesterday" or "Oct 24"
   const day = iso => {
     const then = new Date(iso);
@@ -24,7 +27,7 @@
     const days = Math.round((start(new Date()) - start(then)) / 86400000);
     if (days === 0) return "Today";
     if (days === 1) return "Yesterday";
-    return then.toLocaleDateString(undefined, {month: "short", day: "numeric"});
+    return then.toLocaleDateString(locale(), {month: "short", day: "numeric"});
   };
 
   const greeting = () => {
@@ -123,19 +126,58 @@
     return gaps;
   }
 
-  //"Your name, contact details and 2 jobs are in."
+  //"Done: Name · Contact details · 2 jobs". Each part is its own phrase, so it translates on its own.
   function resumeDone(master) {
     const p = master.profile;
     const done = [];
-    if (p.full_name) done.push("your name");
-    if (p.email || p.phone) done.push("contact details");
-    if (p.summary) done.push("a summary");
+    if (p.full_name) done.push("Name");
+    if (p.email || p.phone) done.push("Contact details");
+    if (p.summary) done.push("Summary");
     if (master.experiences.length) done.push(master.experiences.length === 1 ? "1 job" : `${master.experiences.length} jobs`);
-    if (master.education.length) done.push(master.education.length === 1 ? "a school" : `${master.education.length} schools`);
-    if (!done.length) return "";
-    const list = done.length === 1 ? done[0] : `${done.slice(0, -1).join(", ")} and ${done.at(-1)}`;
-    const verb = done.length > 1 || done[0].endsWith("s") ? "are" : "is";
-    return `${list[0].toUpperCase()}${list.slice(1)} ${verb} in.`;
+    if (master.education.length) done.push(master.education.length === 1 ? "1 school" : `${master.education.length} schools`);
+    return done.length ? `Done: ${done.join(" \u00b7 ")}` : "";
+  }
+
+  // ---------- What needs you ----------
+
+  //Steps due or overdue, suggestions still to decide, and saved jobs with no tailored resume yet: the work in
+  //flight, most urgent first. Kept to a few rows; the Tracker and Tailor hold the rest.
+  async function pipeline(limit = 4) {
+    const today = window.Tracker?.localToday?.() || new Date().toISOString().slice(0, 10);
+    const [apps, jobs] = await Promise.all([
+      api().applications.list({}).catch(() => []),
+      api().jobs.list("").catch(() => []),
+    ]);
+    const items = [];
+    for (const a of (apps || []).filter(a => a.next_step_date && a.next_step_date <= today && !a.archived_at)
+      .sort((x, y) => x.next_step_date < y.next_step_date ? -1 : 1)) {
+      items.push({
+        kind: "due",
+        title: [a.company_name || "Unknown company", a.position_title].filter(Boolean).join(", "),
+        detail: a.next_step_date < today ? "Next step is overdue" : "Next step is due today",
+        aside: "Open", onclick: () => window.Tracker.open(a.id),
+      });
+    }
+    const tracked = new Set((apps || []).map(a => a.job_id));
+    for (const job of (jobs || []).slice(0, 6)) {
+      if (items.length >= limit) break;
+      const rounds = await api().revisions.list(job.id).catch(() => []);
+      const name = [job.position_title, job.company_name].filter(Boolean).join(", ");
+      const latest = rounds?.[0];
+      if (latest?.status === "done") {
+        const full = await api().revisions.get(latest.id).catch(() => null);
+        const left = full ? full.suggestions.filter(s => s.state === "pending").length : 0;
+        if (left) {
+          items.push({kind: "review", title: name, detail: left === 1 ? "1 suggestion to decide" : `${left} suggestions to decide`,
+            aside: "Review", onclick: () => window.Tailor.open(job.id)});
+          continue;
+        }
+      }
+      if (!rounds?.length && !tracked.has(job.id)) {
+        items.push({kind: "tailor", title: name, detail: "Saved, not tailored yet", aside: "Tailor", onclick: () => window.Tailor.open(job.id)});
+      }
+    }
+    return items.slice(0, limit);
   }
 
   // ---------- Recent searches ----------
@@ -169,7 +211,8 @@
     const resumeSection = el("section", {class: "home-section", "aria-labelledby": "home-resume-h"});
     const versionsSection = el("section", {class: "home-section", "aria-labelledby": "home-versions-h"});
     const searchSection = el("section", {class: "home-section", "aria-labelledby": "home-search-h"});
-    const home = el("div", {class: "home"}, introSlot, welcome,
+    const needsSection = el("section", {class: "home-section home-needs", "aria-labelledby": "home-needs-h", hidden: true});
+    const home = el("div", {class: "home"}, introSlot, welcome, needsSection,
       el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
 
     container.replaceChildren(
@@ -179,21 +222,22 @@
     let seq = 0;
     async function refresh() {
       const mine = ++seq;
-      const [master, versions] = await Promise.all([
+      const [master, versions, needs] = await Promise.all([
         api().resume.get().catch(() => null),
         api().resumes.list().catch(() => []),
+        pipeline().catch(() => []),
       ]);
       if (mine !== seq) return;
-      render(master || {profile: null, experiences: [], education: []}, versions || []);
+      render(master || {profile: null, experiences: [], education: []}, versions || [], needs || []);
     }
 
-    function render(master, versions) {
+    function render(master, versions, needs = []) {
       const p = master.profile;
       const gaps = resumeGaps(master);
       //A listing remembered before its text was kept cannot be shown without Greenhouse, so it is not offered.
       const kept = readJSON(LISTING_KEY);
       const listing = typeof kept?.raw_text === "string" ? kept : null;
-      const today = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      const today = new Date().toLocaleDateString(locale(), {weekday: "long", month: "long", day: "numeric"});
       const firstName = (p?.full_name || "").split(/\s+/)[0];
 
       // Welcome: the greeting, where things stand, and the one thing worth doing next.
@@ -211,13 +255,18 @@
         const status = gaps.length === 0 ? "Your resume is ready to tailor."
           : gaps.length <= 2 ? "Your resume is nearly there."
           : "Your resume has a few gaps left to fill.";
-        const then = listing ? " The listing you were reading is right where you left it." : "";
         const hello = away ? "Welcome back" : greeting();
+        //each sentence is its own text, so each can be translated; the date is already in the app's language
+        const line = el("p", {}, el("span", {translate: "no", text: `${today}.`}), " ");
+        for (const sentence of [away?.text, status, listing && "The listing you were reading is right where you left it."]) {
+          if (sentence) line.append(document.createTextNode(sentence), " ");
+        }
+        const next = needs[0];
         fill(welcome,
           el("div", {class: "home-welcome-text"},
-            el("h2", {id: "home-greeting", text: firstName ? `${hello}, ${firstName}` : hello}),
-            el("p", {text: `${today}. ${away ? `${away.text} ` : ""}${status}${then}`}),
-            listing ? row({
+            el("h2", {id: "home-greeting"}, el("span", {text: hello}), firstName ? el("span", {translate: "no", text: `, ${firstName}`}) : null),
+            line,
+            !listing && next ? row(next) : listing ? row({
               title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
               detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
               aside: "Keep reading",
@@ -229,14 +278,23 @@
           pico(greetingPose()));
       }
 
+      // What needs you: due steps, decisions, jobs to tailor. The first one is also the welcome's next step.
+      const rest = listing ? needs : needs.slice(1);
+      needsSection.hidden = !rest.length;
+      fill(needsSection,
+        el("h3", {id: "home-needs-h", text: "Needs you"}),
+        el("p", {text: "Follow-ups that are due, suggestions to decide and jobs to tailor."}),
+        rest.length ? rows(rest) : null);
+
       // Finish your resume
       const done = p ? resumeDone(master) : "";
       fill(resumeSection,
         p && gaps.length > 0 && gaps.length <= 2 ? nudge() : null,
         el("h3", {id: "home-resume-h", text: gaps.length || !p ? "Finish your resume" : "Your resume"}),
         !p ? el("p", {text: "Nothing here yet. Your profile, jobs and schools will show up as you add them."})
-          : gaps.length ? el("p", {text: `${done ? `${done} ` : ""}${gaps.length === 1 ? "One thing left:" : `${gaps.length} things left:`}`})
-          : el("p", {text: `${done} Nothing is missing.`}),
+          : gaps.length ? el("p", {}, done ? el("span", {class: "home-done", text: done}) : null, done ? " " : null,
+            el("span", {text: gaps.length === 1 ? "One thing left:" : `${gaps.length} things left:`}))
+          : el("p", {}, el("span", {class: "home-done", text: done}), " ", el("span", {text: "Nothing is missing."})),
         gaps.length ? rows(gaps.map(g => ({...g, onclick: () => openResume(g.target)}))) : null);
 
       // Saved versions

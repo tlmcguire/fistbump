@@ -35,11 +35,18 @@ window.UI = (() => {
   const ask = (message, {confirm = "OK", cancel = "Cancel", danger = false, title = null} = {}) => new Promise(resolve => {
     const previous = document.activeElement;
     const dialog = make("dialog", {class: "ask", "aria-label": title || "Confirm"});
+    let done = false;
     const finish = answer => {
-      dialog.close();
-      dialog.remove();
-      if (previous && previous.isConnected) previous.focus();
+      if (done) return;
+      done = true;
       resolve(answer);
+      //it leaves faster than it came: a short fade and sink, then it is gone
+      dialog.classList.add("closing");
+      setTimeout(() => {
+        dialog.close();
+        dialog.remove();
+        if (previous && previous.isConnected) previous.focus();
+      }, motion() ? 140 : 90);
     };
     const yes = make("button", {type: "button", class: danger ? "danger-solid" : "primary", text: confirm, onclick: () => finish(true)});
     const no = cancel === null ? null : make("button", {type: "button", text: cancel, onclick: () => finish(false)});
@@ -57,7 +64,7 @@ window.UI = (() => {
 
   //A button for something that cannot be undone asks to be pressed again within a few seconds.
   const confirmFirst = (button, label, action) => {
-    const original = button.textContent;
+    let original = button.textContent;
     let timer = null;
     const reset = () => {
       clearTimeout(timer);
@@ -67,6 +74,7 @@ window.UI = (() => {
     button.addEventListener("click", async event => {
       if (!button.classList.contains("confirming")) {
         event.stopImmediatePropagation();
+        original = button.textContent;
         button.classList.add("confirming");
         button.textContent = label;
         timer = setTimeout(reset, 4000);
@@ -119,5 +127,14 @@ window.UI = (() => {
     requestAnimationFrame(tick);
   };
 
-  return {motion, make, icon, ask, alert, confirmFirst, pico, play, stagger, countTo};
+  //Runs a change that redraws much of the window as a view transition: the old picture fades out as the new
+  //one comes in. type picks the style in motion.css ("language"); reduced motion gets a short plain crossfade.
+  const transition = (update, type) => {
+    if (!document.startViewTransition || document.hidden) { update(); return; }
+    root.dataset.vt = type;
+    const t = document.startViewTransition(update);
+    t.finished.finally(() => { delete root.dataset.vt; });
+  };
+
+  return {motion, transition, make, icon, ask, alert, confirmFirst, pico, play, stagger, countTo};
 })();

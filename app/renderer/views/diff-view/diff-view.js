@@ -15,6 +15,7 @@
       const {icon, pico, ask, confirmFirst, motion, play, stagger, countTo} = window.UI;
       const api = window.FistBumpAPI;
       const SECTION = {header: "Header", summary: "Summary", experience: "Experience", education: "Education", skills: "Skills"};
+      const CHANGE = {changed: "Changed", added: "Added", removed: "Removed"};
       const STATUS = {queued: "Starting", running: "Writing", done: "Ready", failed: "Failed", canceled: "Canceled"};
       const ENGINE = {local: "Local model", remote: "Remote provider", rules: "Built-in rules"};
       const STATE = {
@@ -54,7 +55,7 @@
 
       const jobSelect = el("select", {id: "tailor-job"});
       const baseSelect = el("select", {id: "tailor-base"});
-      const generate = el("button", {type: "button", class: "primary", onclick: () => startRound()}, "Generate suggestions");
+      const generate = el("button", {type: "button", class: "primary", title: "Write a new round of suggestions for the chosen job", onclick: () => startRound()}, "Generate suggestions");
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
       const field = (id, label, select) => el("div", {class: "picker"}, el("label", {for: id, text: label}), select);
 
@@ -68,7 +69,7 @@
             field("tailor-base", "Based on", baseSelect),
             generate)));
 
-      const roundsBar = el("div", {class: "tailor-rounds", role: "group", "aria-label": "Rounds"});
+      const roundsBar = el("div", {class: "tailor-rounds", role: "group", "aria-label": "Rounds", title: "Each round is one set of suggestions. Start another to compare them."});
       const stage = el("div", {class: "tailor-stage"});
       const mainPane = el("div", {class: "pane tailor-main"}, roundsBar, stage);
       const aside = el("aside", {class: "pane tailor-aside", "aria-label": "About this job"});
@@ -95,7 +96,7 @@
           : "No engine ready";
         const note = engine === "remote" ? "Your resume text goes to the provider you set up." : "Nothing leaves this computer.";
         engineChip.dataset.engine = engine || "none";
-        engineChip.title = `${note} Click to change.`;
+        engineChip.title = `${note} Click to change.`; //"{0} Click to change." in the language files
         engineChip.setAttribute("aria-label", `Suggestions written by: ${text}. ${note} Open settings.`);
         fill(engineChip, icon(engine === "remote" ? "cloud" : "shield"), el("span", {text}));
       };
@@ -217,7 +218,8 @@
       };
 
       // ---------- rounds ----------
-      const drawRounds = () => fill(roundsBar, rounds.map(r => el("button", {
+      //with one round there is nothing to choose between, so the bar only shows from the second one on
+      const drawRounds = () => fill(roundsBar, rounds.length < 2 ? [] : rounds.map(r => el("button", {
         type: "button",
         class: "tailor-round",
         "aria-pressed": String(r.id === revId && !tailoredId),
@@ -361,6 +363,7 @@
           const st = STATE[s.state] || STATE.pending;
           const act = (label, key, fn, on, primary) => el("button", {
             type: "button", class: primary ? "primary" : "", "aria-pressed": on === null ? null : String(on),
+            title: label === "Accept" ? "Keep this change in the tailored resume" : "Keep your original text",
             onclick: async () => {
               const r = await attempt(fn);
               if (r) {
@@ -386,7 +389,7 @@
             el("div", {class: "tailor-actions"},
               act("Accept", "A", () => api.suggestions.accept(rev.id, s.id), s.state === "accepted", s.state === "pending"),
               act("Reject", "R", () => api.suggestions.reject(rev.id, s.id), s.state === "rejected", false),
-              el("button", {type: "button", onclick: () => edit(rev, s, node, paint)}, "Edit", el("kbd", {text: "E"})),
+              el("button", {type: "button", title: "Write your own version", onclick: () => edit(rev, s, node, paint)}, "Edit", el("kbd", {text: "E"})),
               s.state !== "pending" ? el("span", {class: "hint", text: "You can still change your mind."}) : null));
           const list = node.querySelector(".brings-in");
           if (list) list.replaceChildren(...bringsIn(s).map(g => el("li", {class: "chip gap", text: g})));
@@ -460,7 +463,7 @@
         }));
 
         const exportNote = el("div");
-        const exportButton = el("button", {type: "button", class: "primary"}, "Export PDF");
+        const exportButton = el("button", {type: "button", class: "primary", title: "Export the tailored resume as a PDF file"}, "Export PDF");
         exportButton.addEventListener("click", async () => {
           exportButton.disabled = true;
           exportNote.replaceChildren();
@@ -473,7 +476,7 @@
         });
 
         //track the job with this tailored resume, or set it on the job's application
-        const trackButton = el("button", {type: "button"}, "Track with this resume");
+        const trackButton = el("button", {type: "button", title: "Add this job to the Tracker with this resume"}, "Track with this resume");
         trackButton.addEventListener("click", async () => {
           const tailoredResumeId = t.value.id;
           const list = await attempt(() => api.applications.list({archived: "include"}));
