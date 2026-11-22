@@ -175,3 +175,96 @@ test('word diff rebuilds both texts', () => {
   assert.strictEqual(text('del'), 'excel python sql');
   assert.strictEqual(text('add'), 'sql excel python');
 });
+//phase 6 tests: export
+function exportSetup({ raw, picked } = {}) {
+  const writes = [];
+  const shown = [];
+  const dialogs = [];
+  const requests = [];
+  const backend = {
+    call: async () => ({}),
+    requestRaw: async (method, url, body) => {
+      requests.push({ method, url, body });
+      return raw || {
+        status: 200,
+        headers: new Headers({ 'content-disposition': `attachment; filename="Ada Lovelace - Acme.pdf"; filename*=UTF-8''Ada%20Lovelace%20-%20Acme.pdf` }),
+        bytes: new TextEncoder().encode('%PDF').buffer,
+      };
+    },
+  };
+  const ipc = fakeIpc();
+  register(ipc, backend, {
+    dialog: { showSaveDialog: async (...args) => { dialogs.push(args.at(-1)); return picked || { canceled: false, filePath: '/Users/ada/Documents/out.pdf' }; } },
+    BrowserWindow: { fromWebContents: () => null },
+    fs: { writeFile: async (file, data) => writes.push({ file, data: Buffer.from(data).toString() }) },
+    shell: { showItemInFolder: (file) => shown.push(file) },
+    documentsDir: () => '/Users/ada/Documents',
+  });
+  return { writes, shown, dialogs, requests, handler: (channel) => ipc.handlers.get(channel) };
+}
+
+test('export asks where to save, starting in Documents with the suggested name, and writes there', async () => {
+  const { writes, dialogs, requests, handler } = exportSetup();
+  const result = await handler('tailored:export')({ sender: {} }, 7, 'pdf');
+  assert.deepStrictEqual(result, { saved: true, path: '/Users/ada/Documents/out.pdf' });
+  assert.deepStrictEqual(requests, [{ method: 'POST', url: '/v1/tailored-resumes/7/export', body: { format: 'pdf' } }]);
+  assert.strictEqual(dialogs[0].defaultPath, path.join('/Users/ada/Documents', 'Ada Lovelace - Acme.pdf'));
+  assert.deepStrictEqual(dialogs[0].filters, [{ name: 'PDF', extensions: ['pdf'] }]);
+  assert.deepStrictEqual(writes, [{ file: '/Users/ada/Documents/out.pdf', data: '%PDF' }]);
+});
+
+test('export reports a canceled dialog and writes nothing', async () => {
+  const { writes, handler } = exportSetup({ picked: { canceled: true } });
+  assert.deepStrictEqual(await handler('resume:export')({ sender: {} }, 'md'), { saved: false });
+  assert.strictEqual(writes.length, 0);
+});
+
+test('export passes back a PDF failure and refuses bad arguments without calling the backend', async () => {
+  const failure = { error: { code: 'internal', message: 'The PDF could not be made', details: { fallback: 'md' } } };
+  const { writes, dialogs, requests, handler } = exportSetup({ raw: failure });
+  assert.deepStrictEqual(await handler('resume:export')({ sender: {} }, 'pdf'), failure);
+  assert.strictEqual(dialogs.length + writes.length, 0);
+
+  assert.strictEqual((await handler('resume:export')({ sender: {} }, 'docx')).error.code, 'validation_failed');
+  assert.strictEqual((await handler('tailored:export')({ sender: {} }, '7', 'pdf')).error.code, 'validation_failed');
+  assert.strictEqual(requests.length, 1);
+});
+
+test('a suggested name can never choose the folder', async () => {
+  const raw = { status: 200, headers: new Headers({ 'content-disposition': 'attachment; filename="../../evil.pdf"' }), bytes: new ArrayBuffer(1) };
+  const { dialogs, handler } = exportSetup({ raw });
+  await handler('resume:export')({ sender: {} }, 'pdf');
+  assert.strictEqual(dialogs[0].defaultPath, path.join('/Users/ada/Documents', 'evil.pdf'));
+});
+
+test('show in folder only reveals the file the last export wrote', async () => {
+  const { shown, handler } = exportSetup();
+  const show = handler('shell:showItem');
+  assert.strictEqual((await show({}, '/Users/ada/Documents/out.pdf')).error.code, 'validation_failed');
+  await handler('resume:export')({ sender: {} }, 'pdf');
+  assert.strictEqual((await show({}, '/etc/passwd')).error.code, 'validation_failed');
+  assert.deepStrictEqual(await show({}, '/Users/ada/Documents/out.pdf'), { ok: true });
+  assert.deepStrictEqual(shown, ['/Users/ada/Documents/out.pdf']);
+});
+
+test('requestRaw gives bytes on success and the error shape for a JSON answer', async () => {
+  const { Backend } = require('../main/backend');
+  const backend = new Backend({ binDir: '', dataDir: '' });
+  Object.assign(backend, { port: 1, state: 'ready', token: 't' });
+  const realFetch = global.fetch;
+  try {
+    global.fetch = async () => new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'application/pdf' } });
+    const ok = await backend.requestRaw('POST', '/v1/resume/export', { format: 'pdf' });
+    assert.strictEqual(ok.status, 200);
+    assert.deepStrictEqual([...new Uint8Array(ok.bytes)], [1, 2, 3]);
+
+    const body = { error: { code: 'internal', message: 'The PDF could not be made', details: { fallback: 'md' } } };
+    global.fetch = async () => new Response(JSON.stringify(body), { status: 500, headers: { 'content-type': 'application/json' } });
+    assert.deepStrictEqual(await backend.requestRaw('POST', '/v1/resume/export', { format: 'pdf' }), body);
+
+    global.fetch = async () => { throw new Error('refused'); };
+    assert.strictEqual((await backend.requestRaw('POST', '/v1/resume/export', {})).error.code, 'unreachable');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
