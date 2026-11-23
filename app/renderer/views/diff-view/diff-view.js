@@ -34,6 +34,7 @@
       let savedJobs = [];     //the saved jobs, so the empty page can offer one to start from
       let problem = null;     //what went wrong, when a round could not be written
       let poll = null;
+      let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
       let gaps = [];          //skills the job asks for that the master resume lacks
       let cards = [];         //the cards on screen, for the keyboard
       let current = 0;
@@ -60,6 +61,7 @@
       const jobSelect = el("select", {id: "tailor-job"});
       const baseSelect = el("select", {id: "tailor-base"});
       const generate = el("button", {type: "button", class: "primary", title: "Write a new round of suggestions for the chosen job", onclick: () => startRound()}, "Generate suggestions");
+      const ownEdit = el("button", {type: "button", title: "Start from your resume and edit it yourself, with no suggestions", onclick: () => startOwnEdit()}, "Edit it myself");
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
       const field = (id, label, select) => el("div", {class: "picker"}, el("label", {for: id, text: label}), select);
 
@@ -71,6 +73,7 @@
           el("div", {class: "toolbar-actions"},
             field("tailor-job", "Job", jobSelect),
             field("tailor-base", "Based on", baseSelect),
+            ownEdit,
             generate)));
 
       const roundsBar = el("div", {class: "tailor-rounds", role: "group", "aria-label": "Rounds", title: "Each round is one set of suggestions. Start another to compare them."});
@@ -143,6 +146,7 @@
 
       const loadRounds = async (draw = true) => {
         generate.disabled = !jobId;
+        ownEdit.disabled = !jobId;
         if (!jobId) {
           rounds = [];
           tailored = [];
@@ -185,6 +189,17 @@
         el("div", {class: "round-actions"},
           p.retry ? el("button", {type: "button", class: "primary", onclick: () => startRound()}, "Try again") : null,
           p.settings ? el("button", {type: "button", onclick: () => window.App.openTab("tab-settings")}, "Open settings") : null));
+
+      //a copy of the resume for this job that is edited by hand, with no suggestions behind it
+      const startOwnEdit = async () => {
+        const created = await attempt(() => api.tailored.createBlank(jobId, baseSelect.value ? Number(baseSelect.value) : null));
+        if (!created) return;
+        say("");
+        tailoredId = created.value.id;
+        nextTab = "edit";
+        await loadRounds(false);
+        drawBody();
+      };
 
       const startRound = async () => {
         const request = {job_id: jobId, engine: "auto", language: window.I18n?.locale() || "en"};
@@ -286,7 +301,10 @@
 
       // ---------- rounds ----------
       //Each round is a chip with its own little x, so a round can be removed from here.
-      const drawRounds = () => fill(roundsBar, rounds.length ? rounds.map(r => {
+      //resumes edited by hand, or whose round was deleted, have no round chip of their own
+      const ownDrafts = () => tailored.filter(t => !rounds.some(r => r.id === t.revision_id));
+
+      const drawRounds = () => fill(roundsBar, [...rounds.map(r => {
         const remove = el("button", {type: "button", class: "round-delete", title: "Delete round", "aria-label": `Delete round ${r.n}`}, icon("x"));
         remove.addEventListener("click", async event => {
           event.stopPropagation();
@@ -304,7 +322,23 @@
           onclick: () => { revId = r.id; tailoredId = null; drawRounds(); drawBody(); },
         }, `Round ${r.n}`, el("span", {class: "round-meta", text: `${STATUS[r.status] || r.status} · ${ENGINE[r.engine] || r.engine}`}));
         return el("div", {class: "tailor-round-item"}, chip, remove);
-      }) : []);
+      }), ...ownDrafts().map((t, i, all) => {
+        const label = `Your edit ${all.length - i}`;
+        const remove = el("button", {type: "button", class: "round-delete", title: "Delete edit", "aria-label": `Delete ${label.toLowerCase()}`}, icon("x"));
+        remove.addEventListener("click", async event => {
+          event.stopPropagation();
+          if (!await ask(`Delete ${label.toLowerCase()}? The resume text you wrote is removed and cannot be brought back.`, {confirm: "Delete", danger: true, title: "Delete edit?"})) return;
+          if (!await attempt(() => api.tailored.delete(t.id))) return;
+          if (tailoredId === t.id) tailoredId = null;
+          await loadRounds();
+          drawBody();
+        });
+        const chip = el("button", {
+          type: "button", class: "tailor-round", "aria-pressed": String(t.id === tailoredId),
+          onclick: () => { tailoredId = t.id; drawRounds(); drawBody(); },
+        }, label, el("span", {class: "round-meta", text: "Edited by you"}));
+        return el("div", {class: "tailor-round-item"}, chip, remove);
+      })]);
 
       // ---------- review ----------
       const releasePdf = () => { pdf?.dispose(); pdf = null; };
@@ -330,7 +364,11 @@
         stopPolling();
         releasePdf();
         cards = [];
-        if (tailoredId) return drawTailored();
+        if (tailoredId) {
+          const tab = nextTab;
+          nextTab = "changes";
+          return drawTailored(tab);
+        }
         drawRounds();
         if (problem) {
           fill(stage, problemPanel(problem));
@@ -340,9 +378,9 @@
         if (!jobId || revId === null) {
           const empty = el("div", {class: "stage-empty"},
             pico(jobId ? "17-tailoring-in-progress.png" : "14-writing.png"),
-            el("h2", {text: jobId ? "No suggestions for this job yet" : "Pick a job to tailor your resume for"}),
+            el("h2", {text: jobId ? "Nothing tailored for this job yet" : "Pick a job to tailor your resume for"}),
             el("p", {text: jobId
-              ? "Press Generate suggestions. You will approve every change before anything is built."
+              ? "Press Generate suggestions and approve each change, or press Edit it myself to change your resume directly."
               : "Choose a saved job above. Nothing changes in your resume until you accept it."}));
           //with no job chosen, the saved jobs are offered here, so there is something to start from
           if (!jobId) empty.append(savedJobs.length ? suggestedJobs() : noJobsYet());
@@ -546,7 +584,7 @@
       // ---------- the tailored resume ----------
       const side = (h, which) => {
         if (h.status === "changed") return window.WordDiff.render(h.words, which);
-        const text = which === "before" ? h.before : h.after;
+        const text = window.WordDiff.plain(which === "before" ? h.before : h.after);
         const tag = h.status === "added" ? "ins" : h.status === "removed" ? "del" : null;
         return tag && text ? el(tag, {text}) : text;
       };
@@ -660,7 +698,7 @@
             el("div", {class: "round-actions"},
               exportButton,
               trackButton,
-              el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, "Back to suggestions"),
+              el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, t.value.revision_id ? "Back to suggestions" : "Close"),
               confirmFirst(el("button", {type: "button", class: "quiet"}, "Delete"), "Delete resume?", async () => {
                 if (await attempt(() => api.tailored.delete(t.value.id))) { tailoredId = null; await loadRounds(); drawBody(); }
               }))),

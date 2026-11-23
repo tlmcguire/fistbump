@@ -12,7 +12,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'jobs:analyzeText', 'connectors:import',
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
-   'tailored:create', 'tailored:list', 'tailored:get', 'tailored:update', 'tailored:diff', 'tailored:delete',
+   'tailored:create', 'tailored:createBlank', 'tailored:list', 'tailored:get', 'tailored:update', 'tailored:diff', 'tailored:delete',
    'resume:export', 'tailored:export', 'shell:showItem',
    'resume:previewPdf', 'tailored:previewPdf',
    'ai:status', 'ai:setMode', 'ai:setRemote', 'ai:clearRemote', 'ai:test',
@@ -94,6 +94,8 @@ const ROUTES = {
   'suggestions:edit': (rid, sid, text) => isId(rid) && isId(sid) && typeof text === 'string' && text.trim()
     ? ['POST', `/v1/revisions/${rid}/suggestions/${sid}/edit`, { edited_text: text }] : bad('Write the edited text.'),
   'tailored:create': (revisionId) => isId(revisionId) ? ['POST', '/v1/tailored-resumes', { revision_id: revisionId }] : bad('Invalid revision id'),
+  //a tailored resume to edit by hand: a copy of the base resume for the job, with no suggestions behind it
+  'tailored:createBlank': (jobId, baseResumeId) => isId(jobId) ? ['POST', '/v1/tailored-resumes', isId(baseResumeId) ? { job_id: jobId, base_resume_id: baseResumeId } : { job_id: jobId }] : bad('Choose a job first.'),
   'tailored:list': (jobId) => ['GET', isId(jobId) ? `/v1/tailored-resumes?job_id=${jobId}` : '/v1/tailored-resumes'],
   'tailored:get': (id) => isId(id) ? ['GET', `/v1/tailored-resumes/${id}`] : bad('Invalid id'),
   'tailored:update': (id, content) => isId(id) && typeof content === 'string' && content.trim() ? ['PUT', `/v1/tailored-resumes/${id}`, { content }] : bad('The resume cannot be empty.'),

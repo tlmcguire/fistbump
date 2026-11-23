@@ -80,6 +80,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   tailored: {
     create: (revisionId) => ipcRenderer.invoke('tailored:create', revisionId),
+    createBlank: (jobId, baseResumeId) => ipcRenderer.invoke('tailored:createBlank', jobId, baseResumeId),
     list: (jobId) => ipcRenderer.invoke('tailored:list', jobId),
     get: (id) => ipcRenderer.invoke('tailored:get', id),
     update: (id, content) => ipcRenderer.invoke('tailored:update', id, content),

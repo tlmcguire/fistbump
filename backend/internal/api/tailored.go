@@ -19,17 +19,20 @@ type tailoredCreated struct {
 	Warnings []string `json:"warnings"`
 }
 
-// tailoredCreate handles POST /v1/tailored-resumes. It applies the user's decisions to the base
-// resume, so every suggestion must be decided first.
+// tailoredCreate handles POST /v1/tailored-resumes. With a revision_id it applies the user's decisions to
+// the base resume, so every suggestion must be decided first. With a job_id and no revision_id it starts
+// from the base resume as it is, for a person who wants to edit it by hand without any suggestions.
 func (s *Server) tailoredCreate(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
-		RevisionID int64 `json:"revision_id"`
+		RevisionID   int64  `json:"revision_id"`
+		JobID        int64  `json:"job_id"`
+		BaseResumeID *int64 `json:"base_resume_id"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		return err
 	}
 	if req.RevisionID < 1 {
-		return validationError("revision_id", "revision_id is required")
+		return s.tailoredBlank(w, r, req.JobID, req.BaseResumeID)
 	}
 
 	ctx := r.Context()
@@ -56,7 +59,7 @@ func (s *Server) tailoredCreate(w http.ResponseWriter, r *http.Request) error {
 		return e
 	}
 
-	base, err := s.baseContent(ctx, rev)
+	base, err := s.baseContent(ctx, rev.BaseResumeID)
 	if err != nil {
 		return err
 	}
@@ -87,11 +90,39 @@ func (s *Server) tailoredCreate(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// tailoredBlank saves a copy of the base resume for a job, with no suggestions behind it.
+func (s *Server) tailoredBlank(w http.ResponseWriter, r *http.Request, jobID int64, baseID *int64) error {
+	if jobID < 1 {
+		return validationError("revision_id", "revision_id or job_id is required")
+	}
+	ctx := r.Context()
+	if _, err := s.store.GetJob(ctx, jobID); err != nil {
+		return storeError(err, "Job")
+	}
+	if baseID != nil {
+		if _, err := s.store.GetResume(ctx, *baseID); errors.Is(err, store.ErrNotFound) {
+			return validationError("base_resume_id", "base_resume_id does not match a saved resume")
+		} else if err != nil {
+			return err
+		}
+	}
+	base, err := s.baseContent(ctx, baseID)
+	if err != nil {
+		return err
+	}
+	created, err := s.store.CreateTailored(ctx, models.TailoredResume{JobID: jobID, BaseResumeID: baseID, Content: base, BaseContent: base})
+	if err != nil {
+		return storeError(err, "Tailored resume")
+	}
+	writeJSON(w, http.StatusCreated, tailoredCreated{TailoredResume: created, Warnings: []string{}})
+	return nil
+}
+
 // baseContent is the text the revision started from: the saved resume it named, or the master
 // resume as it is now.
-func (s *Server) baseContent(ctx context.Context, rev models.Revision) (string, error) {
-	if rev.BaseResumeID != nil {
-		saved, err := s.store.GetResume(ctx, *rev.BaseResumeID)
+func (s *Server) baseContent(ctx context.Context, baseResumeID *int64) (string, error) {
+	if baseResumeID != nil {
+		saved, err := s.store.GetResume(ctx, *baseResumeID)
 		if err == nil {
 			return saved.Content, nil
 		}

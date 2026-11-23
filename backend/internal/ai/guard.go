@@ -32,8 +32,8 @@ func Check(t Target, proposed string, r Request) string {
 			return "summary longer than 3 sentences"
 		}
 	case "experience":
-		if lineCount(proposed) > lineCount(t.Original) {
-			return "more lines than the original"
+		if lineCount(proposed) != lineCount(t.Original) {
+			return "a different number of lines than the original"
 		}
 	}
 	if skill := newSkill(proposed, t, r); skill != "" {

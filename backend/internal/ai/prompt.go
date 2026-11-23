@@ -35,7 +35,7 @@ func sectionRule(t Target) string {
 		if n == 1 {
 			return "This is a line from the experience section. Rewrite it as one line."
 		}
-		return fmt.Sprintf("These are %d lines from the experience section, one item per line. Rewrite them in %d lines or fewer, separated by \\n, keeping any leading \"- \" bullets.", n, n)
+		return fmt.Sprintf("These are %d lines from the experience section, one item per line. Rewrite them as exactly %d lines, one per original line, separated by \\n. Every line keeps its leading \"- \" bullet and every number and fact in it. Do not merge, split or drop lines.", n, n)
 	}
 }
 
@@ -129,13 +129,57 @@ func plainText(s string) string {
 	return strings.Join(lines, "\n")
 }
 
-// toResumeText puts a proposal in the form the target's Original has, so render.Apply can place it.
+// toResumeText puts a proposal in the form the target's Original has, so render.Apply can place it. Small
+// models drop or swap the "- " bullets, so each line gets the marker its original line had.
 func toResumeText(t Target, proposed string) string {
 	proposed = strings.TrimSpace(strings.ReplaceAll(proposed, "\r\n", "\n"))
 	if t.Section == "skills" {
 		return proposed // the skills line is not escaped
 	}
-	return render.Escape(proposed)
+	return render.Escape(matchBullets(plainText(t.Original), proposed))
+}
+
+var bulletPrefix = []string{"- ", "* ", "• ", "– ", "— "}
+
+func hasBullet(line string) bool {
+	line = strings.TrimLeft(line, " \t")
+	for _, p := range bulletPrefix {
+		if strings.HasPrefix(line, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func withoutBullet(line string) string {
+	trimmed := strings.TrimLeft(line, " \t")
+	for _, p := range bulletPrefix {
+		if strings.HasPrefix(trimmed, p) {
+			return strings.TrimLeft(strings.TrimPrefix(trimmed, p), " \t")
+		}
+	}
+	return strings.TrimSpace(line)
+}
+
+// matchBullets makes line i of the proposal a "- " bullet when line i of the original is one, and plain
+// text when it is not. It leaves the proposal alone when the line counts differ, since lines cannot be paired.
+func matchBullets(original, proposed string) string {
+	orig := strings.Split(strings.TrimRight(original, "\n"), "\n")
+	lines := strings.Split(proposed, "\n")
+	if len(orig) != len(lines) {
+		return proposed
+	}
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if hasBullet(orig[i]) {
+			lines[i] = "- " + withoutBullet(line)
+		} else if hasBullet(line) {
+			lines[i] = withoutBullet(line)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }

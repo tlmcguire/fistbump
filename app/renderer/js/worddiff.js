@@ -3,9 +3,13 @@ window.WordDiff = (() => {
     // Newlines are their own tokens so bullets keep their lines.
     const tokens = text => text.replace(/\n/g, " \n ").split(/[ \t]+/).filter(Boolean);
   
+    //The stored resume text backslash-escapes a leading -, # or * so it is not read as Markdown. People should
+    //see the line as written, so the backslash is dropped from what is shown.
+    const plain = text => String(text ?? "").replace(/^([ \t]*)\\([-#*])/gm, "$1$2");
+
     const diff = (before, after) => {
-      const a = tokens(before);
-      const b = tokens(after);
+      const a = tokens(plain(before));
+      const b = tokens(plain(after));
       const dp = Array.from({length: a.length + 1}, () => new Array(b.length + 1).fill(0));
       for (let i = a.length - 1; i >= 0; i--) {
         for (let j = b.length - 1; j >= 0; j--) {
@@ -34,7 +38,8 @@ window.WordDiff = (() => {
     const render = (words, side) => {
       const frag = document.createDocumentFragment();
       const mark = (tag, text) => Object.assign(document.createElement(tag), {textContent: text});
-      for (const w of words) {
+      for (const raw of words) {
+        const w = {...raw, text: plain(raw.text)};
         const space = w.text.endsWith("\n") ? "" : " ";
         if (w.op === "eq") frag.append(w.text + space);
         else if (w.op === "del" && side === "before") frag.append(mark("del", w.text), space);
@@ -43,5 +48,5 @@ window.WordDiff = (() => {
       return frag;
     };
   
-    return {diff, render};
+    return {diff, render, plain};
   })();

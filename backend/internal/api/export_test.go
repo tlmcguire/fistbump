@@ -236,3 +236,17 @@ func TestTailoredUpdateSavesTheUsersEdit(t *testing.T) {
 	wantError(t, call(t, s, "PUT", "/v1/tailored-resumes/"+id, `{"content":"  "}`), 422, "validation_failed")
 	wantError(t, call(t, s, "PUT", "/v1/tailored-resumes/999", `{"content":"x"}`), 404, "not_found")
 }
+
+func TestTailoredCreateWithoutSuggestions(t *testing.T) {
+	s := newExportServer(t, fakePDF)
+	id := seedTailored(t, s, "Ada Lovelace", "Acme", "Data Analyst")
+	job := expect(t, call(t, s, "GET", "/v1/tailored-resumes/"+id, ""), 200)["job_id"]
+
+	out := expect(t, call(t, s, "POST", "/v1/tailored-resumes", fmt.Sprintf(`{"job_id":%v}`, job)), 201)
+	if out["revision_id"] != nil || out["content"] == "" || out["content"] != out["base_content"] {
+		t.Fatalf("created = %v", out)
+	}
+	wantError(t, call(t, s, "POST", "/v1/tailored-resumes", `{}`), 422, "validation_failed")
+	wantError(t, call(t, s, "POST", "/v1/tailored-resumes", `{"job_id":999}`), 404, "not_found")
+	wantError(t, call(t, s, "POST", "/v1/tailored-resumes", fmt.Sprintf(`{"job_id":%v,"base_resume_id":999}`, job)), 422, "validation_failed")
+}
