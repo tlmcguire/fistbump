@@ -251,6 +251,53 @@ button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 1
 .nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
 .nav-item:hover:not(:disabled) .icon { transform: scale(1.1); }
 
+/* ---------- Icons: each answers a hover, a keyboard focus or being chosen, once ---------- */
+
+/* A one-shot gesture that says what the icon is: the wand casts, the gear's sliders slide, the clock turns.
+   It plays when a control is hovered or focused, and once when a tab or sidebar item becomes the chosen one.
+   Nothing loops. Under .reduce-motion base.css turns animation off, so these never play. */
+@keyframes ico-cast   { 0% { transform: none; } 30% { transform: rotate(-22deg) scale(1.15); } 60% { transform: rotate(14deg) scale(1.15); } 100% { transform: none; } }
+@keyframes ico-slide  { 0% { transform: none; } 30% { transform: translateX(-2.5px); } 65% { transform: translateX(2.5px); } 100% { transform: none; } }
+@keyframes ico-hop    { 0% { transform: none; } 35% { transform: translateY(-3px); } 70% { transform: translateY(0.5px); } 100% { transform: none; } }
+@keyframes ico-tilt   { 0% { transform: none; } 35% { transform: rotate(-14deg) scale(1.1); } 70% { transform: rotate(8deg); } 100% { transform: none; } }
+@keyframes ico-turn   { from { transform: none; } to { transform: rotate(360deg); } }
+@keyframes ico-quarter { from { transform: none; } to { transform: rotate(90deg); } }
+@keyframes ico-pop    { 0% { transform: scale(0.75); } 55% { transform: scale(1.25); } 100% { transform: none; } }
+@keyframes ico-pulse  { 0% { transform: none; } 40% { transform: scale(1.18); } 100% { transform: none; } }
+@keyframes ico-dip    { 0% { transform: none; } 40% { transform: translateY(2px); } 100% { transform: none; } }
+@keyframes ico-lift   { 0% { transform: none; } 40% { transform: translateY(-2.5px); } 100% { transform: none; } }
+@keyframes ico-out    { 0% { transform: none; } 40% { transform: translate(2px, -2px); } 100% { transform: none; } }
+@keyframes ico-nudge  { 0% { transform: none; } 40% { transform: translateX(2.5px); } 100% { transform: none; } }
+@keyframes ico-grow   { 0% { transform: none; } 40% { transform: scale(1.2); } 100% { transform: none; } }
+@keyframes ico-shrink { 0% { transform: none; } 40% { transform: scale(0.82); } 100% { transform: none; } }
+
+:is(button, a, [role="tab"], .nav-item):is(:hover, :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon {
+  transform-origin: 50% 50%;
+}
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) {
+  --ico-time: 520ms;
+}
+/* One rule per icon, so each plays its own gesture. The name after #i- is the symbol in index.html. */
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-wand"])     { animation: ico-cast 640ms var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-settings"]) { animation: ico-slide 560ms var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-home"])     { animation: ico-hop var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-search"])   { animation: ico-tilt var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-link"])     { animation: ico-tilt var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-file"])     { animation: ico-lift var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-paste"])    { animation: ico-dip var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-bookmark"]) { animation: ico-dip var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-person"])   { animation: ico-lift var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-external"]) { animation: ico-out var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-check"])    { animation: ico-pop var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-x"])        { animation: ico-quarter var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-pencil"])   { animation: ico-tilt var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-clock"])    { animation: ico-turn 700ms var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-shield"])   { animation: ico-pulse var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-cloud"])    { animation: ico-lift 640ms var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-list"])     { animation: ico-nudge var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-expand"])   { animation: ico-grow var(--ico-time) var(--ease-out); }
+:is(button, a, [role="tab"], .nav-item):is(:hover:not(:disabled), :focus-visible, [aria-selected="true"], [aria-current="page"]) svg.icon:has(> use[href="#i-collapse"]) { animation: ico-shrink var(--ico-time) var(--ease-out); }
+
 /* ---------- Reduce motion: the meaning stays, the movement goes ---------- */
 
 .reduce-motion .view-enter > :not(.toolbar),
