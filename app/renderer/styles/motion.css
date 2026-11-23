@@ -249,7 +249,101 @@ button, .button { transition: background-color 120ms ease, color 120ms ease, tra
 button:active:not(:disabled), .button:active { transform: scale(0.97); }
 button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 10px rgba(206, 166, 21, 0.28); }
 .nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
-.nav-item:hover:not(:disabled) .icon { transform: scale(1.1); }
+
+/* ---------- Icons: each one acts out what it stands for, once ---------- */
+
+/* A control plays its icon's gesture when the pointer arrives or the keyboard focuses it (ui.js sets data-ico
+   for a second, so a gesture always finishes even if the pointer leaves at once), and when a tab or sidebar
+   item becomes the chosen one. Nothing loops. Under .reduce-motion base.css turns animation off, and ui.js
+   does not set data-ico.
+
+   Two layers move. The whole icon (the svg) does what the icon does: the wand casts, the bookmark drops.
+   Parts inside the icon's <symbol> move on their own: the sliders' knobs slide, the clock's hand sweeps, a
+   tick draws itself. A selector on the button cannot reach those parts, but custom properties inherit into
+   them, so the playing control names each part's animation in a variable, and a part with no name plays none. */
+
+:root { --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+:is(button, a, [role="tab"], .nav-item):is([data-ico], [aria-selected="true"], [aria-current="page"]) {
+  --ico-knob-a: ico-knob-a;
+  --ico-knob-b: ico-knob-b;
+  --ico-twinkle: ico-twinkle;
+  --ico-sweep: ico-sweep;
+  --ico-draw: ico-draw;
+  --ico-apart-a: ico-apart-a;
+  --ico-apart-b: ico-apart-b;
+  --ico-launch: ico-launch;
+  --ico-nod: ico-nod;
+  --ico-track-a: ico-track-a;
+  --ico-track-b: ico-track-b;
+}
+:is(button, a, [role="tab"], .nav-item):is([data-ico], [aria-selected="true"], [aria-current="page"]) svg.icon {
+  animation: var(--ico, none);
+}
+svg.icon { transform-origin: 50% 50%; }
+
+/* The whole icon. --ico is set on every icon so the playing rule above has one thing to read. */
+svg.icon:has(> use[href="#i-wand"])     { --ico: ico-cast 620ms var(--ease-out); }
+svg.icon:has(> use[href="#i-home"])     { --ico: ico-hop 560ms var(--ease-out); transform-origin: 50% 100%; }
+svg.icon:has(> use[href="#i-search"])   { --ico: ico-look 620ms var(--ease-out); }
+svg.icon:has(> use[href="#i-bookmark"]) { --ico: ico-settle 620ms var(--ease-out); transform-origin: 50% 100%; }
+svg.icon:has(> use[href="#i-pencil"])   { --ico: ico-scribble 620ms var(--ease-out); }
+svg.icon:has(> use[href="#i-x"])        { --ico: ico-quarter 420ms var(--ease-spring); }
+svg.icon:has(> use[href="#i-shield"])   { --ico: ico-pulse 520ms var(--ease-out); }
+svg.icon:has(> use[href="#i-cloud"])    { --ico: ico-drift 900ms ease-in-out; }
+svg.icon:has(> use[href="#i-expand"])   { --ico: ico-grow 460ms var(--ease-spring); }
+svg.icon:has(> use[href="#i-collapse"]) { --ico: ico-shrink 460ms var(--ease-spring); }
+svg.icon:has(> use[href="#i-check"])    { --ico: ico-pop 520ms var(--ease-spring); }
+
+@keyframes ico-cast     { 0% { transform: none; } 30% { transform: rotate(-16deg); } 60% { transform: rotate(9deg); } 100% { transform: none; } }
+@keyframes ico-hop      { 0% { transform: none; } 15% { transform: scale(1.08, 0.88); } 45% { transform: translateY(-3px) scale(0.96, 1.06); } 75% { transform: scale(1.05, 0.94); } 100% { transform: none; } }
+@keyframes ico-look     { 0% { transform: none; } 30% { transform: translate(-1.5px, -1px) rotate(-10deg); } 65% { transform: translate(1.5px, 0) rotate(6deg); } 100% { transform: none; } }
+@keyframes ico-settle   { 0% { transform: none; } 30% { transform: scale(1.06, 0.9); } 60% { transform: scale(0.97, 1.05); } 82% { transform: scale(1.01, 0.98); } 100% { transform: none; } }
+@keyframes ico-scribble { 0% { transform: none; } 25% { transform: translate(-1px, 1px) rotate(-10deg); } 50% { transform: translate(1px, 0) rotate(6deg); } 75% { transform: translate(-0.5px, 0.5px) rotate(-4deg); } 100% { transform: none; } }
+@keyframes ico-quarter  { from { transform: none; } to { transform: rotate(90deg); } }
+@keyframes ico-pulse    { 0% { transform: none; } 40% { transform: scale(1.12); } 100% { transform: none; } }
+@keyframes ico-drift    { 0% { transform: none; } 35% { transform: translateX(-2px); } 70% { transform: translateX(1.5px); } 100% { transform: none; } }
+@keyframes ico-grow     { 0% { transform: none; } 45% { transform: scale(1.18); } 100% { transform: none; } }
+@keyframes ico-shrink   { 0% { transform: none; } 45% { transform: scale(0.82); } 100% { transform: none; } }
+@keyframes ico-pop      { 0% { transform: none; } 35% { transform: scale(0.86); } 100% { transform: none; } }
+
+/* Parts. The class names are on the paths in index.html's symbols. */
+/* The knobs slide and each track's gap slides with its knob, so the line never shows a hole. */
+#i-settings .knob.a  { animation: var(--ico-knob-a, none) 700ms var(--ease-out) both; }
+#i-settings .track.a { animation: var(--ico-track-a, none) 700ms var(--ease-out) both; }
+#i-settings .knob.b  { animation: var(--ico-knob-b, none) 700ms var(--ease-out) 70ms both; }
+#i-settings .track.b { animation: var(--ico-track-b, none) 700ms var(--ease-out) 70ms both; }
+#i-wand .spark      { transform-box: fill-box; transform-origin: center; animation: var(--ico-twinkle, none) 640ms var(--ease-out) both; }
+#i-wand .spark.late { animation-delay: 140ms; }
+#i-clock .hand      { transform-origin: 12px 12px; animation: var(--ico-sweep, none) 900ms var(--ease-out) both; }
+#i-link .half.a     { animation: var(--ico-apart-a, none) 520ms var(--ease-spring) both; }
+#i-link .half.b     { animation: var(--ico-apart-b, none) 520ms var(--ease-spring) both; }
+#i-external .arrow  { animation: var(--ico-launch, none) 560ms var(--ease-spring) both; }
+#i-person .head     { animation: var(--ico-nod, none) 520ms var(--ease-out) both; }
+/* A tick or a line writes itself again: each has pathLength="1", so one dash is the whole stroke. */
+#i-check .tick, #i-shield .tick, #i-file .lines, #i-paste .lines { stroke-dasharray: 1; animation: var(--ico-draw, none) 560ms ease-in-out both; }
+#i-shield .tick, #i-file .lines, #i-paste .lines { animation-delay: 80ms; }
+/* The tracker's checklist ticks itself off row by row: each tick writes itself, then its row's line. */
+#i-list .tick, #i-list .row { stroke-dasharray: 1; }
+#i-list .tick { animation: var(--ico-draw, none) 340ms ease-in-out both; }
+#i-list .row  { animation: var(--ico-draw, none) 420ms ease-in-out both; }
+#i-list .tick.a { animation-delay: 0ms; }   #i-list .row.a { animation-delay: 120ms; }
+#i-list .tick.b { animation-delay: 180ms; } #i-list .row.b { animation-delay: 300ms; }
+#i-list .tick.c { animation-delay: 360ms; } #i-list .row.c { animation-delay: 480ms; }
+
+@keyframes ico-knob-a  { 0% { transform: none; } 45% { transform: translateX(-5px); } 100% { transform: none; } }
+@keyframes ico-track-a { 0% { d: path("M4 7h9.5M18.5 7H20"); } 45% { d: path("M4 7h4.5M13.5 7H20"); } 100% { d: path("M4 7h9.5M18.5 7H20"); } }
+@keyframes ico-knob-b  { 0% { transform: none; } 45% { transform: translateX(5px); } 100% { transform: none; } }
+@keyframes ico-track-b { 0% { d: path("M4 17h3.5M12.5 17H20"); } 45% { d: path("M4 17h8.5M17.5 17H20"); } 100% { d: path("M4 17h3.5M12.5 17H20"); } }
+@keyframes ico-twinkle { 0% { transform: none; } 35% { transform: scale(1.7) rotate(25deg); } 100% { transform: none; } }
+@keyframes ico-sweep   { from { transform: none; } to { transform: rotate(360deg); } }
+/* With one dash the length of the stroke and one gap the same, moving the offset from 0 to -2 rubs the stroke out
+   from its start and writes it back from its start. It is whole at both ends, so it never blinks off. */
+@keyframes ico-draw    { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -2; } }
+@keyframes ico-apart-a { 0% { transform: none; } 40% { transform: translate(1.5px, -1.5px); } 100% { transform: none; } }
+@keyframes ico-apart-b { 0% { transform: none; } 40% { transform: translate(-1.5px, 1.5px); } 100% { transform: none; } }
+@keyframes ico-launch  { 0% { transform: none; } 40% { transform: translate(2.5px, -2.5px); } 100% { transform: none; } }
+@keyframes ico-nod     { 0% { transform: none; } 35% { transform: translateY(-1.5px); } 70% { transform: translateY(0.5px); } 100% { transform: none; } }
 
 /* ---------- Reduce motion: the meaning stays, the movement goes ---------- */
 
