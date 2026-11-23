@@ -12,6 +12,7 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
+	"github.com/tlmcguire/fistbump/backend/internal/cost"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
 	"github.com/tlmcguire/fistbump/backend/internal/parser"
@@ -227,6 +228,23 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		q.SkillScore = s.skillScorer(r.Context())
 		q.FitOf = s.fitOf(r.Context())
 	}
+	// A sort by fit or by a rating needs that part switched on.
+	switch q.Sort {
+	case connectors.SortFit:
+		if !q.MatchesResume() {
+			return validationFailed("Turn on matching with your resume to sort by fit")
+		}
+	case connectors.SortPay, connectors.SortBenefits, connectors.SortLiving, connectors.SortOverall:
+		if !q.MatchesRatings() {
+			return validationFailed("Turn on the pay, benefits and cost of living ratings to sort this way")
+		}
+	}
+	// The ratings can be turned off too; their filters then do not apply.
+	if !q.MatchesRatings() {
+		q.MinPayRating, q.MinBenefits, q.MinLiving = "", "", ""
+	} else {
+		q.RateOf = s.rateOf(r.Context())
+	}
 	if q.HasFit() && q.FitOf == nil {
 		return conflict("Add your resume first, so jobs can be filtered by how well you fit")
 	}
@@ -312,6 +330,25 @@ func (s *Server) skillScorer(ctx context.Context) func(text string) float64 {
 		var j models.Job
 		applyParse(&j, s.parse(text))
 		return s.analyze(j, m).Score
+	}
+}
+
+// rateOf rates a posting's pay, benefits and cost of living, using the user's home location and minimum pay.
+func (s *Server) rateOf(ctx context.Context) func(p connectors.Posting) *connectors.Ratings {
+	home, desired := "", int64(0)
+	if m, err := s.store.GetMaster(ctx); err == nil && m.Profile != nil {
+		if m.Profile.HomeLocation != nil {
+			home = *m.Profile.HomeLocation
+		}
+		if m.Profile.MinDesiredPay != nil {
+			desired = *m.Profile.MinDesiredPay
+		}
+	}
+	return func(p connectors.Posting) *connectors.Ratings {
+		r := cost.Rate(cost.Analyze(cost.Input{Title: p.PositionTitle, Location: p.Location, WorkMode: p.WorkMode,
+			PayMin: int64(p.PayMin), PayMax: int64(p.PayMax), Text: p.RawText, HomeLocation: home, MinDesiredPay: desired}))
+		return &connectors.Ratings{Pay: r.Pay, Benefits: r.Benefits, Living: r.Living,
+			PayAmount: int(r.PayAmount), BenefitsScore: r.BenefitsScore, LivingLeft: r.LivingLeft, BenefitsFound: r.Found, LeftMonthly: r.LeftMonthly}
 	}
 }
 
@@ -437,6 +474,8 @@ func greenhouseError(err error) error {
 	switch {
 	case errors.Is(err, greenhouse.ErrorNotFound):
 		return notFound("This job is closed or does not exist.")
+	case errors.Is(err, greenhouse.ErrorRateLimited):
+		return upstreamError("Greenhouse is limiting how many requests it answers right now. Wait a minute, then try again.")
 	case errors.Is(err, greenhouse.ErrorUpstream):
 		return upstreamError("Greenhouse did not respond. Try again.")
 	default:

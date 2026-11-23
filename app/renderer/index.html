@@ -101,60 +101,124 @@
 
                         <!--Filters: a row under the toolbar, shown with the Filters button. Part of the same form.-->
                         <div id="filters" class="filters" hidden>
-                            <label>Company
-                                <span class="field"><input id="search-company" type="text" placeholder="e.g. Stripe"></span>
-                            </label>
-                            <label>Industry
-                                <select id="search-industry">
-                                    <option value="">Any industry</option>
-                                </select>
-                            </label>
-                            <label>Work mode
-                                <select id="search-work-mode">
-                                    <option value="Any">Any</option>
-                                    <option value="Remote">Remote</option>
-                                    <option value="Hybrid">Hybrid</option>
-                                    <option value="On-site">On-site</option>
-                                </select>
-                            </label>
-                            <label>Posted within
-                                <select id="search-posted">
-                                    <option value="0">Any time</option>
-                                    <option value="1">Last day</option>
-                                    <option value="7">Last 7 days</option>
-                                    <option value="30">Last 30 days</option>
-                                    <option value="90">Last 90 days</option>
-                                </select>
-                            </label>
-                            <label>Yearly pay (USD)
-                                <span class="pair">
-                                    <input id="search-pay-min" type="text" inputmode="numeric" aria-label="Minimum yearly pay" placeholder="Min, e.g. 90k">
-                                    <input id="search-pay-max" type="text" inputmode="numeric" aria-label="Maximum yearly pay" placeholder="Max">
-                                </span>
-                            </label>
-                            <label class="check"><input id="search-use-resume" type="checkbox" checked> Match with my resume</label>
-                            <label>Fit with my resume
-                                <select id="search-min-fit">
-                                    <option value="0">Any fit</option>
-                                    <option value="50">At least 50%</option>
-                                    <option value="70">At least 70%</option>
-                                    <option value="90">At least 90%</option>
-                                </select>
-                            </label>
-                            <label>Skills I am missing
-                                <select id="search-max-missing">
-                                    <option value="">Any number</option>
-                                    <option value="0">None</option>
-                                    <option value="1">At most 1</option>
-                                    <option value="2">At most 2</option>
-                                    <option value="3">At most 3</option>
-                                    <option value="5">At most 5</option>
-                                </select>
-                            </label>
-                            <label>Leave out titles with
-                                <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
-                            </label>
-                            <label class="check"><input id="search-require-pay" type="checkbox"> Hide postings that do not list pay</label>
+                            <fieldset class="filter-group">
+                                <legend>Role</legend>
+                                <div class="filter-grid">
+                                    <label>Company
+                                        <span class="field"><input id="search-company" type="text" placeholder="e.g. Stripe"></span>
+                                    </label>
+                                    <label>Industry
+                                        <select id="search-industry">
+                                            <option value="">Any industry</option>
+                                        </select>
+                                    </label>
+                                    <label>Work mode
+                                        <select id="search-work-mode">
+                                            <option value="Any">Any</option>
+                                            <option value="Remote">Remote</option>
+                                            <option value="Hybrid">Hybrid</option>
+                                            <option value="On-site">On-site</option>
+                                        </select>
+                                    </label>
+                                    <label>Posted within
+                                        <select id="search-posted">
+                                            <option value="0">Any time</option>
+                                            <option value="1">Last day</option>
+                                            <option value="7">Last 7 days</option>
+                                            <option value="30">Last 30 days</option>
+                                            <option value="90">Last 90 days</option>
+                                        </select>
+                                    </label>
+                                    <label class="wide">Leave out titles with
+                                        <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="filter-group">
+                                <legend>Pay</legend>
+                                <div class="filter-grid">
+                                    <label>Yearly pay (USD)
+                                        <span class="pair">
+                                            <input id="search-pay-min" type="text" inputmode="numeric" aria-label="Minimum yearly pay" placeholder="Min, e.g. 90k">
+                                            <input id="search-pay-max" type="text" inputmode="numeric" aria-label="Maximum yearly pay" placeholder="Max">
+                                        </span>
+                                    </label>
+                                    <label class="check"><input id="search-require-pay" type="checkbox"> Hide postings that do not list pay</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="filter-group">
+                                <legend>Your resume</legend>
+                                <div class="filter-grid">
+                                    <label class="check"><input id="search-use-resume" type="checkbox" checked> Match with my resume</label>
+                                    <label>Fit with my resume
+                                        <select id="search-min-fit">
+                                            <option value="0">Any fit</option>
+                                            <option value="50">At least 50%</option>
+                                            <option value="70">At least 70%</option>
+                                            <option value="90">At least 90%</option>
+                                        </select>
+                                    </label>
+                                    <label>Skills I am missing
+                                        <select id="search-max-missing">
+                                            <option value="">Any number</option>
+                                            <option value="0">None</option>
+                                            <option value="1">At most 1</option>
+                                            <option value="2">At most 2</option>
+                                            <option value="3">At most 3</option>
+                                            <option value="5">At most 5</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="filter-group">
+                                <legend>Pay, benefits and cost of living</legend>
+                                <div class="filter-grid three">
+                                    <label class="check"><input id="search-use-ratings" type="checkbox" checked> Rate each posting</label>
+                                    <label>Pay for the role
+                                        <select id="search-min-pay-rating">
+                                        <option value="">Any</option>
+                                        <option value="fair">Fair or better</option>
+                                        <option value="good">Good only</option>
+                                        </select>
+                                    </label>
+                                    <label>Benefits
+                                        <select id="search-min-benefits">
+                                        <option value="">Any</option>
+                                        <option value="fair">Fair or better</option>
+                                        <option value="good">Good only</option>
+                                        </select>
+                                    </label>
+                                    <label>Cost of living
+                                        <select id="search-min-living">
+                                        <option value="">Any</option>
+                                        <option value="fair">Fair or better</option>
+                                        <option value="good">Good only</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <details class="filter-group show-group">
+                                <summary>Show under each result</summary>
+                                <div class="show-grid">
+                                    <label class="check"><input type="checkbox" data-show="fit"> Fit with my resume</label>
+                                    <label class="check"><input type="checkbox" data-show="missing"> Missing skills</label>
+                                    <label class="check"><input type="checkbox" data-show="pay_range"> Pay range</label>
+                                    <label class="check"><input type="checkbox" data-show="pay_rating"> Pay rating</label>
+                                    <label class="check"><input type="checkbox" data-show="benefits_rating"> Benefits rating</label>
+                                    <label class="check"><input type="checkbox" data-show="living_rating"> Cost of living rating</label>
+                                    <label class="check"><input type="checkbox" data-show="benefits_list"> Benefits included</label>
+                                    <label class="check"><input type="checkbox" data-show="left_over"> Money left each month</label>
+                                    <label class="check"><input type="checkbox" data-show="preview"> Description preview</label>
+                                    <label class="check"><input type="checkbox" data-show="posted"> Date posted</label>
+                                    <label class="check"><input type="checkbox" data-show="locations"> Other locations</label>
+                                    <label class="check"><input type="checkbox" data-show="company_site"> Company website link</label>
+                                </div>
+                            </details>
+
                             <div class="filters-actions">
                                 <button type="button" id="clear-search">Reset all</button>
                             </div>
@@ -500,9 +564,15 @@
                                     <select id="result-sort">
                                         <option value="relevance">Best match</option>
                                         <option value="newest">Newest</option>
+                                        <option value="overall">Best overall</option>
+                                        <option value="fit">Best fit</option>
+                                        <option value="pay">Highest pay</option>
+                                        <option value="benefits">Best benefits</option>
+                                        <option value="living">Best cost of living</option>
                                     </select>
                                 </label>
                             </div>
+                            <div id="result-filters" class="filter-chips" aria-label="Filters used for this search"></div>
                             <p id="result-note" class="note" hidden></p>
                             <div id="result-empty" class="empty">
                                 <img class="mascot" src="views/graphics/mascots/08-no-results.png" alt="">
@@ -560,6 +630,7 @@
                                 <!--One gold action per state: Save job, Tailor resume or Restore. The rest are quiet, and what
                                     removes the job sits apart at the end.-->
                                 <button id="save-listing" type="button" class="primary" hidden>Save job</button>
+                                <button id="view-saved" type="button" class="primary" hidden title="You already saved this job. Open it in Saved jobs.">View saved job</button>
                                 <button id="tailor-job" type="button" class="primary" hidden>Tailor resume</button>
                                 <button id="restore-job" type="button" class="primary" hidden title="Take this job out of the Trash. It goes back to Saved jobs.">Restore</button>
                                 <button id="track-job" type="button" hidden>Track</button>
@@ -573,6 +644,7 @@
                                 <button id="trash-job" type="button" class="quiet danger-text" hidden title="Take this job out of Saved jobs. It is deleted for good after 7 days unless you restore it first.">Move to Trash</button>
                                 <button id="delete-job" type="button" class="quiet danger-text" hidden title="Delete this job right now, for good. It cannot be undone.">Delete now</button>
                             </div>
+                            <section id="cost" class="cost" aria-label="Pay and cost of living" hidden></section>
                             <h3>Description</h3>
                             <p id="job-description"></p>
                             <section id="analysis" hidden></section>
@@ -602,6 +674,7 @@
         <script src="js/locales/de.js" defer></script>
         <script src="js/i18n-start.js" defer></script>
         <script src="js/ui.js" defer></script>
+        <script src="js/places.js" defer></script>
         <script src="js/pdf-preview.js" defer></script>
         <script src="js/tooltip.js" defer></script>
         <script src="js/segments.js" defer></script>

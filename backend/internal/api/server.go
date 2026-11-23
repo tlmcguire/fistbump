@@ -134,6 +134,7 @@ func (s *Server) routes() []route {
 		{"PUT /v1/jobs/{id}", s.jobUpdate},
 		{"DELETE /v1/jobs/{id}", s.jobDelete},
 		{"POST /v1/jobs/{id}/analyze", s.jobAnalyze},
+		{"POST /v1/cost", s.costAnalyze},
 		{"POST /v1/jobs/{id}/archive", s.jobArchive},
 		{"POST /v1/jobs/{id}/unarchive", s.jobUnarchive},
 		{"POST /v1/jobs/{id}/trash", s.jobTrash},

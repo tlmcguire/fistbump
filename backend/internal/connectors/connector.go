@@ -30,6 +30,37 @@ type Posting struct {
 	// Fit is how the posting's required skills compare with the user's resume. Search results only, and
 	// nil when there is no resume or the posting lists no required skills.
 	Fit *Fit `json:"fit,omitempty"`
+	// Ratings is a good, fair or bad for the posting's pay, benefits and cost of living. Search results only, and
+	// nil when the search does not rate them.
+	Ratings *Ratings `json:"ratings,omitempty"`
+}
+
+// Ratings are the cost analysis boiled down to a word for each part: good, fair or bad. A part that cannot be
+// judged (no pay listed and no market figure, benefits the posting does not describe) is empty.
+type Ratings struct {
+	Pay      string `json:"pay"`
+	Benefits string `json:"benefits"`
+	Living   string `json:"living"`
+
+	// The figures behind the words, for sorting. They are not sent to the app.
+	BenefitsFound []string `json:"benefits_found,omitempty"` // the benefits the posting names
+	LeftMonthly   *int     `json:"left_monthly,omitempty"`   // dollars left each month after a modest budget; negative when short
+	PayAmount     int      `json:"-"`                        // yearly pay the posting lists, 0 when it lists none
+	BenefitsScore int      `json:"-"`                        // 0 to 100
+	LivingLeft    int      `json:"-"`                        // percent of take-home left after a modest budget; can be negative
+}
+
+// RatingRank orders the words: bad 1, fair 2, good 3, and 0 for a part that was not rated.
+func RatingRank(word string) int {
+	switch word {
+	case "bad":
+		return 1
+	case "fair":
+		return 2
+	case "good":
+		return 3
+	}
+	return 0
 }
 
 // Fit compares a posting's required skills with the master resume. It is the same deterministic
@@ -68,7 +99,60 @@ const (
 const (
 	SortRelevance = "relevance"
 	SortNewest    = "newest"
+	SortFit       = "fit"      // best fit with the resume
+	SortPay       = "pay"      // highest listed pay
+	SortBenefits  = "benefits" // best benefits listed
+	SortLiving    = "living"   // most left over after the cost of living
+	SortOverall   = "overall"  // fit and the three ratings together
 )
+
+// SortsByScore reports whether the order depends on each posting's description, so the descriptions must be read first.
+func (q Query) SortsByScore() bool {
+	switch q.Sort {
+	case SortFit, SortPay, SortBenefits, SortLiving, SortOverall:
+		return true
+	}
+	return false
+}
+
+// SortKey is a posting's value under the query's score sort, and false when it has none (an unrated posting sorts last).
+func (q Query) SortKey(p Posting) (float64, bool) {
+	r := p.Ratings
+	rank := func(word string) float64 { return float64(RatingRank(word)) }
+	switch q.Sort {
+	case SortFit:
+		if p.Fit == nil {
+			return 0, false
+		}
+		return float64(p.Fit.Percent), true
+	case SortPay:
+		if r == nil || r.PayAmount == 0 {
+			return 0, false
+		}
+		return float64(r.PayAmount), true
+	case SortBenefits:
+		if r == nil || r.Benefits == "" {
+			return 0, false
+		}
+		return float64(r.BenefitsScore), true
+	case SortLiving:
+		if r == nil || r.Living == "" {
+			return 0, false
+		}
+		return float64(r.LivingLeft), true
+	case SortOverall:
+		total, any := 0.0, false
+		if p.Fit != nil {
+			total, any = total+float64(p.Fit.Percent)/100*3, true
+		}
+		if r != nil {
+			total += rank(r.Pay) + rank(r.Benefits) + rank(r.Living)
+			any = any || r.Pay != "" || r.Benefits != "" || r.Living != ""
+		}
+		return total, any
+	}
+	return 0, false
+}
 
 // Experience levels a search can ask for, read from the posting title.
 const (
@@ -101,6 +185,16 @@ type Query struct {
 	RequirePay   bool     `json:"require_pay"`   // drop postings that list no pay when a pay range is set
 	MinFit       int      `json:"min_fit"`       // percent of required skills the resume must show; 0 for any
 	MaxMissing   *int     `json:"max_missing"`   // most required skills the resume may lack; nil for any
+	// Rating filters: the lowest word a posting may have, "fair" or "good"; empty for any. A posting whose part
+	// could not be rated does not pass, because there is nothing to show it is good enough.
+	MinPayRating string `json:"min_pay_rating"`
+	MinBenefits  string `json:"min_benefits"`
+	MinLiving    string `json:"min_living"`
+	// CachedOnly searches only the boards earlier searches have listed, without listing any. Home's matches use it,
+	// so showing Home never sends a request per board.
+	CachedOnly bool `json:"cached_only"`
+	// UseRatings turns the good, fair and bad ratings and their filters on. Nil means yes.
+	UseRatings *bool `json:"use_ratings"`
 	// UseResume tells the search to rate the postings against the user's resume and to rank them
 	// by how well they fit. It is nil when the request does not say, which means yes: the fit
 	// filters and the skill ranking are on unless the user turns them off.
@@ -111,6 +205,29 @@ type Query struct {
 	SkillScore func(text string) float64 `json:"-"`
 	// FitOf compares a posting's text with the resume. The API layer sets it when a profile exists.
 	FitOf func(text string) *Fit `json:"-"`
+	// RateOf rates a posting whose description is loaded. The API layer sets it, since the rating needs the
+	// user's home location and minimum pay.
+	RateOf func(p Posting) *Ratings `json:"-"`
+}
+
+// MatchesRatings reports whether the search rates pay, benefits and cost of living. A request that does not say means yes.
+func (q Query) MatchesRatings() bool { return q.UseRatings == nil || *q.UseRatings }
+
+// HasRatingFilter reports whether the query filters on a rating, which needs each posting's description.
+func (q Query) HasRatingFilter() bool {
+	return q.MatchesRatings() && (q.MinPayRating != "" || q.MinBenefits != "" || q.MinLiving != "")
+}
+
+// RatingsOK reports whether a posting's ratings pass the rating filters.
+func (q Query) RatingsOK(r *Ratings) bool {
+	if !q.HasRatingFilter() {
+		return true
+	}
+	if r == nil {
+		return false
+	}
+	return RatingRank(r.Pay) >= RatingRank(q.MinPayRating) && RatingRank(r.Benefits) >= RatingRank(q.MinBenefits) &&
+		RatingRank(r.Living) >= RatingRank(q.MinLiving)
 }
 
 // MatchesResume reports whether the search rates the postings against the user's resume. A
@@ -145,9 +262,9 @@ func (q Query) Validate() error {
 		return errors.New("Offset must be between 0 and 5000")
 	}
 	switch q.Sort {
-	case "", SortRelevance, SortNewest:
+	case "", SortRelevance, SortNewest, SortFit, SortPay, SortBenefits, SortLiving, SortOverall:
 	default:
-		return errors.New("Sort must be relevance or newest")
+		return errors.New("Sort is not valid")
 	}
 	switch q.Level {
 	case "", LevelAny, LevelIntern, LevelEntry, LevelMid, LevelSenior, LevelLead:
@@ -168,6 +285,11 @@ func (q Query) Validate() error {
 	}
 	if q.MaxMissing != nil && (*q.MaxMissing < 0 || *q.MaxMissing > 50) {
 		return errors.New("Missing skills must be between 0 and 50")
+	}
+	for _, min := range []string{q.MinPayRating, q.MinBenefits, q.MinLiving} {
+		if min != "" && min != "fair" && min != "good" {
+			return errors.New("A rating filter must be fair or good")
+		}
 	}
 	if len(q.Exclude) > 10 {
 		return errors.New("Too many words to exclude")
@@ -201,6 +323,7 @@ type SearchResult struct {
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list
 	PostingsScanned int           `json:"postings_scanned"` // postings seen across those boards
 	Errors          []SearchError `json:"errors"`
+	RateLimited     bool          `json:"rate_limited"` // Greenhouse answered "too many requests", so some boards or descriptions were skipped
 	KeywordsUsed    []string      `json:"keywords_used"`
 	WorkModeUsed    string        `json:"work_mode_used"`
 }

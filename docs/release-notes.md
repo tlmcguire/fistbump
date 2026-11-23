@@ -1,12 +1,85 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.11
+# Fistbump v0.2.0
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.1.11
+## What's new in 0.2.0
+
+The biggest release yet. Fistbump now tells you whether a job is worth it, not just whether you fit it.
+
+### Is this job worth it?
+
+- **Pay, benefits and cost of living, for every job.** Open any posting, saved or not, and a new panel
+  answers three questions. Is the pay competitive for this role, level and place? Are the benefits
+  good? Can you live well there on this pay? Each answer comes with a plain verdict and the numbers
+  behind it. The figures are estimates from averages built into the app, for US locations, and nothing
+  is sent anywhere to get them.
+- **Your real take-home pay.** Federal, state and local income tax, Social Security and Medicare come
+  off first, then rent and a modest monthly budget for the city, so the money left over is what you
+  would actually keep. A table shows the pay per year, month, paycheck, week, day and hour, before
+  and after tax.
+- **Remote jobs use where you live.** Set your home location in your profile and remote postings are
+  measured against your own city.
+- **Benefits are read, never guessed.** Health, dental and vision coverage, retirement matching, paid
+  time off, parental leave, equity and more are counted only when the posting offers them. When a
+  posting mentions benefits but does not spell them out, it says so and rates nothing.
+- **Good, fair or bad at a glance.** Every search result shows a short line of signals: your fit,
+  then pay, benefits and cost of living.
+
+### A smarter search
+
+- **New sorts:** best overall, best fit, highest pay, best benefits and best cost of living.
+- **New filters** for pay against the market, benefits and cost of living, with a switch to turn the
+  ratings off.
+- **See the filters a search used.** Each one shows as a chip under the results, and its x takes it off
+  and searches again.
+- **Choose what shows under each result:** fit, missing skills, pay range, each rating, the benefits
+  listed, the money left each month, a description preview, the date, other locations and the
+  company link.
+- **Tidier filters.** The filters now sit in a few even rows instead of a long panel.
+- **Shorter lists of places.** A posting open in 40 states reads "Remote in 40 places", not a paragraph.
+- **More boards and six new industries:** robotics and drones, space, crypto and Web3, HR and workforce
+  tech, fashion and beauty, and sports, fitness and wellness. Boards that no longer exist were removed.
+
+### Jobs that fit you, on Home
+
+- **Matches on Home.** With target positions in your profile, Home suggests open roles that fit them,
+  your preferred work mode and your location, best fit to your resume first.
+- **Home adds no load.** Matches reuse what your last search loaded, so showing Home never sends a
+  request to every board.
+
+### Fixes and polish
+
+- **A saved job is never offered for saving again.** Search results and links show a Saved tag and a
+  **View saved job** button that opens it in Saved jobs.
+- **No more mystery failures when Greenhouse is busy.** Searches now pace themselves and explain any
+  delay. See "Searching politely" below.
+- **Results no longer come back empty after a slow listing.** Reading the descriptions now has its own
+  time limit.
+- **Clearer high-contrast mode.** With Increase contrast on, the filters end in a clear edge.
+- **Roomier Settings button.** Its highlight no longer hugs the icon and the word.
+
+### Searching politely
+
+Fistbump finds jobs by asking Greenhouse, the job board many companies use. Greenhouse only answers so
+many questions at a time, so this release makes Fistbump a good guest:
+
+- **It asks a few things at a time, not everything at once.** Even with several searches running, only a
+  handful of requests are out at any moment.
+- **It goes fast when you have been away, and eases off when you are busy.** Your first search after a
+  break runs at full speed. If you search again and again, Fistbump paces itself instead of being turned away.
+- **It remembers what it has already seen.** Job lists from the last few hours are reused, and Home's
+  suggestions only use what your searches already found, so they never add to the load.
+- **It never asks twice for the same thing.** If two searches need the same company's jobs at the same
+  moment, one request serves both.
+- **If Greenhouse asks it to slow down, it listens.** Fistbump waits a little, shows what it already has,
+  and tells you plainly to try again shortly. On Home, **Search again** counts down until a new try
+  will work.
+
+## Earlier in 0.1.x
 
 - **The Tailor tab shows the full skill match.** Beside your suggestions it now lists every skill the job
   asks for, required and preferred, colored as on your resume, likely, missing or not mentioned, with the
@@ -95,10 +168,10 @@ applications you sent. Your data stays on your computer unless you choose a remo
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.11-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.11-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.11-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.11-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.2.0-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.2.0-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.2.0-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.2.0-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -138,7 +211,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.1.11 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.2.0 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits

@@ -49,3 +49,25 @@ func TestFitFilterValidation(t *testing.T) {
 		t.Errorf("valid fit filter rejected: %v", err)
 	}
 }
+
+func TestRatingFilters(t *testing.T) {
+	good := &Ratings{Pay: "good", Benefits: "fair", Living: "good"}
+	if !(Query{}).RatingsOK(nil) {
+		t.Error("no filter should pass an unrated posting")
+	}
+	q := Query{MinBenefits: "good"}
+	if q.RatingsOK(good) || q.RatingsOK(nil) {
+		t.Error("fair benefits and unrated benefits should fail a good-benefits filter")
+	}
+	q = Query{MinBenefits: "fair", MinPayRating: "good"}
+	if !q.RatingsOK(good) {
+		t.Error("should pass")
+	}
+	off := false
+	if (Query{MinBenefits: "good", UseRatings: &off}).HasRatingFilter() {
+		t.Error("ratings off means no rating filter")
+	}
+	if (Query{Limit: 5, WorkMode: "Any", MinLiving: "great"}).Validate() == nil {
+		t.Error("a bad rating word should be refused")
+	}
+}

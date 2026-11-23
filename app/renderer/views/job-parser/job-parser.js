@@ -161,8 +161,41 @@ window.JobParser = {
 
       const keyOf = result => result.id ? `job/${result.id}` : `${result.board}/${result.external_id}`;
 
-      //Saved jobs by their Greenhouse listing, so a listing shown again still reads as saved.
+      //Saved jobs by their Greenhouse listing, so a listing shown again still reads as saved. Kept for every
+      //saved job, archived ones included, and read when the view starts so search results know from the first
+      //search which listings are already saved.
       const savedByListing = new Map();
+      const loadSavedIndex = async () => {
+        try {
+          const jobs = await window.FistBumpAPI.jobs.list("", {archived: "include"});
+          savedByListing.clear();
+          for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
+        } catch {
+          return; //the lists still work; a listing just reads as unsaved until the next try
+        }
+        markSavedRows();
+        //the listing on screen may have been saved before the index arrived
+        const open = posting;
+        const id = open && !open.id && open.board && savedByListing.get(`${open.board}/${open.external_id}`);
+        if (id) displayPosting({...open, id}, fromResults);
+      };
+
+      //a small "Saved" tag on the result rows that are already saved jobs
+      const markSavedRows = () => {
+        for (const row of document.querySelectorAll("#result-list .result")) {
+          const body = row.querySelector(".result-body");
+          const saved = savedByListing.has(row.dataset.key);
+          const tag = body.querySelector(".result-saved");
+          if (saved && !tag) {
+            const small = document.createElement("small");
+            small.className = "result-state result-saved";
+            small.textContent = "Saved";
+            body.append(small);
+          } else if (!saved && tag) {
+            tag.remove();
+          }
+        }
+      };
 
       //highlights the open listing in the result list, if it is on this page
       const markSelected = () => {
@@ -226,17 +259,22 @@ window.JobParser = {
         rememberListing(data);
 
         const saved = Boolean(data.id);
+        //A job that is already saved is never offered for saving again. From search or a link it offers to open the
+        //saved copy; the archive, trash and delete controls belong to the Saved tab.
+        const viewSaved = saved && activeTab !== "saved";
         $("save-listing").hidden = saved || !data.board;
         $("save-listing").textContent = "Save job";
         $("save-listing").disabled = false;
-        $("delete-job").hidden = !saved;
-
-        $("tailor-job").hidden = !saved;
-        drawLifecycle(saved ? data : null);
+        $("view-saved").hidden = !viewSaved;
+        $("delete-job").hidden = !saved || viewSaved;
+        drawLifecycle(saved && !viewSaved ? data : null);
+        if (viewSaved) $("tailor-job").hidden = false;
+        $("tailor-job").classList.toggle("primary", !viewSaved);
 
         $("reload-listing").hidden = saved || !data.board;
         $("back-to-results").hidden = !(opened && (results || activeTab === "saved"));
         renderAnalysis(saved ? data.id : null);
+        renderCost(data);
 
       };
 
@@ -426,6 +464,144 @@ window.JobParser = {
         });
       };
 
+      //What shows under each result is the user's choice: boxes in the filters panel, kept on this computer, and
+      //applied at once to the results already on screen. The defaults are the quiet set; the rest are opt-in.
+      const SHOW_KEY = "fistbump.result-show";
+      const SHOW_DEFAULTS = {fit: true, missing: true, pay_range: true, pay_rating: true, benefits_rating: true, living_rating: true,
+        benefits_list: false, left_over: false, preview: false, posted: true, locations: true, company_site: true};
+      const readShow = () => {
+        try {
+          const kept = JSON.parse(localStorage.getItem(SHOW_KEY) || "{}");
+          return {...SHOW_DEFAULTS, ...Object.fromEntries(Object.entries(kept).filter(([k, v]) => k in SHOW_DEFAULTS && typeof v === "boolean"))};
+        } catch {
+          return {...SHOW_DEFAULTS};
+        }
+      };
+      let show = readShow();
+      const syncShowBoxes = () => {
+        for (const box of document.querySelectorAll("input[data-show]")) box.checked = show[box.dataset.show];
+      };
+
+      //One quiet line of signals under each result: how well the resume fits, then good, fair or bad for pay,
+      //benefits and cost of living. The search sends the ratings with each result; a saved job, which the
+      //search did not rate, asks the same analysis for them. A part that cannot be judged is left out.
+      const RATING = {
+        pay: {well_above: "good", above: "good", in_line: "fair", below: "bad", well_below: "bad"},
+        benefits: {strong: "good", decent: "fair", basic: "bad"},
+        living: {comfortable: "good", okay: "fair", tight: "bad", short: "bad"},
+      };
+      const RATING_WORD = {good: "Good", fair: "Fair", bad: "Bad"};
+      const RATING_LABEL = {pay: "Pay", benefits: "Benefits", living: "Living"};
+      const RATING_TITLE = {pay: "Pay for the role", benefits: "Benefits", living: "Cost of living"};
+      let fitAvailable = false; //some result in this search has a fit, so the resume is in play
+      const ratingCache = new Map();
+      const ratingsFor = result => {
+        const key = [result.id, result.pay_min, result.pay_max, (result.raw_text || "").length].join("|");
+        if (!ratingCache.has(key)) {
+          ratingCache.set(key, window.FistBumpAPI.cost.analyze({
+            title: result.position_title || "", location: result.location || "", work_mode: result.work_mode || "",
+            pay_min: result.pay_min || 0, pay_max: result.pay_max || 0, text: result.raw_text || "",
+          }).then(c => c.supported ? {
+            pay: RATING.pay[c.pay?.verdict], benefits: RATING.benefits[c.benefits?.rating], living: RATING.living[c.lifestyle?.verdict],
+            tips: {pay: c.pay?.headline, benefits: c.benefits?.headline, living: c.lifestyle?.headline},
+            benefits_found: c.benefits?.found, left_monthly: c.lifestyle?.left_monthly,
+          } : null).catch(() => null));
+        }
+        return ratingCache.get(key);
+      };
+
+      const pill = (kind, level, label, value, tip) => {
+        const badge = document.createElement("span");
+        badge.className = "signal";
+        badge.dataset.kind = kind;
+        badge.dataset.level = level;
+        if (tip) badge.title = tip;
+        if (label) {
+          const name = document.createElement("span");
+          name.className = "signal-label";
+          name.textContent = label;
+          badge.append(name, " ");
+        }
+        badge.append(value);
+        return badge;
+      };
+      const SHOW_RATING = {pay: "pay_rating", benefits: "benefits_rating", living: "living_rating"};
+      const ratingPills = (ratings, tips = {}) => ["pay", "benefits", "living"]
+        .filter(kind => ratings[kind] && show[SHOW_RATING[kind]])
+        .map(kind => pill(kind, ratings[kind], RATING_LABEL[kind], RATING_WORD[ratings[kind]], `${RATING_TITLE[kind]}: ${tips[kind] || RATING_WORD[ratings[kind]]}`));
+
+      //Fit with the resume, as one pill. A posting that lists no required skills gets a plain "No skill list", so a
+      //missing fit reads as a fact about the posting and not as something that failed to load.
+      const fitPill = fit => {
+        const level = fit.percent >= 70 ? "high" : fit.percent >= 40 ? "mid" : "low";
+        const likely = fit.likely || [];
+        const tip = `${fit.matched} of ${fit.required} required skills are on your resume` +
+          (likely.length ? `; ${likely.length} more look likely from related skills (${likely.join(", ")})` : "") + ".";
+        return pill("fit", level, "", `${fit.percent}% fit`, tip);
+      };
+
+      const signalLine = result => {
+        const line = document.createElement("div");
+        line.className = "signals";
+        if (result.fit && show.fit) line.append(fitPill(result.fit));
+        else if (!result.fit && show.fit && fitAvailable && result.raw_text) {
+          line.append(pill("fit", "none", "", "No skill list", "This posting lists no required skills, so there is nothing to compare with your resume."));
+        }
+        if (result.ratings) line.append(...ratingPills(result.ratings));
+        else if (result.id && result.raw_text) {
+          ratingsFor(result).then(ratings => {
+            if (ratings && line.isConnected) line.append(...ratingPills(ratings, ratings.tips));
+            line.hidden = !line.children.length;
+          });
+        }
+        line.hidden = !line.children.length && !(result.id && result.raw_text);
+        return line;
+      };
+
+      //Two optional lines of detail, from the same ratings: the benefits the posting names, and the money left over
+      //each month. They are written into a holder that a saved job fills when its ratings come back.
+      const detailLines = result => {
+        const holder = document.createElement("div");
+        holder.className = "result-lines";
+        const fillLines = ratings => {
+          if (!ratings) return;
+          const add = (label, text) => {
+            const line = document.createElement("p");
+            line.className = "detail-line";
+            const name = document.createElement("span");
+            name.className = "signal-label";
+            name.textContent = label;
+            line.append(name, ` ${text}`);
+            holder.append(line);
+          };
+          if (show.benefits_list && ratings.benefits_found?.length) {
+            const found = ratings.benefits_found;
+            add("Benefits", found.slice(0, 4).join(", ").toLowerCase().replace(/^./, c => c.toUpperCase()) + (found.length > 4 ? ` +${found.length - 4}` : ""));
+          }
+          if (show.left_over && Number.isFinite(ratings.left_monthly)) {
+            const amount = `$${Math.abs(Math.round(ratings.left_monthly / 10) * 10).toLocaleString()}`;
+            add("Left over", ratings.left_monthly >= 0 ? `about ${amount} a month after living costs` : `short by about ${amount} a month after living costs`);
+          }
+        };
+        if (!show.benefits_list && !show.left_over) return holder;
+        if (result.ratings) fillLines(result.ratings);
+        else if (result.id && result.raw_text) ratingsFor(result).then(ratings => { if (holder.isConnected) fillLines(ratings); });
+        return holder;
+      };
+
+      //What is missing, on one line: the real gaps first, and the count of the rest.
+      const gapLine = fit => {
+        if (!fit?.missing?.length) return null;
+        const line = document.createElement("p");
+        line.className = "gap-line";
+        const label = document.createElement("span");
+        label.className = "signal-label";
+        label.textContent = "Missing";
+        line.append(label, ` ${fit.missing.slice(0, 3).join(", ")}${fit.missing.length > 3 ? ` +${fit.missing.length - 3}` : ""}`);
+        line.title = "Required skills that are not on your resume, and nothing related is";
+        return line;
+      };
+
       //get one row of the search results and define it's html
       const resultItem = (result, onOpen = r => displayPosting(r, true)) => {
         const item = document.createElement("li");
@@ -445,11 +621,11 @@ window.JobParser = {
             el("strong", result.position_title || "Unknown position"),
             el ("span", [
               result.company_name,
-              result.location,
+              window.Places.summary(result.location).short,
               //the work mode, unless the location already says it ("Remote", "Hybrid - Boston")
               !String(result.location || "").toLowerCase().includes(String(result.work_mode || "").toLowerCase()) && result.work_mode,
-              payText(result),
-              ago(result.updated_at)
+              show.pay_range && payText(result),
+              show.posted && ago(result.updated_at)
             ].filter(Boolean).join(" \u00b7 "))
           );
 
@@ -471,51 +647,36 @@ window.JobParser = {
             onOpen(result);
           });
 
-          if (result.fit) body.append(fitLine(result.fit));
-          const preview = snippet(result.raw_text);
-          if (preview) body.append(el("p", preview));
-          if (body.lastChild.tagName === "P") body.lastChild.className = "result-snippet";
-          if (result.duplicates) {
-            body.append(el("small", `Also posted in ${result.duplicates} other ${result.duplicates === 1 ? "location" : "locations"}`));
+          body.append(signalLine(result));
+          const gaps = show.missing ? gapLine(result.fit) : null;
+          if (gaps) body.append(gaps);
+          body.append(detailLines(result));
+          if (show.preview) {
+            const preview = snippet(result.raw_text);
+            if (preview) {
+              const p = el("p", preview);
+              p.className = "result-snippet";
+              body.append(p);
+            }
           }
 
-          const url = safeURL(result.company_url);
+          //quiet extras share one line: other places it is posted, and the company's site
+          const extras = document.createElement("div");
+          extras.className = "result-extras";
+          if (result.duplicates && show.locations) {
+            extras.append(el("small", `Also in ${result.duplicates} other ${result.duplicates === 1 ? "location" : "locations"}`));
+          }
+          const url = show.company_site && safeURL(result.company_url);
           if (url) {
             const link = el("a", "Company site");
             link.className = "result-link";
             link.href = url;
             link.target = "_blank";
             link.rel = "noopener noreferrer";
-            body.append(link);
+            extras.append(link);
           }
+          if (extras.children.length) body.append(extras);
           return item;
-      };
-
-      //how well the resume covers a posting's required skills: a percent with a word, then what you have,
-      //what you probably have (a related skill is on the resume) and the real gaps
-      const fitLine = fit => {
-        const h = window.ResumeBuilder.el;
-        const likely = fit.likely || [];
-        const because = fit.because || [];
-        const level = fit.percent >= 70 ? "high" : fit.percent >= 40 ? "mid" : "low";
-        const word = {high: "Strong fit", mid: "Good fit", low: "Stretch"}[level];
-        const tip = `${fit.matched} of ${fit.required} required skills are on your resume` +
-          (likely.length ? `; ${likely.length} more look likely from related skills` : "") + ".";
-        const wrap = h("div", {class: "fit-block"});
-        wrap.append(h("div", {class: "fit-line"},
-          h("span", {class: "fit-badge", "data-level": level, title: tip, text: `${fit.percent}% \u00b7 ${word}`}),
-          h("span", {class: "fit-missing", text: `${fit.matched} of ${fit.required} required skills shown`})));
-        const chips = (kind, label, items) => {
-          if (!items.length) return;
-          const row = h("div", {class: "fit-line"}, h("span", {class: "fit-label", text: label}));
-          for (const item of items.slice(0, 4)) row.append(h("span", {class: `fit-chip fit-chip-${kind}`, title: item.title || "", text: item.text}));
-          if (items.length > 4) row.append(h("span", {class: "fit-missing", text: `+${items.length - 4}`}));
-          wrap.append(row);
-        };
-        chips("likely", "Likely", likely.map((skill, i) => ({text: skill, title: because[i] ? `You list ${because[i]}, which usually goes with ${skill}` : ""})));
-        chips("gap", "Gaps", fit.missing.map(skill => ({text: skill, title: "Not on your resume, and nothing related is"})));
-        if (!fit.missing.length && !likely.length) wrap.append(h("div", {class: "fit-line"}, h("span", {class: "fit-missing", text: "No gaps in the required skills"})));
-        return wrap;
       };
 
       //explains what the search could and could not find, so a filter that did not apply is never silent.
@@ -585,32 +746,108 @@ window.JobParser = {
         }
 
         if (data.partial) {
-          notes.push("A pay range needs each description, so only the top matches were checked. Narrow the search to see more.");
+          notes.push("Filtering or sorting by pay, fit or ratings needs each description, so only the top matches by relevance were read. Narrow the search to see more.");
+        }
+        if (data.rate_limited && data.postings.length > 0) {
+          notes.push("Greenhouse is limiting how many requests it answers right now, so some boards or descriptions were skipped. Try again in a minute or two for the full list.");
         }
         if (data.boards_searched < data.boards_total) {
           const missed = data.boards_total - data.boards_searched;
           notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
         }
         if (data.postings.length === 0 && data.matched > 0) {
-          empty = "Matches were found, but their descriptions could not be loaded. Try again.";
+          //Greenhouse answers "too many requests" when many boards are read in a short time; say so, not a vague failure
+          empty = data.rate_limited || data.errors.some(failed => failed.message === "Greenhouse is limiting requests")
+            ? "Matches were found, but Greenhouse is limiting how many requests it answers right now, so their descriptions could not be loaded. Wait a minute, then try again."
+            : "Matches were found, but their descriptions could not be loaded. Try again.";
         }
         return {note: notes.join(" "), empty};
+      };
+
+      //The filters a search ran with, as a row of chips under its count. Each says what it did, and its x takes that
+      //one filter off and searches again, so nothing a search hides is a mystery.
+      const RATING_WORDS = {fair: "fair or better", good: "good only"};
+      const activeFilters = q => {
+        const out = [];
+        const add = (text, ids) => out.push({text, ids});
+        const optionName = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(String(value))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim();
+        if (q.location) add(`In ${q.location}`, ["search-location"]);
+        if (q.company) add(`At ${q.company}`, ["search-company"]);
+        if (q.categories?.length) add(optionName("search-industry", q.categories[0]) || q.categories[0], ["search-industry"]);
+        if (q.work_mode && q.work_mode !== "Any") add(`${q.work_mode} only`, ["search-work-mode"]);
+        if (q.posted_within) add(optionName("search-posted", q.posted_within).replace(/^Last/, "Posted in the last") || `Posted within ${q.posted_within} days`, ["search-posted"]);
+        if (q.pay_min && q.pay_max) add(`Pay ${payLabel(q.pay_min)} to ${payLabel(q.pay_max)}`, ["search-pay-min", "search-pay-max"]);
+        else if (q.pay_min) add(`Pay at least ${payLabel(q.pay_min)}`, ["search-pay-min"]);
+        else if (q.pay_max) add(`Pay up to ${payLabel(q.pay_max)}`, ["search-pay-max"]);
+        if (q.require_pay) add("Pay must be listed", ["search-require-pay"]);
+        if (q.exclude?.length) add(`Without ${q.exclude.join(", ")}`, ["search-exclude"]);
+        if (q.use_resume === false) add("Resume not used", ["search-use-resume"]);
+        else {
+          if (q.min_fit) add(`Fit ${q.min_fit}%+`, ["search-min-fit"]);
+          if (q.max_missing !== null && q.max_missing !== undefined) add(q.max_missing === 0 ? "No missing skills" : `At most ${q.max_missing} missing`, ["search-max-missing"]);
+        }
+        if (q.use_ratings === false) add("Ratings off", ["search-use-ratings"]);
+        else {
+          if (q.min_pay_rating) add(`Pay: ${RATING_WORDS[q.min_pay_rating]}`, ["search-min-pay-rating"]);
+          if (q.min_benefits) add(`Benefits: ${RATING_WORDS[q.min_benefits]}`, ["search-min-benefits"]);
+          if (q.min_living) add(`Cost of living: ${RATING_WORDS[q.min_living]}`, ["search-min-living"]);
+        }
+        return out;
+      };
+      const FILTER_DEFAULTS = {"search-use-resume": true, "search-use-ratings": true};
+      const renderActiveFilters = q => {
+        const host = $("result-filters");
+        const filters = activeFilters(q);
+        //no filters, no row: the space goes to the results
+        host.hidden = !filters.length;
+        const label = document.createElement("span");
+        label.className = "filter-chips-label";
+        label.textContent = "Filters";
+        host.replaceChildren(label, ...filters.map(filter => {
+          const chip = document.createElement("span");
+          chip.className = "filter-chip";
+          chip.append(filter.text);
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "filter-chip-x";
+          remove.textContent = "×";
+          remove.setAttribute("aria-label", `Remove filter: ${filter.text}`);
+          remove.addEventListener("click", () => {
+            for (const id of filter.ids) {
+              const field = $(id);
+              if (field.type === "checkbox") field.checked = id in FILTER_DEFAULTS ? FILTER_DEFAULTS[id] : false;
+              else if (field.tagName === "SELECT") field.value = field.options[0].value;
+              else field.value = "";
+            }
+            applyResumeSwitch();
+            applyRatingsSwitch();
+            saveForm();
+            searchForm.requestSubmit();
+          });
+          chip.append(remove);
+          return chip;
+        }));
       };
 
       //fill all results
       const renderResults = data => {
         const count = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+        //one short line; the postings scanned are in the tooltip, so the count never wraps beside the sort
         $("result-counts").textContent = `${data.matched.toLocaleString()}${data.partial ? "+" : ""} ${data.matched === 1 && !data.partial ? "match" : "matches"}` +
-          ` from ${count(data.postings_scanned, "posting", "postings")} on ${count(data.boards_searched, "board", "boards")}`;
+          ` \u00b7 ${count(data.boards_searched, "board", "boards")}`;
+        $("result-counts").title = `${count(data.postings_scanned, "posting", "postings")} read on ${count(data.boards_searched, "board", "boards")}`;
         const {note, empty} = describeSearch(data, searchedQuery);
         $("result-note").hidden = !note;
         $("result-note").textContent = note;
         $("result-empty-message").textContent = empty;
         $("result-empty").hidden = data.postings.length > 0;
         //not map(resultItem): map's index argument would land in onOpen
+        renderActiveFilters(searchedQuery);
+        fitAvailable = searchedQuery.use_resume !== false && data.postings.some(result => result.fit);
         $("result-list").replaceChildren(...data.postings.map(result => resultItem(result)));
         window.UI.stagger($("result-list"), 22, 10);
         markSelected();
+        markSavedRows();
 
         renderPager();
 
@@ -774,6 +1011,10 @@ window.JobParser = {
           use_resume: $("search-use-resume").checked,
           min_fit: $("search-use-resume").checked ? number("search-min-fit") : 0,
           max_missing: !$("search-use-resume").checked || $("search-max-missing").value === "" ? null : number("search-max-missing"),
+          use_ratings: $("search-use-ratings").checked,
+          min_pay_rating: $("search-use-ratings").checked ? $("search-min-pay-rating").value : "",
+          min_benefits: $("search-use-ratings").checked ? $("search-min-benefits").value : "",
+          min_living: $("search-use-ratings").checked ? $("search-min-living").value : "",
           sort: $("result-sort").value,
           limit: window.Prefs.get("pageSize")
         };
@@ -827,6 +1068,7 @@ window.JobParser = {
           const job = imported[0] || refreshed[0];
           if (job) {
             savedByListing.set(`${job.board}/${job.external_id}`, job.id);
+            markSavedRows();
             if (posting === current) displayPosting({...current, ...job}, fromResults); //now shown as saved
             loadSaved();
           }
@@ -834,6 +1076,14 @@ window.JobParser = {
           btn.disabled = false;
           window.UI.alert(error.message); // for example, the posting has closed (404)
         }
+      });
+
+      //A job already saved opens in Saved jobs, where it can be tailored, tracked or archived.
+      $("view-saved").addEventListener("click", () => {
+        const id = posting?.id;
+        if (!id) return;
+        selectTab("saved");
+        openSavedJob({id});
       });
 
       // ---- Saved tab ----
@@ -862,7 +1112,7 @@ window.JobParser = {
       const loadSaved = async () => {
         try {
           const jobs = await jobsApi.list($("saved-q").value.trim(), savedScope());
-          for (const job of jobs) if (job.board && job.external_id) savedByListing.set(`${job.board}/${job.external_id}`, job.id);
+          loadSavedIndex(); //deleted, trashed and newly saved jobs change which listings read as saved
           $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
           $("saved-empty-message").textContent = ({
             archived: "No archived jobs. Archived jobs are hidden from Saved jobs, but nothing is deleted — you can bring them back any time.",
@@ -1077,6 +1327,73 @@ window.JobParser = {
         }
       };      
 
+      // ---- Pay, benefits and cost of living: runs for any posting, saved or not ----
+      let costSeq = 0;
+      const money = n => `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).toLocaleString()}`;
+      const PILL = {
+        pay: {well_above: "Well above market", above: "Above market", in_line: "At market", below: "Below market", well_below: "Well below market", unknown: "Not compared"},
+        benefits: {strong: "Strong", decent: "Decent", basic: "Limited", unclear: "Unclear", unlisted: "Not listed"},
+        life: {comfortable: "Comfortable", okay: "Workable", tight: "Tight", short: "Short"},
+      };
+      const TONE = {well_above: "good", above: "good", in_line: "ok", below: "warn", well_below: "bad", unknown: "ok",
+        comfortable: "good", okay: "ok", tight: "warn", short: "bad", strong: "good", decent: "ok", basic: "warn", unclear: "ok", unlisted: "ok"};
+      const renderCost = async data => {
+        const {el, fill, chips} = window.ResumeBuilder;
+        const box = $("cost");
+        const mine = ++costSeq;
+        box.hidden = true;
+        box.replaceChildren();
+        if (!data?.raw_text && !data?.pay_min && !data?.position_title) return;
+        try {
+          const c = await window.FistBumpAPI.cost.analyze({
+            title: data.position_title || "", location: data.location || "", work_mode: data.work_mode || "",
+            pay_min: data.pay_min || 0, pay_max: data.pay_max || 0, text: data.raw_text || "",
+          });
+          if (mine !== costSeq) return; //a newer listing opened meanwhile
+          const card = (title, kind, verdict, headline, ...more) => el("div", {class: "cost-card"},
+            el("div", {class: "cost-card-head"}, el("h4", {text: title}),
+              kind ? el("span", {class: `cost-pill ${TONE[verdict] || "ok"}`, text: PILL[kind][verdict] || verdict}) : null),
+            el("p", {text: headline}), ...more);
+          const parts = [el("h3", {text: "Pay and cost of living"}), el("p", {class: "cost-summary", text: c.summary})];
+          if (c.pay) {
+            const range = c.pay.market_mid ? el("p", {class: "cost-meta", text: `Typical for this role here: ${money(c.pay.market_low)} to ${money(c.pay.market_high)}`
+              + (c.pay.listed ? `. Posted: ${money(c.pay.min)}${c.pay.max !== c.pay.min ? ` to ${money(c.pay.max)}` : ""}.` : ".")}) : null;
+            const desired = c.pay.meets_desired === null || c.pay.meets_desired === undefined ? null
+              : el("p", {class: "cost-meta", text: c.pay.meets_desired ? "This meets your minimum desired pay." : "This tops out below your minimum desired pay."});
+            parts.push(card("Is the pay competitive?", "pay", c.pay.verdict, c.pay.headline, range, desired));
+          }
+          const b = c.benefits;
+          parts.push(card("Are the benefits good?", "benefits", b.rating, b.headline, b.found.length ? chips(b.found) : null));
+          if (c.lifestyle) {
+            const l = c.lifestyle;
+            //the pay over each stretch of time, before and after tax
+            const cell = (text, tag = "td") => el(tag, {text});
+            const breakdown = el("table", {class: "cost-table cost-periods"},
+              el("caption", {class: "visually-hidden", text: "Pay by period, before and after tax"}),
+              el("thead", {}, el("tr", {}, cell("", "th"), cell("Before tax", "th"), cell("After tax", "th"))),
+              el("tbody", {}, ...l.periods.map(x => el("tr", {}, cell(x.label), cell(money(x.gross)), cell(money(x.net))))));
+            const basis = c.pay?.source === "posting" ? "the posted pay (midpoint of the range)" : "an estimated salary";
+            parts.push(card("What does the pay come to?", null, null, `Based on ${basis}: ${money(l.gross)} a year. About ${l.tax_rate}% goes to tax (federal, state and local, Social Security and Medicare), leaving ${money(l.periods[0].net)}.`, breakdown));
+            const row = (name, amount, cls = "") => el("tr", {class: cls}, el("td", {text: name}), el("td", {text: money(amount)}));
+            const table = el("table", {class: "cost-table"},
+              el("caption", {class: "visually-hidden", text: `Monthly budget in ${c.location.label}`}),
+              el("tbody", {}, row("Pay per month, before tax", l.gross_monthly, "cost-gross"),
+                row(`Expected taxes (${l.tax_rate}%)`, -l.tax_monthly),
+                row("Take-home pay per month", l.net_monthly, "cost-net"),
+                ...l.costs.map(x => row(x.label, -x.amount)),
+                row(l.left_monthly >= 0 ? "Left over" : "Short by", Math.abs(l.left_monthly), "cost-left")));
+            const taxes = el("p", {class: "cost-meta", text: `Yearly taxes: about ${money(l.federal)} federal, ${money(l.state)} state and local, and ${money(l.payroll)} Social Security and Medicare. Rent is about ${l.rent_share}% of gross pay.`});
+            parts.push(card(`Can you live well in ${c.location.label}?`, "life", l.verdict, l.headline, table, taxes));
+          }
+          for (const note of c.notes) parts.push(el("p", {class: "note", text: note}));
+          parts.push(el("p", {class: "cost-meta", text: "Estimates from average figures for one person with a modest budget, not live prices. Taxes are simplified. Use them to compare, then check the real numbers."}));
+          fill(box, ...parts);
+          box.hidden = false;
+        } catch {
+          //the rest of the listing is unaffected; the analysis is simply not shown
+        }
+      };
+
       const PASTE_SPEC = [
         {name: "company_name", label: "Company", required: true},
         {name: "position_title", label: "Title", required: true},
@@ -1100,6 +1417,9 @@ window.JobParser = {
             const body = Object.fromEntries(Object.entries(form.read()).filter(([, value]) => value !== null));
             try {
               const job = await jobsApi.create({...body, source: "pasted", raw_text: text});
+              //saved once: the button says so instead of offering to save the same posting again
+              save.disabled = true;
+              save.textContent = "Saved";
               selectTab("saved");
               displayPosting(job, true);
             } catch (error) {
@@ -1121,11 +1441,13 @@ window.JobParser = {
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
       const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
-        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing"];
+        "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing",
+        "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const filterInUse = id => {
         const field = $(id);
         //With the resume off, the fit filters do not apply, so they do not count as in use.
         if ((id === "search-min-fit" || id === "search-max-missing") && !$("search-use-resume").checked) return false;
+        if (/^search-min-(pay-rating|benefits|living)$/.test(id) && !$("search-use-ratings").checked) return false;
         if (field.type === "checkbox") return field.checked;
         const value = field.value.trim();
         return value !== "" && value !== "Any" && value !== "0";
@@ -1172,7 +1494,7 @@ window.JobParser = {
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
       const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
         "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-use-resume",
-        "search-min-fit", "search-max-missing"];
+        "search-min-fit", "search-max-missing", "search-use-ratings", "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const FORM_KEY = "fistbump.search-form";
 
       //the form as an object, and back
@@ -1188,6 +1510,7 @@ window.JobParser = {
           else $(id).value = String(fields[id]);
         }
         applyResumeSwitch();
+        applyRatingsSwitch();
         updateFilterCount();
       };
 
@@ -1200,7 +1523,27 @@ window.JobParser = {
         updateFilterCount();
       };
       $("search-use-resume").addEventListener("change", applyResumeSwitch);
+
+      //The ratings switch does the same for the three rating filters. Sorting by a part that is switched off is
+      //not possible, so those sort choices are greyed out and the sort goes back to Best match.
+      const applyRatingsSwitch = () => {
+        const on = $("search-use-ratings").checked;
+        for (const id of ["search-min-pay-rating", "search-min-benefits", "search-min-living"]) $(id).disabled = !on;
+        applySortChoices();
+        updateFilterCount();
+      };
+      const applySortChoices = () => {
+        const resume = $("search-use-resume").checked;
+        const ratings = $("search-use-ratings").checked;
+        for (const option of $("result-sort").options) {
+          option.disabled = (option.value === "fit" && !resume) || (["pay", "benefits", "living", "overall"].includes(option.value) && !ratings);
+        }
+        if ($("result-sort").selectedOptions[0]?.disabled) $("result-sort").value = "relevance";
+      };
+      $("search-use-ratings").addEventListener("change", applyRatingsSwitch);
+      $("search-use-resume").addEventListener("change", applySortChoices);
       applyResumeSwitch();
+      applyRatingsSwitch();
 
       const saveForm = () => {
         try {
@@ -1279,6 +1622,11 @@ window.JobParser = {
         if ($("search-use-resume").checked) {
           if (text("search-min-fit") && text("search-min-fit") !== "0") details.push(`fit ${optionText("search-min-fit", text("search-min-fit")).toLowerCase()}`);
           if (text("search-max-missing") !== "" && text("search-max-missing") !== undefined) details.push(text("search-max-missing") === "0" ? "no missing skills" : `${optionText("search-max-missing", text("search-max-missing")).toLowerCase()} missing skills`);
+        }
+        if ($("search-use-ratings").checked) {
+          for (const [id, label] of [["search-min-pay-rating", "pay"], ["search-min-benefits", "benefits"], ["search-min-living", "cost of living"]]) {
+            if (text(id)) details.push(`${label} ${text(id) === "good" ? "good" : "fair or better"}`);
+          }
         }
         return {title, details};
       };
@@ -1363,8 +1711,20 @@ window.JobParser = {
       renderHistory();
       searchForm.addEventListener("change", saveForm);
 
+      //The "show under each result" boxes act at once, on the results already on screen.
+      syncShowBoxes();
+      document.addEventListener("change", event => {
+        const box = event.target.closest?.("input[data-show]");
+        if (!box) return;
+        show = {...show, [box.dataset.show]: box.checked};
+        try { localStorage.setItem(SHOW_KEY, JSON.stringify(show)); } catch { /* the choice lasts until the app closes */ }
+        if (results) renderResults(results);
+        if (activeTab === "saved") loadSaved();
+      });
+
       $("clear-search").addEventListener("click", () => {
         searchForm.reset();
+        syncShowBoxes(); //reset clears every box in the form; the display choices are not part of the search
         try { localStorage.removeItem(FORM_KEY); } catch { /* nothing saved to remove */ }
         updateFilterCount();
         $("search-keywords").focus();
@@ -1441,5 +1801,6 @@ window.JobParser = {
 
       showDetailEmpty();
       selectTab("find");
+      loadSavedIndex();
     }
   };

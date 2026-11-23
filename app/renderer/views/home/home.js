@@ -46,8 +46,8 @@
     svg.append(path);
     return svg;
   };
-  const row = ({title, detail, aside, onclick}) =>
-    el("button", {type: "button", class: "home-row", onclick},
+  const row = ({title, detail, aside, onclick, tip}) =>
+    el("button", {type: "button", class: "home-row", onclick, title: tip},
       el("div", {}, el("strong", {text: title}), detail ? el("span", {text: detail}) : null),
       el("small", {text: aside || ""}),
       chevron());
@@ -180,6 +180,70 @@
     return items.slice(0, limit);
   }
 
+  // ---------- Jobs that fit you ----------
+
+  //Matches come from the same Greenhouse search as Find jobs, run with what the profile says: the target
+  //positions, the home location and the preferred work mode. They are rated against the resume, so the best
+  //fits come first. A search scans many boards, so the answer is kept for half an hour and drawn after Home.
+  const MATCH_TTL = 30 * 60 * 1000;
+  const MATCH_SHOWN = 5;
+  let matchCache = null; // {key, at, items}
+  let matchLoad = null; // {key, promise}
+
+  const modeOf = p => ["Remote", "Hybrid", "On-site"].includes(p.preferred_mode) ? p.preferred_mode : "Any";
+  const matchQuery = p => ({
+    keywords: (p.target_positions || []).map(t => String(t).trim()).filter(Boolean).slice(0, 5),
+    location: (p.home_location || "").trim(),
+    work_mode: modeOf(p),
+    use_resume: true,
+    sort: "relevance",
+    limit: 30,
+    //only boards a search has already listed: showing Home must not send a request to every board
+    cached_only: true,
+  });
+  const matchKey = p => JSON.stringify([matchQuery(p), p.updated_at]);
+
+  const payLine = job => {
+    const k = n => `$${Math.round(n / 1000)}k`;
+    if (job.pay_min && job.pay_max) return job.pay_min === job.pay_max ? k(job.pay_min) : `${k(job.pay_min)}–${k(job.pay_max)}`;
+    return job.pay_min || job.pay_max ? k(job.pay_min || job.pay_max) : "";
+  };
+
+  async function findMatches(p) {
+    const [data, saved] = await Promise.all([
+      api().suggest(matchQuery(p)),
+      api().jobs.list("", {archived: "include"}).catch(() => []),
+    ]);
+    const have = new Set((saved || []).filter(j => j.board && j.external_id).map(j => `${j.board}/${j.external_id}`));
+    const items = (data.postings || [])
+      //a posting that shows less than two in five of its required skills is a stretch, not a match
+      .filter(j => !have.has(`${j.board}/${j.external_id}`) && (!j.fit || j.fit.percent >= 40))
+      .slice(0, MATCH_SHOWN);
+    items.rateLimited = Boolean(data.rate_limited); //Greenhouse skipped some boards or descriptions
+    items.nothingCached = !data.boards_searched; //no search has listed any board yet
+    return items;
+  }
+
+  function matchRows(items) {
+    return rows(items.map(job => ({
+      title: job.position_title || "Unknown position",
+      tip: window.Places.summary(job.location).full,
+      detail: [job.company_name, window.Places.summary(job.location).short, job.work_mode, payLine(job)].filter(Boolean).join(" · "),
+      aside: job.fit ? `${job.fit.percent}% fit` : "Open",
+      onclick: () => {
+        openJobs();
+        window.JobParser.openListing(job);
+      },
+    })));
+  }
+
+  //"Data Analyst, Security Analyst · Remote · Austin, TX"
+  const matchScope = p => [
+    (p.target_positions || []).slice(0, 3).join(", "),
+    modeOf(p) === "Any" ? "" : modeOf(p),
+    p.home_location,
+  ].filter(Boolean).join(" · ");
+
   // ---------- Recent searches ----------
 
   //The search history the Jobs view keeps, described in a line: what, then where and how.
@@ -222,8 +286,9 @@
     const resumeSection = el("section", {class: "home-section", "aria-labelledby": "home-resume-h"});
     const versionsSection = el("section", {class: "home-section", "aria-labelledby": "home-versions-h"});
     const searchSection = el("section", {class: "home-section", "aria-labelledby": "home-search-h"});
+    const matchSection = el("section", {class: "home-section home-matches", "aria-labelledby": "home-matches-h", hidden: true});
     const needsSection = el("section", {class: "home-section home-needs", "aria-labelledby": "home-needs-h", hidden: true});
-    const home = el("div", {class: "home"}, introSlot, welcome, needsSection,
+    const home = el("div", {class: "home"}, introSlot, welcome, needsSection, matchSection,
       el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
 
     container.replaceChildren(
@@ -240,6 +305,81 @@
       ]);
       if (mine !== seq) return;
       render(master || {profile: null, experiences: [], education: []}, versions || [], needs || []);
+    }
+
+    //Draws the matches section. The search can take a while, so it shows a waiting line first and fills in when
+    //the answer is back; a newer drawing of Home makes an older answer stop.
+    let matchSeq = 0;
+    function renderMatches(p, force = false) {
+      const mine = ++matchSeq;
+      const targets = (p?.target_positions || []).filter(t => String(t).trim());
+      matchSection.hidden = !targets.length;
+      if (!targets.length) return;
+      const key = matchKey(p);
+      const head = note => [
+        el("h3", {id: "home-matches-h", text: "Jobs that fit you"}),
+        el("p", {text: note}),
+      ];
+      //Search again. After a rate limit it waits out the limit, counting down, so a click cannot just fail again.
+      const retry = (waitSeconds = 0) => {
+        const button = el("button", {type: "button", class: "quiet", text: "Search again", onclick: () => renderMatches(p, true)});
+        if (waitSeconds > 0) {
+          let left = waitSeconds;
+          button.disabled = true;
+          button.textContent = `Search again in ${left}s`;
+          const tick = setInterval(() => {
+            left--;
+            if (!button.isConnected || left <= 0) {
+              clearInterval(tick);
+              button.disabled = false;
+              button.textContent = "Search again";
+              return;
+            }
+            button.textContent = `Search again in ${left}s`;
+          }, 1000);
+        }
+        return button;
+      };
+      const RATE_WAIT = 30; //seconds; the backend backs off at least this long after Greenhouse says "too many requests"
+      //animate: the answer just arrived, so its rows come in one after another; a cached answer is simply there
+      const show = (items, animate = false) => {
+        if (mine !== matchSeq) return;
+        fill(matchSection, ...head(items.length
+          ? `Open roles that match ${matchScope(p)}, best fit to your resume first.`
+          : items.nothingCached
+            ? "Run a search in Find jobs and matches will show up here. Home reuses what that search loaded, so it never adds load on the job boards."
+            : items.rateLimited
+            ? "Greenhouse is limiting how many requests it answers right now, so matches could not be loaded. Try again in a minute or two."
+            : `No strong matches for ${matchScope(p)} right now. Widen your target positions or check back later.`),
+        items.length ? matchRows(items) : null,
+        retry(items.rateLimited && !items.length ? RATE_WAIT : 0));
+        if (!animate) return;
+        window.UI?.play(matchSection.querySelector("p"), "enter", 260);
+        const list = matchSection.querySelector(".home-rows");
+        if (list) window.UI?.stagger(list, 55, 6);
+        else window.UI?.play(matchSection.querySelector(".quiet"), "enter", 260);
+      };
+      if (!force && matchCache && matchCache.key === key && Date.now() - matchCache.at < MATCH_TTL) return show(matchCache.items);
+      //grey placeholder rows hold the space, so the real rows do not push the page down when they arrive
+      fill(matchSection, ...head(`Looking for roles that match ${matchScope(p)}…`),
+        el("ul", {class: "home-skeletons", "aria-hidden": "true"}, [0, 1, 2, 3].map(() => el("li", {class: "skeleton"}))));
+      if (!matchLoad || matchLoad.key !== key || force) matchLoad = {key, promise: findMatches(p)};
+      const load = matchLoad;
+      //the placeholder stays up long enough to read, so a quick answer does not flicker past
+      const shown = new Promise(resolve => setTimeout(resolve, force ? 700 : 0));
+      Promise.all([load.promise, shown]).then(([items]) => {
+        if (items.length || !(items.rateLimited || items.nothingCached)) matchCache = {key, at: Date.now(), items};
+        else matchLoad = null; //try again next time Home is shown
+        show(items, true);
+      }, error => {
+        if (matchLoad === load) matchLoad = null;
+        if (mine !== matchSeq) return;
+        const limited = /limiting/i.test(error?.message || "");
+        fill(matchSection, ...head(limited
+          ? "Greenhouse is limiting how many requests it answers right now, so matches could not be loaded. Search again when the countdown ends."
+          : `Couldn't look for matches just now. ${error?.message || ""}`.trim()), retry(limited ? RATE_WAIT : 0));
+        window.UI?.play(matchSection.querySelector("p"), "enter", 260);
+      });
     }
 
     function render(master, versions, needs = []) {
@@ -296,6 +436,9 @@
         el("h3", {id: "home-needs-h", text: "Needs you"}),
         el("p", {text: "Follow-ups that are due, suggestions to decide and jobs to tailor."}),
         rest.length ? rows(rest) : null);
+
+      // Jobs that fit the target positions, work mode and place the profile names
+      renderMatches(p);
 
       // Finish your resume
       const done = p ? resumeDone(master) : "";

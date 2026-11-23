@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('api', {
 
     //new in phase 2
     search: (query) => ipcRenderer.invoke('connectors:search', query),
+    suggest: (query) => ipcRenderer.invoke('connectors:suggest', query),
     list: () => ipcRenderer.invoke('connectors:list'),
     categories: () => ipcRenderer.invoke('connectors:categories'),
     logo: (url, board) => ipcRenderer.invoke('connectors:logo', url, board),
@@ -142,6 +143,11 @@ contextBridge.exposeInMainWorld('api', {
     unarchive: (id) => ipcRenderer.invoke('jobs:unarchive', id),
     trash: (id) => ipcRenderer.invoke('jobs:trash', id),
     restore: (id) => ipcRenderer.invoke('jobs:restore', id),
+  },
+
+  //pay, benefits and cost of living for a posting
+  cost: {
+    analyze: (body) => ipcRenderer.invoke('cost:analyze', body),
   },
 
   //phase 8: the local model catalog

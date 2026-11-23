@@ -1,5 +1,5 @@
 // Maps renderer IPC channels to backend HTTP routes. The renderer never sees the port or token.
-const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo',
+const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 'connectors:list', 'connectors:categories', 'connectors:cancel-search', 'connectors:logo', 'connectors:suggest',
    'resume:get', 'resume:putProfile', 'resume:preview',
    'resume:importFile', 'resume:importData', 'resume:importText', 'resume:importApply',
    'experiences:create', 'experiences:update', 'experiences:delete',
@@ -19,7 +19,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'models:list', 'models:get', 'models:download', 'models:downloadStatus', 'models:cancelDownload', 'models:delete',
    'applications:list', 'applications:create', 'applications:get', 'applications:update', 'applications:delete',
    'applications:bulkStatus', 'applications:archive', 'applications:unarchive', 'applications:bulkArchive',
-   'jobs:archive', 'jobs:unarchive', 'jobs:trash', 'jobs:restore',];
+   'jobs:archive', 'jobs:unarchive', 'jobs:trash', 'jobs:restore', 'cost:analyze'];
 
 const path = require('node:path');
 
@@ -130,6 +130,9 @@ const ROUTES = {
   'jobs:trash':     (id) => isId(id) ? ['POST', `/v1/jobs/${id}/trash`] : bad('Invalid job id'),
   'jobs:restore':   (id) => isId(id) ? ['POST', `/v1/jobs/${id}/restore`] : bad('Invalid job id'),
 
+  //how a posting's pay and benefits compare with the market and the cost of living
+  'cost:analyze': (body) => isObject(body) ? ['POST', '/v1/cost', body] : bad('Invalid posting'),
+
   //phase 7: the application tracker
   'applications:list':   (filters) => ['GET', `/v1/applications${query(filters, ['status', 'q', 'archived'])}`],
   'applications:create': (body) => isObject(body) && isId(body.job_id) ? ['POST', '/v1/applications', body] : bad('Choose a job first.'),
@@ -215,6 +218,18 @@ function register(ipcMain, backend, deps = {}) {
     activeSearch = controller;
     return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query}, controller.signal).finally(() => {
       if (activeSearch === controller) activeSearch = null;
+    });
+  });
+
+  // Home's job matches. They run apart from the Find search, so neither one stops the other.
+  let activeSuggest = null;
+  ipcMain.handle('connectors:suggest', (_event, query) => {
+    if (!query || typeof query !== 'object' || Array.isArray(query)) return bad('Invalid search');
+    activeSuggest?.abort();
+    const controller = new AbortController();
+    activeSuggest = controller;
+    return backend.call('POST', '/v1/connectors/greenhouse/fetch', {query}, controller.signal).finally(() => {
+      if (activeSuggest === controller) activeSuggest = null;
     });
   });
 
