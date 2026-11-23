@@ -23,9 +23,34 @@ function compareVersions(a, b) {
   return x.pre < y.pre ? -1 : 1;
 }
 
+const DOWNLOAD_PREFIX = 'https://github.com/tlmcguire/fistbump/releases/download/';
+// The installers are named by electron-builder.yml: FistBump-<version>-<OS>-<arch>.<ext>.
+const INSTALLER = /^FistBump-\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?-(?:Windows-x64\.exe|macOS-(?:arm64|x64)\.dmg|Linux-x86_64\.AppImage)$/;
+
+// installerName is the file built for this computer, or '' when no installer is published for it.
+function installerName(version, platform, arch) {
+  if (platform === 'win32' && arch === 'x64') return `FistBump-${version}-Windows-x64.exe`;
+  if (platform === 'darwin' && (arch === 'arm64' || arch === 'x64')) return `FistBump-${version}-macOS-${arch}.dmg`;
+  if (platform === 'linux' && arch === 'x64') return `FistBump-${version}-Linux-x86_64.AppImage`;
+  return '';
+}
+
+// pickAsset finds this computer's installer among a release's files. It returns only an installer on this
+// project's GitHub downloads, so nothing else can be fetched, or null.
+function pickAsset(assets, version, platform, arch) {
+  const name = installerName(version, platform, arch);
+  if (!name || !Array.isArray(assets)) return null;
+  const a = assets.find((x) => x && x.name === name);
+  if (!a || typeof a.browser_download_url !== 'string' || !a.browser_download_url.startsWith(DOWNLOAD_PREFIX)) return null;
+  const size = Number.isInteger(a.size) && a.size > 0 ? a.size : 0;
+  const m = /^sha256:([0-9a-f]{64})$/.exec(String(a.digest || ''));
+  return { name, url: a.browser_download_url, size, sha256: m ? m[1] : '' };
+}
+
 // checkForUpdates returns { status, current, latest, url, publishedAt, message }. status is "available",
-// "current", "none" (no release published yet) or "error". fetchImpl is replaceable for tests.
-async function checkForUpdates(current, fetchImpl = fetch) {
+// "current", "none" (no release published yet) or "error". An available update also carries asset: this
+// computer's installer, or null. fetchImpl and target are replaceable for tests.
+async function checkForUpdates(current, fetchImpl = fetch, target = { platform: process.platform, arch: process.arch }) {
   const base = { current, latest: '', url: RELEASES_PAGE, publishedAt: '' };
   let res;
   try {
@@ -50,8 +75,47 @@ async function checkForUpdates(current, fetchImpl = fetch) {
   const found = { ...base, latest, url, publishedAt: release.published_at || '' };
   if (!parseVersion(latest)) return { ...found, status: 'error', message: 'The latest release has a version this app cannot read.' };
   return compareVersions(current, latest) < 0
-    ? { ...found, status: 'available', message: `Fistbump ${latest} is available.` }
+    ? { ...found, status: 'available', message: `Fistbump ${latest} is available.`, asset: pickAsset(release.assets, latest, target.platform, target.arch) }
     : { ...found, status: 'current', message: `You have the latest version (${current}).` };
 }
 
-module.exports = { checkForUpdates, compareVersions, parseVersion, RELEASES_PAGE };
+// downloadUpdate saves the installer into dir and returns { path }. It writes name.part first and renames
+// it once the whole file is there and, when GitHub gave one, its SHA-256 matches, so a half file never
+// looks like an installer. onProgress(received, total) is called as bytes arrive; signal cancels.
+async function downloadUpdate(asset, dir, { fetchImpl = fetch, onProgress, signal } = {}) {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const crypto = require('node:crypto');
+  if (!asset || !INSTALLER.test(asset.name) || typeof asset.url !== 'string' || !asset.url.startsWith(DOWNLOAD_PREFIX)) {
+    throw new Error('That update cannot be downloaded.');
+  }
+  const final = path.join(dir, asset.name);
+  const part = `${final}.part`;
+  const res = await fetchImpl(asset.url, { headers: { 'User-Agent': 'fistbump' }, signal });
+  if (!res.ok || !res.body) throw new Error(`GitHub answered with an error (${res.status}).`);
+  const total = asset.size || Number(res.headers.get('content-length')) || 0;
+  fs.mkdirSync(dir, { recursive: true });
+  const out = fs.createWriteStream(part);
+  const hash = crypto.createHash('sha256');
+  let received = 0;
+  try {
+    for await (const chunk of res.body) {
+      hash.update(chunk);
+      received += chunk.length;
+      if (!out.write(chunk)) await new Promise((resolve) => out.once('drain', resolve));
+      if (onProgress) onProgress(received, total);
+    }
+    await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
+    if (asset.size && received !== asset.size) throw new Error('The download was cut short. Try again.');
+    if (asset.sha256 && hash.digest('hex') !== asset.sha256) throw new Error('The download did not match the published checksum, so it was removed.');
+    fs.renameSync(part, final);
+  } catch (error) {
+    out.destroy();
+    fs.rmSync(part, { force: true });
+    throw error;
+  }
+  if (process.platform === 'linux') fs.chmodSync(final, 0o755); // an AppImage runs once it is executable
+  return { path: final };
+}
+
+module.exports = { checkForUpdates, compareVersions, parseVersion, pickAsset, installerName, downloadUpdate, RELEASES_PAGE };

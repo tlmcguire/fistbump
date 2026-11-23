@@ -422,14 +422,54 @@ window.Settings = {
     // ---------- Updates ----------
 
     let releaseUrl = "";
+    let downloading = false;
+    const megabytes = bytes => `${(bytes / 1048576).toFixed(bytes < 10485760 ? 1 : 0)} MB`;
+
+    //one place decides which update buttons show: Download (a download is possible), Cancel (one is running),
+    //Install (it is saved), or just the release page when no installer is published for this computer
+    const updateButtons = ({available, downloadable, saved}) => {
+      $("update-dot").hidden = !available;
+      $("open-release").hidden = !available;
+      $("download-update").hidden = !(available && downloadable && !downloading && !saved);
+      $("cancel-update").hidden = !downloading;
+      $("install-update").hidden = !saved;
+    };
+
     const showUpdate = result => {
-      $("update-status").textContent = result.message || "";
-      releaseUrl = result.status === "available" ? result.url : "";
-      $("open-release").hidden = !releaseUrl;
-      $("update-dot").hidden = !releaseUrl;
+      downloading = false;
+      const available = result.status === "available";
+      releaseUrl = available ? result.url : "";
+      $("update-status").textContent = available && result.downloadable && result.size
+        ? `${result.message} The installer is ${megabytes(result.size)}.`
+        : result.message || "";
+      updateButtons({available, downloadable: available && result.downloadable});
+    };
+
+    window.api?.app?.onUpdateProgress?.((received, total) => {
+      if (!downloading) return;
+      $("update-status").textContent = total
+        ? `Downloading the update... ${Math.floor(received * 100 / total)}% (${megabytes(received)} of ${megabytes(total)})`
+        : `Downloading the update... ${megabytes(received)}`;
+    });
+
+    const downloadUpdate = async () => {
+      downloading = true;
+      updateButtons({available: true, downloadable: true});
+      $("update-status").textContent = "Downloading the update...";
+      const result = await api.app.downloadUpdate();
+      downloading = false;
+      if (result?.error) {
+        $("update-status").textContent = result.error.code === "canceled" ? "The download was canceled." : result.error.message;
+        updateButtons({available: true, downloadable: true});
+        return;
+      }
+      const where = {win32: "Install runs the installer and asks to close Fistbump.", darwin: "Install opens the disk image: drag FistBump to Applications.", linux: "Install shows the file: run it to start the new version."}[api.platform] || "";
+      $("update-status").textContent = `Downloaded ${result.name} to your Downloads folder. ${where}`.trim();
+      updateButtons({available: true, downloadable: true, saved: true});
     };
 
     const checkForUpdates = async () => {
+      if (downloading) return; //a check would forget the installer being downloaded
       if (!api?.app?.checkForUpdates) {
         showUpdate({message: "Updates can be checked in the app."});
         return;
@@ -445,6 +485,12 @@ window.Settings = {
     };
     $("check-updates").addEventListener("click", checkForUpdates);
     $("open-release").addEventListener("click", () => api?.app?.openReleases?.(releaseUrl));
+    $("download-update").addEventListener("click", downloadUpdate);
+    $("cancel-update").addEventListener("click", () => api?.app?.cancelUpdate?.());
+    $("install-update").addEventListener("click", async () => {
+      const result = await api.app.openUpdate();
+      if (result?.error) $("update-status").textContent = result.error.message;
+    });
 
     // ---------- About ----------
 

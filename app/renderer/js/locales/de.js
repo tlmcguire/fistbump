@@ -343,4 +343,7 @@ window.I18n.add("de", {
   "e.g. sql, tableau": "z. B. SQL, Tableau",
   "e.g. BS": "z. B. Bachelor",
   "e.g. Computer Science": "z. B. Informatik",
+  "What's new": "Neuigkeiten",
+  "Download update": "Update herunterladen",
+  "Install": "Installieren",
 });

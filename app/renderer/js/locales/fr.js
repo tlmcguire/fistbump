@@ -343,4 +343,7 @@ window.I18n.add("fr", {
   "e.g. sql, tableau": "p. ex. sql, tableau",
   "e.g. BS": "p. ex. Licence",
   "e.g. Computer Science": "p. ex. Informatique",
+  "What's new": "Nouveautés",
+  "Download update": "Télécharger la mise à jour",
+  "Install": "Installer",
 });

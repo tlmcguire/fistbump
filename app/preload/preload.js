@@ -117,6 +117,12 @@ contextBridge.exposeInMainWorld('api', {
     checkForUpdates: () => ipcRenderer.invoke('app:check-updates'),
     showDataFolder: () => ipcRenderer.invoke('app:show-data-folder'),
     openReleases: (url) => ipcRenderer.invoke('app:open-releases', url),
+    // Downloads the installer found by the last check into Downloads, then opens it. Progress arrives as
+    // cb(receivedBytes, totalBytes).
+    downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
+    cancelUpdate: () => ipcRenderer.invoke('app:cancel-update'),
+    openUpdate: () => ipcRenderer.invoke('app:open-update'),
+    onUpdateProgress: (cb) => { ipcRenderer.on('update:progress', (_event, received, total) => cb(received, total)); },
     // The menu's Settings item (Cmd/Ctrl+,) asks the page to show its settings.
   },
 
