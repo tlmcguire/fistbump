@@ -61,6 +61,7 @@ const launch = () => electron.launch({
   await click('#tab-saved');
   await win.locator('text=Data Analyst').first().click();
   await shot('jobs');
+  await click('#nav-tailor');
   await win.locator('.stage-job', { hasText: 'Data Analyst' }).click();
   await shot('tailor');
   await click('#nav-tracker'); await shot('tracker');
