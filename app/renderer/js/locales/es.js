@@ -351,4 +351,7 @@ window.I18n.add("es", {
   "e.g. sql, tableau": "p. ej. sql, tableau",
   "e.g. BS": "p. ej. Grado",
   "e.g. Computer Science": "p. ej. Informática",
+  "What's new": "Novedades",
+  "Download update": "Descargar actualización",
+  "Install": "Instalar",
 });

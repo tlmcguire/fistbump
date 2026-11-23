@@ -37,6 +37,9 @@ function openInBrowser(url) {
   }
 }
 
+// The installer found by the last update check, and the file once it is downloaded.
+const update = { asset: null, file: '', abort: null };
+
 const isMac = process.platform === 'darwin';
 const ICON = path.join(__dirname, '..', '..', 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 
@@ -153,7 +156,56 @@ if (!app.requestSingleInstanceLock()) {
         arch: process.arch,
         dataDir: app.getPath('userData'),
       }),
-      checkForUpdates: () => updates.checkForUpdates(app.getVersion()),
+      checkForUpdates: async () => {
+        const result = await updates.checkForUpdates(app.getVersion());
+        // Main keeps the installer to fetch; the renderer only learns whether there is one and how big.
+        update.asset = result.status === 'available' ? result.asset : null;
+        update.file = '';
+        const { asset, ...rest } = result;
+        return { ...rest, downloadable: Boolean(asset), size: asset ? asset.size : 0 };
+      },
+      downloadUpdate: async () => {
+        if (!update.asset) return { error: { code: 'not_found', message: 'There is no update to download. Check for updates first.', details: null } };
+        if (update.abort) return { error: { code: 'conflict', message: 'The update is already downloading.', details: null } };
+        const controller = new AbortController();
+        update.abort = controller;
+        let last = 0;
+        try {
+          const { path: file } = await updates.downloadUpdate(update.asset, app.getPath('downloads'), {
+            signal: controller.signal,
+            onProgress: (received, total) => {
+              const now = Date.now();
+              if (now - last < 100 && received !== total) return; // about ten updates a second is plenty
+              last = now;
+              for (const win of BrowserWindow.getAllWindows()) {
+                if (!win.isDestroyed()) win.webContents.send('update:progress', received, total);
+              }
+            },
+          });
+          update.file = file;
+          return { ok: true, name: path.basename(file), folder: path.dirname(file) };
+        } catch (error) {
+          if (controller.signal.aborted) return { error: { code: 'canceled', message: 'The download was canceled.', details: null } };
+          return { error: { code: 'upstream_error', message: error.message || 'The download failed. Try again.', details: null } };
+        } finally {
+          update.abort = null;
+        }
+      },
+      cancelUpdate: () => {
+        if (update.abort) update.abort.abort();
+        return { ok: true };
+      },
+      // Windows runs the installer, which asks to close Fistbump; macOS opens the disk image to drag the
+      // app across; on Linux the AppImage is shown in its folder.
+      openUpdate: async () => {
+        if (!update.file) return { error: { code: 'not_found', message: 'Download the update first.', details: null } };
+        if (process.platform === 'linux') {
+          shell.showItemInFolder(update.file);
+          return { ok: true };
+        }
+        const error = await shell.openPath(update.file);
+        return error ? { error: { code: 'internal', message: error, details: null } } : { ok: true };
+      },
       showDataFolder: async () => {
         const error = await shell.openPath(app.getPath('userData'));
         return error ? { error: { code: 'internal', message: error, details: null } } : { ok: true };
