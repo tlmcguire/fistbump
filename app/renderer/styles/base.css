@@ -377,6 +377,10 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 
 /* ---------- Toolbar and filters ---------- */
 
+/* Windows has no title bar: the system's three window buttons are drawn over the toolbar's right end, so
+   the toolbar leaves that room clear. */
+.platform-win32 .toolbar { padding-right: 140px; }
+
 .toolbar {
   flex: none;
   background: var(--surface);
