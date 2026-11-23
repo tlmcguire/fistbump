@@ -17,7 +17,13 @@ window.UI = (() => {
     control.setAttribute("data-ico", "");
     setTimeout(() => control.removeAttribute("data-ico"), 1000);
   };
+  //pointerenter alone is not reliable on Windows, where hover never started the gesture while selecting did.
+  //pointerover and mouseover bubble and name the element under the pointer, so any of them finds the control it
+  //is inside; playIcon ignores a control that is already playing.
+  const onHover = event => playIcon(event.target?.closest?.(ICON_CONTROL));
   document.addEventListener("pointerenter", event => playIcon(event.target), true);
+  document.addEventListener("pointerover", onHover);
+  document.addEventListener("mouseover", onHover);
   document.addEventListener("focusin", event => {
     if (event.target.matches?.(":focus-visible")) playIcon(event.target);
   });
