@@ -79,6 +79,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 			}
 			var jobs []Listing
 			var err error
+			saved := false
 			if q.CachedOnly {
 				// Home's matches never list a board: they use what earlier searches left in the cache, at any age.
 				entry, ok := c.cache().listing(board)
@@ -87,6 +88,10 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				}
 				jobs = entry.Jobs
 			} else {
+				// A listing the cache still holds is read from this computer, not from Greenhouse.
+				if e, ok := c.cache().listing(board); ok && !e.NotFound && c.cache().fresh(e) {
+					saved = true
+				}
 				jobs, err = c.ListBoard(ctx, board)
 			}
 			mu.Lock()
@@ -96,6 +101,9 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				return
 			}
 			result.BoardsSearched++
+			if saved || q.CachedOnly {
+				result.BoardsCached++
+			}
 			result.PostingsScanned += len(jobs)
 			for _, l := range jobs {
 				p := listingPosting(board, l)

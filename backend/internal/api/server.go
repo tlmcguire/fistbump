@@ -160,6 +160,7 @@ func (s *Server) routes() []route {
 		{"POST /v1/tailored-resumes", s.tailoredCreate},
 		{"GET /v1/tailored-resumes", s.tailoredList},
 		{"GET /v1/tailored-resumes/{id}", s.tailoredGet},
+		{"PUT /v1/tailored-resumes/{id}", s.tailoredUpdate},
 		{"GET /v1/tailored-resumes/{id}/diff", s.tailoredDiff},
 		{"POST /v1/tailored-resumes/{id}/export", s.tailoredExport},
 		{"DELETE /v1/tailored-resumes/{id}", s.tailoredDelete},

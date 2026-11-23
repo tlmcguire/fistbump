@@ -34,6 +34,7 @@ const VIEWS = {
     container: "view-tailor",
     mount: container => window.Tailor.mount(container),
     redraw: true,
+    selfAnimated: true,
   },
 
   //phase 7: the application tracker, loaded again each time it is shown
@@ -84,7 +85,8 @@ function show(name) {
   const view = VIEWS[name];
   const container = document.getElementById(view.container);
   window.ViewState.show(container);
-  if (current !== null) window.UI.play(container, "view-enter", 320);
+  //Tailor animates its own stage and sidebar as they fill, so the page does not also fade in around them
+  if (current !== null && !view.selfAnimated) window.UI.play(container, "view-enter", 320);
   if (!mounted.has(name)) {
     const redraw = view.mount(container);
     mounted.set(name, view.redraw ? redraw : null);

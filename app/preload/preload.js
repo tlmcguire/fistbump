@@ -82,6 +82,7 @@ contextBridge.exposeInMainWorld('api', {
     create: (revisionId) => ipcRenderer.invoke('tailored:create', revisionId),
     list: (jobId) => ipcRenderer.invoke('tailored:list', jobId),
     get: (id) => ipcRenderer.invoke('tailored:get', id),
+    update: (id, content) => ipcRenderer.invoke('tailored:update', id, content),
     diff: (id) => ipcRenderer.invoke('tailored:diff', id),
     delete: (id) => ipcRenderer.invoke('tailored:delete', id),
     export: (id, format) => ipcRenderer.invoke('tailored:export', id, format),

@@ -31,6 +31,19 @@ func (s *Store) GetTailored(ctx context.Context, id int64) (models.TailoredResum
 	return scanTailored(s.db.QueryRowContext(ctx, `SELECT `+tailoredCols+` FROM tailored_resumes WHERE id = ?`, id))
 }
 
+// UpdateTailoredContent replaces a tailored resume's text with the user's own edit. The base text
+// stays as it was, so the changes view still compares against the resume it started from.
+func (s *Store) UpdateTailoredContent(ctx context.Context, id int64, content string) (models.TailoredResume, error) {
+	res, err := s.db.ExecContext(ctx, `UPDATE tailored_resumes SET content = ? WHERE id = ?`, content, id)
+	if err != nil {
+		return models.TailoredResume{}, mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return models.TailoredResume{}, ErrNotFound
+	}
+	return s.GetTailored(ctx, id)
+}
+
 // ListTailored returns a job's tailored resumes, newest first, without their text.
 func (s *Store) ListTailored(ctx context.Context, jobID int64) ([]models.TailoredResume, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, job_id, revision_id, base_resume_id, '', '', created_at

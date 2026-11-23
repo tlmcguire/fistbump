@@ -16,6 +16,10 @@ Rules:
 - Keep every fact. Do not add skills, tools, numbers, job titles, employers, dates or achievements that are not in the text you are given.
 - Do not mention the job posting or the company you are applying to.
 - Write in the same voice and tense as the original.
+- Plain text only, because the resume is printed from it: no Markdown (no **bold**, no # headings, no backticks, no tables), no emoji, no quotation marks around the text, no placeholders such as [Company].
+- Keep the original's layout. Bullet lines start with "- " and stay bullets; a paragraph stays a paragraph. Do not add a heading, a name, a section title or a contact line.
+- Keep the original's dates, job titles and punctuation style. Spell out nothing that is abbreviated and abbreviate nothing that is spelled out.
+- Write short, concrete lines that start with a verb where the original does. No first person ("I", "my"), no filler such as "responsible for" or "passionate", and no buzzword stuffing.
 - Also give a "reason": one short sentence (at most 25 words) telling the person why this change helps them for this job, for example why skills were reordered or why a line was reworded. Do not claim anything the original does not show.
 - Reply with JSON only, in exactly this form: {"proposed": "the rewritten text", "reason": "why you changed it"}`
 

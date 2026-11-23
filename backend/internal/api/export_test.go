@@ -220,3 +220,19 @@ func TestContentDisposition(t *testing.T) {
 		}
 	}
 }
+
+func TestTailoredUpdateSavesTheUsersEdit(t *testing.T) {
+	s := newExportServer(t, fakePDF)
+	id := seedTailored(t, s, "Ada Lovelace", "Acme", "Data Analyst")
+
+	out := expect(t, call(t, s, "PUT", "/v1/tailored-resumes/"+id, `{"content":"# Ada\n\nMy own words\n"}`), 200)
+	if out["content"] != "# Ada\n\nMy own words\n" || out["base_content"] != "# Ada\n" {
+		t.Fatalf("content = %q, base = %q", out["content"], out["base_content"])
+	}
+	rec := call(t, s, "POST", "/v1/tailored-resumes/"+id+"/export", `{"format":"md"}`)
+	if rec.Body.String() != "# Ada\n\nMy own words\n" {
+		t.Errorf("export = %q", rec.Body)
+	}
+	wantError(t, call(t, s, "PUT", "/v1/tailored-resumes/"+id, `{"content":"  "}`), 422, "validation_failed")
+	wantError(t, call(t, s, "PUT", "/v1/tailored-resumes/999", `{"content":"x"}`), 404, "not_found")
+}

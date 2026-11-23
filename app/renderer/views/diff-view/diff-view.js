@@ -88,9 +88,19 @@
         problem = null;
         say("");
         jobSelect.value = jobId ? String(jobId) : "";
-        await loadRounds();
-        drawBody();
-        drawAside();
+        await swapJob();
+      };
+
+      //Changing the job: the old job's page goes at once, so it is never seen beside the new one, then the
+      //rounds, the review and the sidebar are loaded together and drawn in one go.
+      const swapJob = async () => {
+        stopPolling();
+        releasePdf();
+        cards = [];
+        stage.replaceChildren();
+        roundsBar.replaceChildren();
+        await loadRounds(false);
+        await Promise.all([drawBody(), drawAside()]);
       };
 
       jobSelect.addEventListener("change", () => chooseJob(jobSelect.value ? Number(jobSelect.value) : null));
@@ -131,7 +141,7 @@
         jobSelect.value = jobId ? String(jobId) : "";
       };
 
-      const loadRounds = async () => {
+      const loadRounds = async (draw = true) => {
         generate.disabled = !jobId;
         if (!jobId) {
           rounds = [];
@@ -142,7 +152,7 @@
           tailored = tl?.value || [];
         }
         if (!rounds.some(r => r.id === revId)) revId = rounds[0]?.id ?? null;
-        drawRounds();
+        if (draw) drawRounds();
       };
 
       //Why a round failed, in words someone can act on. The backend's own words stay as the reason.
@@ -194,10 +204,12 @@
 
       // ---------- the job beside the suggestions ----------
       let asideSeq = 0;
+      let asideJob = null; //the job the sidebar last arrived for
       const drawAside = async () => {
         const mine = ++asideSeq;
         gaps = [];
         if (!jobId) {
+          asideJob = null;
           fill(aside, el("div", {class: "aside-empty"}, pico("16-skill-gap.png"), el("p", {text: "Pick a saved job and its skill gaps show here while you review."})));
           return;
         }
@@ -208,6 +220,9 @@
         const missing = a ? [...a.required.tech.missing, ...a.required.soft.missing] : [];
         const preferredMissing = a ? [...a.preferred.tech.missing, ...a.preferred.soft.missing] : [];
         gaps = [...missing, ...preferredMissing].map(String);
+        const prefGroups = a ? [a.preferred.tech, a.preferred.soft] : [];
+        const preferredHave = prefGroups.reduce((n, g) => n + g.matched.length, 0);
+        const preferredTotal = prefGroups.reduce((n, g) => n + g.matched.length + (g.likely || []).length + g.missing.length, 0);
         const titles = Object.fromEntries((master?.value?.experiences || []).map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
         const match = a ? window.ResumeBuilder.skillMatch(a, titles) : null;
         const score = a ? Math.round(a.score * 100) : null;
@@ -219,11 +234,19 @@
           el("p", {class: "aside-company", text: job.value.company_name}),
           a ? el("div", {class: "score"}, ring,
             el("p", {text: "of required skills are already on your resume"})) : null,
+          a && preferredTotal ? el("p", {class: "aside-preferred", text: `${preferredHave} of ${preferredTotal} nice-to-have skills are on your resume`}) : null,
           match ? el("div", {class: "skill-match"}, el("h3", {text: match.heading}), ...match.groups) : null,
           !a ? el("p", {class: "hint", text: analysis === null ? "" : "Add your master resume to see how it matches."}) : null,
           el("p", {class: "hint", text: "Suggestions only reword what is already true. Skills you have not used stay missing until you add them yourself."}));
         if (a) countTo(scoreNode, score);
-        if (a && motion()) aside.classList.remove("in"), void aside.offsetWidth, aside.classList.add("in");
+        //the sidebar arrives once per job; redrawing the same job in place does not replay it
+        if (a && motion() && asideJob !== jobId) {
+          aside.classList.remove("in");
+          void aside.offsetWidth;
+          aside.classList.add("in");
+          setTimeout(() => aside.classList.remove("in"), 500);
+        }
+        asideJob = jobId;
         if (revId !== null && !tailoredId) markGaps();
       };
 
@@ -308,6 +331,7 @@
         releasePdf();
         cards = [];
         if (tailoredId) return drawTailored();
+        drawRounds();
         if (problem) {
           fill(stage, problemPanel(problem));
           play(stage, "enter", 500);
@@ -326,8 +350,9 @@
           play(stage, "enter", 500);
           return;
         }
-        const r = await attempt(() => api.revisions.get(revId));
-        if (r && r.value.id === revId) show(r.value);
+        const asked = revId;
+        const r = await attempt(() => api.revisions.get(asked));
+        if (r && r.value.id === revId && asked === revId) show(r.value);
       };
 
       const show = rev => {
@@ -529,9 +554,10 @@
       //"Data Analyst, Acme" for an experience, else the section name
       const hunkTitle = h => h.heading.replace(/^#+\s*/, "") || SECTION[h.section] || h.section;
 
-      const drawTailored = async () => {
+      const drawTailored = async (startTab = "changes", savedMessage = "") => {
         const [t, d] = await Promise.all([attempt(() => api.tailored.get(tailoredId)), attempt(() => api.tailored.diff(tailoredId))]);
         if (!t || !d) { tailoredId = null; return; }
+        drawRounds();
         let showAll = false;
         const hunks = el("div", {class: "tailor-stage"});
         const drawHunks = () => fill(hunks, d.value.hunks.map(h => {
@@ -579,7 +605,7 @@
 
         //Changes or PDF, as tabs
         const panels = {};
-        const tabs = [["changes", "Changes"], ["pdf", "PDF preview"]];
+        const tabs = [["changes", "Changes"], ["edit", "Edit resume"], ["pdf", "PDF preview"]];
         pdf = window.PdfPreview.create(async () => (await api.tailored.previewPdf(t.value.id)).data_base64, {title: "Tailored resume as a PDF"});
         panels.changes = el("div", {class: "panel", id: "tailor-panel-changes", role: "tabpanel", "aria-labelledby": "tailor-tab-changes"},
           el("label", {class: "hint"},
@@ -587,6 +613,22 @@
             " Show unchanged text"),
           el("div", {class: "diff-cols"}, el("h4", {text: "Your resume"}), el("h4", {text: "Tailored"})),
           hunks);
+        //your own edits: the whole resume as text, saved over the tailored version
+        const editor = el("textarea", {id: "tailor-editor", rows: 28, spellcheck: "true", "aria-label": "Tailored resume text", value: t.value.content});
+        const editNote = el("p", {class: "hint", role: "status", text: savedMessage});
+        const saveEdit = el("button", {type: "button", class: "primary", disabled: true, onclick: async () => {
+          saveEdit.disabled = true;
+          const r = await attempt(() => api.tailored.update(t.value.id, editor.value));
+          if (r) await drawTailored("changes", "Your edits are saved.");
+          else saveEdit.disabled = false;
+        }}, "Save edits");
+        const revert = el("button", {type: "button", onclick: () => { editor.value = t.value.content; saveEdit.disabled = true; }}, "Discard changes");
+        editor.addEventListener("input", () => { saveEdit.disabled = editor.value === t.value.content || !editor.value.trim(); });
+        panels.edit = el("div", {class: "panel", id: "tailor-panel-edit", role: "tabpanel", "aria-labelledby": "tailor-tab-edit", hidden: true},
+          el("p", {class: "hint", text: "Change anything in the tailored resume yourself. It is Markdown: # for the name, ## for sections, - for bullets. The Changes tab and the PDF follow what you save."}),
+          editor,
+          el("div", {class: "round-actions"}, saveEdit, revert),
+          editNote);
         panels.pdf = el("div", {class: "panel", id: "tailor-panel-pdf", role: "tabpanel", "aria-labelledby": "tailor-tab-pdf", hidden: true},
           el("p", {class: "hint", text: "This is the PDF that Export PDF saves. Check it before you send it."}), pdf.node);
         const tabButtons = tabs.map(([key, label]) => el("button", {
@@ -606,7 +648,8 @@
         const tablist = el("div", {class: "tabs", role: "tablist", "aria-label": "Tailored resume view"}, tabButtons);
         tablist.addEventListener("keydown", event => {
           if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-          const next = tabs[(tabs.findIndex(([k]) => tabButtons[tabs.findIndex(([x]) => x === k)].getAttribute("aria-selected") === "true") + 1) % 2][0];
+          const now = tabButtons.findIndex(b => b.getAttribute("aria-selected") === "true");
+          const next = tabs[(now + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length][0];
           pick(next);
           tabButtons[tabs.findIndex(([k]) => k === next)].focus();
         });
@@ -625,27 +668,32 @@
           (warned.get(tailoredId) || []).map(w => el("p", {class: "resume-status error", role: "alert", text: String(w)})),
           tablist,
           panels.changes,
+          panels.edit,
           panels.pdf);
         drawHunks();
+        if (startTab !== "changes") pick(startTab);
         play(stage, "enter", 500);
       };
 
       // ---------- entry, runs now and every time the view is shown again ----------
+      //arriving on a different job: swap to it before the pickers load, so the old page is not seen first
       const sync = async () => {
-        await loadPickers();
-        loadEngine();
         const want = window.Tailor.jobId;
-        if (want && want !== jobId) {
+        const changed = want && want !== jobId;
+        if (changed) {
           jobId = want;
           revId = null;
           tailoredId = null;
+          problem = null;
           jobSelect.value = String(jobId);
-          await loadRounds();
-          drawBody();
-          drawAside();
+          generate.disabled = false;
         }
+        const pickers = loadPickers();
+        if (changed) await swapJob();
+        await pickers;
+        loadEngine();
       };
-      loadPickers().then(() => loadRounds()).then(() => { drawBody(); drawAside(); });
+      loadPickers().then(() => swapJob());
       loadEngine();
       return sync;
     },
