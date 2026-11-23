@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, safeStorage, shell } = require('electron');
 const path = require('path');
 const { Backend } = require('./backend');
 const { register } = require('./ipc-handlers');
@@ -6,6 +6,7 @@ const windowState = require('./window-state');
 const { appMenu, contextMenu } = require('./menus');
 const updates = require('./updates');
 const { createSecrets, restoreRemoteKey } = require('./secrets');
+const { showErrorScreen } = require('./error-screen');
 
 app.setName('Fistbump');
 // Data stays where earlier builds kept it (named after the package, "fistbump"), so the product name in
@@ -14,6 +15,18 @@ app.setName('Fistbump');
 app.setPath('userData', process.env.FISTBUMP_USER_DATA || path.join(app.getPath('appData'), 'fistbump'));
 
 let backend;
+// What the error screen shows when the backend will not run. It is filled in before the screen opens.
+let startupError = { message: '', stderr: [] };
+let errorScreenShown = false;
+
+// The error screen stands in for the app: it says what happened, and shows the last words the
+// backend wrote. It is shown once, and the user quits from it.
+function showStartupError(message, { quitOnClose = false } = {}) {
+  if (errorScreenShown) return;
+  errorScreenShown = true;
+  startupError = { message, stderr: backend ? backend.stderrLines(40) : [] };
+  showErrorScreen({ onClosed: quitOnClose ? () => app.quit() : undefined });
+}
 
 // Only https links leave the app, and they open in the user's default browser, never in an Electron window.
 function openInBrowser(url) {
@@ -101,19 +114,17 @@ if (!app.requestSingleInstanceLock()) {
 
   //starts the backend, connects the handlers and opens the window
   app.whenReady().then(async () => {
+    // A packaged app carries the backend in its resources; from the source it sits next to the app.
+    const binDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'bin')
+      : path.join(__dirname, '..', '..', 'bin', `${process.platform}-${process.arch}`);
     backend = new Backend({
-      binDir: path.join(__dirname, '..', '..', 'bin', `${process.platform}-${process.arch}`),
+      binDir,
       dataDir: app.getPath('userData'),
     });
-    try {
-      await backend.start();
-    } catch (err) {
-      dialog.showErrorBox('Fistbump could not start', String(err?.message || err));
-      app.quit();
-      return;
-    }
     const secrets = createSecrets(safeStorage, app.getPath('userData'));
-    await restoreRemoteKey(backend, secrets).catch(() => false);
+    // The handlers are registered before the backend starts, so the error screen can talk to the
+    // main process even when the backend never came up.
     register(ipcMain, backend, {
       secrets,
       dialog,
@@ -140,6 +151,42 @@ if (!app.requestSingleInstanceLock()) {
         shell.openExternal(target);
         return { ok: true };
       },
+      // The error screen: what happened, and the last words from the backend.
+      errorDetails: () => startupError,
+      copyDetails: () => {
+        clipboard.writeText([startupError.message, ...startupError.stderr].join('\n'));
+        return { ok: true };
+      },
+      quit: () => {
+        app.quit();
+        return { ok: true };
+      },
+    });
+
+    // The backend came back after a crash: it has a new port and token, so the key is sent again
+    // and the views reload their data.
+    backend.on('restarted', async () => {
+      await restoreRemoteKey(backend, secrets).catch(() => false);
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('backend:restarted');
+      }
+    });
+
+    try {
+      await backend.start();
+    } catch (err) {
+      showStartupError(`The backend could not start. ${String(err?.message || err)}`, { quitOnClose: true });
+      return;
+    }
+    // The stored key goes to the backend at launch, so it never has to be read back from the page.
+    await restoreRemoteKey(backend, secrets).catch(() => false);
+
+    // After the app started, a backend that gives up shows the error screen too.
+    backend.on('state', (state, extra) => {
+      if (state !== 'failed') return;
+      showStartupError(extra?.reason === 'too many crashes'
+        ? 'The backend crashed too many times in a minute and was not restarted.'
+        : 'The backend stopped and could not be restarted.');
     });
     nativeTheme.themeSource = 'dark'; // native menus, pickers and the window material match the dark app
     app.setAboutPanelOptions({ applicationName: 'Fistbump', applicationVersion: app.getVersion() });

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tlmcguire/fistbump/backend/internal/ai"
 )
 
 // CacheClearer is a cache the storage route can empty: the Greenhouse cache and the logo cache.
@@ -15,11 +17,14 @@ type CacheClearer interface {
 	Clear() error
 }
 
-// Cleanup targets. Only the ones for features that exist are built; the others belong to later phases.
-var (
-	builtTargets   = map[string]bool{"cache": true, "partial_downloads": true}
-	plannedTargets = map[string]bool{"old_jobs": true, "trash": true, "unused_models": true}
-)
+// builtTargets are the cleanup targets that are built. Anything else is a validation error.
+var builtTargets = map[string]bool{
+	"cache":             true,
+	"partial_downloads": true,
+	"old_jobs":          true,
+	"trash":             true,
+	"unused_models":     true,
+}
 
 // Database files: the database and SQLite's write-ahead log and shared-memory files beside it.
 var dbFiles = []string{"fistbump.db", "fistbump.db-wal", "fistbump.db-shm"}
@@ -88,15 +93,15 @@ func (s *Server) storageCleanup(w http.ResponseWriter, r *http.Request) error {
 		return validationFailed("Older than days must be at least 1")
 	}
 	for _, t := range body.Targets {
-		switch {
-		case builtTargets[t]:
-		case plannedTargets[t]:
-			return validationFailed("Cleaning up " + strings.ReplaceAll(t, "_", " ") + " is not available yet")
-		default:
+		if !builtTargets[t] {
 			return validationFailed("Unknown cleanup target")
 		}
 	}
 
+	settings, err := s.store.GetSettings(r.Context())
+	if err != nil {
+		return err
+	}
 	before, err := s.measure(r)
 	if err != nil {
 		return err
@@ -105,12 +110,24 @@ func (s *Server) storageCleanup(w http.ResponseWriter, r *http.Request) error {
 		FreedBytes int64          `json:"freed_bytes"`
 		Removed    map[string]int `json:"removed"`
 		DryRun     bool           `json:"dry_run"`
-	}{Removed: map[string]int{}, DryRun: body.DryRun}
+	}{Removed: map[string]int{"files": 0}, DryRun: body.DryRun}
+
+	// The days each job target uses: the request overrides the setting for both of them.
+	oldDays := settingInt(settings, "jobs.retention_days", 30)
+	trashDays := settingInt(settings, "jobs.trash_days", 7)
+	if body.OlderThanDays != nil {
+		oldDays, trashDays = *body.OlderThanDays, *body.OlderThanDays
+	}
+	selected, _ := settings["ai.selected_model"].(string)
+	removedAny := false
 
 	for _, t := range body.Targets {
 		switch t {
 		case "cache":
 			result.FreedBytes += before.CacheBytes
+			if before.CacheBytes > 0 {
+				removedAny = true
+			}
 			if body.DryRun {
 				continue
 			}
@@ -123,6 +140,40 @@ func (s *Server) storageCleanup(w http.ResponseWriter, r *http.Request) error {
 			files := partialFiles(filepath.Join(s.dataDir, "models"))
 			result.Removed["files"] += len(files)
 			result.FreedBytes += before.PartialDownloadsBytes
+			if len(files) > 0 {
+				removedAny = true
+			}
+			if body.DryRun {
+				continue
+			}
+			for _, f := range files {
+				os.Remove(f)
+			}
+		case "old_jobs":
+			n, err := s.store.OldJobs(r.Context(), oldDays, body.DryRun)
+			if err != nil {
+				return err
+			}
+			result.Removed["old_jobs"] += int(n)
+			if n > 0 {
+				removedAny = true
+			}
+		case "trash":
+			n, err := s.store.TrashedJobs(r.Context(), trashDays, body.DryRun)
+			if err != nil {
+				return err
+			}
+			result.Removed["trash"] += int(n)
+			if n > 0 {
+				removedAny = true
+			}
+		case "unused_models":
+			files, size := unusedModelFiles(s.dataDir, selected)
+			result.Removed["files"] += len(files)
+			result.FreedBytes += size
+			if len(files) > 0 {
+				removedAny = true
+			}
 			if body.DryRun {
 				continue
 			}
@@ -131,14 +182,49 @@ func (s *Server) storageCleanup(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-	if !body.DryRun {
-		// Emptied tables leave free pages in the file; VACUUM gives them back to the disk.
-		if _, err := s.db.ExecContext(r.Context(), `VACUUM`); err != nil {
+	if !body.DryRun && removedAny {
+		// Emptied tables and deleted rows leave free pages in the file; VACUUM gives them back
+		// to the disk. It runs outside any transaction, because SQLite refuses it inside one.
+		if err := s.store.Vacuum(r.Context()); err != nil {
 			return err
 		}
 	}
 	writeJSON(w, http.StatusOK, result)
 	return nil
+}
+
+// settingInt reads an integer setting, falling back to def when it is missing or not a number.
+func settingInt(settings map[string]any, key string, def int) int {
+	n, _ := settings[key].(int)
+	if n < 1 {
+		return def
+	}
+	return n
+}
+
+// unusedModelFiles lists the model files in the data dir that belong to a catalog entry other
+// than the selected model, and the space they take. The selected model is never removed, and a
+// model that is not downloaded is not reported.
+func unusedModelFiles(dataDir, selected string) ([]string, int64) {
+	keep := ""
+	if m, ok := ai.FindModel(selected); ok {
+		keep = m.Path(dataDir)
+	}
+	var files []string
+	var size int64
+	for _, m := range ai.Catalog() {
+		path := m.Path(dataDir)
+		if path == keep {
+			continue
+		}
+		info, err := os.Stat(path)
+		if err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		files = append(files, path)
+		size += info.Size()
+	}
+	return files, size
 }
 
 func fileSize(path string) int64 {

@@ -142,6 +142,39 @@ func TestDictionary(t *testing.T) {
 	}
 }
 
+// TestImpliedSkills checks the rules that let one skill stand in for another: a resume that shows
+// "rest" shows "api", and a resume that shows "google analytics" shows "analytics".
+func TestImpliedSkills(t *testing.T) {
+	cases := []struct {
+		skill string
+		want  []string
+	}{
+		{"api", []string{"rest", "graphql", "grpc"}},
+		{"sql", []string{"sql server", "postgresql", "mysql", "sqlite", "snowflake", "dbt"}},
+		{"docker", []string{"kubernetes"}},
+		{"analytics", []string{"data analysis", "tableau", "google analytics"}},
+	}
+	for _, c := range cases {
+		got := Implied(c.skill)
+		for _, w := range c.want {
+			if !slices.Contains(got, w) {
+				t.Errorf("Implied(%q) = %v; want it to include %q", c.skill, got, w)
+			}
+		}
+		if slices.Contains(got, c.skill) {
+			t.Errorf("Implied(%q) = %v; a skill never covers itself", c.skill, got)
+		}
+	}
+	// An alias is understood: "APIs" is the skill "api".
+	if got := Implied("APIs"); !slices.Contains(got, "rest") {
+		t.Errorf("Implied(%q) = %v; want it to include %q", "APIs", got, "rest")
+	}
+	// One letter covers nothing.
+	if got := Implied("c"); len(got) != 0 {
+		t.Errorf("Implied(%q) = %v; want nothing", "c", got)
+	}
+}
+
 const posting = `Senior Data Analyst
 Acme Analytics · Charleston, SC (Hybrid)
 

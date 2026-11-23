@@ -137,11 +137,17 @@ test('storage cleanup only passes known targets to the backend', async () => {
   const ipc = fakeIpc();
   register(ipc, { call: async (...args) => { calls.push(args); return { ok: true }; } });
   const cleanup = ipc.handlers.get('storage:cleanup');
-  assert.strictEqual((await cleanup({}, ['everything'])).error.code, 'validation_failed');
-  assert.strictEqual((await cleanup({}, [])).error.code, 'validation_failed');
-  assert.strictEqual((await cleanup({}, 'cache')).error.code, 'validation_failed');
-  await cleanup({}, ['cache']);
+  assert.strictEqual((await cleanup({}, { targets: ['everything'] })).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, { targets: [] })).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, { targets: 'cache' })).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, ['cache'])).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, { targets: ['cache'], older_than_days: 0 })).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, { targets: ['cache'], older_than_days: 1.5 })).error.code, 'validation_failed');
+  assert.strictEqual((await cleanup({}, { targets: ['cache'], dry_run: 'yes' })).error.code, 'validation_failed');
+  await cleanup({}, { targets: ['cache'] });
   assert.deepStrictEqual(calls, [['POST', '/v1/storage/cleanup', { targets: ['cache'] }]]);
+  await cleanup({}, { targets: ['cache', 'trash'], older_than_days: 30, dry_run: true });
+  assert.deepStrictEqual(calls[1], ['POST', '/v1/storage/cleanup', { targets: ['cache', 'trash'], older_than_days: 30, dry_run: true }]);
 });
 
 test('app actions come from the main process, and say so when missing', async () => {

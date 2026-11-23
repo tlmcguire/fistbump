@@ -31,6 +31,8 @@
       const warned = new Map(); //warnings from building a tailored resume, by its id
       let rounds = [];        //newest first, each with its number n
       let tailored = [];
+      let savedJobs = [];     //the saved jobs, so the empty page can offer one to start from
+      let problem = null;     //what went wrong, when a round could not be written
       let poll = null;
       let gaps = [];          //skills the job asks for that the master resume lacks
       let cards = [];         //the cards on screen, for the keyboard
@@ -43,12 +45,14 @@
         status.textContent = message;
         status.classList.toggle("error", isError);
       };
-      //runs fn. a failure goes to the status line and gives null, success gives {value}
-      const attempt = async fn => {
+      //runs fn. a failure goes to the status line and gives null, success gives {value}.
+      //onError, when it is given, takes the error instead of the status line.
+      const attempt = async (fn, onError) => {
         try {
           return {value: await fn()};
         } catch (error) {
-          say(error.message, true);
+          if (onError) onError(error);
+          else say(error.message, true);
           return null;
         }
       };
@@ -75,16 +79,21 @@
       const aside = el("aside", {class: "pane tailor-aside", "aria-label": "About this job"});
       fill(container, toolbar, el("div", {class: "content tailor-content"}, mainPane, aside));
 
-      jobSelect.addEventListener("change", async () => {
-        jobId = jobSelect.value ? Number(jobSelect.value) : null;
+      //Picks the job to tailor for: the one in the toolbar, or one of the saved jobs on the empty page.
+      const chooseJob = async id => {
+        jobId = id || null;
         window.Tailor.jobId = jobId;
         revId = null;
         tailoredId = null;
+        problem = null;
         say("");
+        jobSelect.value = jobId ? String(jobId) : "";
         await loadRounds();
         drawBody();
         drawAside();
-      });
+      };
+
+      jobSelect.addEventListener("change", () => chooseJob(jobSelect.value ? Number(jobSelect.value) : null));
 
       // ---------- which engine will write ----------
       const drawEngine = s => {
@@ -112,6 +121,7 @@
       // ---------- data ----------
       const loadPickers = async () => {
         const [jobs, versions] = await Promise.all([attempt(() => api.jobs.list("")), attempt(() => api.resumes.list())]);
+        savedJobs = jobs?.value || [];
         fill(jobSelect,
           el("option", {value: ""}, "Choose a saved job"),
           (jobs?.value || []).map(j => el("option", {value: j.id}, `${j.position_title} at ${j.company_name}`)));
@@ -135,11 +145,44 @@
         drawRounds();
       };
 
+      //Why a round failed, in words someone can act on. The backend's own words stay as the reason.
+      const explain = reason => {
+        const text = String(reason || "").trim();
+        const low = text.toLowerCase();
+        const known = [
+          [/profile/, "Your master resume is not ready", ["Save your master resume first, then try again."], false, false],
+          [/all engines failed/, "Every suggestion engine failed", ["The reason is below. Try again, or use the built-in rules from Settings."], true, true],
+          [/unavailable|not available|no engine/, "No engine is ready to write suggestions", ["Set up the local model or a remote provider in Settings, or use the built-in rules."], true, false],
+          [/interrupted/, "The round was interrupted", ["The app closed while the suggestions were being written. Try again."], true, true],
+          [/empty reply/, "The model sent an empty reply", ["Try again, or use the built-in rules from Settings."], true, true],
+          [/provider|api key|unauthorized|forbidden/, "Your remote provider refused the request", ["Check the address, the model name and the key in Settings."], true, true],
+          [/llama-server|local model/, "The local model could not be started", ["Check that the model is downloaded, then try again."], true, true],
+        ];
+        for (const [re, title, steps, settings, retry] of known) {
+          if (re.test(low)) return {title, steps, settings, retry, reason: text};
+        }
+        return {title: "Suggestions could not be written", steps: ["Try again. If it keeps failing, use the built-in rules from Settings."], settings: true, retry: true, reason: text};
+      };
+
+      //The panel that says what went wrong and offers the next step.
+      const problemPanel = p => el("div", {class: "stage-problem", role: "alert"},
+        pico("29-something-went-wrong.png"),
+        el("h2", {text: p.title}),
+        p.reason ? el("p", {class: "problem-reason", text: p.reason}) : null,
+        el("ul", {class: "problem-steps"}, p.steps.map(step => el("li", {text: step}))),
+        el("div", {class: "round-actions"},
+          p.retry ? el("button", {type: "button", class: "primary", onclick: () => startRound()}, "Try again") : null,
+          p.settings ? el("button", {type: "button", onclick: () => window.App.openTab("tab-settings")}, "Open settings") : null));
+
       const startRound = async () => {
         const request = {job_id: jobId, engine: "auto", language: window.I18n?.locale() || "en"};
         if (baseSelect.value) request.base_resume_id = Number(baseSelect.value);
-        const created = await attempt(() => api.revisions.create(request));
-        if (!created) return;
+        problem = null;
+        const created = await attempt(() => api.revisions.create(request), err => { problem = explain(err.message); });
+        if (!created) {
+          drawBody();
+          return;
+        }
         say("");
         revId = created.value.id;
         tailoredId = null;
@@ -218,29 +261,67 @@
       };
 
       // ---------- rounds ----------
-      //with one round there is nothing to choose between, so the bar only shows from the second one on
-      const drawRounds = () => fill(roundsBar, rounds.length < 2 ? [] : rounds.map(r => el("button", {
-        type: "button",
-        class: "tailor-round",
-        "aria-pressed": String(r.id === revId && !tailoredId),
-        onclick: () => { revId = r.id; tailoredId = null; drawRounds(); drawBody(); },
-      }, `Round ${r.n}`, el("span", {class: "round-meta", text: `${STATUS[r.status] || r.status} · ${ENGINE[r.engine] || r.engine}`}))));
+      //Each round is a chip with its own little x, so a round can be removed from here.
+      const drawRounds = () => fill(roundsBar, rounds.length ? rounds.map(r => {
+        const remove = el("button", {type: "button", class: "round-delete", title: "Delete round", "aria-label": `Delete round ${r.n}`}, icon("x"));
+        remove.addEventListener("click", async event => {
+          event.stopPropagation();
+          if (!await ask(`Delete round ${r.n}? Its suggestions are removed and cannot be brought back.`, {confirm: "Delete", danger: true, title: "Delete round?"})) return;
+          const done = await attempt(() => api.revisions.delete(r.id));
+          if (!done) return;
+          if (revId === r.id) revId = null;
+          await loadRounds();
+          drawBody();
+        });
+        const chip = el("button", {
+          type: "button",
+          class: "tailor-round",
+          "aria-pressed": String(r.id === revId && !tailoredId),
+          onclick: () => { revId = r.id; tailoredId = null; drawRounds(); drawBody(); },
+        }, `Round ${r.n}`, el("span", {class: "round-meta", text: `${STATUS[r.status] || r.status} · ${ENGINE[r.engine] || r.engine}`}));
+        return el("div", {class: "tailor-round-item"}, chip, remove);
+      }) : []);
 
       // ---------- review ----------
       const releasePdf = () => { pdf?.dispose(); pdf = null; };
+
+      //The saved jobs on the empty page: a way in without the dropdown.
+      const suggestedJobs = () => el("div", {class: "stage-jobs"},
+        el("p", {class: "hint", text: "Or start with one of your saved jobs:"}),
+        el("div", {class: "stage-job-list"}, savedJobs.slice(0, 6).map(j => {
+          const title = j.position_title || j.company_name || "";
+          const company = j.position_title ? j.company_name : "";
+          return el("button", {type: "button", class: "stage-job", translate: "no", onclick: () => chooseJob(j.id)},
+            el("strong", {text: title}),
+            company ? el("span", {text: company}) : null,
+            j.location ? el("small", {text: j.location}) : null);
+        })));
+
+      //No saved jobs yet: point at the place where they come from.
+      const noJobsYet = () => el("div", {},
+        el("p", {class: "hint", text: "You have no saved jobs yet. Save one in the Jobs view first."}),
+        el("button", {type: "button", onclick: () => window.App.go("jobs")}, "Find jobs"));
 
       const drawBody = async () => {
         stopPolling();
         releasePdf();
         cards = [];
         if (tailoredId) return drawTailored();
+        if (problem) {
+          fill(stage, problemPanel(problem));
+          play(stage, "enter", 500);
+          return;
+        }
         if (!jobId || revId === null) {
-          fill(stage, el("div", {class: "stage-empty"},
+          const empty = el("div", {class: "stage-empty"},
             pico(jobId ? "17-tailoring-in-progress.png" : "14-writing.png"),
             el("h2", {text: jobId ? "No suggestions for this job yet" : "Pick a job to tailor your resume for"}),
             el("p", {text: jobId
               ? "Press Generate suggestions. You will approve every change before anything is built."
-              : "Choose a saved job above. Nothing changes in your resume until you accept it."})));
+              : "Choose a saved job above. Nothing changes in your resume until you accept it."}));
+          //with no job chosen, the saved jobs are offered here, so there is something to start from
+          if (!jobId) empty.append(savedJobs.length ? suggestedJobs() : noJobsYet());
+          fill(stage, empty);
           play(stage, "enter", 500);
           return;
         }
@@ -265,7 +346,7 @@
             el("h2", {text: `Round ${round?.n ?? ""}`}),
             el("span", {class: "round-meta", text: `${STATUS[rev.status] || rev.status} · ${ENGINE[rev.engine] || rev.engine}`}),
             roundActions),
-          rev.error && el("p", {class: "resume-status error", role: "alert", text: `Could not write suggestions: ${rev.error}`}),
+          rev.status === "failed" ? problemPanel(explain(rev.error)) : null,
           busy && writing(rev),
           rev.status === "done" && suggestions(rev));
         if (!busy) play(stage, "enter", 500);

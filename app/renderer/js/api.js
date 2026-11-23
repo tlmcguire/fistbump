@@ -17,9 +17,38 @@ window.FistBumpAPI = {
         const error = new Error(result.error.message || "An unknown error has occurred");
         error.code = result.error.code;
         error.details = result.error.details;
+        // The backend is restarting after a crash. The message shows with a button that runs the
+        // same call again, because the backend comes back on its own.
+        if (error.code === "unreachable") window.FistBumpAPI.backendDown(call, error);
         throw error;
       }
       return result;
+    },
+
+    // The notice at the bottom of the window: what happened, and a Try again button.
+    backendDown(call, error) {
+      let notice = document.getElementById("backend-notice");
+      if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "backend-notice";
+        notice.className = "backend-notice";
+        notice.setAttribute("role", "status");
+        document.body.appendChild(notice);
+      }
+      const text = document.createElement("span");
+      text.textContent = error?.message || "The backend is not answering.";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Try again";
+      retry.addEventListener("click", async () => {
+        notice.remove();
+        try {
+          await window.FistBumpAPI.request(call);
+        } catch {
+          // The view shows the error. The notice comes back if it fails again.
+        }
+      });
+      notice.replaceChildren(text, retry);
     },
   
     async link(url) {
@@ -98,3 +127,6 @@ window.FistBumpAPI = {
 
   //phase 6: show an exported file in its folder
   window.FistBumpAPI.shell = wrap("shell", ["showItem"]);
+
+  // The backend is back after a crash, so the notice at the bottom of the window goes away.
+  window.api?.onBackendRestarted?.(() => document.getElementById("backend-notice")?.remove());

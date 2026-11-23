@@ -3,6 +3,7 @@
   "productName": "Fistbump",
   "version": "0.1.0",
   "description": "A local-first job application assistant",
+  "author": "tlmcguire",
   "main": "app/main/main.js",
   "private": true,
   "scripts": {
@@ -10,11 +11,15 @@
     "build:go": "node scripts/build-go.js",
     "fetch:llama": "node scripts/fetch-llama-server.js",
     "test": "node --test app/tests/*.test.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dist": "npm run build:go && npm run fetch:llama && electron-builder",
+    "dist:mac": "npm run build:go -- --platform darwin && npm run fetch:llama -- --platform darwin && electron-builder --mac",
+    "dist:win": "npm run build:go -- --platform win32 && npm run fetch:llama -- --platform win32 && electron-builder --win",
+    "dist:linux": "npm run build:go -- --platform linux && npm run fetch:llama -- --platform linux && electron-builder --linux"
   },
   "devDependencies": {
-    "electron": "*",
-    "electron-builder": "*",
+    "electron": "44.9.2",
+    "electron-builder": "26.15.3",
     "@playwright/test": "^1.50.0"
   }
 }

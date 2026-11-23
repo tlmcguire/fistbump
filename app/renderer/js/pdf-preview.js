@@ -22,12 +22,23 @@ window.PdfPreview = {
     const backdrop = make("div", {class: "pdf-backdrop"}); //sits in the page, behind the preview, so it does not dim it
 
     //Larger: the preview fills the window over a dimmed page. Esc or the button puts it back.
+    //While it is expanded the preview moves to the document root. Inside the page an animated or clipped
+    //ancestor can trap a fixed element behind the backdrop, and then Close cannot be clicked.
+    const home = document.createComment("pdf-preview");
     const setExpanded = on => {
+      if (on === node.classList.contains("expanded")) return;
       node.classList.toggle("expanded", on);
-      if (on) document.body.append(backdrop); else backdrop.remove();
+      if (on) {
+        node.before(home);
+        document.body.append(backdrop, node);
+      } else {
+        backdrop.remove();
+        if (home.parentNode) home.replaceWith(node);
+        else node.remove(); //the page it came from is gone
+      }
       expand.setAttribute("aria-pressed", String(on));
       expand.replaceChildren(icon(on ? "collapse" : "expand"), make("span", {text: on ? "Close" : "Expand"}));
-      if (on) expand.focus();
+      if (on) expand.focus(); else if (node.isConnected) expand.blur();
     };
     expand.addEventListener("click", () => setExpanded(!node.classList.contains("expanded")));
     backdrop.addEventListener("click", () => setExpanded(false));

@@ -5,3 +5,5 @@ bin/
 .env
 playwright-report/
 test-results/
+build/icon.iconset/
+dist/

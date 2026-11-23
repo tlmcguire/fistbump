@@ -731,7 +731,6 @@ func TestStorageCleanupRejects(t *testing.T) {
 	for name, body := range map[string]string{
 		"no targets":     `{"targets":[]}`,
 		"unknown target": `{"targets":["everything"]}`,
-		"planned target": `{"targets":["old_jobs"]}`,
 		"bad days":       `{"targets":["cache"],"older_than_days":0}`,
 		"unknown field":  `{"targets":["cache"],"force":true}`,
 	} {

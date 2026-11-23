@@ -9,6 +9,16 @@ contextBridge.exposeInMainWorld('api', {
     if ([0.9, 1, 1.15, 1.3].includes(factor)) webFrame.setZoomFactor(factor);
   },
 
+  // The backend crashed and came back. It has a new port and token, so the views reload their data.
+  onBackendRestarted: (cb) => { ipcRenderer.on('backend:restarted', () => cb()); },
+
+  // The startup error screen: what happened, and the last words from the backend.
+  error: {
+    details: () => ipcRenderer.invoke('error:details'),
+    copyDetails: () => ipcRenderer.invoke('error:copyDetails'),
+    quit: () => ipcRenderer.invoke('error:quit'),
+  },
+
   connectors: {
     link: (url) => ipcRenderer.invoke('connectors:link', url),
     posting: (board, jobId) => ipcRenderer.invoke('connectors:posting', board, jobId),
@@ -100,7 +110,7 @@ contextBridge.exposeInMainWorld('api', {
 
   storage: {
     report: () => ipcRenderer.invoke('storage:report'),
-    cleanup: (targets) => ipcRenderer.invoke('storage:cleanup', targets),
+    cleanup: (payload) => ipcRenderer.invoke('storage:cleanup', payload),
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),

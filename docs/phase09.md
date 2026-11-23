@@ -46,7 +46,7 @@ As written in [api.md](api.md).
 - **Targets.** `cache`: phase 2's Greenhouse cache (memory and the two `greenhouse_*_cache` tables). `partial_downloads`: `.part` files with no running download. `old_jobs`: jobs with no application, neither archived nor trashed, whose `searched_at` is older than `older_than_days` (default `jobs.retention_days`). `trash`: trashed jobs older than `jobs.trash_days`. `unused_models`: installed models other than `ai.selected_model`.
 - Deleting jobs cascades to revisions, suggestions and tailored resumes. Jobs with applications are never removed (`RESTRICT`).
 - After removing jobs, run `VACUUM` so the database file shrinks.
-- **Automatic cleanup** at startup: `old_jobs` and `trash` only, logged to stderr. Files are removed only when the user asks. The `trash` half is built: `store.PurgeTrashedJobs` deletes the jobs that have been in the Trash for longer than `jobs.trash_days` at every start. `old_jobs` and the models are not built yet.
+- **Automatic cleanup** at startup: `old_jobs` and `trash` only, logged to stderr. Files are removed only when the user asks. Both halves are built: `store.OldJobs` throws away the jobs nobody tracks once they are older than `jobs.retention_days`, and `store.TrashedJobs` deletes the jobs that have been in the Trash for longer than `jobs.trash_days`, at every start.
 
 | Status | `code` | When |
 |--------|--------|------|
@@ -56,18 +56,19 @@ As written in [api.md](api.md).
 
 Progress:
 
-- [ ] 1. `build.yml` (tests)
-- [ ] 2. `package.json` pins and scripts
-- [ ] 3. `build-go.js` folder names
-- [ ] 4. `electron-builder.yml`
-- [ ] 5. `gc.go`, `storage.go` (the trash purge in `gc.go` is done; `old_jobs` and the models are not)
-- [ ] 6. Storage section in settings (built early on `feature/settings-page`: sizes, cache cleanup, data folder; job and model cleanup wait for those features)
-- [ ] 7. `backend.js` restart, startup error screen
-- [ ] 8. `build.yml` (release job)
-- [ ] 9. Size measurement
-- [ ] 10. `docs/user-guide.md`, README
-- [ ] 11. `docs/release-checklist.md` and the release
-- [ ] Tests and tooling
+- [x] 1. `build.yml` (tests)
+- [x] 2. `package.json` pins and scripts
+- [x] 3. `build-go.js` folder names
+- [x] 4. `electron-builder.yml`
+- [x] 5. `gc.go`, `storage.go`
+- [x] 6. Storage section in settings
+- [x] 7. `backend.js` restart, startup error screen
+- [x] 8. `build.yml` (release job)
+- [x] 9. Size measurement
+- [x] 10. `docs/user-guide.md`, README
+- [x] 11. `docs/release-checklist.md`
+- [ ] 12. The `v0.1.0` release itself: the tag, the CI build, the checklist on each installer, and publishing the draft
+- [x] Tests and tooling
 
 ### CI
 
