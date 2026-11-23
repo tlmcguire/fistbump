@@ -273,7 +273,7 @@ window.JobParser = {
 
         $("reload-listing").hidden = saved || !data.board;
         $("back-to-results").hidden = !(opened && (results || activeTab === "saved"));
-        renderAnalysis(saved ? data.id : null);
+        renderAnalysis(saved ? data.id : null, saved ? "" : (data.raw_text || ""));
         renderCost(data);
 
       };
@@ -1308,15 +1308,15 @@ window.JobParser = {
 
       // ---- Analysis panel: runs whenever a saved job opens ----
       let analysisSeq = 0;
-      const renderAnalysis = async id => {
+      const renderAnalysis = async (id, text = "") => {
         const {el, fill, chips} = window.ResumeBuilder;
         const box = $("analysis");
         const mine = ++analysisSeq;
-        box.hidden = !id;
+        box.hidden = !id && !text;
         box.replaceChildren();
-        if (!id) return;
+        if (!id && !text) return;
         try {
-          const [a, master] = await Promise.all([jobsApi.analyze(id), window.FistBumpAPI.resume.get()]);
+          const [a, master] = await Promise.all([(id ? jobsApi.analyze(id) : jobsApi.analyzeText(text)), window.FistBumpAPI.resume.get()]);
           if (mine !== analysisSeq) return; // a newer job opened meanwhile
           const titles = Object.fromEntries(master.experiences.map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
           const {heading, groups} = window.ResumeBuilder.skillMatch(a, titles);

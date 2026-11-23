@@ -390,6 +390,34 @@ func (s *Server) jobAnalyze(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// jobAnalyzeText handles POST /v1/jobs/analyze: the same skill breakdown as jobAnalyze, for posting text that
+// is not saved, such as a search result. No writes.
+func (s *Server) jobAnalyzeText(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		RawText string `json:"raw_text"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		return err
+	}
+	if strings.TrimSpace(body.RawText) == "" {
+		return validationError("raw_text", "raw_text is required")
+	}
+	if len(body.RawText) > maxRawText {
+		return validationError("raw_text", "raw_text is too long")
+	}
+	m, err := s.store.GetMaster(r.Context())
+	if err != nil {
+		return storeError(err, "Resume")
+	}
+	if m.Profile == nil {
+		return conflict("create a profile first")
+	}
+	var j models.Job
+	applyParse(&j, s.parse(body.RawText))
+	writeJSON(w, http.StatusOK, s.analyze(j, m))
+	return nil
+}
+
 // jobArchive handles POST /v1/jobs/{id}/archive: sets job to archived
 func (s *Server) jobArchive(w http.ResponseWriter, r *http.Request) error {
 	id, err := pathID(r)

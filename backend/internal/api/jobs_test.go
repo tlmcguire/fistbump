@@ -194,6 +194,24 @@ func TestJobAnalyze(t *testing.T) {
 	}
 }
 
+// An unsaved posting, such as a search result, gets the same breakdown and nothing is written.
+func TestJobAnalyzeText(t *testing.T) {
+	s := newJobServer(t, &fakeFetcher{})
+	body := `{"raw_text":"Analyst at Acme\nSQL"}`
+	wantError(t, call(t, s, "POST", "/v1/jobs/analyze", body), 409, "conflict")
+	wantError(t, call(t, s, "POST", "/v1/jobs/analyze", `{"raw_text":" "}`), 422, "validation_failed")
+
+	putProfile(t, s) // skills: sql, excel
+	res := expect(t, call(t, s, "POST", "/v1/jobs/analyze", body), 200)
+	matched := res["required"].(map[string]any)["tech"].(map[string]any)["matched"].([]any)
+	if res["score"] != float64(1) || len(matched) != 1 {
+		t.Errorf("analysis = %v", res)
+	}
+	if n := len(expect2(t, call(t, s, "GET", "/v1/jobs", ""))); n != 0 {
+		t.Errorf("analyzing saved %d jobs", n)
+	}
+}
+
 // postingFetcher serves canned postings by job id. An id in closed is a 404; in broken, a 502.
 type postingFetcher struct {
 	text   string
