@@ -130,7 +130,7 @@ func listingPosting(board string, l Listing) connectors.Posting {
 		CompanyName:   companyName(board, ""),
 		PositionTitle: l.Title,
 		Location:      l.Location,
-		ListingURL:    listingBase + "/" + board + "/jobs/" + id,
+		ListingURL:    listingURL(board, id, l.AbsoluteURL),
 		CompanyURL:    companyURL(board, l.AbsoluteURL),
 		UpdatedAt:     l.UpdatedAt,
 	}

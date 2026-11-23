@@ -138,8 +138,8 @@ func TestFetchJobMapsFixture(t *testing.T) {
 	if p.ListingURL != "https://job-boards.greenhouse.io/backblaze/jobs/5277815008" {
 		t.Errorf("listing_url = %q", p.ListingURL)
 	}
-	if p.CompanyURL == nil || *p.CompanyURL != "https://www.backblaze.com/company/careers" {
-		t.Errorf("company_url = %v, want the curated website (absolute_url is on Greenhouse)", p.CompanyURL)
+	if p.CompanyURL == nil || *p.CompanyURL != "https://www.backblaze.com/" {
+		t.Errorf("company_url = %v, want the company's home page (absolute_url is on Greenhouse)", p.CompanyURL)
 	}
 
 	// updated_at carries a local offset; the Posting holds the same instant in UTC.
@@ -293,18 +293,22 @@ func TestCompanyNameFallback(t *testing.T) {
 
 func TestCompanyAndListingURL(t *testing.T) {
 	ownSite := "https://www.backblaze.com/company/careers/?gh_jid=5277815008"
+	gh := func(board string) string { return "https://job-boards.greenhouse.io/" + board + "/jobs/77" }
 	cases := []struct {
 		name, board, absolute string
-		want                  any // string or nil
+		listing               string
+		company               any // string or nil
 	}{
-		{"own-site absolute_url", "backblaze", ownSite, ownSite},
-		{"own-site beats curated", "backblaze", "https://jobs.example.com/x?gh_jid=1", "https://jobs.example.com/x?gh_jid=1"},
-		{"greenhouse absolute_url uses curated website", "backblaze", "https://job-boards.greenhouse.io/backblaze/jobs/1", "https://www.backblaze.com/company/careers"},
-		{"greenhouse subdomain counts as greenhouse", "backblaze", "https://boards.eu.greenhouse.io/backblaze/jobs/1", "https://www.backblaze.com/company/careers"},
-		{"look-alike host is not greenhouse", "acmeuncurated", "https://greenhouse.io.acme.com/jobs/1", "https://greenhouse.io.acme.com/jobs/1"},
-		{"greenhouse and nothing curated", "acmeuncurated", "https://job-boards.greenhouse.io/acmeuncurated/jobs/1", nil},
-		{"http own site is not used", "acmeuncurated", "http://acme.com/careers?gh_jid=1", nil},
-		{"empty absolute_url", "acmeuncurated", "", nil},
+		// The listing is the company's own page for the job when there is one; the company link is its home page.
+		{"own-site absolute_url", "backblaze", ownSite, ownSite, "https://www.backblaze.com/"},
+		{"curated home page beats an own-site link", "backblaze", "https://jobs.example.com/x?gh_jid=1", "https://jobs.example.com/x?gh_jid=1", "https://www.backblaze.com/"},
+		{"greenhouse absolute_url uses the curated home page", "backblaze", "https://job-boards.greenhouse.io/backblaze/jobs/1", gh("backblaze"), "https://www.backblaze.com/"},
+		{"greenhouse subdomain counts as greenhouse", "backblaze", "https://boards.eu.greenhouse.io/backblaze/jobs/1", gh("backblaze"), "https://www.backblaze.com/"},
+		{"home page comes from an uncurated own-site link", "acmeuncurated", "https://careers.acme.com/openings/1?gh_jid=1", "https://careers.acme.com/openings/1?gh_jid=1", "https://acme.com/"},
+		{"look-alike host is not greenhouse", "acmeuncurated", "https://greenhouse.io.acme.com/jobs/1", "https://greenhouse.io.acme.com/jobs/1", "https://greenhouse.io.acme.com/"},
+		{"greenhouse and nothing curated", "acmeuncurated", "https://job-boards.greenhouse.io/acmeuncurated/jobs/1", gh("acmeuncurated"), nil},
+		{"http own site is not used", "acmeuncurated", "http://acme.com/careers?gh_jid=1", gh("acmeuncurated"), nil},
+		{"empty absolute_url", "acmeuncurated", "", gh("acmeuncurated"), nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -313,16 +317,34 @@ func TestCompanyAndListingURL(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if want := "https://job-boards.greenhouse.io/" + c.board + "/jobs/77"; p.ListingURL != want {
-				t.Errorf("listing_url = %q, want %q", p.ListingURL, want)
+			if p.ListingURL != c.listing {
+				t.Errorf("listing_url = %q, want %q", p.ListingURL, c.listing)
 			}
 			out, _ := json.Marshal(p)
 			var got map[string]any
 			json.Unmarshal(out, &got)
-			if got["company_url"] != c.want {
-				t.Errorf("company_url = %v, want %v", got["company_url"], c.want)
+			if got["company_url"] != c.company {
+				t.Errorf("company_url = %v, want %v", got["company_url"], c.company)
 			}
 		})
+	}
+}
+
+func TestHomepage(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://www.backblaze.com/company/careers": "https://www.backblaze.com/",
+		"https://careers.airbnb.com/positions/1":    "https://airbnb.com/",
+		"https://jobs.lever.co/x":                   "https://lever.co/",
+		"https://boards.greenhouse.io/x":            "",
+		"http://acme.com":                           "",
+		"https://localhost/x":                       "",
+		"https://user:pw@acme.com/":                 "",
+		"https://careers.com/":                      "https://careers.com/",
+		"":                                          "",
+	} {
+		if got := homepage(in); got != want {
+			t.Errorf("homepage(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
