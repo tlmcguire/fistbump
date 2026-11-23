@@ -195,8 +195,44 @@ if (!app.requestSingleInstanceLock()) {
         if (update.abort) update.abort.abort();
         return { ok: true };
       },
-      // Windows runs the installer, which asks to close Fistbump; macOS opens the disk image to drag the
-      // app across; on Linux the AppImage is shown in its folder.
+      // Installs the downloaded update in place of this app and starts the new version: Windows runs the
+      // installer silently, macOS swaps the app bundle once this one has quit, Linux replaces the AppImage.
+      // When that cannot be done here (say the app runs from the disk image), it says why, and Open installer
+      // is the way on.
+      installUpdate: async () => {
+        if (!update.file) return { error: { code: 'not_found', message: 'Download the update first.', details: null } };
+        const fs = require('node:fs');
+        const os = require('node:os');
+        const canWrite = (target) => { try { fs.accessSync(target, fs.constants.W_OK); return true; } catch { return false; } };
+        const scriptPath = path.join(os.tmpdir(), `fistbump-update-${process.pid}.sh`);
+        const plan = updates.installPlan({
+          platform: process.platform, file: update.file, execPath: process.execPath,
+          appImage: process.env.APPIMAGE || '', pid: process.pid, scriptPath, canWrite,
+        });
+        if (plan.kind === 'manual') return { error: { code: 'manual', message: plan.reason, details: null } };
+        try {
+          if (plan.kind === 'appimage') {
+            const next = `${plan.target}.update`;
+            fs.copyFileSync(update.file, next);
+            fs.chmodSync(next, 0o755);
+            fs.renameSync(next, plan.target);
+          }
+          if (process.platform === 'darwin') fs.writeFileSync(scriptPath, updates.MAC_INSTALL, { mode: 0o700 });
+          // The backend is stopped first, so its files are free to be replaced.
+          await backend?.stop();
+          if (plan.kind === 'run') {
+            require('node:child_process').spawn(plan.command, plan.args, { detached: true, stdio: 'ignore' }).unref();
+          } else {
+            app.relaunch({ execPath: plan.target, args: process.argv.slice(1) });
+          }
+        } catch (error) {
+          return { error: { code: 'internal', message: `The update could not be installed: ${error.message}`, details: null } };
+        }
+        setTimeout(() => app.exit(0), 300); // after the answer reaches the page
+        return { ok: true };
+      },
+      // Opens the downloaded installer by hand: the installer on Windows, the disk image on macOS, the file's
+      // folder on Linux. It is the way on when the update cannot install itself.
       openUpdate: async () => {
         if (!update.file) return { error: { code: 'not_found', message: 'Download the update first.', details: null } };
         if (process.platform === 'linux') {
@@ -205,16 +241,6 @@ if (!app.requestSingleInstanceLock()) {
         }
         const error = await shell.openPath(update.file);
         return error ? { error: { code: 'internal', message: error, details: null } } : { ok: true };
-      },
-      showDataFolder: async () => {
-        const error = await shell.openPath(app.getPath('userData'));
-        return error ? { error: { code: 'internal', message: error, details: null } } : { ok: true };
-      },
-      // Only GitHub release pages for this project are opened.
-      openReleases: (url) => {
-        const target = typeof url === 'string' && url.startsWith(updates.RELEASES_PAGE) ? url : updates.RELEASES_PAGE;
-        shell.openExternal(target);
-        return { ok: true };
       },
       // The error screen: what happened, and the last words from the backend.
       errorDetails: () => startupError,

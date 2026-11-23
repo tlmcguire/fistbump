@@ -11,7 +11,8 @@ window.Prefs = (() => {
     pageSize: 20,            // 20 | 30 | 50 results a page
     defaultSort: "relevance",
     showLogos: true,
-    checkUpdatesOnLaunch: false,
+    notifyUpdates: true,     // look for a new version when Fistbump opens, and say so
+    skippedUpdate: "",       // a version the user chose not to hear about again
   };
   const ZOOM = {small: 0.9, default: 1, large: 1.15, larger: 1.3};
   const ALLOWED = {

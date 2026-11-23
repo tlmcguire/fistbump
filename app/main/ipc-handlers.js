@@ -7,7 +7,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'resumes:list', 'resumes:get', 'resumes:create', 'resumes:update', 'resumes:delete',
    'settings:get', 'settings:put',
    'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases',
-   'app:download-update', 'app:cancel-update', 'app:open-update',
+   'app:download-update', 'app:cancel-update', 'app:open-update', 'app:install-update',
    'error:details', 'error:copyDetails', 'error:quit',
    'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import',
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
@@ -413,6 +413,7 @@ function register(ipcMain, backend, deps = {}) {
   ipcMain.handle('app:download-update', () => (deps.downloadUpdate ? deps.downloadUpdate() : missing()));
   ipcMain.handle('app:cancel-update', () => (deps.cancelUpdate ? deps.cancelUpdate() : missing()));
   ipcMain.handle('app:open-update', () => (deps.openUpdate ? deps.openUpdate() : missing()));
+  ipcMain.handle('app:install-update', () => (deps.installUpdate ? deps.installUpdate() : missing()));
   ipcMain.handle('app:open-releases', (_event, url) => (deps.openReleases ? deps.openReleases(url) : missing()));
 
   // The startup error screen: it shows what happened, and the last words from the backend.

@@ -432,3 +432,6 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 /* Recent searches and versions under a tree item: one tidy line each */
 .tree-leaf { height: 26px; line-height: 26px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%; }
 .tree-children { margin: 2px 0 4px 15px; }
+
+/* The dialog that says a new version is out, when Fistbump opens. */
+.update-skip { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; color: var(--muted); font-size: 12px; }
