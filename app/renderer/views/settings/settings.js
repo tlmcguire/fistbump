@@ -68,7 +68,7 @@ window.Settings = {
     bind("pref-page-size", "pageSize", control => Number(control.value));
     bind("pref-default-sort", "defaultSort");
     bind("pref-show-logos", "showLogos", ...checked);
-    bind("pref-check-updates", "checkUpdatesOnLaunch", ...checked);
+    bind("pref-check-updates", "notifyUpdates", ...checked);
 
     //A status line under a card. After a cleanup it shows the mascot tidying up beside what was cleared.
     const setStatus = (id, text, {cleaned = false} = {}) => {
@@ -452,6 +452,9 @@ window.Settings = {
         : `Downloading the update... ${megabytes(received)}`;
     });
 
+    //Update and restart: download the installer, then install it over this app and start the new version.
+    //Fistbump quits as the install begins. When it cannot install itself (say it runs from the disk image),
+    //the status says why and Open installer opens the download instead.
     const downloadUpdate = async () => {
       downloading = true;
       updateButtons({available: true, downloadable: true});
@@ -463,9 +466,14 @@ window.Settings = {
         updateButtons({available: true, downloadable: true});
         return;
       }
-      const where = {win32: "Install runs the installer and asks to close Fistbump.", darwin: "Install opens the disk image: drag FistBump to Applications.", linux: "Install shows the file: run it to start the new version."}[api.platform] || "";
-      $("update-status").textContent = `Downloaded ${result.name} to your Downloads folder. ${where}`.trim();
+      $("update-status").textContent = "Installing the update. Fistbump will close and open again in a moment.";
       updateButtons({available: true, downloadable: true, saved: true});
+      $("install-update").hidden = true;
+      const installed = await api.app.installUpdate();
+      if (installed?.error) {
+        $("update-status").textContent = `${installed.error.message} The installer, ${result.name}, is in your Downloads folder.`;
+        $("install-update").hidden = false;
+      }
     };
 
     const checkForUpdates = async () => {
@@ -479,9 +487,44 @@ window.Settings = {
       try {
         const result = await api.app.checkForUpdates();
         showUpdate(result?.error ? {message: result.error.message} : result);
+        return result;
       } finally {
         $("check-updates").disabled = false;
       }
+    };
+
+    //When Fistbump opens it looks for a new version and, if there is one the user has not skipped, says so in
+    //a dialog: Update and restart, or Not now. "Don't remind me about this version" skips that version only;
+    //a later one is announced again. The Settings switch turns the whole thing off.
+    const notifyOnLaunch = async () => {
+      const result = await checkForUpdates();
+      if (result?.status !== "available" || !result.latest || result.latest === window.Prefs.get("skippedUpdate")) return;
+      const {make} = window.UI;
+      const skip = make("input", {type: "checkbox", id: "skip-update"});
+      const dialog = make("dialog", {class: "ask update-notice", "aria-label": "Update available"});
+      const close = () => {
+        if (skip.checked) window.Prefs.set("skippedUpdate", result.latest);
+        dialog.close();
+        dialog.remove();
+      };
+      const later = make("button", {type: "button", text: "Not now", onclick: close});
+      const update = make("button", {type: "button", class: "primary", text: result.downloadable ? "Update and restart" : "See what's new", onclick: () => {
+        close();
+        if (!result.downloadable) { api.app.openReleases(result.url); return; }
+        $("tab-settings")?.click(); //the progress shows in Settings
+        downloadUpdate();
+      }});
+      dialog.append(
+        make("h2", {text: `Fistbump ${result.latest} is available`}),
+        make("p", {text: result.downloadable
+          ? `You have ${result.current}. Fistbump can download the new version, install it and open again.`
+          : `You have ${result.current}. No installer is published for this computer, so the release page has it.`}),
+        make("label", {class: "update-skip"}, skip, " Don't remind me about this version"),
+        make("div", {class: "ask-actions"}, later, update));
+      dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
+      document.body.append(dialog);
+      dialog.showModal();
+      update.focus();
     };
     $("check-updates").addEventListener("click", checkForUpdates);
     $("open-release").addEventListener("click", () => api?.app?.openReleases?.(releaseUrl));
@@ -514,7 +557,7 @@ window.Settings = {
     window.api?.onBackendRestarted?.(() => window.Settings.refresh());
 
     showAbout();
-    if (window.Prefs.get("checkUpdatesOnLaunch")) checkForUpdates();
+    if (window.Prefs.get("notifyUpdates")) setTimeout(notifyOnLaunch, 2500); //after the first view has settled
   },
   refresh() {},
 };

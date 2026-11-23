@@ -354,4 +354,10 @@ window.I18n.add("es", {
   "What's new": "Novedades",
   "Download update": "Descargar actualización",
   "Install": "Instalar",
+  "Update and restart": "Actualizar y reiniciar",
+  "Open installer": "Abrir el instalador",
+  "Tell me about new versions when Fistbump opens": "Avisarme de versiones nuevas al abrir Fistbump",
+  "Not now": "Ahora no",
+  "See what's new": "Ver novedades",
+  "Don't remind me about this version": "No recordarme esta versión",
 });

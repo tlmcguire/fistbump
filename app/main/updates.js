@@ -118,4 +118,63 @@ async function downloadUpdate(asset, dir, { fetchImpl = fetch, onProgress, signa
   return { path: final };
 }
 
-module.exports = { checkForUpdates, compareVersions, parseVersion, pickAsset, installerName, downloadUpdate, RELEASES_PAGE };
+// appBundle is the FistBump.app the running app lives in, or '' when it cannot be replaced in place: not
+// inside a .app, run from the disk image (/Volumes) or from the copy macOS makes of an app it has not
+// moved yet (App Translocation).
+function appBundle(execPath) {
+  const path = require('node:path');
+  const bundle = path.resolve(execPath, '..', '..', '..');
+  if (!bundle.endsWith('.app') || bundle.startsWith('/Volumes/') || bundle.includes('/AppTranslocation/')) return '';
+  return bundle;
+}
+
+// MAC_INSTALL is the script that replaces the app on macOS once it has quit. It is run as
+// bash MAC_INSTALL <pid> <dmg> <app>, so no path is pasted into the script. It waits for the app to exit,
+// copies the new app out of the disk image next to the old one, swaps the two, and opens the new one.
+// If anything fails before the swap, the old app is left where it was and opened again.
+const MAC_INSTALL = `#!/bin/bash
+pid="$1"; dmg="$2"; app="$3"
+new="$app.update"; old="$app.previous"
+mnt="$(mktemp -d)"
+cleanup() { hdiutil detach -quiet "$mnt" >/dev/null 2>&1; rmdir "$mnt" 2>/dev/null; }
+fail() { cleanup; rm -rf "$new"; open "$app"; exit 1; }
+for _ in $(seq 1 300); do kill -0 "$pid" 2>/dev/null || break; sleep 0.2; done
+hdiutil attach -nobrowse -noautoopen -quiet -mountpoint "$mnt" "$dmg" || fail
+src="$(find "$mnt" -maxdepth 1 -name '*.app' -print -quit)"
+[ -n "$src" ] || fail
+rm -rf "$new"
+ditto "$src" "$new" || fail
+cleanup
+rm -rf "$old"
+mv "$app" "$old" || { rm -rf "$new"; open "$app"; exit 1; }
+if ! mv "$new" "$app"; then mv "$old" "$app"; open "$app"; exit 1; fi
+rm -rf "$old"
+xattr -dr com.apple.quarantine "$app" 2>/dev/null
+rm -f "$dmg"
+open "$app"
+`;
+
+// installPlan says how to put the downloaded installer in place of the running app, then start it again:
+//   { kind: 'run', command, args }: start this and quit; it installs and starts the new version.
+//   { kind: 'appimage', target }:   copy the file over target, then relaunch.
+//   { kind: 'manual', reason }:     it cannot be done here; the user opens the installer.
+function installPlan({ platform, file, execPath, appImage, pid, scriptPath, canWrite }) {
+  if (platform === 'win32') {
+    // electron-builder's installer: /S installs without its pages, --force-run starts the app afterwards.
+    return { kind: 'run', command: file, args: ['/S', '--force-run'] };
+  }
+  if (platform === 'darwin') {
+    const bundle = appBundle(execPath);
+    if (!bundle) return { kind: 'manual', reason: 'Fistbump is running from the disk image or a temporary copy, so it cannot replace itself. Move it to Applications first.' };
+    if (!canWrite(require('node:path').dirname(bundle)) || !canWrite(bundle)) return { kind: 'manual', reason: `Fistbump cannot write to ${bundle}.` };
+    return { kind: 'run', command: '/bin/bash', args: [scriptPath, String(pid), file, bundle] };
+  }
+  if (platform === 'linux') {
+    if (!appImage) return { kind: 'manual', reason: 'Fistbump was not started from an AppImage, so it cannot replace itself.' };
+    if (!canWrite(require('node:path').dirname(appImage))) return { kind: 'manual', reason: `Fistbump cannot write to the folder ${require('node:path').dirname(appImage)}.` };
+    return { kind: 'appimage', target: appImage };
+  }
+  return { kind: 'manual', reason: 'Updates cannot be installed on this system.' };
+}
+
+module.exports = { checkForUpdates, compareVersions, parseVersion, pickAsset, installerName, downloadUpdate, appBundle, installPlan, MAC_INSTALL, RELEASES_PAGE };

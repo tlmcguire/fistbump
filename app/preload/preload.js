@@ -122,6 +122,8 @@ contextBridge.exposeInMainWorld('api', {
     downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
     cancelUpdate: () => ipcRenderer.invoke('app:cancel-update'),
     openUpdate: () => ipcRenderer.invoke('app:open-update'),
+    // Installs the downloaded update over this app and restarts into it. Fistbump quits when it answers ok.
+    installUpdate: () => ipcRenderer.invoke('app:install-update'),
     onUpdateProgress: (cb) => { ipcRenderer.on('update:progress', (_event, received, total) => cb(received, total)); },
     // The menu's Settings item (Cmd/Ctrl+,) asks the page to show its settings.
   },

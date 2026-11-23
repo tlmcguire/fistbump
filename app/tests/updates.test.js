@@ -81,3 +81,74 @@ test('downloads the installer, checks it, and leaves no half file', async () => 
   await assert.rejects(downloadUpdate({ ...a, url: 'https://evil.example/x.exe' }, dir, { fetchImpl: async () => body('hello') }), /cannot be downloaded/);
   await assert.rejects(downloadUpdate({ ...a, name: '../evil.exe' }, dir, { fetchImpl: async () => body('hello') }), /cannot be downloaded/);
 });
+
+const { execFileSync, spawn } = require('node:child_process');
+const { appBundle, installPlan, MAC_INSTALL } = require('../main/updates');
+
+test('finds the app bundle it can replace, and refuses the disk image and translocated copies', () => {
+  assert.strictEqual(appBundle('/Applications/FistBump.app/Contents/MacOS/FistBump'), '/Applications/FistBump.app');
+  assert.strictEqual(appBundle('/Volumes/FistBump 0.2.0/FistBump.app/Contents/MacOS/FistBump'), '');
+  assert.strictEqual(appBundle('/private/var/folders/x/AppTranslocation/ABC/d/FistBump.app/Contents/MacOS/FistBump'), '');
+  assert.strictEqual(appBundle('/usr/lib/electron/electron'), '');
+});
+
+test('plans the install for each system', () => {
+  const yes = () => true;
+  const no = () => false;
+  const base = { file: '/dl/FistBump-0.2.0-x', pid: 42, scriptPath: '/tmp/s.sh', canWrite: yes, appImage: '' };
+  assert.deepStrictEqual(installPlan({ ...base, platform: 'win32', execPath: 'C:\\FistBump\\FistBump.exe' }),
+    { kind: 'run', command: '/dl/FistBump-0.2.0-x', args: ['/S', '--force-run'] });
+  assert.deepStrictEqual(installPlan({ ...base, platform: 'darwin', execPath: '/Applications/FistBump.app/Contents/MacOS/FistBump' }),
+    { kind: 'run', command: '/bin/bash', args: ['/tmp/s.sh', '42', '/dl/FistBump-0.2.0-x', '/Applications/FistBump.app'] });
+  assert.strictEqual(installPlan({ ...base, platform: 'darwin', execPath: '/Volumes/F/FistBump.app/Contents/MacOS/FistBump' }).kind, 'manual');
+  assert.strictEqual(installPlan({ ...base, platform: 'darwin', canWrite: no, execPath: '/Applications/FistBump.app/Contents/MacOS/FistBump' }).kind, 'manual');
+  assert.deepStrictEqual(installPlan({ ...base, platform: 'linux', execPath: '/tmp/.mount/fistbump', appImage: '/home/a/FistBump.AppImage' }),
+    { kind: 'appimage', target: '/home/a/FistBump.AppImage' });
+  assert.strictEqual(installPlan({ ...base, platform: 'linux', execPath: '/usr/bin/fistbump' }).kind, 'manual');
+});
+
+// Runs the real macOS script on a dummy app: a disk image holding a new FistBump.app replaces the old one
+// once the "running app" (a sleeping process) exits, and the new one is opened. `open` is a stub.
+test('the macOS script swaps the app once it has quit', { skip: process.platform !== 'darwin' }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-mac-'));
+  const mkApp = (where, version) => {
+    fs.mkdirSync(path.join(where, 'FistBump.app', 'Contents'), { recursive: true });
+    fs.writeFileSync(path.join(where, 'FistBump.app', 'Contents', 'version'), version);
+  };
+  mkApp(path.join(dir, 'Applications'), 'old');
+  mkApp(path.join(dir, 'image'), 'new');
+  const dmg = path.join(dir, 'update.dmg');
+  execFileSync('hdiutil', ['create', '-quiet', '-srcfolder', path.join(dir, 'image'), '-format', 'UDZO', dmg]);
+  const bin = path.join(dir, 'bin');
+  fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, 'open'), `#!/bin/bash\necho "$@" > "${path.join(dir, 'opened')}"\n`, { mode: 0o755 });
+  const script = path.join(dir, 'install.sh');
+  fs.writeFileSync(script, MAC_INSTALL, { mode: 0o700 });
+
+  const running = spawn('sleep', ['1']);
+  const app = path.join(dir, 'Applications', 'FistBump.app');
+  const started = Date.now();
+  execFileSync('/bin/bash', [script, String(running.pid), dmg, app], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+  assert.ok(Date.now() - started >= 700, 'it waited for the app to quit');
+  assert.strictEqual(fs.readFileSync(path.join(app, 'Contents', 'version'), 'utf8'), 'new');
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'opened'), 'utf8').trim(), app);
+  assert.ok(!fs.existsSync(`${app}.update`) && !fs.existsSync(`${app}.previous`), 'no copies are left behind');
+  assert.ok(!fs.existsSync(dmg), 'the downloaded disk image is removed');
+});
+
+test('the macOS script keeps the old app when the disk image is bad', { skip: process.platform !== 'darwin' }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-mac-'));
+  const app = path.join(dir, 'FistBump.app');
+  fs.mkdirSync(path.join(app, 'Contents'), { recursive: true });
+  fs.writeFileSync(path.join(app, 'Contents', 'version'), 'old');
+  const bad = path.join(dir, 'bad.dmg');
+  fs.writeFileSync(bad, 'not a disk image');
+  const bin = path.join(dir, 'bin');
+  fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, 'open'), `#!/bin/bash\necho "$@" > "${path.join(dir, 'opened')}"\n`, { mode: 0o755 });
+  const script = path.join(dir, 'install.sh');
+  fs.writeFileSync(script, MAC_INSTALL, { mode: 0o700 });
+  assert.throws(() => execFileSync('/bin/bash', [script, '999999', bad, app], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, stdio: 'ignore' }));
+  assert.strictEqual(fs.readFileSync(path.join(app, 'Contents', 'version'), 'utf8'), 'old');
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'opened'), 'utf8').trim(), app, 'the old app is opened again');
+});
