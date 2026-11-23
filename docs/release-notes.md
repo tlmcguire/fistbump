@@ -1,12 +1,36 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.2.0
+# Fistbump v0.3.0
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.2.0
+## What's new in 0.3.0
+
+Tailoring is now yours to finish, and the skill match shows what a job would like as well as what it needs.
+
+- **Edit the tailored resume yourself.** A new **Edit resume** tab in Tailor holds the whole resume as text.
+  Change anything, save, and the Changes view and the PDF follow what you wrote. Your edit never touches
+  the resume you started from, so the comparison still shows what changed.
+- **Required and nice-to-have skills, side by side.** Search results, saved jobs and the Tailor sidebar
+  list the skills a job requires and the ones it would like, each colored by where you stand. The long
+  per-skill breakdown folds away under Details. Tailor also says how many nice-to-have skills are on
+  your resume.
+- **"Is a plus" now means nice to have.** A line such as "Kafka is a plus" or "Terraform preferred" counts
+  as nice to have even when it sits under Requirements, so it no longer drags down your required match.
+- **Suggestions follow the resume's format.** The model is told to write plain text, keep bullets as they
+  are and add no headings, and a suggestion that comes back with Markdown symbols is dropped in favor of
+  the built-in rules.
+- **A calmer Tailor view.** Switching to a different job, or opening one from the recommended list, no
+  longer flashes the previous page or fades several parts in on top of each other.
+- **Updates show their progress where you click.** Choosing **Update and restart** in the popup keeps you
+  where you are and shows the download in the popup, with Cancel, instead of jumping to Settings.
+- **Industry search is easier to find.** The empty search page says an industry alone is enough and has a
+  **Browse by industry** button. The loading message now says that boards read in the last 6 hours load
+  from this computer and the rest come from Greenhouse.
+
+## In 0.2.0
 
 The biggest release yet. Fistbump now tells you whether a job is worth it, not just whether you fit it.
 
@@ -153,7 +177,8 @@ many questions at a time, so this release makes Fistbump a good guest:
   score. Matching is lenient: a skill under another name counts, and soft skills you do not name
   are marked "Not mentioned" rather than missing. The search can run without your resume.
 - **Tailor with review.** Rounds of suggestions, written by built-in rules, a local model or a
-  remote provider. Nothing changes until you accept, reject or edit each one. A failed round says
+  remote provider. Nothing changes until you accept, reject or edit each one, and the finished
+  resume can be edited by hand. A failed round says
   what went wrong and what to try. Rounds can be deleted with the x on their chip.
 - **Export.** Build the tailored resume and save a PDF or Markdown.
 - **Track applications.** Stages from Saved to Offered, dates, next steps and notes, with follow-ups
@@ -168,10 +193,10 @@ many questions at a time, so this release makes Fistbump a good guest:
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.2.0-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.2.0-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.2.0-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.2.0-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.3.0-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.3.0-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.3.0-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.3.0-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -211,7 +236,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.2.0 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.3.0 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits
