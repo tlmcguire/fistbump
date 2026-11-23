@@ -918,6 +918,54 @@
     };
   }
  
-  window.ResumeBuilder = {mount, forms, el, fill, chips, makeForm, exportFile, savedNote};
+  //the skill breakdown shared by the saved-job view and the tailor view
+  const skillMatch = (a, titles) => {
+    const group = (heading, split) => {
+            const matched = [...split.tech.matched, ...split.soft.matched];
+            const missing = [...split.tech.missing, ...split.soft.missing];
+            // Skills the resume does not list but probably covers, because it shows a related one. They are
+            // not gaps and count for half in the score, so they are shown rather than left unexplained.
+            const likely = [...(split.tech.likely || []), ...(split.soft.likely || [])];
+            // Soft skills the resume does not name are not held against the person: a resume
+            // rarely lists them. They are shown apart, so it is clear what the posting asked for.
+            const unmentioned = [...(split.tech.unmentioned || []), ...(split.soft.unmentioned || [])];
+            if (!matched.length && !likely.length && !missing.length && !unmentioned.length) return null;
+            //Every skill the posting asks for at a glance, colored by where it stands, then the breakdown.
+            //Each chip also carries a mark, so the colors are not the only way to tell them apart.
+            const skill = (kind, mark, text, title) => el("li", {class: `chip skill skill-${kind}`, title: title || null},
+              el("span", {class: "skill-mark", "aria-hidden": "true", text: mark}), text);
+            const evidence = m => m.experience_ids.map(i => titles[i]).filter(Boolean).join("; ");
+            const overview = el("ul", {class: "chips skill-overview", "aria-label": `${heading} skills`},
+              matched.map(m => skill("have", "\u2713", m.skill, evidence(m) ? `On your resume: ${evidence(m)}` : "On your resume")),
+              likely.map(l => skill("likely", "~", l.skill, l.because ? `Not listed, but you list ${l.because}` : "Not listed, but a related skill is")),
+              missing.map(x => skill("gap", "\u00d7", x, "Not on your resume")),
+              unmentioned.map(x => skill("soft", "\u00b7", x, "A soft skill your resume does not name. It is not held against you.")));
+            const count = (kind, label, n) => n ? el("span", {class: `skill-key skill-key-${kind}`, text: `${n} ${label}`}) : null;
+            return el("div", {class: "skill-group"},
+              el("h4", {text: heading}),
+              overview,
+              el("p", {class: "skill-keys"},
+                count("have", "on your resume", matched.length),
+                count("likely", "likely", likely.length),
+                count("gap", "missing", missing.length),
+                count("soft", "not mentioned", unmentioned.length)),
+              el("div", {class: "skill-breakdown"},
+                matched.length ? [el("p", {text: "On your resume"}),
+                  matched.map(m => el("p", {class: "skill-evidence"}, `\u2713 ${m.skill}`,
+                    evidence(m) ? el("small", {text: ` \u2014 ${evidence(m)}`}) : null))] : null,
+                likely.length ? [el("p", {text: "Likely (not listed, but related skills on your resume suggest it)"}),
+                  el("ul", {class: "chips"}, likely.map(l => skill("likely", "~", l.because ? `${l.skill} (you list ${l.because})` : l.skill, "")))] : null,
+                missing.length ? [el("p", {text: "Missing"}), el("ul", {class: "chips"}, missing.map(x => skill("gap", "\u00d7", x, "")))] : null,
+                unmentioned.length ? [el("p", {text: "Not mentioned (soft skills a resume rarely lists, not held against you)"}),
+                  el("ul", {class: "chips"}, unmentioned.map(x => skill("soft", "\u00b7", x, "")))] : null));
+          };
+    const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !(g.likely || []).length && !g.missing.length && !(g.unmentioned || []).length);
+    return {
+      heading: noRequired ? "This posting lists no required skills" : `Skill match: ${Math.round(a.score * 100)}% of required skills`,
+      groups: [group("Required", a.required), group("Preferred", a.preferred)],
+    };
+  };
+
+  window.ResumeBuilder = {skillMatch, mount, forms, el, fill, chips, makeForm, exportFile, savedNote};
 })();
  
