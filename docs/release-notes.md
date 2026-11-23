@@ -1,13 +1,18 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.7
+# Fistbump v0.1.8
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.1.7
+## What's new in 0.1.8
 
+- **Updates download from Settings.** When a newer version is available, **Download update** saves
+  the installer for your computer into your Downloads folder, with progress and a Cancel button, and
+  **Install** opens it: the installer on Windows, the disk image on macOS, the file's folder on
+  Linux. Fistbump does not install the update by itself. Before 0.1.8 the button only opened the
+  releases page, so this first update from 0.1.7 or earlier is still a download from that page.
 - **The update dot no longer covers the Settings label.** When a newer version is available, the
   dot now sits after the word "Settings" instead of over its last letter.
 - **No title bar or menu bar on Windows.** The window no longer has a title bar, and Alt does not
@@ -65,10 +70,10 @@ applications you sent. Your data stays on your computer unless you choose a remo
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.7-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.7-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.7-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.7-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.1.8-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.8-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.8-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.8-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -108,7 +113,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.1.7 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.1.8 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits
