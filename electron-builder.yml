@@ -6,6 +6,8 @@ files:
   - app/**/*
   - "!app/tests/**"
 asar: true
+# Runs after each app is packed. On macOS it ad-hoc signs FistBump only; see scripts/adhoc-sign.js.
+afterPack: scripts/adhoc-sign.js
 mac:
   target:
     - target: dmg
@@ -14,8 +16,13 @@ mac:
         - x64
   icon: build/icon.icns
   category: public.app-category.productivity
-  # The MVP builds are unsigned, so no signing identity is looked up and nothing is notarized.
+  # There is no Apple developer account, so nothing is notarized and no keychain certificate is used.
+  # scripts/adhoc-sign.js ad-hoc signs the FistBump app after it is packed. Without a valid signature
+  # macOS reports the app as damaged on Apple silicon once electron-builder adds the resources.
+  # Gatekeeper still blocks the first launch, so the README says to open it with right-click.
   identity: null
+  # Ad-hoc signing cannot use hardened runtime without an entitlement, and the app does not need it.
+  hardenedRuntime: false
   notarize: false
   artifactName: "${productName}-${version}-macOS-${arch}.${ext}"
   extraResources:
