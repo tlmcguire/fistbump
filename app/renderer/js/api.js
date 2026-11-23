@@ -118,7 +118,7 @@ window.FistBumpAPI = {
   //handles job management in phase 4
   window.FistBumpAPI.resumes = wrap("resumes", ["list", "get", "create","update", "delete"]);
   window.FistBumpAPI.importJobs = postings => window.FistBumpAPI.request(() => window.api.connectors.import(postings));
-  window.FistBumpAPI.jobs = wrap("jobs", ["parse", "create", "list", "get", "update", "delete", "analyze",
+  window.FistBumpAPI.jobs = wrap("jobs", ["parse", "create", "list", "get", "update", "delete", "analyze", "analyzeText",
     "archive", "unarchive", "trash", "restore"]);
 
   window.FistBumpAPI.cost = wrap("cost", ["analyze"]);

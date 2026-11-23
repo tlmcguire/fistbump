@@ -138,6 +138,7 @@ contextBridge.exposeInMainWorld('api', {
     update: (id, b) => ipcRenderer.invoke('jobs:update', id, b),
     delete: (id) => ipcRenderer.invoke('jobs:delete', id),
     analyze: (id) => ipcRenderer.invoke('jobs:analyze', id),
+    analyzeText: (t) => ipcRenderer.invoke('jobs:analyzeText', t),
     //phase 7: list takes (q, { archived, trashed }); archive takes (id, { archive_application })
     archive: (id, opts) => ipcRenderer.invoke('jobs:archive', id, opts),
     unarchive: (id) => ipcRenderer.invoke('jobs:unarchive', id),

@@ -9,7 +9,7 @@ const CHANNELS = ['connectors:link', 'connectors:posting', 'connectors:search', 
    'storage:report', 'storage:cleanup', 'app:info', 'app:check-updates', 'app:show-data-folder', 'app:open-releases',
    'app:download-update', 'app:cancel-update', 'app:open-update', 'app:install-update',
    'error:details', 'error:copyDetails', 'error:quit',
-   'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'connectors:import',
+   'jobs:parse', 'jobs:create', 'jobs:list', 'jobs:get', 'jobs:update', 'jobs:delete', 'jobs:analyze', 'jobs:analyzeText', 'connectors:import',
    'revisions:create', 'revisions:list', 'revisions:get', 'revisions:cancel', 'revisions:delete',
    'suggestions:accept', 'suggestions:reject', 'suggestions:edit',
    'tailored:create', 'tailored:list', 'tailored:get', 'tailored:diff', 'tailored:delete',
@@ -121,6 +121,7 @@ const ROUTES = {
   'jobs:get':     (id) => isId(id) ? ['GET', `/v1/jobs/${id}`] : bad('Invalid job id'),
   'jobs:update':  (id, body) => isId(id) && isObject(body) ? ['PUT', `/v1/jobs/${id}`, body] : bad('Invalid job'),
   'jobs:delete':  (id) => isId(id) ? ['DELETE', `/v1/jobs/${id}`] : bad('Invalid job id'),
+  'jobs:analyzeText': (raw_text) => typeof raw_text === 'string' && raw_text.trim() ? ['POST', '/v1/jobs/analyze', { raw_text }] : bad('No posting text.'),
   'jobs:analyze': (id) => isId(id) ? ['POST', `/v1/jobs/${id}/analyze`] : bad('Invalid job id'),
 
   //phase 7: job archive and trash
