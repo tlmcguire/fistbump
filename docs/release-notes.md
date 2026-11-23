@@ -1,13 +1,18 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.9
+# Fistbump v0.1.10
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.1.9
+## What's new in 0.1.10
 
+- **Updates install themselves.** **Update and restart** downloads the new version, puts it in place of
+  the old one and opens Fistbump again; your data is kept. When Fistbump opens it tells you about a new
+  version, with **Not now** and a way to skip that version. On a Mac, keep the app in Applications so it
+  can replace itself. Updating from 0.1.9 or earlier still goes the old way once.
+- **A searching magnifier.** The search icon sweeps as if looking around.
 - **The skill match shows every skill a job asks for.** Each one appears in a colored row: on your
   resume, likely (a related skill is on your resume, shown with the one that suggests it), missing,
   or a soft skill your resume does not name. The breakdown with your evidence follows below.
@@ -22,7 +27,7 @@ applications you sent. Your data stays on your computer unless you choose a remo
 - **Updates download from Settings.** When a newer version is available, **Download update** saves
   the installer for your computer into your Downloads folder, with progress and a Cancel button, and
   **Install** opens it: the installer on Windows, the disk image on macOS, the file's folder on
-  Linux. Fistbump does not install the update by itself. Before 0.1.9 the button only opened the
+  Linux. Fistbump does not install the update by itself. Before 0.1.10 the button only opened the
   releases page, so this first update from 0.1.7 or earlier is still a download from that page.
 - **The update dot no longer covers the Settings label.** When a newer version is available, the
   dot now sits after the word "Settings" instead of over its last letter.
@@ -81,10 +86,10 @@ applications you sent. Your data stays on your computer unless you choose a remo
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.9-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.9-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.9-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.9-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.1.10-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.10-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.10-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.10-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -124,7 +129,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.1.9 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.1.10 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits
