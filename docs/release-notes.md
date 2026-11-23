@@ -35,9 +35,9 @@ AI provider.
 | Platform | File | Notes |
 |----------|------|-------|
 | Windows 10 and 11 | `FistBump-0.1.0 Setup.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.0-arm64.dmg` | unsigned |
-| macOS 12 and later, Intel | `FistBump-0.1.0.dmg` | unsigned |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.0.AppImage` | x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.1-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.1-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.1-Linux-x64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
