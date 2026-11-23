@@ -28,6 +28,7 @@ window.PdfPreview = {
     const setExpanded = on => {
       if (on === node.classList.contains("expanded")) return;
       node.classList.toggle("expanded", on);
+      document.body.classList.toggle("pdf-expanded", on); //drag regions would swallow clicks on the Close button
       if (on) {
         node.before(home);
         document.body.append(backdrop, node);

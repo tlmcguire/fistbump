@@ -163,17 +163,21 @@ func TestParseSkillsSplitOnEverySeparator(t *testing.T) {
 	}
 }
 
-func TestParseActivitiesAreNotJobs(t *testing.T) {
-	d := Parse("Jane Doe\n\nEXPERIENCE\nAnalyst, Acme\n2019 - 2021\n- Did things\n\nPROJECTS\nInventory Tracker\nMar 2021 - Jun 2021\n- Built a tracker in Go\n")
-	if len(d.Experiences) != 1 || d.Experiences[0].JobTitle != "Analyst" {
+func TestParseActivitiesAreImported(t *testing.T) {
+	d := Parse("Jane Doe\n\nEXPERIENCE\nAnalyst, Acme\n2019 - 2021\n- Did things\n\nPROJECTS\nInventory Tracker\nMar 2021 - Jun 2021\n- Built a tracker in Go\n\nEXTRACURRICULAR\nCybersecurity Club \u2014 State College, Charleston, SC | August 2023 \u2013 Present\n- Defense team member\n")
+	if len(d.Experiences) != 3 || d.Experiences[0].JobTitle != "Analyst" {
 		t.Fatalf("experiences = %+v", d.Experiences)
 	}
-	found := false
-	for _, w := range d.Warnings {
-		found = found || strings.Contains(w, "Inventory Tracker")
+	if e := d.Experiences[1]; e.JobTitle != "Inventory Tracker" || e.CompanyName != "Projects" {
+		t.Errorf("project = %+v", e)
 	}
-	if !found {
-		t.Errorf("activity text was not reported: %q", d.Warnings)
+	if e := d.Experiences[2]; e.JobTitle != "Cybersecurity Club" || e.CompanyName != "State College" || e.StartDate == nil || *e.StartDate != "2023-08-01" {
+		t.Errorf("club = %+v", e)
+	}
+	for _, w := range d.Warnings {
+		if strings.Contains(w, "Inventory") || strings.Contains(w, "Cybersecurity") {
+			t.Errorf("activity text was reported as unplaced: %q", w)
+		}
 	}
 }
 

@@ -279,10 +279,14 @@ func Parse(text string) Draft {
 	}
 	d.Skills = parseSkills(blocks[secSkills])
 	d.Experiences = parseExperiences(blocks[secExperience], "", &d.Warnings)
-	// Projects, research, volunteering and activities are not jobs, so they are not imported as
-	// experience. Their text is reported so the user can add what matters by hand.
+	// Projects, research, volunteering and activities are imported as experience too, named by their
+	// section when an entry has no organization of its own, so the user keeps what they wrote and can
+	// remove what is not a job. Text that fits no entry is reported.
 	for _, a := range acts {
-		unplaced(&d.Warnings, a.title+" (not imported as work experience)", a.lines)
+		d.Experiences = append(d.Experiences, parseExperiences(a.lines, a.title, &d.Warnings)...)
+	}
+	for i := range d.Experiences {
+		d.Experiences[i].SortOrder = int64(i)
 	}
 	d.Education = parseEducation(blocks[secEducation], &d.Warnings)
 	for _, l := range blocks[secHeader] {

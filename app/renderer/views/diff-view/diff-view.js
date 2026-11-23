@@ -201,13 +201,15 @@
           fill(aside, el("div", {class: "aside-empty"}, pico("16-skill-gap.png"), el("p", {text: "Pick a saved job and its skill gaps show here while you review."})));
           return;
         }
-        const [job, analysis] = await Promise.all([attempt(() => api.jobs.get(jobId)), attempt(() => api.jobs.analyze(jobId))]);
+        const [job, analysis, master] = await Promise.all([attempt(() => api.jobs.get(jobId)), attempt(() => api.jobs.analyze(jobId)), attempt(() => api.resume.get())]);
         if (mine !== asideSeq) return;
         if (!job) return;
         const a = analysis?.value;
         const missing = a ? [...a.required.tech.missing, ...a.required.soft.missing] : [];
         const preferredMissing = a ? [...a.preferred.tech.missing, ...a.preferred.soft.missing] : [];
         gaps = [...missing, ...preferredMissing].map(String);
+        const titles = Object.fromEntries((master?.value?.experiences || []).map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
+        const match = a ? window.ResumeBuilder.skillMatch(a, titles) : null;
         const score = a ? Math.round(a.score * 100) : null;
         const scoreNode = el("span", {class: "score-number", text: "0"});
         const ring = el("div", {class: "score-ring"}, scoreNode, "%");
@@ -217,10 +219,7 @@
           el("p", {class: "aside-company", text: job.value.company_name}),
           a ? el("div", {class: "score"}, ring,
             el("p", {text: "of required skills are already on your resume"})) : null,
-          missing.length ? el("section", {}, el("h3", {text: "Required skills you are missing"}),
-            el("ul", {class: "chips"}, missing.map(m => el("li", {class: "chip gap", text: String(m)})))) : null,
-          preferredMissing.length ? el("section", {}, el("h3", {text: "Preferred skills you are missing"}),
-            el("ul", {class: "chips"}, preferredMissing.map(m => el("li", {class: "chip", text: String(m)})))) : null,
+          match ? el("div", {class: "skill-match"}, el("h3", {text: match.heading}), ...match.groups) : null,
           !a ? el("p", {class: "hint", text: analysis === null ? "" : "Add your master resume to see how it matches."}) : null,
           el("p", {class: "hint", text: "Suggestions only reword what is already true. Skills you have not used stay missing until you add them yourself."}));
         if (a) countTo(scoreNode, score);

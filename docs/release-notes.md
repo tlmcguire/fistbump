@@ -1,13 +1,22 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.10
+# Fistbump v0.1.11
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.1.10
+## What's new in 0.1.11
 
+- **The Tailor tab shows the full skill match.** Beside your suggestions it now lists every skill the job
+  asks for, required and preferred, colored as on your resume, likely, missing or not mentioned, with the
+  same breakdown and evidence as a saved job.
+- **Close works on the whole button.** On an expanded PDF the top of the Close button sat under the window's
+  drag area and did not respond; the full button is clickable now.
+- **Research, projects and activities are imported.** Entries under headings such as Research or
+  Extracurricular now come in as experience, named by their section when they list no organization,
+  instead of being left as warnings. Remove any that are not a job.
+- **Spacing in the import review.** The Add education and Add experience rows no longer touch the card above.
 - **Updates install themselves.** **Update and restart** downloads the new version, puts it in place of
   the old one and opens Fistbump again; your data is kept. When Fistbump opens it tells you about a new
   version, with **Not now** and a way to skip that version. On a Mac, keep the app in Applications so it
@@ -86,10 +95,10 @@ applications you sent. Your data stays on your computer unless you choose a remo
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.10-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.10-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.10-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.10-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.1.11-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.11-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.11-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.11-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -129,7 +138,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.1.10 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.1.11 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits

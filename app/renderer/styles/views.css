@@ -253,6 +253,9 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 }
 .pdf-preview.expanded .pdf-frame { height: auto; min-height: 0; }
 .pdf-preview.expanded .pdf-bar { padding-block: 8px; }
+/* The window's drag regions (toolbar, sidebar top) take clicks even under a fixed element. While the preview is
+   expanded its Close button overlaps them, so they stop dragging until it closes. */
+body.pdf-expanded .drag { -webkit-app-region: no-drag; }
 
 /* ---------- Tracker ---------- */
 
