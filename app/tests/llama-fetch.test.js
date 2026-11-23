@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const zlib = require("node:zlib");
 
-const {untar, unzip, pickServerFiles, TAG, ASSETS} = require("../../scripts/fetch-llama-server.js");
+const {untar, unzip, pickServerFiles, missingLibraries, TAG, ASSETS} = require("../../scripts/fetch-llama-server.js");
 
 //one file entry in a tar archive
 const tarEntry = (name, content) => {
@@ -102,6 +102,42 @@ test("a tar archive is read and the server with its libraries is picked", () => 
   assert.deepEqual([...picked.keys()].sort(), ["libggml.dylib", "libllama.dylib", "llama-server"]);
 });
 
+//one symbolic link entry in a tar archive
+const tarLink = (name, target) => {
+  const header = Buffer.alloc(512);
+  header.write(name, 0, 100, "utf8");
+  header.write("0000777", 100, 8, "ascii");
+  header.write("0000000", 108, 8, "ascii");
+  header.write("0000000", 116, 8, "ascii");
+  header.write("00000000000 ", 124, 12, "ascii");
+  header.write("00000000000 ", 136, 12, "ascii");
+  header.write("        ", 148, 8, "ascii");
+  header.write("2", 156, 1, "ascii");
+  header.write(target, 157, 100, "utf8");
+  header.write("ustar\0" + "00", 257, 8, "ascii");
+  let sum = 0;
+  for (const byte of header) sum += byte;
+  header.write(sum.toString(8).padStart(6, "0") + "\0 ", 148, 8, "ascii");
+  return header;
+};
+
+test("a symbolic link in a tar archive is kept as the file it points at", () => {
+  const folder = "llama-" + TAG + "-bin-macos-arm64/build/bin/";
+  const tar = Buffer.concat([
+    tarEntry(folder + "libllama.0.6.0.dylib", Buffer.from("library")),
+    tarLink(folder + "libllama.0.dylib", "libllama.0.6.0.dylib"),
+    tarLink(folder + "libllama.dylib", "libllama.0.dylib"), //a link to a link
+    tarEntry(folder + "llama-server", Buffer.from("server")),
+    Buffer.alloc(1024),
+  ]);
+  const files = untar(tar);
+  assert.equal(files.get(folder + "libllama.dylib").toString(), "library");
+  assert.equal(files.get(folder + "libllama.0.dylib").toString(), "library");
+
+  const picked = pickServerFiles(files);
+  assert.deepEqual([...picked.keys()].sort(), ["libllama.0.6.0.dylib", "libllama.0.dylib", "libllama.dylib", "llama-server"]);
+});
+
 test("a zip archive is read, stored and deflated alike", () => {
   const folder = "llama-" + TAG + "-bin-win-cpu-x64/";
   const zip = zipArchive([
@@ -116,6 +152,21 @@ test("a zip archive is read, stored and deflated alike", () => {
 
   const picked = pickServerFiles(files);
   assert.deepEqual([...picked.keys()].sort(), ["ggml.dll", "llama-server.exe"]);
+});
+
+test("a macOS binary whose libraries are missing from the folder is reported", () => {
+  //the output of otool -L on the server, as it was when the links were dropped
+  const otool = [
+    "/Applications/FistBump.app/Contents/Resources/bin/llama-server:",
+    "\t/usr/lib/librdma.dylib (compatibility version 1.0.0, current version 1.0.0, weak)",
+    "\t@rpath/libllama-server-impl.dylib (compatibility version 0.0.0, current version 0.0.0)",
+    "\t@rpath/libllama-common.1.dylib (compatibility version 1.0.0, current version 0.0.0)",
+    "\t@rpath/libllama.1.dylib (compatibility version 1.0.0, current version 0.0.0)",
+    "",
+  ].join("\n");
+  const present = new Set(["llama-server", "libllama-server-impl.dylib", "libllama.1.0.0.dylib", "libllama.1.dylib"]);
+  assert.deepEqual(missingLibraries(otool, present), ["libllama-common.1.dylib"]);
+  assert.deepEqual(missingLibraries(otool, new Set([...present, "libllama-common.1.dylib"])), []);
 });
 
 test("an archive without a server is refused", () => {

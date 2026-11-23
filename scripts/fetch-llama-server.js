@@ -11,6 +11,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const https = require('node:https');
+const { execFileSync } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const hostArch = require('./host-arch');
 
@@ -74,8 +75,11 @@ const download = (url, redirects = 0) => new Promise((resolve, reject) => {
 const sha256 = buffer => crypto.createHash('sha256').update(buffer).digest('hex');
 
 //untar reads a tar archive into a map of name to content. Only the file entries are kept.
+//A symbolic link is kept as a copy of the file it points at: llama-server finds its libraries by
+//their version names (libllama.1.dylib), and those names are links to the real files in the archive.
 const untar = buffer => {
   const files = new Map();
+  const links = []; //{name, target}, resolved once the whole archive is read
   let offset = 0;
   let longName = null;
   while (offset + 512 <= buffer.length) {
@@ -84,6 +88,7 @@ const untar = buffer => {
     const name = header.subarray(0, 100).toString('utf8').replace(/\0.*$/, '');
     const size = parseInt(header.subarray(124, 136).toString('ascii').replace(/[\0 ]/g, ''), 8) || 0;
     const type = String.fromCharCode(header[156]);
+    const linkName = header.subarray(157, 257).toString('utf8').replace(/\0.*$/, '');
     offset += 512;
     const data = buffer.subarray(offset, offset + size);
     offset += Math.ceil(size / 512) * 512;
@@ -94,7 +99,22 @@ const untar = buffer => {
     if (type === '0' || type === '\0' || type === '') {
       files.set(longName || name, data);
       longName = null;
+    } else if (type === '2') { //a symbolic link, relative to the folder the link is in
+      const entry = longName || name;
+      longName = null;
+      links.push({name: entry, target: path.posix.join(path.posix.dirname(entry), linkName)});
     }
+  }
+  //a link can point at another link, so the links are resolved until no more can be
+  let pending = links;
+  while (pending.length) {
+    const next = pending.filter(({name, target}) => {
+      if (!files.has(target)) return true;
+      files.set(name, files.get(target));
+      return false;
+    });
+    if (next.length === pending.length) break; //the rest point at nothing in the archive
+    pending = next;
   }
   return files;
 };
@@ -162,6 +182,37 @@ const install = (target, files) => {
   return {dir, names};
 };
 
+//the libraries a macOS binary asks for at load time, as otool -L lists them, that are not in the folder
+const missingLibraries = (otoolOutput, names) => {
+  const missing = [];
+  for (const line of otoolOutput.split('\n')) {
+    const match = line.match(/^\t@rpath\/(\S+) /);
+    if (match && !names.has(match[1])) missing.push(match[1]);
+  }
+  return missing;
+};
+
+//checks that the installed server can load. A release that drops a library fails here, at build
+//time, rather than when a user asks the AI for the first time.
+const verifyInstall = (target, dir, names) => {
+  const present = new Set(names);
+  if (process.platform === 'darwin') {
+    for (const name of names) {
+      if (!LIBRARY.test(name) && name !== 'llama-server') continue;
+      const out = execFileSync('otool', ['-L', path.join(dir, name)], {encoding: 'utf8'});
+      const missing = missingLibraries(out, present);
+      if (missing.length) {
+        throw new Error(name + ' needs ' + missing.join(', ') + ', which the archive does not include');
+      }
+    }
+  }
+  //when the target is this computer, the server is run, so a load failure shows here
+  if (target === process.platform + '-' + hostArch()) {
+    const server = path.join(dir, 'llama-server' + (process.platform === 'win32' ? '.exe' : ''));
+    execFileSync(server, ['--version'], {stdio: 'ignore'});
+  }
+};
+
 const fetchFor = async target => {
   const mapping = TARGETS[target];
   if (!mapping) throw new Error('no target for ' + target);
@@ -176,6 +227,7 @@ const fetchFor = async target => {
   }
   const files = asset.file.endsWith('.zip') ? unzip(buffer) : untar(zlib.gunzipSync(buffer));
   const done = install(mapping.folder, pickServerFiles(files));
+  verifyInstall(target, done.dir, done.names);
   console.log('ok, ' + done.names.length + ' files in ' + path.relative(root, done.dir));
 };
 
@@ -204,7 +256,7 @@ const run = async () => {
   for (const target of targets()) await fetchFor(target);
 };
 
-module.exports = {TAG, ASSETS, TARGETS, untar, unzip, pickServerFiles, download, sha256};
+module.exports = {TAG, ASSETS, TARGETS, untar, unzip, pickServerFiles, missingLibraries, download, sha256};
 
 if (require.main === module) {
   run().catch(error => {
