@@ -1,0 +1,11 @@
+# Keep line endings as LF everywhere, so gofmt and the tests behave the same on Windows.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
+*.tiff binary
+*.bmp binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff2 binary
