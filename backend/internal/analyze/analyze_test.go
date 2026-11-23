@@ -292,3 +292,16 @@ func TestRunLikelySkills(t *testing.T) {
 		t.Errorf("score = %v", got)
 	}
 }
+
+func TestRunManagedKubernetes(t *testing.T) {
+	k8s := models.Master{Profile: &models.Profile{ID: 1, Skills: []string{"Kubernetes"}}}
+	r := Run(models.Job{ReqTechSkills: []string{"eks"}}, k8s).Required.Tech
+	if len(r.Likely) != 1 || r.Likely[0].Skill != "eks" || r.Likely[0].Because != "kubernetes" {
+		t.Errorf("Kubernetes on the resume, EKS asked: %+v", r)
+	}
+	eks := models.Master{Profile: &models.Profile{ID: 1, Skills: []string{"Amazon EKS"}}}
+	r = Run(models.Job{ReqTechSkills: []string{"kubernetes", "aws"}}, eks).Required.Tech
+	if len(r.Likely) != 1 || r.Likely[0].Skill != "kubernetes" || len(r.Matched) != 1 || r.Matched[0].Skill != "aws" {
+		t.Errorf("EKS on the resume, Kubernetes and AWS asked: %+v", r)
+	}
+}

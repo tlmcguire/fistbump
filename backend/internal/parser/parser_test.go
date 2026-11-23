@@ -506,3 +506,20 @@ func TestPlainLinesAreRequirementsWhenBulletsWereLost(t *testing.T) {
 		t.Errorf("requirements = %q, want only the bullet", bulleted.Requirements)
 	}
 }
+
+func TestManagedKubernetes(t *testing.T) {
+	for in, want := range map[string]string{"Amazon EKS": "eks", "AWS EKS": "eks", "Elastic Kubernetes Service": "eks", "Google Kubernetes Engine": "gke", "Azure Kubernetes Service": "aks"} {
+		if got := Canon(in); got != want {
+			t.Errorf("Canon(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if tech, _ := FindSkills("Run services on Amazon EKS and Kubernetes."); !slices.Contains(tech, "eks") || !slices.Contains(tech, "kubernetes") {
+		t.Errorf("FindSkills = %v", tech)
+	}
+	if !slices.Contains(Related("eks"), "kubernetes") || !slices.Contains(Related("kubernetes"), "eks") {
+		t.Errorf("EKS and Kubernetes are not a likely pair: %v / %v", Related("eks"), Related("kubernetes"))
+	}
+	if !slices.Contains(Implied("aws"), "eks") {
+		t.Errorf("EKS does not cover AWS: %v", Implied("aws"))
+	}
+}
