@@ -1,11 +1,21 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.0
+# Fistbump v0.1.3
 
-The first release. Fistbump is a local-first job application assistant: your resume, the postings,
-the skills they ask for that you do not have yet, a tailored resume you can export as a PDF, and a
-tracker for the applications you sent. Your data stays on your computer unless you choose a remote
-AI provider.
+Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
+for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
+applications you sent. Your data stays on your computer unless you choose a remote AI provider.
+
+## What's new in 0.1.3
+
+- **The local AI starts on macOS.** In the earlier macOS builds the bundled `llama-server` could not
+  load its libraries, so using the local model failed with "llama-server exited while starting".
+  The builds now include them. If you use the local model on a Mac, update to this version.
+- **A missing library now fails the build.** After the llama server is fetched, the build checks
+  that every library the macOS binary needs is in the bundle, and runs the server when it can, so
+  this cannot reach a release again.
+- Earlier fixes since 0.1.0: the macOS app is ad-hoc signed so the DMG opens, and the menu bar is
+  hidden on Windows.
 
 ![Tailoring a resume](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/tailor.png)
 
@@ -34,10 +44,10 @@ AI provider.
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.0 Setup.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.1-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.1-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.1-Linux-x64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.1.3-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.3-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.3-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.3-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -46,7 +56,9 @@ user guide ([user-guide.md](user-guide.md)) walks through it.
 ## Install size against NFR-5
 
 NFR-5 asks for an install under 250 MB, without model weights. Measured on macOS from a real
-`npm run dist` build on November 22, 2026:
+`npm run dist` build on November 22, 2026, for 0.1.0. The 0.1.3 macOS installers are a little larger
+(176.4 MB for arm64 and 181.9 MB for x64 on the release page), because the llama libraries are now
+bundled under the version names the server loads them by:
 
 | | arm64 | x64 |
 |---|---|---|
@@ -75,8 +87,8 @@ image is compressed.
 
 ## Upgrading and data
 
-This is the first release, so there is nothing to upgrade from. Your data lives in one folder (the
-user guide shows where on each platform); copy it while the app is closed to back it up.
+Install 0.1.3 over the earlier version; your data is kept. It lives in one folder (the user guide
+shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits
 
