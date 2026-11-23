@@ -72,6 +72,9 @@ function createWindow() {
       spellcheck: false, // red squiggles under job titles and place names look out of place
     },
   });
+  // On Windows, hide the menu bar (File, Edit, View and so on). The menu stays set, so its shortcuts,
+  // such as Ctrl+, for Settings, still work.
+  if (process.platform === 'win32') win.setMenuBarVisibility(false);
   if (state.maximized) win.maximize();
   windowState.track(win);
   win.once('ready-to-show', () => win.show());
