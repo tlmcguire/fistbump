@@ -1,15 +1,24 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.1.4
+# Fistbump v0.1.5
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.1.4
+## What's new in 0.1.5
 
-0.1.3 was built but never published, so its changes are listed here too.
-
+- **Better job search matching.** A city now matches as a whole name and is not confused with a
+  city of the same name elsewhere: "Columbia, SC" no longer finds British Columbia or Columbia, MD.
+  A posting in your city ranks above one that only shares your state.
+- **A fit that tells gaps from skills you likely have.** A required skill you do not list but that
+  sits next to one you do (PostgreSQL for MySQL, Excel for Tableau) shows as "Likely", earns half
+  credit and is not counted as missing. Each posting shows Likely and Gaps chips, and the Strong
+  and Good fit thresholds are more lenient.
+- **Activities are no longer imported as jobs.** Projects, research, volunteering and activities
+  on a resume are reported as text to add by hand instead of becoming work experience.
+- **More boards and two new industries.** The Greenhouse list grows from 630 to 947 boards, with
+  Marketing and advertising and Automotive and mobility added as industries.
 - **Tailoring saves its suggestions again.** On a database that an earlier test build had moved
   ahead, a round written by the local model or a remote provider could not be saved, and the app
   showed "An unexpected error occurred". The app now repairs the database when it opens; your data
@@ -52,10 +61,10 @@ applications you sent. Your data stays on your computer unless you choose a remo
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.1.4-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.1.4-macOS-arm64.dmg` | unsigned, ad-hoc signed |
-| macOS 12 and later, Intel | `FistBump-0.1.4-macOS-x64.dmg` | unsigned, ad-hoc signed |
-| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.4-Linux-x86_64.AppImage` | x64, unsigned |
+| Windows 10 and 11 | `FistBump-0.1.5-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.1.5-macOS-arm64.dmg` | unsigned, ad-hoc signed |
+| macOS 12 and later, Intel | `FistBump-0.1.5-macOS-x64.dmg` | unsigned, ad-hoc signed |
+| Ubuntu 20.04 and later, Fedora 36 and later | `FistBump-0.1.5-Linux-x86_64.AppImage` | x64, unsigned |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -95,7 +104,7 @@ image is compressed.
 
 ## Upgrading and data
 
-Install 0.1.4 over the earlier version; your data is kept. It lives in one folder (the user guide
+Install 0.1.5 over the earlier version; your data is kept. It lives in one folder (the user guide
 shows where on each platform); copy it while the app is closed to back it up.
 
 ## Known limits
