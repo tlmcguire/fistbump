@@ -36,7 +36,59 @@ func Open(file string) (*sql.DB, error) {
 		conn.Close()
 		return nil, err
 	}
+	if err := ensureColumns(conn); err != nil {
+		conn.Close()
+		return nil, err
+	}
 	return conn, nil
+}
+
+// columnMigrations each add one column with ALTER TABLE, which cannot say IF NOT EXISTS. The column is
+// checked on every open and the migration run when it is missing, for the same reason as cacheMigrations:
+// a database whose user_version another build moved past them never ran them, and every write of that
+// column then fails ("table suggestions has no column named reason").
+var columnMigrations = []struct{ table, column, file string }{
+	{"suggestions", "reason", "004_suggestion_reason.sql"},
+}
+
+func ensureColumns(conn *sql.DB) error {
+	for _, c := range columnMigrations {
+		has, err := hasColumn(conn, c.table, c.column)
+		if err != nil {
+			return fmt.Errorf("check %s.%s: %w", c.table, c.column, err)
+		}
+		if has {
+			continue
+		}
+		body, err := migrationsFS.ReadFile(path.Join("migrations", c.file))
+		if err != nil {
+			return fmt.Errorf("read %s: %w", c.file, err)
+		}
+		slog.Warn("adding a column an earlier migration should have added", "table", c.table, "column", c.column)
+		if _, err := conn.Exec(string(body)); err != nil {
+			return fmt.Errorf("ensure %s: %w", c.file, err)
+		}
+	}
+	return nil
+}
+
+func hasColumn(conn *sql.DB, table, column string) (bool, error) {
+	// PRAGMA does not accept bound parameters. table comes from columnMigrations above, never from input.
+	rows, err := conn.Query("SELECT name FROM pragma_table_info('" + table + "')")
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return false, err
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
 }
 
 // cacheMigrations only create cache tables, with IF NOT EXISTS, so they are run on every open as well as in

@@ -202,6 +202,42 @@ func TestListMigrationsOrdered(t *testing.T) {
 	}
 }
 
+// A database whose version another build moved past 004 still gets suggestions.reason, and keeps its rows.
+func TestColumnRepairedWhenVersionSkippedIt(t *testing.T) {
+	conn, file := openTemp(t)
+	for _, stmt := range []string{
+		"ALTER TABLE suggestions DROP COLUMN reason",
+		"PRAGMA user_version = 6",
+	} {
+		if _, err := conn.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conn.Close()
+
+	again, err := Open(file)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer again.Close()
+	has, err := hasColumn(again, "suggestions", "reason")
+	if err != nil || !has {
+		t.Fatalf("suggestions.reason missing after reopening (err=%v)", err)
+	}
+	// a second open finds the column and leaves it alone
+	again.Close()
+	third, err := Open(file)
+	if err != nil {
+		t.Fatalf("Open again: %v", err)
+	}
+	defer third.Close()
+	var version int
+	third.QueryRow("PRAGMA user_version").Scan(&version)
+	if version != 6 {
+		t.Errorf("user_version = %d; the repair must not change it", version)
+	}
+}
+
 // A database whose version another build moved past the cache migrations still gets its cache tables.
 func TestCacheTablesRepairedWhenVersionSkippedThem(t *testing.T) {
 	conn, file := openTemp(t)

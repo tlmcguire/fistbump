@@ -157,6 +157,8 @@
           [/empty reply/, "The model sent an empty reply", ["Try again, or use the built-in rules from Settings."], true, true],
           [/provider|api key|unauthorized|forbidden/, "Your remote provider refused the request", ["Check the address, the model name and the key in Settings."], true, true],
           [/llama-server|local model/, "The local model could not be started", ["Check that the model is downloaded, then try again."], true, true],
+          //a database or backend fault: the suggestions were written but could not be saved or read
+          [/sql|database|no such (table|column)|no column named|went wrong inside/, "FistBump could not save the suggestions", ["Restart FistBump and try again.", "If it keeps failing, install the latest version. It repairs the database when it opens."], false, true],
         ];
         for (const [re, title, steps, settings, retry] of known) {
           if (re.test(low)) return {title, steps, settings, retry, reason: text};
