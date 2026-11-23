@@ -81,7 +81,7 @@ jobs:
           - os: macos-latest
             node_platform: darwin
             arches: arm64 x64
-            installer: dist/mac-*/FistBump-*.dmg
+            installer: dist/*.dmg
           - os: windows-latest
             node_platform: win32
             arches: x64
