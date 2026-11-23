@@ -36,9 +36,9 @@
 
 \title{FistBump: A Local-First Job Application Assistant}
 
-\author{Tyler McGuire \inst{1} \and Joe Cooney \inst{1} \and Tyler Goodman \inst{1} \and Aron Magnusson \inst{1}}
+\author{Tyler McGuire \and Joe Cooney \and Tyler Goodman \and Aron Magnusson}
 
-\institute[shortinst]{\inst{1} College of Charleston, Department of Computer Science}
+\institute[shortinst]{College of Charleston, Department of Computer Science}
 
 % ====================
 % Footer
@@ -46,8 +46,8 @@
 
 \footercontent{
   \href{https://github.com/tlmcguire/fistbump}{github.com/tlmcguire/fistbump} \hfill
-  Status as of November 14, 2026 \hfill
-  Phase 4 in review}
+  Released as v0.1.0, November 22, 2026 \hfill
+  Phases 1 to 9 complete}
 
 % ====================
 % Logos
@@ -75,7 +75,7 @@
 \separatorcolumn
 
 % ====================
-% Column 1: problem, goals, status of requirements
+% Column 1: problem, requirements, design rule
 % ====================
 
 \begin{column}{\colwidth}
@@ -97,38 +97,49 @@
       \toprule
       \textbf{Requirement} & \textbf{Phase} & \textbf{Status} \\
       \midrule
-      FR-1 Edit a master resume locally & 3 & Done \\
-      FR-2 Skill gaps for a posting & 4 & In review \\
-      FR-3 Accept, reject or edit revisions & 5, 8 & Not started \\
-      FR-4 Compile revisions to PDF & 6 & Not started \\
-      FR-5 Store jobs, statuses, versions & 3, 4, 7 & Partial \\
-      FR-6 Linux, Windows, macOS & 9 & Planned \\
-      NFR-1 Data and inference stay local & All & Holds so far \\
-      NFR-3 Skill-gap analysis under 1.5 s & 4 & To measure \\
+      FR-1 Edit a master resume locally & 3 & Met \\
+      FR-2 Skill gaps for a posting & 1, 4 & Met \\
+      FR-3 Accept, reject or edit revisions & 5, 8 & Met \\
+      FR-4 Compile revisions to PDF & 6 & Met (Markdown fallback) \\
+      FR-5 Store jobs, statuses, versions & 3, 4, 7 & Met \\
+      FR-6 Windows, macOS, Linux & 9 & Met, unsigned \\
+      FR-7 Open a Greenhouse link & 1 & Met \\
+      FR-8 Search Greenhouse boards & 2 & Met \\
+      FR-9 Import PDF, TXT or MD & 3 & Met \\
+      NFR-5 Install under 250 MB & 9 & Not met \\
       \bottomrule
     \end{tabular*}
 
     \vspace{0.5em}
 
-    Job search (phase 2) is not a proposal requirement. It is part of the
-    plan because the first version reads Greenhouse listings.
+    The install is 397.6 MB on Apple silicon, 148 MB over the target. The
+    Electron runtime is 288 MB of it. Job search (phase 2) is not a proposal
+    requirement; it was added because the first version reads Greenhouse listings.
 
   \end{block}
 
   \begin{alertblock}{Design rule}
 
     Every AI change is a suggestion. The user can accept, reject or edit it,
-    and nothing is written to the resume until they do. Analysis never calls
-    a model, so the skill-gap result is the same every time it runs.
+    and nothing is written to the resume until they do. Skill-gap analysis
+    never calls a model, so its result is the same every time it runs and
+    finishes in under 1.5 s.
 
   \end{alertblock}
+
+  \begin{block}{References}
+
+    \nocite{*}
+    \tiny{\bibliographystyle{plain}\bibliography{poster}}
+
+  \end{block}
 
 \end{column}
 
 \separatorcolumn
 
 % ====================
-% Column 2: architecture and what works
+% Column 2: architecture and the app
 % ====================
 
 \begin{column}{\colwidth}
@@ -138,18 +149,18 @@
     \begin{center}
     \begin{tikzpicture}[
         box/.style={draw, rounded corners, align=center, font=\small,
-                    minimum width=0.85\colwidth, minimum height=1.6cm,
+                    minimum width=0.85\colwidth, minimum height=1.0cm,
                     inner sep=6pt},
         flow/.style={-{Stealth[length=2.5mm]}, thick}]
       \node[box, fill=gray!10] (ui) {Renderer: vanilla JS views\\
-        Find, Home, Resume, Jobs, Settings};
-      \node[box, fill=gray!10, below=0.7cm of ui] (pre) {Preload: contextBridge\\
+        Find, Home, Resume, Jobs, Tailor, Tracker, Settings};
+      \node[box, fill=gray!10, below=0.4cm of ui] (pre) {Preload: contextBridge\\
         \texttt{window.api}};
-      \node[box, fill=gray!10, below=0.7cm of pre] (main) {Main process: IPC handlers\\
-        starts the backend};
-      \node[box, fill=gray!10, below=0.7cm of main] (go) {Go backend \texttt{fistbump-core}\\
-        local HTTP API, deterministic analysis};
-      \node[box, fill=gray!10, below=0.7cm of go] (db) {SQLite file on disk};
+      \node[box, fill=gray!10, below=0.4cm of pre] (main) {Main process: IPC handlers\\
+        starts and restarts the backend};
+      \node[box, fill=gray!10, below=0.4cm of main] (go) {Go backend \texttt{fistbump-core}\\
+        local HTTP API, deterministic analysis, local or remote AI};
+      \node[box, fill=gray!10, below=0.4cm of go] (db) {SQLite file on disk};
 
       \draw[flow] (ui) -- (pre);
       \draw[flow] (pre) -- (main);
@@ -158,35 +169,30 @@
     \end{tikzpicture}
     \end{center}
 
-    The renderer has no Node access. Every read and write goes through
-    the Go backend, which stores data in SQLite on the user's machine. The
-    backend contacts the Greenhouse Job Board API only when the user
-    searches, imports or opens a listing.
+    The renderer has no Node access, and every request carries a per-launch
+    token. The backend contacts Greenhouse only when the user searches or
+    opens a link, and a remote AI provider only if the user adds one.
 
   \end{block}
 
-  \begin{block}{What works today}
+  \begin{block}{The app}
 
-    \begin{itemize}
-      \item \textbf{Job search:} 675 curated Greenhouse boards in 32
-        categories, with location, level, recency and pay filters, ranked
-        results and cached listings.
-      \item \textbf{Master resume:} edit the profile, import a PDF or text
-        resume, report hidden PDF text, and keep saved versions.
-      \item \textbf{Settings:} search history, storage controls and saved
-        data.
-      \item \textbf{Pico,} the mascot, guides Home and the search states.
-    \end{itemize}
-
-  \end{block}
-
-  \begin{block}{Skill-gap analysis (phase 4)}
-
-    The parser splits a posting into required and preferred skills. The
-    analysis compares them with the master resume and shows the evidence
-    for each match. Saving a Greenhouse posting and ranking search results
-    by skill fit are built. The parser, the analysis and the Jobs view are
-    next.
+    \begin{center}
+    \begin{tabular}{cc}
+      \includegraphics[width=0.45\colwidth]{screenshots/home.png} &
+      \includegraphics[width=0.45\colwidth]{screenshots/resume.png} \\
+      {\footnotesize Home: follow-ups and jobs to tailor} &
+      {\footnotesize Master resume with live PDF preview} \\[0.6em]
+      \includegraphics[width=0.45\colwidth]{screenshots/jobs.png} &
+      \includegraphics[width=0.45\colwidth]{screenshots/tailor.png} \\
+      {\footnotesize Saved job with its full posting} &
+      {\footnotesize Tailor: each change accepted, rejected or edited} \\[0.6em]
+      \includegraphics[width=0.45\colwidth]{screenshots/tracker.png} &
+      \includegraphics[width=0.45\colwidth]{screenshots/settings.png} \\
+      {\footnotesize Tracker: each application and its next step} &
+      {\footnotesize Settings: AI engine and storage} \\
+    \end{tabular}
+    \end{center}
 
   \end{block}
 
@@ -195,7 +201,7 @@
 \separatorcolumn
 
 % ====================
-% Column 3: timeline, next steps, references
+% Column 3: timeline, what shipped, limits, references
 % ====================
 
 \begin{column}{\colwidth}
@@ -209,40 +215,44 @@
       1 & Listing view, Greenhouse link & Done \\
       2 & Job search across boards & Done \\
       3 & Master resume and import & Done \\
-      4 & Saved jobs and skill gaps & In review \\
-      5 & Tailoring loop, rules engine & Not started \\
-      6 & PDF export & Not started \\
-      7 & Application tracker & Not started \\
-      8 & Local and remote AI & Not started \\
-      9 & Installers and CI & Not started \\
+      4 & Saved jobs and skill gaps & Done \\
+      5 & Tailoring loop, rules engine & Done \\
+      6 & PDF export & Done \\
+      7 & Application tracker & Done \\
+      8 & Local and remote AI & Done \\
+      9 & Installers and CI & Released \\
       \bottomrule
     \end{tabular*}
 
   \end{block}
 
-  \begin{block}{Next steps}
+  \begin{block}{What shipped in v0.1.0}
 
     \begin{itemize}
-      \item Finish phase 4: parser, analysis and the Jobs view, then
-        measure the 1.5 s target.
-      \item Phase 5: suggestions, side-by-side review and tailored resumes.
-      \item Then PDF export, the tracker, the AI providers and the release.
+      \item Installers for Windows (NSIS, x64), macOS (arm64 and x64 \texttt{.dmg}) and Linux (\texttt{.AppImage}, x64), unsigned.
+      \item Search of 675 curated Greenhouse boards in 32 categories, ranked by fit.
+      \item Local model (llama-server) or any OpenAI-compatible remote provider, with a rules fallback and an encrypted key.
+      \item Tracker with archive, trash, bulk status and CSV export; PDF export with a Markdown fallback.
     \end{itemize}
 
   \end{block}
 
-  \begin{alertblock}{Code and team}
+  \begin{alertblock}{Known limits}
 
-    Source: \href{https://github.com/tlmcguire/fistbump}{github.com/tlmcguire/fistbump}.
-    The Go backend has 143 test functions. Team: Tyler McGuire, Joe Cooney,
-    Tyler Goodman and Aron Magnusson.
+    \begin{itemize}
+      \item Install size is over the 250 MB target; \texttt{llama-server} download on first use is the planned fix.
+      \item Greenhouse only; other boards are paste-only.
+      \item Skill matching is a dictionary of about 120 skills, strongest for technical roles.
+      \item The database is not encrypted at rest; PDF text uses core fonts (Latin-1).
+    \end{itemize}
 
   \end{alertblock}
 
-  \begin{block}{References}
+  \begin{block}{Code and team}
 
-    \nocite{*}
-    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
+    Source and release: \href{https://github.com/tlmcguire/fistbump}{github.com/tlmcguire/fistbump}.
+    The Go backend has 384 test functions, and CI runs the Go and app tests on Ubuntu, macOS and Windows.
+    Team: Tyler McGuire, Joe Cooney, Tyler Goodman and Aron Magnusson.
 
   \end{block}
 
