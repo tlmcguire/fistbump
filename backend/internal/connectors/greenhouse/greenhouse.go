@@ -500,7 +500,7 @@ func toPosting(board, jobID string, raw rawJob) (connectors.Posting, error) {
 		CompanyName:   company,
 		PositionTitle: title,
 		Location:      location,
-		ListingURL:    listingBase + "/" + board + "/jobs/" + jobID,
+		ListingURL:    listingURL(board, jobID, raw.AbsoluteURL),
 		CompanyURL:    companyURL(board, raw.AbsoluteURL),
 		UpdatedAt:     updated,
 		RawText:       text,
@@ -508,18 +508,44 @@ func toPosting(board, jobID string, raw rawJob) (connectors.Posting, error) {
 	}, nil
 }
 
-// companyURL is the posting's absolute_url when it is on the company's own site, or the curated
-// website; otherwise nil. Only https links are used.
-func companyURL(board, absolute string) *string {
+// listingURL is where the original listing is read: the posting's own page on the company's site when
+// Greenhouse points there, else the page Greenhouse hosts. Only https links are used.
+func listingURL(board, id, absolute string) string {
 	if link, ok := httpsURL(absolute); ok && !greenhouseHost(link.Hostname()) {
-		return &absolute
+		return absolute
 	}
-	if site := WebsiteFor(board); site != "" {
-		if _, ok := httpsURL(site); ok {
-			return &site
+	return listingBase + "/" + board + "/jobs/" + id
+}
+
+// companyURL is the company's home page, so a reader can see what the company is and does. It comes from the
+// curated website, else from the posting's own-site link, with the path stripped; nil when neither is known.
+func companyURL(board, absolute string) *string {
+	for _, source := range []string{WebsiteFor(board), absolute} {
+		if home := homepage(source); home != "" {
+			return &home
 		}
 	}
 	return nil
+}
+
+// jobSiteLabels are subdomains that hold jobs, not the company: careers.example.com is example.com's.
+var jobSiteLabels = map[string]bool{"careers": true, "career": true, "jobs": true, "job": true, "boards": true, "apply": true, "work": true, "join": true, "talent": true, "hire": true}
+
+// homepage is the front page of the site a link is on, "https://host/", or "" for a link that is not https,
+// is on Greenhouse, or has no real host. A jobs subdomain is dropped.
+func homepage(link string) string {
+	u, ok := httpsURL(link)
+	if !ok || greenhouseHost(u.Hostname()) {
+		return ""
+	}
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if labels := strings.SplitN(host, ".", 2); len(labels) == 2 && jobSiteLabels[labels[0]] && strings.Contains(labels[1], ".") {
+		host = labels[1]
+	}
+	if !strings.Contains(host, ".") {
+		return ""
+	}
+	return "https://" + host + "/"
 }
 
 // ensure only https URLs are used; http is not accepted
