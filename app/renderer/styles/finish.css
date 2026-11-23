@@ -322,3 +322,7 @@ dialog.ask { border-color: rgba(255, 255, 255, 0.12); background: #153678; box-s
   .filters label.check:has(#search-require-pay) { grid-column: span 3; }
   .filters .filters-actions { grid-column: -2 / -1; }
 }
+
+/* The toolbar's dropdowns (search suggestions, history) must open over the results. The content below animates in
+   with a transform, which gives it a layer of its own that would otherwise paint over them. */
+.toolbar { position: relative; z-index: 40; }
