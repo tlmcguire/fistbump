@@ -285,8 +285,18 @@ body.pdf-expanded .drag { -webkit-app-region: no-drag; }
 
 .tracker-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; background: var(--note); border: 1px solid var(--note-line); border-radius: var(--radius); }
 .tracker-table-wrap { overflow-x: auto; }
-.tracker-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-.tracker-table thead th { color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 1; padding: 4px 8px; background: var(--bg); border-bottom: 1px solid var(--line-strong); text-align: left; white-space: nowrap; }
+.tracker-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; min-width: 880px; }
+.tracker-table th:nth-child(1), .tracker-table td:nth-child(1) { width: 32px; padding-left: 6px; padding-right: 0; }
+.tracker-table th:nth-child(2) { width: 12%; }
+.tracker-table th:nth-child(3) { width: auto; min-width: 170px; }
+.tracker-table th:nth-child(4) { width: 120px; }
+.tracker-table th:nth-child(5), .tracker-table th:nth-child(6) { width: 124px; }
+.tracker-table th:nth-child(7) { width: 9%; }
+.tracker-table th:nth-child(8) { width: 14%; }
+.tracker-table td { overflow-wrap: break-word; word-break: normal; }
+.tracker-table td .link-button { text-align: left; white-space: normal; overflow-wrap: break-word; }
+.tracker-table td select, .tracker-table td input[type="date"] { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+.tracker-table thead th { color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 1; padding: 4px 8px; background: var(--bg); border-bottom: 1px solid var(--line-strong); text-align: left; white-space: normal; }
 .sort-button { height: 26px; padding: 0 4px; margin-left: -4px; background: transparent; color: var(--muted); font-weight: 600; }
 .sort-button:hover:not(:disabled) { color: var(--text); }
 th[aria-sort="ascending"] .sort-button, th[aria-sort="descending"] .sort-button { color: var(--text); }
@@ -297,7 +307,7 @@ th[aria-sort="ascending"] .sort-button, th[aria-sort="descending"] .sort-button 
 .tracker-table tr.due td { background: rgba(255, 255, 255, 0.035); }
 .tracker-table tr.archived td { opacity: 0.75; }
 .tracker-table tr.focused td { background: var(--select); }
-.tracker-table textarea { width: 100%; min-width: 160px; resize: vertical; font: inherit; }
+.tracker-table textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; font: inherit; }
 .tracker-due { display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--due); font-size: 12px; font-weight: 600; }
 .tracker-due .icon { width: 13px; height: 13px; }
 .tracker-pdf { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
