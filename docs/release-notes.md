@@ -1,8 +1,34 @@
-# Release notes: v0.1.0
+![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-The first release of Fistbump. A local-first job application assistant: your resume, the job
-postings, the skills they ask for that you do not have, a tailored resume you can export as a
-PDF, and a tracker for the applications you sent.
+# Fistbump v0.1.0
+
+The first release. Fistbump is a local-first job application assistant: your resume, the postings,
+the skills they ask for that you do not have yet, a tailored resume you can export as a PDF, and a
+tracker for the applications you sent. Your data stays on your computer unless you choose a remote
+AI provider.
+
+![Tailoring a resume](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/tailor.png)
+
+## What you can do
+
+- **Keep one master resume.** Enter it by hand or import a file, see it as a live PDF, and save
+  named versions.
+- **Collect jobs.** Search Greenhouse boards, open a link, or paste a posting. Postings are parsed
+  into company, title, location, pay and the skills they ask for.
+- **See the skill gap.** Required and preferred skills your resume does not show yet, with a match
+  score. Matching is lenient: a skill under another name counts, and soft skills you do not name
+  are marked "Not mentioned" rather than missing. The search can run without your resume.
+- **Tailor with review.** Rounds of suggestions, written by built-in rules, a local model or a
+  remote provider. Nothing changes until you accept, reject or edit each one. A failed round says
+  what went wrong and what to try. Rounds can be deleted with the x on their chip.
+- **Export.** Build the tailored resume and save a PDF or Markdown.
+- **Track applications.** Stages from Saved to Offered, dates, next steps and notes, with follow-ups
+  on the Home view.
+- **Stay in control of storage.** Settings shows what the app stores, previews a cleanup before
+  anything is removed, and old untracked jobs and the Trash are cleared on their own.
+- **Recover from a crash.** If the backend stops, the app restarts it. If it cannot start, an error
+  screen shows what happened with a Copy details button.
+- Four languages: English, Spanish, French and German.
 
 ## Installers
 
@@ -47,6 +73,11 @@ What the gap could be closed with, in order of how much it saves:
 Note that the installed size is what the user gets: the installer is smaller because the disk
 image is compressed.
 
+## Upgrading and data
+
+This is the first release, so there is nothing to upgrade from. Your data lives in one folder (the
+user guide shows where on each platform); copy it while the app is closed to back it up.
+
 ## Known limits
 
 - Greenhouse only: the job board support covers companies that post on a Greenhouse board.
@@ -58,3 +89,5 @@ image is compressed.
 - The builds are unsigned, so the first launch needs the extra click described above.
 - The local model needs about 4 GB of free memory for the default one, and the model file itself
   is about 1 GB on disk, outside the install size above.
+
+Full documentation: the [user guide](https://github.com/tlmcguire/fistbump/blob/main/docs/user-guide.md).
