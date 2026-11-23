@@ -13,7 +13,7 @@ var boardsJSON []byte
 type Board struct {
 	Token   string `json:"token"`
 	Company string `json:"company"`
-	// Website is the company's careers page where known, else its home page. Optional; https only.
+	// Website is the company's home page, so a reader can see what it does. Optional; https only.
 	Website string `json:"website,omitempty"`
 }
 
