@@ -523,3 +523,10 @@ func TestManagedKubernetes(t *testing.T) {
 		t.Errorf("EKS does not cover AWS: %v", Implied("aws"))
 	}
 }
+
+func TestInlinePlusMarksASkillAsPreferred(t *testing.T) {
+	r := Parse("Requirements\n- Strong SQL\n- Kafka is a plus\n- Terraform preferred\n")
+	if !slices.Equal(r.ReqTechSkills, []string{"sql"}) || !slices.Equal(r.PrefTechSkills, []string{"kafka", "terraform"}) {
+		t.Errorf("required %v, preferred %v", r.ReqTechSkills, r.PrefTechSkills)
+	}
+}

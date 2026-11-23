@@ -136,12 +136,12 @@ window.JobParser = {
         if (name === "saved") loadSaved();
 
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
-          showInitial("Search by job title, location, company or industry. Results appear here.");
+          showInitial("Search by job title, location, company or industry. An industry alone is enough: no keywords needed.");
         }
         ({find: $("search-keywords"), link: input, paste: $("paste-text"), saved: $("saved-q")})[name]?.focus();
 
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
-          showInitial("Search by job title, location, company or industry. Results appear here.");
+          showInitial("Search by job title, location, company or industry. An industry alone is enough: no keywords needed.");
         }
         (name === "find" ? $("search-keywords") : input).focus();
       };
@@ -871,7 +871,9 @@ window.JobParser = {
         results = null;
         setSearchBusy(true);
         const wide = !query.company && !query.categories.length && boardTotal;
-        showLoading(wide ? `Searching ${boardTotal.toLocaleString()} boards\u2026` : "Searching Greenhouse\u2026", true);
+        showLoading(wide
+          ? `Searching ${boardTotal.toLocaleString()} boards\u2026 Boards read in the last 6 hours load from this computer; the rest are asked from Greenhouse, which takes longer.`
+          : "Searching Greenhouse\u2026 Boards read in the last 6 hours load from this computer.", true);
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
@@ -1467,6 +1469,11 @@ window.JobParser = {
         $("filters-toggle").setAttribute("aria-expanded", String(open));
       };
       $("filters-toggle").addEventListener("click", () => setFiltersOpen($("filters").hidden));
+      //an industry on its own is a complete search, so the empty page points straight at it
+      $("browse-industry").addEventListener("click", () => {
+        setFiltersOpen(true);
+        $("search-industry").focus();
+      });
       searchForm.addEventListener("input", updateFilterCount);
       searchForm.addEventListener("change", updateFilterCount);
 

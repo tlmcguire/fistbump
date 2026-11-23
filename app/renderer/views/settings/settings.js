@@ -445,11 +445,22 @@ window.Settings = {
       updateButtons({available, downloadable: available && result.downloadable});
     };
 
+    //the status line in Settings, and the popup that started the update when there is one
+    let mirror = null; //{text, bar, close}
+    const setUpdateStatus = (text, fraction) => {
+      $("update-status").textContent = text;
+      if (!mirror) return;
+      mirror.text.textContent = text;
+      if (fraction === undefined) return;
+      if (fraction === null) mirror.bar.removeAttribute("value");
+      else mirror.bar.value = fraction;
+    };
+
     window.api?.app?.onUpdateProgress?.((received, total) => {
       if (!downloading) return;
-      $("update-status").textContent = total
+      setUpdateStatus(total
         ? `Downloading the update... ${Math.floor(received * 100 / total)}% (${megabytes(received)} of ${megabytes(total)})`
-        : `Downloading the update... ${megabytes(received)}`;
+        : `Downloading the update... ${megabytes(received)}`, total ? received / total : null);
     });
 
     //Update and restart: download the installer, then install it over this app and start the new version.
@@ -458,20 +469,20 @@ window.Settings = {
     const downloadUpdate = async () => {
       downloading = true;
       updateButtons({available: true, downloadable: true});
-      $("update-status").textContent = "Downloading the update...";
+      setUpdateStatus("Downloading the update...");
       const result = await api.app.downloadUpdate();
       downloading = false;
       if (result?.error) {
-        $("update-status").textContent = result.error.code === "canceled" ? "The download was canceled." : result.error.message;
+        setUpdateStatus(result.error.code === "canceled" ? "The download was canceled." : result.error.message);
         updateButtons({available: true, downloadable: true});
         return;
       }
-      $("update-status").textContent = "Installing the update. Fistbump will close and open again in a moment.";
+      setUpdateStatus("Installing the update. Fistbump will close and open again in a moment.");
       updateButtons({available: true, downloadable: true, saved: true});
       $("install-update").hidden = true;
       const installed = await api.app.installUpdate();
       if (installed?.error) {
-        $("update-status").textContent = `${installed.error.message} The installer, ${result.name}, is in your Downloads folder.`;
+        setUpdateStatus(`${installed.error.message} The installer, ${result.name}, is in your Downloads folder.`);
         $("install-update").hidden = false;
       }
     };
@@ -508,11 +519,21 @@ window.Settings = {
         dialog.remove();
       };
       const later = make("button", {type: "button", text: "Not now", onclick: close});
-      const update = make("button", {type: "button", class: "primary", text: result.downloadable ? "Update and restart" : "See what's new", onclick: () => {
-        close();
-        if (!result.downloadable) { api.app.openReleases(result.url); return; }
-        $("tab-settings")?.click(); //the progress shows in Settings
-        downloadUpdate();
+      const update = make("button", {type: "button", class: "primary", text: result.downloadable ? "Update and restart" : "See what's new", onclick: async () => {
+        if (!result.downloadable) { close(); api.app.openReleases(result.url); return; }
+        //the popup turns into the progress view, so the user sees the download where they clicked
+        const text = make("p", {role: "status"});
+        const bar = make("progress", {max: "1", "aria-label": "Update download"});
+        const cancel = make("button", {type: "button", text: "Cancel", onclick: () => api?.app?.cancelUpdate?.()});
+        const done = make("button", {type: "button", text: "Close", hidden: true, onclick: () => { mirror = null; dialog.close(); dialog.remove(); }});
+        dialog.replaceChildren(make("h2", {text: `Updating to Fistbump ${result.latest}`}), text, bar, make("div", {class: "ask-actions"}, cancel, done));
+        dialog.addEventListener("cancel", event => event.preventDefault());
+        mirror = {text, bar};
+        await downloadUpdate();
+        //reaching here means it was canceled or failed (a successful install quits the app)
+        cancel.hidden = true;
+        done.hidden = false;
+        done.focus();
       }});
       dialog.append(
         make("h2", {text: `Fistbump ${result.latest} is available`}),

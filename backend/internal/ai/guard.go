@@ -17,6 +17,10 @@ func Check(t Target, proposed string, r Request) string {
 	if strings.TrimSpace(proposed) == strings.TrimSpace(t.Original) {
 		return "no change"
 	}
+	// The resume is printed from plain text, so Markdown emphasis or headings would show as stray symbols.
+	if strings.Contains(proposed, "**") || strings.Contains(proposed, "`") || strings.Contains(proposed, "\n#") || strings.HasPrefix(strings.TrimSpace(proposed), "#") {
+		return "uses Markdown formatting"
+	}
 	switch t.Section {
 	case "skills":
 		if !sameItems(t.Original, proposed) {

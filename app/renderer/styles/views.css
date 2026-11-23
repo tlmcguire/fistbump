@@ -534,3 +534,9 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 .cost-periods td:nth-child(2) { text-align: right; color: var(--muted); }
 .cost-periods td:last-child { font-weight: 650; }
 .cost-table .cost-gross td { padding-bottom: 3px; }
+
+/* The tailored resume's own editor and the update popup's progress bar */
+#tailor-editor { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; line-height: 1.5; resize: vertical; }
+.update-notice progress { width: 100%; margin-top: 12px; }
+.aside-preferred { margin: 4px 0 8px; font-size: 0.9rem; }
+.score-number { display: inline-block; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }

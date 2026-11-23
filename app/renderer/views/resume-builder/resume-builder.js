@@ -949,7 +949,7 @@
                 count("likely", "likely", likely.length),
                 count("gap", "missing", missing.length),
                 count("soft", "not mentioned", unmentioned.length)),
-              el("div", {class: "skill-breakdown"},
+              el("details", {class: "skill-breakdown"}, el("summary", {text: "Details"}),
                 matched.length ? [el("p", {text: "On your resume"}),
                   matched.map(m => el("p", {class: "skill-evidence"}, `\u2713 ${m.skill}`,
                     evidence(m) ? el("small", {text: ` \u2014 ${evidence(m)}`}) : null))] : null,
@@ -960,9 +960,10 @@
                   el("ul", {class: "chips"}, unmentioned.map(x => skill("soft", "\u00b7", x, "")))] : null));
           };
     const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !(g.likely || []).length && !g.missing.length && !(g.unmentioned || []).length);
+    const none = text => el("div", {class: "skill-group"}, el("h4", {text}), el("p", {class: "hint", text: "The posting lists none."}));
     return {
       heading: noRequired ? "This posting lists no required skills" : `Skill match: ${Math.round(a.score * 100)}% of required skills`,
-      groups: [group("Required", a.required), group("Preferred", a.preferred)],
+      groups: [group("Required", a.required) || none("Required"), group("Nice to have", a.preferred) || none("Nice to have")],
     };
   };
 

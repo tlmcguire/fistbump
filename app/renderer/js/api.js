@@ -130,7 +130,7 @@ window.FistBumpAPI = {
   //phase 5
   window.FistBumpAPI.revisions = wrap("revisions", ["create", "list", "get", "cancel", "delete"]);
   window.FistBumpAPI.suggestions = wrap("suggestions", ["accept", "reject", "edit"]);
-  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "diff", "delete", "export", "previewPdf"]);
+  window.FistBumpAPI.tailored = wrap("tailored", ["create", "list", "get", "update", "diff", "delete", "export", "previewPdf"]);
   window.FistBumpAPI.ai = wrap("ai", ["status", "setMode", "setRemote", "clearRemote", "test"]);
   //phase 8: the local model catalog
   window.FistBumpAPI.models = wrap("models", ["list", "get", "download", "downloadStatus", "cancelDownload", "delete"]);

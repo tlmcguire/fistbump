@@ -292,3 +292,12 @@ func TestAnEnglishReasonIsNotShownInAnotherLanguage(t *testing.T) {
 		t.Errorf("no reason stays none: %q", got)
 	}
 }
+
+func TestCheckDropsMarkdownFormatting(t *testing.T) {
+	target := Target{Section: "experience", Original: "- Cleaned order data with SQL"}
+	for _, proposed := range []string{"- Cleaned **order data** with SQL", "# Cleaned order data with SQL", "- Cleaned `order` data with SQL"} {
+		if got := Check(target, proposed, promptRequest()); got != "uses Markdown formatting" {
+			t.Errorf("Check(%q) = %q", proposed, got)
+		}
+	}
+}

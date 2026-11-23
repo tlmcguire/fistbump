@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/tlmcguire/fistbump/backend/internal/diff"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
@@ -171,6 +172,32 @@ func (s *Server) tailoredDiff(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"hunks": hunks})
+	return nil
+}
+
+// tailoredUpdate handles PUT /v1/tailored-resumes/{id}: the user's own edit of the resume text.
+func (s *Server) tailoredUpdate(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		return err
+	}
+	if strings.TrimSpace(body.Content) == "" {
+		return validationError("content", "content cannot be empty")
+	}
+	if len(body.Content) > 1<<20 {
+		return validationError("content", "content is too long")
+	}
+	t, err := s.store.UpdateTailoredContent(r.Context(), id, body.Content)
+	if err != nil {
+		return storeError(err, "Tailored resume")
+	}
+	writeJSON(w, http.StatusOK, t)
 	return nil
 }
 

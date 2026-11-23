@@ -321,6 +321,7 @@ type SearchResult struct {
 	LocationMatched int           `json:"location_matched"` // of those, postings in the requested location itself (0 when none was asked)
 	BoardsSearched  int           `json:"boards_searched"`  // boards listed without error
 	BoardsTotal     int           `json:"boards_total"`     // boards the search set out to list
+	BoardsCached    int           `json:"boards_cached"`    // of those, boards read from this computer's saved listings instead of Greenhouse
 	PostingsScanned int           `json:"postings_scanned"` // postings seen across those boards
 	Errors          []SearchError `json:"errors"`
 	RateLimited     bool          `json:"rate_limited"` // Greenhouse answered "too many requests", so some boards or descriptions were skipped

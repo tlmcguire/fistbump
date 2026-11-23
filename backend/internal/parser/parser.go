@@ -74,6 +74,10 @@ func Parse(raw string) Result {
 		switch {
 		case sec == secRequired, sec != secPreferred && !hasReq:
 			tDst, sDst = reqT, reqS
+			// A line that calls its own skills a bonus ("Kafka is a plus") is preferred, wherever it sits.
+			if softenedRe.MatchString(line) {
+				tDst, sDst = prefT, prefS
+			}
 		case sec == secPreferred:
 			tDst, sDst = prefT, prefS
 		default:
@@ -183,7 +187,9 @@ var (
 	preferredRe  = regexp.MustCompile(`\b(preferred|nice[- ]to[- ]haves?|bonus|pluses|desired)\b|^(a |big |huge )?plus$|\ba plus$`)
 	requiredRe   = regexp.MustCompile(`\b(requirements|required|qualifications|what you bring|what you'll bring|what you will bring|must[- ]haves?|what you'll need|what you will need|what we're looking for|what we are looking for|who you are)\b`)
 	otherRe      = regexp.MustCompile(`\b(responsibilities|duties|what you'll do|what you will do|day[- ]to[- ]day|in this role|the role|your role|about|overview|summary|who we are|why join|our team|the team|culture|values|how to apply|equal opportunity|eeo|location|locations|logistics|how we(?:'re| are) different|come work with us|life at)\b`)
-	headingTrim  = "#*_=: "
+	// softenedRe marks a single line as asking for a skill only as a bonus.
+	softenedRe  = regexp.MustCompile(`(?i)\b(is|are|would be|a) (a )?(plus|bonus|nice to have)\b|\bnice[- ]to[- ]haves?\b|\b(preferred|ideally|bonus points)\b`)
+	headingTrim = "#*_=: "
 )
 
 // heading reports whether line is a section heading, and which section it starts. A heading is
