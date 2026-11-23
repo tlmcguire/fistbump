@@ -15,9 +15,18 @@ type Match struct {
 	ExperienceIDs []int64 `json:"experience_ids"`
 }
 
+// Likely is a skill the resume does not list but probably has, because it shows a related one.
+type Likely struct {
+	Skill   string `json:"skill"`
+	Because string `json:"because"` // the related skill the resume shows
+}
+
 // Group is one skill list split into matched and missing. Neither list is nil.
 type Group struct {
-	Matched []Match  `json:"matched"`
+	Matched []Match `json:"matched"`
+	// Likely skills are not on the resume but sit next to ones that are (PostgreSQL for MySQL).
+	// They are not missing; the score gives them half credit.
+	Likely  []Likely `json:"likely"`
 	Missing []string `json:"missing"`
 	// Unmentioned are the soft skills the resume does not name. A resume rarely lists them, so
 	// they are no evidence against the person and never count as missing. They are reported on
@@ -112,8 +121,18 @@ func Run(job models.Job, m models.Master) Result {
 		return "", false
 	}
 
+	// The related skill the resume shows, if there is one: the reason to think the person has this one.
+	relatedOf := func(skill string) (string, bool) {
+		for _, rel := range parser.Related(skill) {
+			if have[rel] {
+				return rel, true
+			}
+		}
+		return "", false
+	}
+
 	group := func(skills []string) Group {
-		g := Group{Matched: []Match{}, Missing: []string{}, Unmentioned: []string{}}
+		g := Group{Matched: []Match{}, Likely: []Likely{}, Missing: []string{}, Unmentioned: []string{}}
 		for _, raw := range skills {
 			skill := parser.Canon(raw)
 			if have[skill] {
@@ -126,6 +145,10 @@ func Run(job models.Job, m models.Master) Result {
 			}
 			if cover, ok := coverOf(skill); ok {
 				g.Matched = append(g.Matched, Match{Skill: raw, ExperienceIDs: evidence(cover)})
+				continue
+			}
+			if because, ok := relatedOf(skill); ok {
+				g.Likely = append(g.Likely, Likely{Skill: raw, Because: because})
 				continue
 			}
 			g.Missing = append(g.Missing, raw)
@@ -141,8 +164,10 @@ func Run(job models.Job, m models.Master) Result {
 	}
 	// The score counts the technical skills only: a soft skill nobody writes down is not something
 	// to be marked down for.
-	if total := len(r.Required.Tech.Matched) + len(r.Required.Tech.Missing); total > 0 {
-		r.Score = float64(len(r.Required.Tech.Matched)) / float64(total)
+	// A likely skill earns half credit, and is no gap.
+	g := r.Required.Tech
+	if total := len(g.Matched) + len(g.Likely) + len(g.Missing); total > 0 {
+		r.Score = (float64(len(g.Matched)) + 0.5*float64(len(g.Likely))) / float64(total)
 	}
 	r.DurationMS = time.Since(start).Milliseconds()
 	return r

@@ -330,11 +330,15 @@ func (s *Server) fitOf(ctx context.Context) func(text string) *connectors.Fit {
 		// against the person, so a posting that lists only soft skills is not rated at all.
 		missing := append([]string{}, res.Required.Tech.Missing...)
 		matched := len(res.Required.Tech.Matched)
-		required := matched + len(missing)
+		likely, because := []string{}, []string{}
+		for _, l := range res.Required.Tech.Likely {
+			likely, because = append(likely, l.Skill), append(because, l.Because)
+		}
+		required := matched + len(likely) + len(missing)
 		if required == 0 {
 			return nil
 		}
-		return &connectors.Fit{Percent: int(res.Score*100 + 0.5), Matched: matched, Required: required, Missing: missing}
+		return &connectors.Fit{Percent: int(res.Score*100 + 0.5), Matched: matched, Required: required, Missing: missing, Likely: likely, Because: because}
 	}
 }
 

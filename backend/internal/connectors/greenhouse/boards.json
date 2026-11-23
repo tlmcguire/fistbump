@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "verified_at": "2026-10-04",
+  "verified_at": "2026-11-23",
   "categories": [
     {
       "id": "technical",
@@ -221,6 +221,26 @@
         {
           "token": "udio",
           "company": "Udio"
+        },
+        {
+          "token": "speechify",
+          "company": "Speechify"
+        },
+        {
+          "token": "striveworks",
+          "company": "Striveworks"
+        },
+        {
+          "token": "echodynecorp",
+          "company": "Echodyne Corp"
+        },
+        {
+          "token": "skyryse",
+          "company": "Skyryse"
+        },
+        {
+          "token": "braincorporation",
+          "company": "Brain Corp"
         }
       ]
     },
@@ -296,6 +316,10 @@
         {
           "token": "yugabyte",
           "company": "YugabyteDB"
+        },
+        {
+          "token": "sigmoid",
+          "company": "Sigmoid"
         }
       ]
     },
@@ -419,6 +443,22 @@
         {
           "token": "workato",
           "company": "Workato"
+        },
+        {
+          "token": "sourcegraph91",
+          "company": "Sourcegraph"
+        },
+        {
+          "token": "digitalocean98",
+          "company": "DigitalOcean"
+        },
+        {
+          "token": "aviatrix",
+          "company": "Aviatrix"
+        },
+        {
+          "token": "akuity",
+          "company": "Akuity"
         }
       ]
     },
@@ -686,6 +726,222 @@
         {
           "token": "zuora",
           "company": "Zuora"
+        },
+        {
+          "token": "esri",
+          "company": "Esri"
+        },
+        {
+          "token": "canonical",
+          "company": "Canonical"
+        },
+        {
+          "token": "avepoint",
+          "company": "AvePoint"
+        },
+        {
+          "token": "appian",
+          "company": "Appian Corporation"
+        },
+        {
+          "token": "acquia",
+          "company": "Acquia"
+        },
+        {
+          "token": "abbyy",
+          "company": "ABBYY"
+        },
+        {
+          "token": "anydesk",
+          "company": "AnyDesk"
+        },
+        {
+          "token": "apaleo",
+          "company": "Apaleo"
+        },
+        {
+          "token": "ahrefsjobs",
+          "company": "Ahrefs"
+        },
+        {
+          "token": "amperity",
+          "company": "Amperity"
+        },
+        {
+          "token": "arcesiumllc",
+          "company": "Arcesium LLC"
+        },
+        {
+          "token": "boomilp",
+          "company": "Boomi"
+        },
+        {
+          "token": "bottomlinetechnologies",
+          "company": "Bottomline"
+        },
+        {
+          "token": "billtrust",
+          "company": "Billtrust US Careers"
+        },
+        {
+          "token": "bloomerang",
+          "company": "Bloomerang"
+        },
+        {
+          "token": "bloomreach",
+          "company": "Bloomreach"
+        },
+        {
+          "token": "boulevard",
+          "company": "Boulevard"
+        },
+        {
+          "token": "celigo",
+          "company": "Celigo"
+        },
+        {
+          "token": "censys",
+          "company": "Censys"
+        },
+        {
+          "token": "conga",
+          "company": "Conga"
+        },
+        {
+          "token": "constantcontact",
+          "company": "Constant Contact"
+        },
+        {
+          "token": "contentstack",
+          "company": "Contentstack"
+        },
+        {
+          "token": "conviva",
+          "company": "Conviva"
+        },
+        {
+          "token": "coveoen",
+          "company": "Coveo"
+        },
+        {
+          "token": "digicert",
+          "company": "DigiCert"
+        },
+        {
+          "token": "diligentcorporation",
+          "company": "Diligent Corporation"
+        },
+        {
+          "token": "dominodatalab",
+          "company": "Domino"
+        },
+        {
+          "token": "doitintl",
+          "company": "DoiT"
+        },
+        {
+          "token": "dunnhumby",
+          "company": "dunnhumby"
+        },
+        {
+          "token": "edb",
+          "company": "EDB"
+        },
+        {
+          "token": "ensono",
+          "company": "Ensono"
+        },
+        {
+          "token": "extrahopnetworks",
+          "company": "ExtraHop"
+        },
+        {
+          "token": "fairmarkit",
+          "company": "Fairmarkit"
+        },
+        {
+          "token": "fingerprint",
+          "company": "Fingerprint"
+        },
+        {
+          "token": "geotab",
+          "company": "Geotab"
+        },
+        {
+          "token": "gleanwork",
+          "company": "Glean"
+        },
+        {
+          "token": "goguardian",
+          "company": "GoGuardian"
+        },
+        {
+          "token": "showpad",
+          "company": "Showpad"
+        },
+        {
+          "token": "similarweb",
+          "company": "Similarweb"
+        },
+        {
+          "token": "simpplr",
+          "company": "Simpplr"
+        },
+        {
+          "token": "smartbear",
+          "company": "SmartBear"
+        },
+        {
+          "token": "smartling",
+          "company": "Smartling"
+        },
+        {
+          "token": "smartcatplatforminc",
+          "company": "Smartcat"
+        },
+        {
+          "token": "sproutsocial",
+          "company": "Sprout Social"
+        },
+        {
+          "token": "startree",
+          "company": "StarTree"
+        },
+        {
+          "token": "stackline",
+          "company": "Stackline"
+        },
+        {
+          "token": "starrez",
+          "company": "StarRez"
+        },
+        {
+          "token": "storable",
+          "company": "Storable"
+        },
+        {
+          "token": "alarmcom",
+          "company": "Alarm.com"
+        },
+        {
+          "token": "avidxchangeinc",
+          "company": "AvidXchange, Inc."
+        },
+        {
+          "token": "bamboohr17",
+          "company": "BambooHR"
+        },
+        {
+          "token": "connecteam",
+          "company": "Connecteam"
+        },
+        {
+          "token": "edmentum",
+          "company": "Edmentum"
+        },
+        {
+          "token": "skillsoft",
+          "company": "Skillsoft"
         }
       ]
     },
@@ -844,6 +1100,14 @@
         {
           "token": "zyngacareers",
           "company": "Zynga"
+        },
+        {
+          "token": "skillzinc",
+          "company": "Skillz Inc"
+        },
+        {
+          "token": "squishable",
+          "company": "Squishable"
         }
       ]
     },
@@ -1164,6 +1428,34 @@
         {
           "token": "zscaler",
           "company": "Zscaler"
+        },
+        {
+          "token": "armorcode",
+          "company": "ArmorCode Inc."
+        },
+        {
+          "token": "britive",
+          "company": "Britive"
+        },
+        {
+          "token": "corelight",
+          "company": "Corelight"
+        },
+        {
+          "token": "deepwatchinc",
+          "company": "Deepwatch"
+        },
+        {
+          "token": "babelstreet",
+          "company": "Babel Street"
+        },
+        {
+          "token": "sonicwall",
+          "company": "SonicWall"
+        },
+        {
+          "token": "exiger",
+          "company": "Exiger"
         }
       ]
     },
@@ -1418,6 +1710,118 @@
         {
           "token": "zocdoc",
           "company": "Zocdoc"
+        },
+        {
+          "token": "bayada",
+          "company": "BAYADA Home Health Care"
+        },
+        {
+          "token": "centriaautism",
+          "company": "Centria Autism"
+        },
+        {
+          "token": "blueskytelepsych",
+          "company": "BlueSky Telepsych"
+        },
+        {
+          "token": "convenientmd",
+          "company": "ConvenientMD"
+        },
+        {
+          "token": "skilledwoundcare",
+          "company": "Skilled Wound Care"
+        },
+        {
+          "token": "cortica",
+          "company": "Cortica"
+        },
+        {
+          "token": "betterhelpcom",
+          "company": "BetterHelp"
+        },
+        {
+          "token": "simplepractice55",
+          "company": "SimplePractice"
+        },
+        {
+          "token": "ceribell",
+          "company": "Ceribell, Inc"
+        },
+        {
+          "token": "ethoslife",
+          "company": "Ethos Life"
+        },
+        {
+          "token": "evergreennephrology",
+          "company": "Evergreen Nephrology"
+        },
+        {
+          "token": "springfertility",
+          "company": "Spring Fertility"
+        },
+        {
+          "token": "sonobello",
+          "company": "Sono Bello"
+        },
+        {
+          "token": "frontierdermatologyprovidercareers",
+          "company": "Frontier Dermatology Provider Careers"
+        },
+        {
+          "token": "employerdirecthealthcare",
+          "company": "Lantern"
+        },
+        {
+          "token": "folxhealth",
+          "company": "Join the FOLX Team!"
+        },
+        {
+          "token": "smithrx",
+          "company": "SmithRx"
+        },
+        {
+          "token": "centralreach",
+          "company": "CentralReach"
+        },
+        {
+          "token": "globalhealthcareexchangeinc",
+          "company": "GHX"
+        },
+        {
+          "token": "cleerlyhealth",
+          "company": "Cleerly"
+        },
+        {
+          "token": "ennoblecare",
+          "company": "Ennoble Care"
+        },
+        {
+          "token": "familywell",
+          "company": "FamilyWell"
+        },
+        {
+          "token": "delfina",
+          "company": "Delfina"
+        },
+        {
+          "token": "bethesdahealthgroup",
+          "company": "Bethesda Health Group"
+        },
+        {
+          "token": "eucalyptus",
+          "company": "Careers at Eucalyptus"
+        },
+        {
+          "token": "careportalinc",
+          "company": "Cedar"
+        },
+        {
+          "token": "affirmedrxpbc",
+          "company": "AffirmedRx, PBC"
+        },
+        {
+          "token": "axogen",
+          "company": "Axogen"
         }
       ]
     },
@@ -1508,6 +1912,30 @@
         {
           "token": "veracyte",
           "company": "Veracyte"
+        },
+        {
+          "token": "americaninstitutesforresearch",
+          "company": "American Institutes for Research"
+        },
+        {
+          "token": "givewell",
+          "company": "GiveWell"
+        },
+        {
+          "token": "correlationone",
+          "company": "Correlation One"
+        },
+        {
+          "token": "generalmatter",
+          "company": "General Matter"
+        },
+        {
+          "token": "firstprinciples",
+          "company": "FirstPrinciples"
+        },
+        {
+          "token": "goodfire",
+          "company": "Goodfire"
         }
       ]
     },
@@ -1706,6 +2134,58 @@
         {
           "token": "zenasbio",
           "company": "Zenas BioPharma"
+        },
+        {
+          "token": "billiontoone",
+          "company": "BillionToOne"
+        },
+        {
+          "token": "genscript",
+          "company": "GenScript"
+        },
+        {
+          "token": "flagshippioneeringinc",
+          "company": "Flagship Pioneering, Inc."
+        },
+        {
+          "token": "discmedicine",
+          "company": "Disc Medicine"
+        },
+        {
+          "token": "dotmatics",
+          "company": "Dotmatics"
+        },
+        {
+          "token": "genezenlabs",
+          "company": "Genezen"
+        },
+        {
+          "token": "stylusmedicine",
+          "company": "Stylus Medicine"
+        },
+        {
+          "token": "cellanome",
+          "company": "Cellanome"
+        },
+        {
+          "token": "clinchoice",
+          "company": "ClinChoice"
+        },
+        {
+          "token": "suvoda",
+          "company": "Suvoda"
+        },
+        {
+          "token": "cogstateinc",
+          "company": "Cogstate"
+        },
+        {
+          "token": "dyopath",
+          "company": "DYOPATH"
+        },
+        {
+          "token": "apothecom",
+          "company": "ApotheCom"
         }
       ]
     },
@@ -1824,6 +2304,14 @@
         {
           "token": "xosinc",
           "company": "Xos"
+        },
+        {
+          "token": "ernestpackagingsolutions",
+          "company": "Ernest"
+        },
+        {
+          "token": "brennan",
+          "company": "Brennan Industries"
         }
       ]
     },
@@ -1954,6 +2442,30 @@
         {
           "token": "zone5technologies",
           "company": "Zone 5 Technologies"
+        },
+        {
+          "token": "aevexaerospace",
+          "company": "AEVEX"
+        },
+        {
+          "token": "astspacemobile",
+          "company": "AST SpaceMobile"
+        },
+        {
+          "token": "stratolaunch",
+          "company": "Stratolaunch"
+        },
+        {
+          "token": "shift5",
+          "company": "Shift5"
+        },
+        {
+          "token": "barbaricum",
+          "company": "Barbaricum"
+        },
+        {
+          "token": "bluestaq",
+          "company": "Bluestaq US External"
         }
       ]
     },
@@ -2208,6 +2720,126 @@
         {
           "token": "xendit",
           "company": "Xendit"
+        },
+        {
+          "token": "sumup",
+          "company": "SumUp"
+        },
+        {
+          "token": "sezzle",
+          "company": "Sezzle"
+        },
+        {
+          "token": "ebury",
+          "company": "Ebury"
+        },
+        {
+          "token": "earnin",
+          "company": "EarnIn"
+        },
+        {
+          "token": "bvnk",
+          "company": "BVNK"
+        },
+        {
+          "token": "convera",
+          "company": "Convera"
+        },
+        {
+          "token": "crossriverbank",
+          "company": "Cross River"
+        },
+        {
+          "token": "clearstreet",
+          "company": "Clear Street"
+        },
+        {
+          "token": "falconx",
+          "company": "FalconX"
+        },
+        {
+          "token": "drweng",
+          "company": "DRW"
+        },
+        {
+          "token": "drwfr",
+          "company": "DRW Montreal"
+        },
+        {
+          "token": "cais",
+          "company": "CAIS"
+        },
+        {
+          "token": "bridgewater89",
+          "company": "Bridgewater Associates"
+        },
+        {
+          "token": "bwaltpostings",
+          "company": "Bridgewater Associates LP"
+        },
+        {
+          "token": "gcmgrosvenor",
+          "company": "GCM Grosvenor"
+        },
+        {
+          "token": "generalatlantic",
+          "company": "General Atlantic"
+        },
+        {
+          "token": "stage",
+          "company": "Careers at KKR"
+        },
+        {
+          "token": "fartherfinance",
+          "company": "Farther"
+        },
+        {
+          "token": "galaxydigitalservices",
+          "company": "Galaxy"
+        },
+        {
+          "token": "davinciderivatives",
+          "company": "Da Vinci"
+        },
+        {
+          "token": "fiveringsllc",
+          "company": "Five Rings LLC - Careers"
+        },
+        {
+          "token": "exoduspoint",
+          "company": "ExodusPoint"
+        },
+        {
+          "token": "stashinvest",
+          "company": "Stash"
+        },
+        {
+          "token": "axicorpfinancialservicesptyltd",
+          "company": "Axi"
+        },
+        {
+          "token": "clara",
+          "company": "Clara"
+        },
+        {
+          "token": "cobre",
+          "company": "Cobre"
+        },
+        {
+          "token": "complyadvantage",
+          "company": "ComplyAdvantage"
+        },
+        {
+          "token": "billtrust1",
+          "company": "Billtrust India Careers"
+        },
+        {
+          "token": "srsacquiom",
+          "company": "SRS Acquiom"
+        },
+        {
+          "token": "dv01",
+          "company": "dv01"
         }
       ]
     },
@@ -2230,6 +2862,34 @@
         {
           "token": "oscar",
           "company": "Oscar Health"
+        },
+        {
+          "token": "fortitudegroupholdingsllc",
+          "company": "Fortitude Re"
+        },
+        {
+          "token": "authenticinsurance",
+          "company": "Authentic"
+        },
+        {
+          "token": "cottinghambutlerinsuranceservicesinc",
+          "company": "Cottingham & Butler"
+        },
+        {
+          "token": "edgewoodpartnersinsurancecenter",
+          "company": "EPIC Brokers"
+        },
+        {
+          "token": "sureify",
+          "company": "Sureify"
+        },
+        {
+          "token": "atbayjobs",
+          "company": "At-Bay"
+        },
+        {
+          "token": "federato",
+          "company": "Federato"
         }
       ]
     },
@@ -2288,6 +2948,34 @@
         {
           "token": "sunnova",
           "company": "Sunnova Energy"
+        },
+        {
+          "token": "amperesand",
+          "company": "Amperesand"
+        },
+        {
+          "token": "enviva",
+          "company": "Enviva"
+        },
+        {
+          "token": "siliconranch",
+          "company": "Silicon Ranch Corporation"
+        },
+        {
+          "token": "galvanizeclimatesolutions",
+          "company": "Galvanize"
+        },
+        {
+          "token": "silananotechnologies",
+          "company": "Sila"
+        },
+        {
+          "token": "electreon",
+          "company": "Electreon"
+        },
+        {
+          "token": "aidashinc",
+          "company": "AiDASH, Inc."
         }
       ]
     },
@@ -2362,6 +3050,38 @@
         {
           "token": "udemy",
           "company": "Udemy"
+        },
+        {
+          "token": "2u",
+          "company": "2U"
+        },
+        {
+          "token": "accelschools",
+          "company": "ACCEL Schools"
+        },
+        {
+          "token": "coneyislandprep",
+          "company": "Coney Island Prep"
+        },
+        {
+          "token": "appletreeprep",
+          "company": "AppleTree Prep"
+        },
+        {
+          "token": "codepath",
+          "company": "CodePath"
+        },
+        {
+          "token": "alu",
+          "company": "ALU"
+        },
+        {
+          "token": "springboardmentors",
+          "company": "Springboard"
+        },
+        {
+          "token": "studycareers",
+          "company": "Study.com"
         }
       ]
     },
@@ -2404,6 +3124,86 @@
         {
           "token": "voxmedia",
           "company": "Vox Media"
+        },
+        {
+          "token": "fanduel",
+          "company": "FanDuel"
+        },
+        {
+          "token": "fanaticsfbg",
+          "company": "Fanatics Betting & Gaming"
+        },
+        {
+          "token": "fanaticscollectibles",
+          "company": "Fanatics Collectibles"
+        },
+        {
+          "token": "aegworldwide",
+          "company": "AEG Worldwide"
+        },
+        {
+          "token": "crunchyroll",
+          "company": "Crunchyroll, LLC"
+        },
+        {
+          "token": "sonyinteractiveentertainmentglobal",
+          "company": "PlayStation Global"
+        },
+        {
+          "token": "atariinc",
+          "company": "Atari"
+        },
+        {
+          "token": "crystaldynamics",
+          "company": "Crystal Dynamics"
+        },
+        {
+          "token": "sonypicturesimageworks",
+          "company": "Sony Pictures Imageworks"
+        },
+        {
+          "token": "sonypicturesanimation",
+          "company": "Sony Pictures Animation"
+        },
+        {
+          "token": "fubotv",
+          "company": "Fubo"
+        },
+        {
+          "token": "forbes",
+          "company": "Forbes"
+        },
+        {
+          "token": "suntimes",
+          "company": "Chicago Sun-Times"
+        },
+        {
+          "token": "axs",
+          "company": "AXS"
+        },
+        {
+          "token": "freeformfuturecorp",
+          "company": "Freeform"
+        },
+        {
+          "token": "fender",
+          "company": "Fender"
+        },
+        {
+          "token": "dicefm-careers",
+          "company": "DICE"
+        },
+        {
+          "token": "feverup",
+          "company": "FeverUp"
+        },
+        {
+          "token": "baltimoreorioles",
+          "company": "Baltimore Orioles"
+        },
+        {
+          "token": "athleticsbaseballops",
+          "company": "Athletics - Baseball Operations"
         }
       ]
     },
@@ -2450,6 +3250,22 @@
         {
           "token": "trussworksinc",
           "company": "TrussWorks"
+        },
+        {
+          "token": "stateaffairs",
+          "company": "State Affairs"
+        },
+        {
+          "token": "democracyforward",
+          "company": "Democracy Forward"
+        },
+        {
+          "token": "cityoffortworth",
+          "company": "The City of Fort Worth"
+        },
+        {
+          "token": "sitrepsllc",
+          "company": "Sitreps"
         }
       ]
     },
@@ -2496,6 +3312,26 @@
         {
           "token": "wikimedia",
           "company": "Wikimedia Foundation"
+        },
+        {
+          "token": "bbyo",
+          "company": "BBYO"
+        },
+        {
+          "token": "bluestarfamilies",
+          "company": "Blue Star Families"
+        },
+        {
+          "token": "girleffect",
+          "company": "Girl Effect"
+        },
+        {
+          "token": "acluinternships",
+          "company": "ACLU - Internships"
+        },
+        {
+          "token": "aclunj",
+          "company": "ACLU of New Jersey"
         }
       ]
     },
@@ -2510,6 +3346,30 @@
         {
           "token": "pivotbio",
           "company": "Pivot Bio"
+        },
+        {
+          "token": "fairlife",
+          "company": "fairlife"
+        },
+        {
+          "token": "cookunity",
+          "company": "CookUnity"
+        },
+        {
+          "token": "chowbus",
+          "company": "Chowbus"
+        },
+        {
+          "token": "butternutbox",
+          "company": "Butternut Box"
+        },
+        {
+          "token": "dorsia",
+          "company": "Dorsia"
+        },
+        {
+          "token": "bobbie",
+          "company": "Bobbie"
         }
       ]
     },
@@ -2612,6 +3472,94 @@
         {
           "token": "stockx",
           "company": "StockX"
+        },
+        {
+          "token": "aloyoga",
+          "company": "ALO"
+        },
+        {
+          "token": "gorjana",
+          "company": "gorjana"
+        },
+        {
+          "token": "casetify",
+          "company": "CASETiFY"
+        },
+        {
+          "token": "suitsupply",
+          "company": "Suitsupply"
+        },
+        {
+          "token": "sharkninjaoperatingllc",
+          "company": "SharkNinja"
+        },
+        {
+          "token": "babylist",
+          "company": "Babylist"
+        },
+        {
+          "token": "baublebar",
+          "company": "BaubleBar"
+        },
+        {
+          "token": "bombas",
+          "company": "Bombas"
+        },
+        {
+          "token": "drsquatch",
+          "company": "Dr. Squatch"
+        },
+        {
+          "token": "filson",
+          "company": "Filson"
+        },
+        {
+          "token": "blankstreet",
+          "company": "Blank Street"
+        },
+        {
+          "token": "shinola",
+          "company": "Shinola"
+        },
+        {
+          "token": "sothebys",
+          "company": "Sotheby's"
+        },
+        {
+          "token": "soldejaneiro",
+          "company": "Sol de Janeiro"
+        },
+        {
+          "token": "stanley1913-us",
+          "company": "Stanley 1913"
+        },
+        {
+          "token": "supplyhouse",
+          "company": "SupplyHouse.com"
+        },
+        {
+          "token": "catawiki",
+          "company": "Catawiki"
+        },
+        {
+          "token": "fetch",
+          "company": "Fetch"
+        },
+        {
+          "token": "shopltk",
+          "company": "LTK USA"
+        },
+        {
+          "token": "goop",
+          "company": "goop"
+        },
+        {
+          "token": "supergoop",
+          "company": "Supergoop!"
+        },
+        {
+          "token": "bellroy",
+          "company": "Bellroy"
         }
       ]
     },
@@ -2638,6 +3586,22 @@
         {
           "token": "trivago",
           "company": "trivago"
+        },
+        {
+          "token": "sohohouseco",
+          "company": "Soho House & Co."
+        },
+        {
+          "token": "foratravel",
+          "company": "Fora"
+        },
+        {
+          "token": "evolvevacationrental",
+          "company": "Evolve"
+        },
+        {
+          "token": "spothopper",
+          "company": "SpotHopper"
         }
       ]
     },
@@ -2700,6 +3664,30 @@
         {
           "token": "via",
           "company": "Via"
+        },
+        {
+          "token": "flyzipline",
+          "company": "Zipline"
+        },
+        {
+          "token": "easyship",
+          "company": "Easyship"
+        },
+        {
+          "token": "aftership",
+          "company": "AfterShip"
+        },
+        {
+          "token": "auctane",
+          "company": "Auctane"
+        },
+        {
+          "token": "alvys",
+          "company": "Alvys"
+        },
+        {
+          "token": "charterup",
+          "company": "CharterUP"
         }
       ]
     },
@@ -2758,6 +3746,22 @@
         {
           "token": "vts",
           "company": "VTS"
+        },
+        {
+          "token": "crexi",
+          "company": "Crexi"
+        },
+        {
+          "token": "dealpath",
+          "company": "Dealpath"
+        },
+        {
+          "token": "faropoint",
+          "company": "Faropoint"
+        },
+        {
+          "token": "communitymanager",
+          "company": "Avanath"
         }
       ]
     },
@@ -2788,6 +3792,10 @@
         {
           "token": "rocketlawyer",
           "company": "Rocket Lawyer"
+        },
+        {
+          "token": "cordellcordell",
+          "company": "Cordell & Cordell"
         }
       ]
     },
@@ -2806,6 +3814,42 @@
         {
           "token": "openspace",
           "company": "OpenSpace"
+        },
+        {
+          "token": "bgeinc",
+          "company": "BGE, Inc"
+        },
+        {
+          "token": "brph",
+          "company": "BRPH"
+        },
+        {
+          "token": "atwellgroup",
+          "company": "Atwell, LLC"
+        },
+        {
+          "token": "bozzuto",
+          "company": "Bozzuto"
+        },
+        {
+          "token": "fairsteadescllc",
+          "company": "Fairstead ESC LLC"
+        },
+        {
+          "token": "appliedengineering",
+          "company": "Applied Engineering"
+        },
+        {
+          "token": "bellcabinetry",
+          "company": "Bell Cabinetry"
+        },
+        {
+          "token": "apexcompanies",
+          "company": "Apex Companies"
+        },
+        {
+          "token": "dhpace",
+          "company": "DH Pace"
         }
       ]
     },
@@ -2832,6 +3876,70 @@
         {
           "token": "thoughtworks",
           "company": "Thoughtworks"
+        },
+        {
+          "token": "capco",
+          "company": "Capco"
+        },
+        {
+          "token": "accordion",
+          "company": "Accordion"
+        },
+        {
+          "token": "alphasights",
+          "company": "AlphaSights"
+        },
+        {
+          "token": "charlesriverassociates",
+          "company": "Charles River Associates"
+        },
+        {
+          "token": "dexisconsultinggroup",
+          "company": "Dexis"
+        },
+        {
+          "token": "gersonlehrmangroup",
+          "company": "GLG"
+        },
+        {
+          "token": "artefact",
+          "company": "Artefact"
+        },
+        {
+          "token": "capgeminideutschlandgmbh",
+          "company": "Capgemini Invent"
+        },
+        {
+          "token": "equalexperts",
+          "company": "Equal Experts"
+        },
+        {
+          "token": "encora10",
+          "company": "Encora"
+        },
+        {
+          "token": "eositsolutions",
+          "company": "EOS"
+        },
+        {
+          "token": "globalizationpartners",
+          "company": "G-P"
+        },
+        {
+          "token": "ensco",
+          "company": "ENSCO, Inc."
+        },
+        {
+          "token": "spauldingridge",
+          "company": "Spaulding Ridge"
+        },
+        {
+          "token": "excella",
+          "company": "Excella"
+        },
+        {
+          "token": "cannondesign",
+          "company": "CannonDesign"
         }
       ]
     },
@@ -2866,6 +3974,30 @@
         {
           "token": "tenstorrent",
           "company": "Tenstorrent"
+        },
+        {
+          "token": "skhynixamerica",
+          "company": "SK hynix America"
+        },
+        {
+          "token": "ambiqmicroinc",
+          "company": "Ambiq Micro, Inc."
+        },
+        {
+          "token": "ethernovia",
+          "company": "Ethernovia, Inc."
+        },
+        {
+          "token": "efficientcomputer",
+          "company": "Efficient Computer"
+        },
+        {
+          "token": "eridan",
+          "company": "Eridan"
+        },
+        {
+          "token": "armada",
+          "company": "Armada"
         }
       ]
     },
@@ -2900,6 +4032,154 @@
         {
           "token": "vonage",
           "company": "Vonage"
+        },
+        {
+          "token": "emnify",
+          "company": "emnify"
+        },
+        {
+          "token": "boingo",
+          "company": "Boingo"
+        },
+        {
+          "token": "sonic",
+          "company": "Sonic Internet + Phone"
+        }
+      ]
+    },
+    {
+      "id": "marketing_advertising",
+      "name": "Marketing and advertising",
+      "boards": [
+        {
+          "token": "dept",
+          "company": "DEPT®"
+        },
+        {
+          "token": "akqa",
+          "company": "AKQA"
+        },
+        {
+          "token": "stackadapt",
+          "company": "StackAdapt"
+        },
+        {
+          "token": "smartlyio",
+          "company": "Smartly"
+        },
+        {
+          "token": "adswerveinc",
+          "company": "Adswerve, Inc"
+        },
+        {
+          "token": "bursonglobalcareers",
+          "company": "Burson"
+        },
+        {
+          "token": "golin",
+          "company": "Golin"
+        },
+        {
+          "token": "fgsglobal",
+          "company": "FGS Global"
+        },
+        {
+          "token": "criticalmass",
+          "company": "Critical Mass"
+        },
+        {
+          "token": "brandwatch",
+          "company": "Brandwatch"
+        },
+        {
+          "token": "cision",
+          "company": "Cision"
+        },
+        {
+          "token": "agencywithin",
+          "company": "WITHIN"
+        },
+        {
+          "token": "deepintent",
+          "company": "DeepIntent"
+        },
+        {
+          "token": "awin",
+          "company": "Awin"
+        },
+        {
+          "token": "appier",
+          "company": "Appier"
+        },
+        {
+          "token": "emarketer",
+          "company": "EMARKETER"
+        },
+        {
+          "token": "bluestatedigital",
+          "company": "Blue State"
+        },
+        {
+          "token": "berlinrosen",
+          "company": "BerlinRosen"
+        },
+        {
+          "token": "gmrmarketing",
+          "company": "GMR Marketing"
+        },
+        {
+          "token": "fosphamarketing",
+          "company": "Fospha"
+        }
+      ]
+    },
+    {
+      "id": "automotive",
+      "name": "Automotive and mobility",
+      "boards": [
+        {
+          "token": "cariadinc",
+          "company": "CARIAD, Inc."
+        },
+        {
+          "token": "sonatus",
+          "company": "Sonatus"
+        },
+        {
+          "token": "agero",
+          "company": "Agero"
+        },
+        {
+          "token": "cargurus",
+          "company": "CarGurus"
+        },
+        {
+          "token": "autoscout24",
+          "company": "AutoScout24"
+        },
+        {
+          "token": "autotradercanada",
+          "company": "AutoTrader.ca"
+        },
+        {
+          "token": "avride",
+          "company": "Avride"
+        },
+        {
+          "token": "botauto",
+          "company": "Bot Auto"
+        },
+        {
+          "token": "glydways",
+          "company": "Glydways"
+        },
+        {
+          "token": "caronsale",
+          "company": "CarOnSale"
+        },
+        {
+          "token": "gotion",
+          "company": "Gotion, Inc."
         }
       ]
     }

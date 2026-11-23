@@ -190,6 +190,52 @@ var impliedSkills = map[string][]string{
 	"testing":          {"pytest", "jest", "cypress", "selenium", "junit", "tdd"},
 }
 
+// relatedFamilies group skills that someone who has one very likely has used or can pick up fast:
+// a resume that shows PostgreSQL probably knows MySQL. They are weaker evidence than impliedSkills, so
+// the analysis counts them as likely, for half credit, and never as a skill the resume shows.
+var relatedFamilies = [][]string{
+	{"postgresql", "mysql", "sql server", "sqlite", "oracle", "sql"},
+	{"aws", "gcp", "azure", "cloud", "cloud computing"},
+	{"react", "vue", "angular", "svelte", "javascript", "typescript", "html", "css"},
+	{"python", "pandas", "numpy", "jupyter"},
+	{"java", "kotlin", "spring", "scala"},
+	{"docker", "kubernetes", "terraform", "ci/cd", "linux", "bash"},
+	{"git", "github", "gitlab", "ci/cd"},
+	{"tableau", "power bi", "looker", "qlik", "excel", "data visualization", "reporting"},
+	{"machine learning", "pytorch", "tensorflow", "scikit-learn", "deep learning", "statistics", "python"},
+	{"jira", "confluence", "agile", "scrum", "project management"},
+	{"salesforce", "hubspot", "crm"},
+	{"pytest", "jest", "junit", "selenium", "cypress", "testing"},
+	{"rest", "api", "graphql", "grpc", "microservices"},
+	{"airflow", "spark", "dbt", "etl", "snowflake", "data engineering"},
+}
+
+// Related returns the skills a resume that shows the given skill probably has too, other than the
+// skill itself. The names are canonical.
+func Related(skill string) []string {
+	c := Canon(skill)
+	out := []string{}
+	seen := map[string]bool{c: true}
+	for _, fam := range relatedFamilies {
+		in := false
+		for _, m := range fam {
+			if Canon(m) == c {
+				in = true
+			}
+		}
+		if !in {
+			continue
+		}
+		for _, m := range fam {
+			if m = Canon(m); !seen[m] {
+				seen[m] = true
+				out = append(out, m)
+			}
+		}
+	}
+	return out
+}
+
 var softSkills = map[string][]string{
 	"communication":          {"communication skills", "written and verbal communication", "communicate", "written communication", "verbal communication"},
 	"leadership":             {"lead teams", "team lead", "technical leadership"},

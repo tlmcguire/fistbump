@@ -277,3 +277,18 @@ func TestRunSpeed(t *testing.T) {
 		t.Errorf("the fastest of 5 runs took %v, over %v", fastest, limit)
 	}
 }
+
+func TestRunLikelySkills(t *testing.T) {
+	m := models.Master{Profile: &models.Profile{ID: 1, Skills: []string{"PostgreSQL", "AWS"}}}
+	job := models.Job{ReqTechSkills: []string{"mysql", "azure", "kubernetes", "postgresql"}}
+	r := Run(job, m).Required.Tech
+	if len(r.Likely) != 2 || r.Likely[0].Skill != "mysql" || r.Likely[0].Because != "postgresql" {
+		t.Errorf("likely = %+v", r.Likely)
+	}
+	if !slices.Equal(r.Missing, []string{"kubernetes"}) {
+		t.Errorf("missing = %v", r.Missing)
+	}
+	if got := Run(job, m).Score; got != 0.5 { // (1 matched + 2 likely at half) / 4
+		t.Errorf("score = %v", got)
+	}
+}

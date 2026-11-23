@@ -38,7 +38,9 @@ type Fit struct {
 	Percent  int      `json:"percent"`  // matched required skills over all required, 0 to 100
 	Matched  int      `json:"matched"`  // required skills the resume shows
 	Required int      `json:"required"` // required skills the posting lists
-	Missing  []string `json:"missing"`  // required skills the resume does not show
+	Missing  []string `json:"missing"`  // real gaps: required skills the resume neither shows nor suggests
+	Likely   []string `json:"likely"`   // required skills not listed, but probably known from related ones
+	Because  []string `json:"because"`  // for each Likely skill, the related skill the resume shows
 }
 
 // Dropped counts what was removed from a posting before it was kept.
