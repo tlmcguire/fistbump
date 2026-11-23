@@ -7,6 +7,21 @@ window.UI = (() => {
   //the stylesheets are switched off by the same .reduce-motion class.
   const motion = () => !root.classList.contains("reduce-motion");
 
+  //Icon gestures (motion.css): a control plays its icon's gesture when the pointer arrives on it or the
+  //keyboard focuses it. data-ico stays on for the longest gesture, so the gesture finishes even if the
+  //pointer leaves at once, and moving about inside the control does not start it again.
+  const ICON_CONTROL = "button, a, [role='tab'], .nav-item";
+  const playIcon = control => {
+    if (!motion() || !control?.matches?.(ICON_CONTROL) || control.disabled || control.hasAttribute("data-ico")) return;
+    if (!control.querySelector(":scope > svg.icon, :scope > * > svg.icon")) return;
+    control.setAttribute("data-ico", "");
+    setTimeout(() => control.removeAttribute("data-ico"), 1000);
+  };
+  document.addEventListener("pointerenter", event => playIcon(event.target), true);
+  document.addEventListener("focusin", event => {
+    if (event.target.matches?.(":focus-visible")) playIcon(event.target);
+  });
+
   const make = (tag, attrs = {}, ...kids) => {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(attrs)) {
