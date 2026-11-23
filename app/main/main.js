@@ -43,7 +43,8 @@ const ICON = path.join(__dirname, '..', '..', 'build', process.platform === 'win
 // The window follows each platform's conventions so it does not look like a web page in a frame:
 // - macOS: the title bar is hidden, the window buttons sit over the sidebar, and the sidebar shows the
 //   system's translucent material behind its tint.
-// - Windows 11: the system's Mica material behind the window, under the same tint.
+// - Windows 11: the system's Mica material behind the window, under the same tint, and no title bar or
+//   menu bar; the window buttons are drawn over the toolbar.
 // - It opens at its last size and place, and is shown only once painted, so it never flashes white.
 function createWindow() {
   const state = windowState.load({ width: 1240, height: 820 });
@@ -62,7 +63,13 @@ function createWindow() {
       vibrancy: 'sidebar',
       visualEffectState: 'followWindow',
     } : {}),
-    ...(process.platform === 'win32' ? { backgroundMaterial: 'mica' } : {}),
+    // Windows: no title bar and no menu bar. The system's minimize, maximize and close buttons stay,
+    // drawn over the toolbar so the window can still be closed and snapped.
+    ...(process.platform === 'win32' ? {
+      backgroundMaterial: 'mica',
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: '#00000000', symbolColor: '#f2f5fb', height: 52 }, // 52 is the toolbar's height
+    } : {}),
     ...(isMac ? {} : { icon: ICON }), // macOS takes the icon from the app bundle (or the Dock, in development)
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
@@ -72,9 +79,12 @@ function createWindow() {
       spellcheck: false, // red squiggles under job titles and place names look out of place
     },
   });
-  // On Windows, hide the menu bar (File, Edit, View and so on). The menu stays set, so its shortcuts,
-  // such as Ctrl+, for Settings, still work.
-  if (process.platform === 'win32') win.setMenuBarVisibility(false);
+  // On Windows, hide the menu bar (File, Edit, View and so on) for good, so Alt does not bring it back. The
+  // menu stays set, so its shortcuts, such as Ctrl+, for Settings, still work.
+  if (process.platform === 'win32') {
+    win.setAutoHideMenuBar(false);
+    win.setMenuBarVisibility(false);
+  }
   if (state.maximized) win.maximize();
   windowState.track(win);
   win.once('ready-to-show', () => win.show());
