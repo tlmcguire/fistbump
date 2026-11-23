@@ -122,7 +122,7 @@ async function downloadUpdate(asset, dir, { fetchImpl = fetch, onProgress, signa
 // inside a .app, run from the disk image (/Volumes) or from the copy macOS makes of an app it has not
 // moved yet (App Translocation).
 function appBundle(execPath) {
-  const path = require('node:path');
+  const path = require('node:path').posix; // a macOS path, read the same way whatever system runs this
   const bundle = path.resolve(execPath, '..', '..', '..');
   if (!bundle.endsWith('.app') || bundle.startsWith('/Volumes/') || bundle.includes('/AppTranslocation/')) return '';
   return bundle;
@@ -166,12 +166,13 @@ function installPlan({ platform, file, execPath, appImage, pid, scriptPath, canW
   if (platform === 'darwin') {
     const bundle = appBundle(execPath);
     if (!bundle) return { kind: 'manual', reason: 'Fistbump is running from the disk image or a temporary copy, so it cannot replace itself. Move it to Applications first.' };
-    if (!canWrite(require('node:path').dirname(bundle)) || !canWrite(bundle)) return { kind: 'manual', reason: `Fistbump cannot write to ${bundle}.` };
+    if (!canWrite(require('node:path').posix.dirname(bundle)) || !canWrite(bundle)) return { kind: 'manual', reason: `Fistbump cannot write to ${bundle}.` };
     return { kind: 'run', command: '/bin/bash', args: [scriptPath, String(pid), file, bundle] };
   }
   if (platform === 'linux') {
     if (!appImage) return { kind: 'manual', reason: 'Fistbump was not started from an AppImage, so it cannot replace itself.' };
-    if (!canWrite(require('node:path').dirname(appImage))) return { kind: 'manual', reason: `Fistbump cannot write to the folder ${require('node:path').dirname(appImage)}.` };
+    const folder = require('node:path').posix.dirname(appImage);
+    if (!canWrite(folder)) return { kind: 'manual', reason: `Fistbump cannot write to the folder ${folder}.` };
     return { kind: 'appimage', target: appImage };
   }
   return { kind: 'manual', reason: 'Updates cannot be installed on this system.' };
