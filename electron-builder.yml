@@ -17,6 +17,7 @@ mac:
   # The MVP builds are unsigned, so no signing identity is looked up and nothing is notarized.
   identity: null
   notarize: false
+  artifactName: "${productName}-${version}-macOS-${arch}.${ext}"
   extraResources:
     - from: bin/darwin-${arch}/
       to: bin/
@@ -26,6 +27,7 @@ win:
       arch:
         - x64
   icon: build/icon.ico
+  artifactName: "${productName}-${version}-Windows-${arch}.${ext}"
   extraResources:
     - from: bin/win32-${arch}/
       to: bin/
@@ -36,6 +38,7 @@ linux:
         - x64
   icon: build/icon.png
   category: Office
+  artifactName: "${productName}-${version}-Linux-${arch}.${ext}"
   extraResources:
     - from: bin/linux-${arch}/
       to: bin/
