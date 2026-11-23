@@ -1072,20 +1072,25 @@ window.JobParser = {
           const group = (heading, split) => {
             const matched = [...split.tech.matched, ...split.soft.matched];
             const missing = [...split.tech.missing, ...split.soft.missing];
+            // Skills the resume does not list but probably covers, because it shows a related one. They are
+            // not gaps and count for half in the score, so they are shown rather than left unexplained.
+            const likely = [...(split.tech.likely || []), ...(split.soft.likely || [])];
             // Soft skills the resume does not name are not held against the person: a resume
             // rarely lists them. They are shown apart, so it is clear what the posting asked for.
             const unmentioned = [...(split.tech.unmentioned || []), ...(split.soft.unmentioned || [])];
-            if (!matched.length && !missing.length && !unmentioned.length) return null;
+            if (!matched.length && !likely.length && !missing.length && !unmentioned.length) return null;
             return el("div", {},
               el("h4", {text: heading}),
               matched.map(m => el("p", {}, `\u2713 ${m.skill}`,
                 m.experience_ids.length
                   ? el("small", {text: ` \u2014 ${m.experience_ids.map(i => titles[i]).filter(Boolean).join("; ")}`})
                   : null)),
+              likely.length ? [el("p", {text: "Likely (not listed, but related skills on your resume suggest it)"}),
+                chips(likely.map(l => l.because ? `${l.skill} (you list ${l.because})` : l.skill))] : null,
               missing.length ? [el("p", {text: "Missing"}), chips(missing)] : null,
               unmentioned.length ? [el("p", {text: "Not mentioned"}), chips(unmentioned)] : null);
           };
-          const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !g.missing.length && !(g.unmentioned || []).length);
+          const noRequired = [a.required.tech, a.required.soft].every(g => !g.matched.length && !(g.likely || []).length && !g.missing.length && !(g.unmentioned || []).length);
           fill(box,
             el("h3", {text: noRequired ? "This posting lists no required skills" : `Skill match: ${Math.round(a.score * 100)}% of required skills`}),
             group("Required", a.required),
