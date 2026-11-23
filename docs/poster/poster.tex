@@ -46,8 +46,8 @@
 
 \footercontent{
   \href{https://github.com/tlmcguire/fistbump}{github.com/tlmcguire/fistbump} \hfill
-  Status as of November 14, 2026 \hfill
-  Phase 4 in review}
+  Version 0.1.0, released November 22, 2026 \hfill
+  Status as of November 22, 2026}
 
 % ====================
 % Logos
@@ -75,7 +75,7 @@
 \separatorcolumn
 
 % ====================
-% Column 1: problem, goals, status of requirements
+% Column 1: problem, requirements, design rule
 % ====================
 
 \begin{column}{\colwidth}
@@ -97,21 +97,24 @@
       \toprule
       \textbf{Requirement} & \textbf{Phase} & \textbf{Status} \\
       \midrule
-      FR-1 Edit a master resume locally & 3 & Done \\
-      FR-2 Skill gaps for a posting & 4 & In review \\
-      FR-3 Accept, reject or edit revisions & 5, 8 & Not started \\
-      FR-4 Compile revisions to PDF & 6 & Not started \\
-      FR-5 Store jobs, statuses, versions & 3, 4, 7 & Partial \\
-      FR-6 Linux, Windows, macOS & 9 & Planned \\
-      NFR-1 Data and inference stay local & All & Holds so far \\
-      NFR-3 Skill-gap analysis under 1.5 s & 4 & To measure \\
+      FR-1 Edit a master resume locally & 3 & Met \\
+      FR-2 Skill gaps for a posting & 1, 4 & Met \\
+      FR-3 Accept, reject or edit revisions & 5, 8 & Met \\
+      FR-4 Compile revisions to PDF & 6 & Met \\
+      FR-5 Store jobs, statuses, versions & 3, 4, 7 & Met \\
+      FR-6 Windows, macOS, Linux & 9 & Met, unsigned \\
+      FR-7 Open a Greenhouse link & 1 & Met \\
+      FR-8 Search boards, ranked list & 2 & Met \\
+      FR-9 Import resume, save after review & 3 & Met \\
+      NFR-3 Skill gap under 1.5 s & 4 & Met \\
+      NFR-5 Install under 250 MB & 9 & Not met \\
       \bottomrule
     \end{tabular*}
 
     \vspace{0.5em}
 
-    Job search (phase 2) is not a proposal requirement. It is part of the
-    plan because the first version reads Greenhouse listings.
+    The install is 166.8 MB as a disk image but 397.6 MB installed on Apple
+    silicon, against a 250 MB limit. The Electron runtime is 288.3 MB of it.
 
   \end{block}
 
@@ -123,12 +126,31 @@
 
   \end{alertblock}
 
+  \begin{block}{Skill-gap analysis}
+
+    The parser splits a posting into required and preferred skills. The
+    analysis compares them with the master resume and lists the evidence
+    for each match. It is deterministic and runs in under 1.5 s.
+
+  \end{block}
+
+  \begin{block}{Next steps}
+
+    \begin{itemize}
+      \item Download \texttt{llama-server} on first use to meet the
+        install target.
+      \item Continuous integration and end-to-end interface tests.
+      \item More job connectors, and a public skill taxonomy.
+    \end{itemize}
+
+  \end{block}
+
 \end{column}
 
 \separatorcolumn
 
 % ====================
-% Column 2: architecture and what works
+% Column 2: architecture and what it does
 % ====================
 
 \begin{column}{\colwidth}
@@ -142,11 +164,11 @@
                     inner sep=6pt},
         flow/.style={-{Stealth[length=2.5mm]}, thick}]
       \node[box, fill=gray!10] (ui) {Renderer: vanilla JS views\\
-        Find, Home, Resume, Jobs, Settings};
+        Home, Find, Resume, Jobs, Tailor, Tracker, Settings};
       \node[box, fill=gray!10, below=0.7cm of ui] (pre) {Preload: contextBridge\\
         \texttt{window.api}};
       \node[box, fill=gray!10, below=0.7cm of pre] (main) {Main process: IPC handlers\\
-        starts the backend};
+        starts and restarts the backend};
       \node[box, fill=gray!10, below=0.7cm of main] (go) {Go backend \texttt{fistbump-core}\\
         local HTTP API, deterministic analysis};
       \node[box, fill=gray!10, below=0.7cm of go] (db) {SQLite file on disk};
@@ -158,35 +180,32 @@
     \end{tikzpicture}
     \end{center}
 
-    The renderer has no Node access. Every read and write goes through
-    the Go backend, which stores data in SQLite on the user's machine. The
-    backend contacts the Greenhouse Job Board API only when the user
-    searches, imports or opens a listing.
+    The renderer has no Node access, and the backend listens on loopback
+    with a per-launch token. Every read and write goes through the Go
+    backend. It contacts Greenhouse only when the user searches, imports or
+    opens a listing, and a remote AI provider only if the user adds one.
 
   \end{block}
 
-  \begin{block}{What works today}
 
-    \begin{itemize}
-      \item \textbf{Job search:} 675 curated Greenhouse boards in 32
-        categories, with location, level, recency and pay filters, ranked
-        results and cached listings.
-      \item \textbf{Master resume:} edit the profile, import a PDF or text
-        resume, report hidden PDF text, and keep saved versions.
-      \item \textbf{Settings:} search history, storage controls and saved
-        data.
-      \item \textbf{Pico,} the mascot, guides Home and the search states.
-    \end{itemize}
 
-  \end{block}
+  \begin{block}{What the app does}
 
-  \begin{block}{Skill-gap analysis (phase 4)}
+    \begin{center}
+    \begin{tabular}{@{}c@{\hspace{0.02\linewidth}}c@{}}
+      \includegraphics[width=0.44\linewidth]{screenshots/jobs.png} &
+      \includegraphics[width=0.44\linewidth]{screenshots/tailor.png} \\[0.2em]
+      \small Saved jobs & \small Tailor \\[0.6em]
+      \includegraphics[width=0.44\linewidth]{screenshots/resume.png} &
+      \includegraphics[width=0.44\linewidth]{screenshots/tracker.png} \\[0.2em]
+      \small Master resume & \small Tracker \\
+    \end{tabular}
+    \end{center}
 
-    The parser splits a posting into required and preferred skills. The
-    analysis compares them with the master resume and shows the evidence
-    for each match. Saving a Greenhouse posting and ranking search results
-    by skill fit are built. The parser, the analysis and the Jobs view are
-    next.
+    Saved jobs search 630 curated boards or open a pasted link. Every
+    tailoring change is a suggestion shown as a diff. Also: a local AI model by default, or any OpenAI-compatible provider
+    with an encrypted key, plus a rules fallback. Pico, the mascot, guides
+    Home and the search states.
 
   \end{block}
 
@@ -195,7 +214,7 @@
 \separatorcolumn
 
 % ====================
-% Column 3: timeline, next steps, references
+% Column 3: timeline, results, limits, references
 % ====================
 
 \begin{column}{\colwidth}
@@ -209,35 +228,40 @@
       1 & Listing view, Greenhouse link & Done \\
       2 & Job search across boards & Done \\
       3 & Master resume and import & Done \\
-      4 & Saved jobs and skill gaps & In review \\
-      5 & Tailoring loop, rules engine & Not started \\
-      6 & PDF export & Not started \\
-      7 & Application tracker & Not started \\
-      8 & Local and remote AI & Not started \\
-      9 & Installers and CI & Not started \\
+      4 & Saved jobs and skill gaps & Done \\
+      5 & Tailoring loop, rules engine & Done \\
+      6 & PDF export & Done \\
+      7 & Application tracker & Done \\
+      8 & Local and remote AI & Done \\
+      9 & Installers for three systems & Released \\
       \bottomrule
     \end{tabular*}
 
   \end{block}
 
-  \begin{block}{Next steps}
+  \begin{block}{Results}
 
     \begin{itemize}
-      \item Finish phase 4: parser, analysis and the Jobs view, then
-        measure the 1.5 s target.
-      \item Phase 5: suggestions, side-by-side review and tailored resumes.
-      \item Then PDF export, the tracker, the AI providers and the release.
+      \item All ten use cases are built and working.
+      \item Go backend: 383 test functions in 16 packages, all passing.
+      \item Interface layer: 50 JavaScript tests, all passing.
+      \item v0.1.0 is on GitHub Releases for Windows, macOS and Linux.
     \end{itemize}
 
   \end{block}
 
-  \begin{alertblock}{Code and team}
+  \begin{alertblock}{Known limits}
 
-    Source: \href{https://github.com/tlmcguire/fistbump}{github.com/tlmcguire/fistbump}.
-    The Go backend has 143 test functions. Team: Tyler McGuire, Joe Cooney,
-    Tyler Goodman and Aron Magnusson.
+    \begin{itemize}
+      \item Install size is over the 250 MB target (NFR-5).
+      \item Builds are unsigned, so the first launch needs one extra step.
+      \item Greenhouse only; other boards are paste-only.
+      \item Skill matching is strongest for technical roles.
+    \end{itemize}
 
   \end{alertblock}
+
+
 
   \begin{block}{References}
 
