@@ -79,9 +79,19 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 
 .tailor-rounds { display: flex; flex-wrap: wrap; gap: 6px; }
 .tailor-rounds:empty { display: none; }
+.tailor-round-item { position: relative; display: inline-flex; }
 .tailor-round { flex-direction: column; align-items: flex-start; gap: 0; height: auto; padding: 5px 12px; text-align: left; }
 .tailor-round .round-meta { color: var(--muted); font-size: 12px; font-weight: 400; }
 .tailor-round[aria-pressed="true"] { background: var(--select); border-color: var(--line-strong); }
+/* the little x in the corner of a round */
+.round-delete {
+  position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  color: var(--muted); cursor: pointer; z-index: 1;
+}
+.round-delete:hover { color: var(--text); border-color: var(--line-strong); background: var(--select); }
+.round-delete .icon { width: 10px; height: 10px; }
 
 .round-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .round-head .round-meta { color: var(--muted); font-size: 12px; }
@@ -92,6 +102,20 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
   padding: 36px 20px; text-align: center; color: var(--muted);
 }
 .stage-empty h2, .tracker-empty h2 { color: var(--text); }
+
+/* the saved jobs offered on the empty tailor page */
+.stage-jobs { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
+.stage-job-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.stage-job { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 12px; text-align: left; }
+.stage-job span, .stage-job small { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+/* what went wrong, and what to do about it */
+.stage-problem { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 20px; text-align: center; }
+.stage-problem h2 { color: var(--danger-text); }
+.stage-problem .mascot { width: 96px; height: 96px; }
+.problem-reason { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-word; }
+.problem-steps { text-align: left; color: var(--muted); max-width: 46ch; }
+.stage-problem .round-actions { margin-left: 0; justify-content: center; }
 .stage-empty p, .tracker-empty p { max-width: 42ch; }
 .stage-empty .mascot, .tracker-empty .mascot { width: 120px; height: 120px; }
 .aside-empty { padding: 24px 8px; }
