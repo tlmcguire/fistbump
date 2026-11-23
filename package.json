@@ -1,7 +1,7 @@
 {
   "name": "fistbump",
   "productName": "Fistbump",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A local-first job application assistant",
   "author": "tlmcguire",
   "main": "app/main/main.js",
