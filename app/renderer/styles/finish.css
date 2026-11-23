@@ -169,3 +169,156 @@ dialog.ask { border-color: rgba(255, 255, 255, 0.12); background: #153678; box-s
   .tailor-toolbar .picker { flex: 1 1 160px; }
   .tailor-toolbar .picker select { width: 100%; min-width: 0; max-width: none; }
 }
+
+/* Jobs that fit you: grey rows hold the space while the search runs, so the answer does not shove the page down. */
+.home-skeletons { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 4px; list-style: none; }
+.home-skeletons .skeleton { height: 58px; border-radius: 9px; }
+.home-matches { min-height: 120px; }
+
+/* With Increase contrast on, the filters panel ends in a clear edge, so it never blends into the results beneath it. */
+.high-contrast .filters {
+  background: rgba(0, 0, 0, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.55);
+  position: relative;
+  z-index: 1;
+}
+
+/* A button with a text label gets room on both sides, so its highlight does not hug the icon and the word. */
+.icon-button:has(.icon-button-label) { padding-inline: 12px; }
+.icon-button:has(.icon-button-label) .dot { margin-right: -4px; } /* keeps the update dot where it was */
+
+/* Filters in groups: each has a small heading and its own grid, so related controls sit together. */
+.filters { display: flex; flex-direction: column; gap: 16px; max-height: 62vh; overflow-y: auto; }
+.filter-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.filter-group legend {
+  padding: 0 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.filter-group + .filter-group { padding-top: 14px; border-top: 1px solid var(--line); }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; align-items: end; }
+.show-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 14px; }
+.show-grid label.check { height: 28px; }
+.filters-actions { grid-column: auto; }
+.detail-line { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
+.result-lines:empty { display: none; }
+
+/* ---------- Filters: compact. Groups sit side by side, and the display choices fold away until wanted. ---------- */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 10px 24px;
+  max-height: 52vh;
+  padding-block: 10px 12px;
+}
+.filter-group + .filter-group { padding-top: 0; border-top: 0; }
+.filter-group legend { padding-bottom: 4px; font-size: 11px; }
+.filter-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 10px; }
+.filters label.check { height: 26px; }
+.show-group, .filters-actions { grid-column: 1 / -1; }
+.show-group summary { cursor: pointer; color: var(--text); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.show-group[open] summary { margin-bottom: 4px; }
+.show-grid { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.show-grid label.check { height: 24px; }
+.filters-actions { justify-content: flex-end; margin-top: -6px; }
+
+/* The filters a search ran with. */
+.filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 14px 8px; }
+.filter-chips-label { margin-right: 4px; color: var(--faint); font-size: 12px; font-weight: 600; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 12px;
+}
+.filter-chip-x { width: 18px; height: 18px; min-width: 0; padding: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; }
+.filter-chip-x:hover:not(:disabled) { background: var(--control-hover); color: var(--text); }
+
+/* ---------- Filters: one tidy grid ----------
+   Four groups side by side on a wide window, two on a narrow one. Everything aligns to the top of its group, a
+   toggle takes a full row of its own, and the controls below sit on one even two-column grid. */
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: 16px 32px;
+  padding: 14px 16px 12px;
+}
+.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.filter-group legend { float: left; width: 100%; padding: 0; margin: 0 0 2px; }
+.filter-group legend + * { clear: both; }
+.filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; align-items: start; }
+.filter-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.filter-grid > label.check,
+.filter-grid > label.wide,
+.filter-grid > label:has(.pair) { grid-column: 1 / -1; }
+.filter-grid > label.check { height: auto; min-height: 28px; align-items: center; }
+.filter-grid input[type="text"], .filter-grid select, .filter-grid .field { width: 100%; box-sizing: border-box; }
+.filter-grid .pair input { min-width: 0; flex: 1; }
+.show-group, .filters-actions { grid-column: 1 / -1; }
+.filters-actions { margin-top: 0; }
+
+/* ---------- Filters: dense. The groups dissolve into one flowing grid, so no row is mostly empty. ----------
+   Each control keeps its label, the group names stay for screen readers, and the display choices stay folded away. */
+.filters {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  align-items: end;
+  gap: 8px 10px;
+  max-height: none;
+  padding: 10px 14px 10px;
+}
+.filter-group, .filter-grid { display: contents; }
+.filter-group legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.filter-grid > label.check, .filter-grid > label.wide { grid-column: auto; }
+.filter-grid > label:has(.pair) { grid-column: span 2; }
+.filter-grid > label.check { min-height: 34px; padding-bottom: 0; }
+.show-group { display: block; grid-column: 1 / -1; }
+.filters-actions { grid-column: auto; margin: 0; align-self: end; }
+.filters-actions button { white-space: nowrap; }
+
+/* ---------- Filters: three even rows ----------
+   Row 1, the role: company, industry, work mode, posted within, pay (two boxes).
+   Row 2, what fits: words to leave out, fit, missing skills, and the three ratings.
+   Row 3, the switches, with Reset all at the end. The display choices fold away below. */
+.filters { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px 12px; }
+.filters label:has(#search-company) { order: 1; }
+.filters label:has(#search-industry) { order: 2; }
+.filters label:has(#search-work-mode) { order: 3; }
+.filters label:has(#search-posted) { order: 4; }
+.filters label:has(.pair) { order: 5; grid-column: span 2; }
+.filters label:has(#search-exclude) { order: 6; }
+.filters label:has(#search-min-fit) { order: 7; }
+.filters label:has(#search-max-missing) { order: 8; }
+.filters label:has(#search-min-pay-rating) { order: 9; }
+.filters label:has(#search-min-benefits) { order: 10; }
+.filters label:has(#search-min-living) { order: 11; }
+.filters label.check:has(#search-require-pay) { order: 12; grid-column: span 2; }
+.filters label.check:has(#search-use-resume) { order: 13; }
+.filters label.check:has(#search-use-ratings) { order: 14; }
+.filters .filters-actions { order: 15; grid-column: -2 / -1; justify-content: flex-end; }
+.filters .show-group { order: 16; grid-column: 1 / -1; padding-top: 6px; border-top: 1px solid var(--line); }
+.filters label.check { min-height: 30px; align-self: center; white-space: nowrap; }
+.filters label.check:has(#search-require-pay) { white-space: normal; }
+
+@media (max-width: 1100px) {
+  .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filters label.check:has(#search-require-pay) { grid-column: span 3; }
+  .filters .filters-actions { grid-column: -2 / -1; }
+}

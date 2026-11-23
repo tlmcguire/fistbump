@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/cost"
 )
 
 type fakeJob struct {
@@ -520,5 +521,155 @@ func TestSearchRanksBySkillFit(t *testing.T) {
 	}
 	if p := r.Postings[0]; p.SkillScore != 1 || p.Score != SkillFitScore(p.TitleScore, 1, 0) {
 		t.Errorf("scores = %+v", p)
+	}
+}
+
+// rater rates a posting the way the API layer does, with no home location or minimum pay.
+func rater(p connectors.Posting) *connectors.Ratings {
+	r := cost.Rate(cost.Analyze(cost.Input{Title: p.PositionTitle, Location: p.Location, WorkMode: p.WorkMode,
+		PayMin: int64(p.PayMin), PayMax: int64(p.PayMax), Text: p.RawText}))
+	return &connectors.Ratings{Pay: r.Pay, Benefits: r.Benefits, Living: r.Living, PayAmount: int(r.PayAmount),
+		BenefitsScore: r.BenefitsScore, LivingLeft: r.LivingLeft, BenefitsFound: r.Found, LeftMonthly: r.LeftMonthly}
+}
+
+func ratedServer() *searchServer {
+	now := time.Now().UTC().Format(time.RFC3339)
+	var jobs []fakeJob
+	for i := 1; i <= 5; i++ {
+		jobs = append(jobs, fakeJob{i, fmt.Sprintf("Software Engineer %d", i), "Austin, TX", now})
+	}
+	return &searchServer{boards: map[string][]fakeJob{"acme": jobs}, pay: map[string]string{
+		"acme/1": "Salary $150,000 - $170,000. Benefits: medical, dental, vision, 401(k) match, paid time off, stock options, parental leave.",
+		"acme/2": "Salary $90,000 - $100,000. We offer a 401(k).",
+		"acme/3": "Salary $200,000 - $220,000. We offer a comprehensive benefits package.",
+		"acme/4": "Our vision is bold. Diversity, equity and inclusion matter to us.",
+		"acme/5": "Salary $120,000 - $130,000. Benefits: health insurance, dental, paid time off.",
+	}}
+}
+
+func TestSearchRatingsAndFilters(t *testing.T) {
+	c := ratedServer().client(t)
+	q := query("software engineer")
+	q.RateOf = rater
+
+	r, err := c.Search(context.Background(), q, []string{"acme"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]connectors.Posting{}
+	for _, p := range r.Postings {
+		by[p.ExternalID] = p
+	}
+	for id, p := range by {
+		if p.Ratings == nil {
+			t.Errorf("posting %s has no ratings", id)
+		}
+	}
+	if got := by["1"].Ratings.Benefits; got != "good" {
+		t.Errorf("posting 1 benefits = %q; want good", got)
+	}
+	if got := by["3"].Ratings.Benefits; got != "" {
+		t.Errorf("a posting that only says 'benefits package' rated %q; want unrated", got)
+	}
+	if got := by["4"].Ratings.Benefits; got != "" || len(by["4"].Ratings.BenefitsFound) != 0 {
+		t.Errorf("boilerplate invented benefits: %q %v", got, by["4"].Ratings.BenefitsFound)
+	}
+	if got := by["2"].Ratings.Benefits; got != "bad" {
+		t.Errorf("posting 2 benefits = %q; want bad", got)
+	}
+
+	// filter: good benefits only the one fully described posting
+	q.MinBenefits = "good"
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.Matched != 1 || r.Postings[0].ExternalID != "1" {
+		t.Errorf("good benefits: matched %d %+v", r.Matched, r.Postings)
+	}
+	// fair or better keeps 1 and 5; unrated and bad ones are out
+	q.MinBenefits = "fair"
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	got := []string{}
+	for _, p := range r.Postings {
+		got = append(got, p.ExternalID)
+	}
+	if r.Matched != 2 || !(contains(got, "1") && contains(got, "5")) {
+		t.Errorf("fair benefits: %v", got)
+	}
+	// turning ratings off removes them and their filters
+	off := false
+	q.UseRatings = &off
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.Matched != 5 || r.Postings[0].Ratings != nil {
+		t.Errorf("ratings off: matched %d, ratings %v", r.Matched, r.Postings[0].Ratings)
+	}
+}
+
+func contains(list []string, s string) bool {
+	for _, x := range list {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}
+
+func TestSearchSortByScore(t *testing.T) {
+	c := ratedServer().client(t)
+	ids := func(q connectors.Query) []string {
+		r, err := c.Search(context.Background(), q, []string{"acme"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, p := range r.Postings {
+			out = append(out, p.ExternalID)
+		}
+		return out
+	}
+	q := query("software engineer")
+	q.RateOf = rater
+
+	q.Sort = connectors.SortPay
+	if got := strings.Join(ids(q), ","); !strings.HasPrefix(got, "3,1,5,2,") || !strings.HasSuffix(got, ",4") {
+		t.Errorf("by pay: %s; want 3,1,5,2 then the unpriced 4", got)
+	}
+	q.Sort = connectors.SortBenefits
+	if got := ids(q); got[0] != "1" || got[1] != "5" || got[2] != "2" {
+		t.Errorf("by benefits: %v; want 1,5,2 first", got)
+	}
+	// postings with no benefits rating go last, whatever their pay
+	if got := ids(q); !contains(got[3:], "3") || !contains(got[3:], "4") {
+		t.Errorf("unrated benefits should sort last: %v", got)
+	}
+	q.Sort = connectors.SortLiving
+	if got := ids(q); got[0] != "3" {
+		t.Errorf("by cost of living: %v; the best paid should leave the most", got)
+	}
+	// a score sort pages through the whole sorted list
+	q.Sort = connectors.SortPay
+	q.Limit = 2
+	r, _ := c.Search(context.Background(), q, []string{"acme"})
+	if len(r.Postings) != 2 || !r.HasMore || r.Postings[0].ExternalID != "3" || r.Matched != 5 {
+		t.Errorf("page 1 by pay: %d postings, more %v, first %s, matched %d", len(r.Postings), r.HasMore, r.Postings[0].ExternalID, r.Matched)
+	}
+	q.Offset = 2
+	r, _ = c.Search(context.Background(), q, []string{"acme"})
+	if r.Postings[0].ExternalID != "1" && r.Postings[0].ExternalID != "5" {
+		t.Errorf("page 2 by pay starts %s", r.Postings[0].ExternalID)
+	}
+
+	// by fit: best percentage first, no fit last
+	fits := map[string]int{"1": 40, "2": 90, "3": 70, "5": 55}
+	q = query("software engineer")
+	q.Sort = connectors.SortFit
+	q.FitOf = func(text string) *connectors.Fit {
+		for id, pct := range fits {
+			if strings.Contains(text, "Software Engineer "+id) {
+				return &connectors.Fit{Percent: pct, Required: 10, Matched: pct / 10}
+			}
+		}
+		return nil
+	}
+	if got := strings.Join(ids(q), ","); got != "2,3,5,1,4" {
+		t.Errorf("by fit: %s", got)
 	}
 }

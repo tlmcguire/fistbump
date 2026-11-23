@@ -331,6 +331,7 @@ test('application and job lifecycle routes check their arguments and build the r
   await h('jobs:restore')({}, 5);
   await h('jobs:list')({}, 'acme', { trashed: 'only' });
   await h('jobs:list')({}, '');
+  assert.strictEqual((await h('cost:analyze')({}, 'x')).error.code, 'validation_failed');
   assert.deepStrictEqual(backend.calls, [
     { method: 'GET', url: '/v1/applications?status=Applied&q=a%26b&archived=only', body: undefined },
     { method: 'GET', url: '/v1/applications', body: undefined },

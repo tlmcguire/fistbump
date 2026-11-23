@@ -48,6 +48,9 @@ var (
 
 	// ErrorUpstream: any other failure talking to Greenhouse or reading its answer.
 	ErrorUpstream = errors.New("Greenhouse request failed")
+
+	// ErrorRateLimited: Greenhouse answered 429, too many requests. It is also an ErrorUpstream.
+	ErrorRateLimited = errors.New("Greenhouse is limiting requests")
 )
 
 var (
@@ -93,6 +96,10 @@ type Client struct {
 	Cache   *Cache // listing and description cache; nil means a memory-only one
 
 	cacheOnce sync.Once
+	inflight  flights // requests in progress, shared by callers that want the same one
+	limit     backoff // set by a 429; while it lasts no new requests go out
+	budget    budget  // every request spends from it; see budgetSize
+	open      slots   // bounds the requests open at once; see maxInFlight
 }
 
 // NewClient returns a client for the live API with a request timeout.
@@ -139,6 +146,17 @@ func (c *Client) FetchJob(ctx context.Context, board, jobID string) (connectors.
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "application/json")
 	// Accept-Encoding stays unset so the transport asks for gzip and decompresses it.
+	if c.limit.active(time.Now()) {
+		return connectors.Posting{}, rateLimited()
+	}
+	if err := c.budget.spend(ctx); err != nil {
+		return connectors.Posting{}, fmt.Errorf("%w: %v", ErrorUpstream, err)
+	}
+	release, err := c.open.acquire(ctx)
+	if err != nil {
+		return connectors.Posting{}, fmt.Errorf("%w: %v", ErrorUpstream, err)
+	}
+	defer release()
 	res, err := hc.Do(req)
 	if err != nil {
 		return connectors.Posting{}, fmt.Errorf("%w: %v", ErrorUpstream, err)
@@ -147,6 +165,9 @@ func (c *Client) FetchJob(ctx context.Context, board, jobID string) (connectors.
 	switch {
 	case res.StatusCode == http.StatusNotFound:
 		return connectors.Posting{}, fmt.Errorf("%w: %s/%s", ErrorNotFound, board, jobID)
+	case res.StatusCode == http.StatusTooManyRequests:
+		c.limit.start(time.Now(), res)
+		return connectors.Posting{}, rateLimited()
 	case res.StatusCode != http.StatusOK:
 		return connectors.Posting{}, fmt.Errorf("%w: HTTP %d", ErrorUpstream, res.StatusCode)
 	}
@@ -562,3 +583,6 @@ func greenhouseHost(host string) bool {
 	host = strings.ToLower(strings.TrimSuffix(host, "."))
 	return host == "greenhouse.io" || strings.HasSuffix(host, ".greenhouse.io")
 }
+
+// rateLimited is the error for a 429: an upstream failure, and also a rate limit, so callers can say which.
+func rateLimited() error { return fmt.Errorf("%w: %w", ErrorUpstream, ErrorRateLimited) }

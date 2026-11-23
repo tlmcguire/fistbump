@@ -438,3 +438,89 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 
 /* The dialog that says a new version is out, when Fistbump opens. */
 .update-skip { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; color: var(--muted); font-size: 12px; }
+
+/* ---------- Pay, benefits and cost of living (job detail) ---------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cost { display: flex; flex-direction: column; gap: 10px; margin-block: 8px 18px; }
+.cost[hidden] { display: none; }
+.cost h3 { margin-bottom: 0; }
+.cost-summary { margin: 0; color: var(--text); font-weight: 600; }
+.cost-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.cost-card p { margin: 0; }
+.cost-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cost-card-head h4 { margin: 0; font-size: 14px; font-weight: 650; }
+.cost-meta { color: var(--faint); font-size: 12px; }
+
+/* A verdict is a word first; the colour only agrees with it. */
+.cost-pill {
+  flex: none;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 650;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+.cost-pill.good { color: var(--good); border-color: var(--good); }
+.cost-pill.warn { color: var(--accent-hover); border-color: var(--accent); }
+.cost-pill.bad { color: var(--bad); border-color: var(--danger-line); }
+
+.cost-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cost-table td { padding: 3px 0; }
+.cost-table td:last-child { text-align: right; }
+.cost-table .cost-net td,
+.cost-table .cost-left td { font-weight: 650; padding-top: 6px; border-top: 1px solid var(--line); }
+.cost-table .cost-net td { border-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+
+.result-saved { color: var(--good); }
+
+/* The signals under a result: fit, then good, fair or bad. One quiet line, words first, colour agreeing. */
+.signals { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 3px; }
+.signals[hidden] { display: none; }
+.signal {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  align-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.signal-label { color: var(--faint); font-weight: 500; }
+.signal[data-level="good"], .signal[data-level="high"] { color: var(--good); }
+.signal[data-level="fair"], .signal[data-level="mid"] { color: var(--accent-hover); }
+.signal[data-level="bad"], .signal[data-level="low"] { color: var(--due); }
+.signal[data-level="none"] { color: var(--faint); font-weight: 500; }
+.signal[data-kind="fit"] { background: rgba(255, 255, 255, 0.1); }
+
+.gap-line { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
+.result-extras { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+
+.cost-periods th { padding: 2px 0 4px; color: var(--faint); font-size: 12px; font-weight: 600; text-align: right; }
+.cost-periods th:first-child, .cost-periods td:first-child { text-align: left; }
+.cost-periods td:nth-child(2) { text-align: right; color: var(--muted); }
+.cost-periods td:last-child { font-weight: 650; }
+.cost-table .cost-gross td { padding-bottom: 3px; }

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	searchDeadline   = 20 * time.Second
+	searchDeadline   = 60 * time.Second // listing the boards; a cold cache at the request pace takes most of a minute
+	fillDeadline     = 25 * time.Second // then reading descriptions and rating them, with a clock of its own
 	listConcurrency  = 24
 	fetchConcurrency = 8
 	perCompanyCap    = 3
@@ -27,7 +28,8 @@ const (
 // top q.Limit. A board that fails is reported in Errors; Search fails only when every board does.
 // The query must already be validated, with Limit and WorkMode set.
 func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string) (connectors.SearchResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, searchDeadline)
+	parent := ctx
+	ctx, cancel := context.WithTimeout(parent, searchDeadline)
 	defer cancel()
 
 	result := connectors.SearchResult{
@@ -75,7 +77,18 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 				mu.Unlock()
 				return
 			}
-			jobs, err := c.ListBoard(ctx, board)
+			var jobs []Listing
+			var err error
+			if q.CachedOnly {
+				// Home's matches never list a board: they use what earlier searches left in the cache, at any age.
+				entry, ok := c.cache().listing(board)
+				if !ok || entry.NotFound {
+					return
+				}
+				jobs = entry.Jobs
+			} else {
+				jobs, err = c.ListBoard(ctx, board)
+			}
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -111,9 +124,14 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	}
 	wg.Wait()
 
-	if err := ctx.Err(); err != nil && errors.Is(err, context.Canceled) {
+	if err := parent.Err(); err != nil && errors.Is(err, context.Canceled) {
 		return result, err // the caller stopped waiting
 	}
+	// Listing many boards can use up its whole deadline when the cache is cold or the network is busy. Reading the
+	// descriptions of the page then gets a deadline of its own, so a slow listing never leaves the results empty.
+	cancel()
+	ctx, cancelFill := context.WithTimeout(parent, fillDeadline)
+	defer cancelFill()
 	newest := q.Sort == connectors.SortNewest
 	sort.SliceStable(candidates, func(i, j int) bool {
 		a, b := candidates[i], candidates[j]
@@ -179,23 +197,36 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 	}
 
 	var page []connectors.Posting
-	if q.HasPay() || q.HasFit() {
+	sortScores := q.SortsByScore()
+	if q.HasPay() || q.HasFit() || q.HasRatingFilter() || sortScores {
 		// A pay range or a skill fit needs the description, so descriptions are read in rank order, a chunk at a
 		// time, until the page and one posting more are found or the scan cap is reached.
 		var passing []connectors.Posting
 		scanned := 0
-		for scanned < len(ranked) && scanned < payScanCap && len(passing) < q.Offset+q.Limit+1 && ctx.Err() == nil {
+		for scanned < len(ranked) && scanned < payScanCap && (sortScores || len(passing) < q.Offset+q.Limit+1) && ctx.Err() == nil && !c.limit.active(time.Now()) {
 			chunk := ranked[scanned:min(scanned+payChunk, len(ranked), payScanCap)]
 			for _, p := range fill(chunk) {
 				if p == nil {
 					continue
 				}
 				annotateFit(p, q)
-				if PayOK(p.PayMin, p.PayMax, q.PayMin, q.PayMax, q.RequirePay) && q.FitOK(p.Fit) {
+				annotateRatings(p, q)
+				if PayOK(p.PayMin, p.PayMax, q.PayMin, q.PayMax, q.RequirePay) && q.FitOK(p.Fit) && q.RatingsOK(p.Ratings) {
 					passing = append(passing, *p)
 				}
 			}
 			scanned += len(chunk)
+		}
+		if sortScores {
+			// Best first; a posting with no value for this sort goes last. The sort is stable, so ties keep their relevance order.
+			sort.SliceStable(passing, func(i, j int) bool {
+				a, aok := q.SortKey(passing[i])
+				b, bok := q.SortKey(passing[j])
+				if aok != bok {
+					return aok
+				}
+				return a > b
+			})
 		}
 		result.Matched = len(passing)
 		result.ExactMatched = 0
@@ -217,6 +248,7 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		for _, p := range fill(ranked[start:end]) {
 			if p != nil {
 				annotateFit(p, q)
+				annotateRatings(p, q)
 				page = append(page, *p)
 			}
 		}
@@ -229,8 +261,18 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 		result.Errors = append(result.Errors, connectors.SearchError{Board: board, Message: failed[board]})
 	}
 	sort.Slice(result.Errors, func(i, j int) bool { return result.Errors[i].Board < result.Errors[j].Board })
-	if result.BoardsSearched == 0 && len(boards) > 0 {
-		return result, fmt.Errorf("%w: every board failed", ErrorUpstream)
+	for _, e := range result.Errors {
+		if e.Message == RateLimitedMessage {
+			result.RateLimited = true
+		}
+	}
+	if result.BoardsSearched == 0 && len(boards) > 0 && !q.CachedOnly {
+		for _, e := range result.Errors {
+			if e.Message != RateLimitedMessage {
+				return result, fmt.Errorf("%w: every board failed", ErrorUpstream)
+			}
+		}
+		return result, rateLimited() // every board failed because Greenhouse asked for fewer requests
 	}
 	return result, nil
 }
@@ -239,6 +281,13 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 func annotateFit(p *connectors.Posting, q connectors.Query) {
 	if q.FitOf != nil && p.RawText != "" {
 		p.Fit = q.FitOf(p.RawText)
+	}
+}
+
+// annotateRatings rates a posting whose description is loaded, when the search rates postings.
+func annotateRatings(p *connectors.Posting, q connectors.Query) {
+	if q.RateOf != nil && q.MatchesRatings() && p.RawText != "" {
+		p.Ratings = q.RateOf(*p)
 	}
 }
 
@@ -335,19 +384,25 @@ func (c *Client) fetchCached(ctx context.Context, board, id string) (connectors.
 	if p, ok := cache.description(board, id); ok {
 		return p, nil
 	}
-	p, err := c.FetchJob(ctx, board, id)
+	v, err := c.inflight.do(ctx, "job/"+board+"/"+id, func(ctx context.Context) (any, error) { return c.FetchJob(ctx, board, id) })
 	if err != nil {
 		return connectors.Posting{}, err
 	}
+	p := v.(connectors.Posting)
 	cache.putDescription(board, id, p)
 	return p, nil
 }
+
+// RateLimitedMessage is the reason a board or description failed when Greenhouse answered 429. The app looks for it.
+const RateLimitedMessage = "Greenhouse is limiting requests"
 
 // errorMessage is the short reason shown for a failed board. It never includes URLs or response text.
 func errorMessage(ctx context.Context, err error) string {
 	switch {
 	case errors.Is(err, ErrorNotFound):
 		return "board not found"
+	case errors.Is(err, ErrorRateLimited):
+		return RateLimitedMessage
 	case ctx.Err() != nil:
 		return "timed out"
 	case errors.Is(err, ErrorUpstream):

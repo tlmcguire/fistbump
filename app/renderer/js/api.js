@@ -87,6 +87,14 @@ window.FistBumpAPI = {
       return window.api?.connectors?.cancelSearch?.();
     },
 
+    //Home's job matches: a search that runs apart from the Find search
+    async suggest(query) {
+      if (!window.api?.connectors?.suggest) {
+        throw new Error("Connection error");
+      }
+      return this.request(() => window.api.connectors.suggest(query));
+    },
+
     async search(query) {
       if (!window.api?.connectors?.search) {
         throw new Error("Connection error");
@@ -112,6 +120,8 @@ window.FistBumpAPI = {
   window.FistBumpAPI.importJobs = postings => window.FistBumpAPI.request(() => window.api.connectors.import(postings));
   window.FistBumpAPI.jobs = wrap("jobs", ["parse", "create", "list", "get", "update", "delete", "analyze",
     "archive", "unarchive", "trash", "restore"]);
+
+  window.FistBumpAPI.cost = wrap("cost", ["analyze"]);
 
   //phase 7: the application tracker
   window.FistBumpAPI.applications = wrap("applications", ["list", "create", "get", "update", "delete",

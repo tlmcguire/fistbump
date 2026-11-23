@@ -33,6 +33,12 @@ type rawListing struct {
 // ListBoard lists a board's postings without descriptions, through the cache: a listing under 6
 // hours old is used as is; an older one is revalidated with If-None-Match.
 func (c *Client) ListBoard(ctx context.Context, board string) ([]Listing, error) {
+	v, err := c.inflight.do(ctx, "list/"+board, func(ctx context.Context) (any, error) { return c.listBoard(ctx, board) })
+	jobs, _ := v.([]Listing)
+	return jobs, err
+}
+
+func (c *Client) listBoard(ctx context.Context, board string) ([]Listing, error) {
 	if !tokenRe.MatchString(board) {
 		return nil, ErrorBadLink
 	}
@@ -40,6 +46,13 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]Listing, error)
 	cached, have := cache.listing(board)
 	if have && cache.fresh(cached) {
 		return cached.result(board)
+	}
+	// Backing off after a 429: an older copy is used as is, and a board never listed is skipped without asking.
+	if c.limit.active(time.Now()) {
+		if have {
+			return cached.result(board)
+		}
+		return nil, rateLimited()
 	}
 
 	base := c.BaseURL
@@ -60,6 +73,18 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]Listing, error)
 	if have && cached.ETag != "" && !cached.NotFound {
 		req.Header.Set("If-None-Match", cached.ETag)
 	}
+	// A busy spell has used most of the budget: a board listed before is served as it was rather than asked again.
+	if have && !cached.NotFound && c.budget.low() {
+		return cached.Jobs, nil
+	}
+	if err := c.budget.spend(ctx); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorUpstream, err)
+	}
+	release, err := c.open.acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorUpstream, err)
+	}
+	defer release()
 	res, err := hc.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorUpstream, err)
@@ -74,6 +99,12 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]Listing, error)
 	case res.StatusCode == http.StatusNotFound:
 		cache.putListing(cachedListing{Board: board, FetchedAt: cache.now(), NotFound: true})
 		return nil, fmt.Errorf("%w: %s", ErrorNotFound, board)
+	case res.StatusCode == http.StatusTooManyRequests:
+		c.limit.start(time.Now(), res)
+		if have && !cached.NotFound {
+			return cached.Jobs, nil // Greenhouse wants fewer requests: an older copy of the listing is better than none
+		}
+		return nil, rateLimited()
 	case res.StatusCode != http.StatusOK:
 		return nil, fmt.Errorf("%w: HTTP %d", ErrorUpstream, res.StatusCode)
 	}
