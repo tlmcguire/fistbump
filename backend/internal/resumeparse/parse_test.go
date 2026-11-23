@@ -163,14 +163,17 @@ func TestParseSkillsSplitOnEverySeparator(t *testing.T) {
 	}
 }
 
-func TestParseProjectsReadLikeExperience(t *testing.T) {
-	d := Parse("Jane Doe\n\nPROJECTS\nInventory Tracker\nMar 2021 - Jun 2021\n- Built a tracker in Go\n")
-	if len(d.Experiences) != 1 {
+func TestParseActivitiesAreNotJobs(t *testing.T) {
+	d := Parse("Jane Doe\n\nEXPERIENCE\nAnalyst, Acme\n2019 - 2021\n- Did things\n\nPROJECTS\nInventory Tracker\nMar 2021 - Jun 2021\n- Built a tracker in Go\n")
+	if len(d.Experiences) != 1 || d.Experiences[0].JobTitle != "Analyst" {
 		t.Fatalf("experiences = %+v", d.Experiences)
 	}
-	e := d.Experiences[0]
-	if e.JobTitle != "Inventory Tracker" || e.CompanyName != "Projects" || *e.StartDate != "2021-03-01" || *e.EndDate != "2021-06-01" {
-		t.Errorf("project = %+v", e)
+	found := false
+	for _, w := range d.Warnings {
+		found = found || strings.Contains(w, "Inventory Tracker")
+	}
+	if !found {
+		t.Errorf("activity text was not reported: %q", d.Warnings)
 	}
 }
 

@@ -21,7 +21,7 @@ var usStateCodes = map[string]string{
 var placeGroups = [][]string{
 	{"new york", "new york city", "nyc", "new york, ny"},
 	{"san francisco", "sf", "san fran", "bay area"},
-	{"washington, dc", "dc", "district of columbia"},
+	{"washington, dc", "washington dc", "washington, d.c.", "dc", "district of columbia"},
 	{"philadelphia", "philly"},
 	{"atlanta", "atl"},
 	{"los angeles", "la county"},
@@ -33,7 +33,7 @@ var bayArea = []string{"san francisco", "oakland", "san jose", "palo alto", "mou
 
 // expandTerms adds the other spellings of each term: a state's code or name, and the group names.
 // The result is lower case without duplicates. A two-letter term is a state code.
-func expandTerms(terms []string) []string {
+func expandTerms(terms []string, states bool) []string {
 	seen := map[string]bool{}
 	var out []string
 	add := func(t string) {
@@ -44,12 +44,14 @@ func expandTerms(terms []string) []string {
 	}
 	for _, t := range terms {
 		add(t)
-		if code, ok := usStateCodes[t]; ok {
-			add(code)
-		}
-		for name, code := range usStateCodes {
-			if code == t {
-				add(name)
+		if states {
+			if code, ok := usStateCodes[t]; ok {
+				add(code)
+			}
+			for name, code := range usStateCodes {
+				if code == t {
+					add(name)
+				}
 			}
 		}
 		for _, group := range placeGroups {
@@ -74,4 +76,17 @@ func expandTerms(terms []string) []string {
 // "or" in "Oakland or Remote" is not Oregon.
 func codeLike(term string) bool {
 	return len(term) == 2 && strings.ToLower(term) == term
+}
+
+// dedupe drops repeated terms, keeping the first of each.
+func dedupe(terms []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, t := range terms {
+		if !seen[t] {
+			seen[t] = true
+			out = append(out, t)
+		}
+	}
+	return out
 }

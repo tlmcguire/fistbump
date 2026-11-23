@@ -491,21 +491,31 @@ window.JobParser = {
           return item;
       };
 
-      //how well the resume covers a posting's required skills: a percent with a word, and the gaps
+      //how well the resume covers a posting's required skills: a percent with a word, then what you have,
+      //what you probably have (a related skill is on the resume) and the real gaps
       const fitLine = fit => {
         const h = window.ResumeBuilder.el;
-        const level = fit.percent >= 80 ? "high" : fit.percent >= 50 ? "mid" : "low";
-        const word = {high: "Strong fit", mid: "Partial fit", low: "Weak fit"}[level];
-        const shown = fit.missing.slice(0, 3);
-        const line = h("div", {class: "fit-line"},
-          h("span", {class: "fit-badge", "data-level": level, title: `${fit.matched} of ${fit.required} required skills are on your resume`, text: `${fit.percent}% \u00b7 ${word}`}));
-        if (shown.length) {
-          const more = fit.missing.length - shown.length;
-          line.append(h("span", {class: "fit-missing", text: `Missing: ${shown.join(", ")}${more > 0 ? ` +${more}` : ""}`}));
-        } else {
-          line.append(h("span", {class: "fit-missing", text: "No required skills missing"}));
-        }
-        return line;
+        const likely = fit.likely || [];
+        const because = fit.because || [];
+        const level = fit.percent >= 70 ? "high" : fit.percent >= 40 ? "mid" : "low";
+        const word = {high: "Strong fit", mid: "Good fit", low: "Stretch"}[level];
+        const tip = `${fit.matched} of ${fit.required} required skills are on your resume` +
+          (likely.length ? `; ${likely.length} more look likely from related skills` : "") + ".";
+        const wrap = h("div", {class: "fit-block"});
+        wrap.append(h("div", {class: "fit-line"},
+          h("span", {class: "fit-badge", "data-level": level, title: tip, text: `${fit.percent}% \u00b7 ${word}`}),
+          h("span", {class: "fit-missing", text: `${fit.matched} of ${fit.required} required skills shown`})));
+        const chips = (kind, label, items) => {
+          if (!items.length) return;
+          const row = h("div", {class: "fit-line"}, h("span", {class: "fit-label", text: label}));
+          for (const item of items.slice(0, 4)) row.append(h("span", {class: `fit-chip fit-chip-${kind}`, title: item.title || "", text: item.text}));
+          if (items.length > 4) row.append(h("span", {class: "fit-missing", text: `+${items.length - 4}`}));
+          wrap.append(row);
+        };
+        chips("likely", "Likely", likely.map((skill, i) => ({text: skill, title: because[i] ? `You list ${because[i]}, which usually goes with ${skill}` : ""})));
+        chips("gap", "Gaps", fit.missing.map(skill => ({text: skill, title: "Not on your resume, and nothing related is"})));
+        if (!fit.missing.length && !likely.length) wrap.append(h("div", {class: "fit-line"}, h("span", {class: "fit-missing", text: "No gaps in the required skills"})));
+        return wrap;
       };
 
       //explains what the search could and could not find, so a filter that did not apply is never silent.

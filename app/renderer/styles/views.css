@@ -325,6 +325,11 @@ th[aria-sort="ascending"] .sort-button, th[aria-sort="descending"] .sort-button 
 .fit-badge[data-level="mid"] { color: var(--text); }
 .fit-badge[data-level="low"] { color: var(--due); }
 .fit-missing { color: var(--muted); font-size: 12px; }
+.fit-block { display: grid; gap: 4px; margin-top: 2px; }
+.fit-label { min-width: 40px; color: var(--muted); font-size: 12px; }
+.fit-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 12px; background: rgba(255, 255, 255, 0.06); }
+.fit-chip-likely { color: var(--text); border: 1px dashed rgba(255, 255, 255, 0.25); }
+.fit-chip-gap { color: var(--due); }
 
 .reason { padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); color: var(--muted); line-height: 1.5; user-select: text; -webkit-user-select: text; }
 .reason strong { color: var(--text); font-weight: 600; }

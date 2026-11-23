@@ -137,3 +137,16 @@ func TestLocationAliases(t *testing.T) {
 		}
 	}
 }
+
+func TestLocationScorePrefersCity(t *testing.T) {
+	terms := locationTerms("Charleston, SC")
+	if got := LocationScore("Charleston, SC", "On-site", terms); got != 1 {
+		t.Errorf("city = %v", got)
+	}
+	if got := LocationScore("Columbia, SC", "On-site", terms); got != stateScore {
+		t.Errorf("state only = %v", got)
+	}
+	if LocationScore("Columbia, SC", "On-site", terms) <= LocationScore("Remote", "Remote", terms) {
+		t.Error("state match should outrank remote")
+	}
+}

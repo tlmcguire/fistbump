@@ -2,6 +2,7 @@ package greenhouse
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
@@ -102,25 +103,102 @@ func locationTerms(s string) []string {
 			out = append(out, p)
 		}
 	}
-	// "Charleston, South Carolina" is also worth trying as one name, for groups like "new york, ny".
+	// Only the last part of "Columbia, SC" can be a state, so "Washington, DC" does not also mean the state
+	// of Washington. A bare "Washington" or "Virginia" is read as a state too.
 	if len(out) > 1 {
-		out = append(out, strings.Join(out, ", "))
+		city, last := out[:len(out)-1], out[len(out)-1:]
+		terms := expandTerms(last, true)
+		for _, t := range expandTerms(city, false) {
+			terms = append(terms, t)
+		}
+		// "Charleston, South Carolina" is also worth trying as one name, for groups like "new york, ny".
+		terms = append(terms, expandTerms([]string{strings.Join(out, ", ")}, false)...)
+		return dedupe(terms)
 	}
-	return expandTerms(out)
+	return expandTerms(out, true)
+}
+
+// notAfter lists words that turn a place name into another place: "British Columbia" is not Columbia,
+// and "West Virginia" is not Virginia.
+var notAfter = map[string]string{"columbia": "british ", "virginia": "west "}
+
+// containsPlace reports whether the lower-case location has the term as whole words, so "columbia"
+// is not found in "Columbiana" and "ohio" not in "Ohioan".
+func containsPlace(l, term string) bool {
+	for i := 0; ; {
+		at := strings.Index(l[i:], term)
+		if at < 0 {
+			return false
+		}
+		start, end := i+at, i+at+len(term)
+		before := start == 0 || !isLetter(l[start-1])
+		after := end == len(l) || !isLetter(l[end])
+		if before && after && !(notAfter[term] != "" && strings.HasSuffix(l[:start], notAfter[term])) {
+			return true
+		}
+		i = start + 1
+	}
+}
+
+// requestedStates is the state codes the request names, upper case.
+func requestedStates(terms []string) map[string]bool {
+	out := map[string]bool{}
+	for _, t := range terms {
+		if usStateSet[t] {
+			out[strings.ToUpper(t)] = true
+		}
+	}
+	return out
+}
+
+// contradicts reports whether a posting location puts a city of the same name somewhere else: it
+// names a state the request did not ask for, or a foreign country. "Columbia, MD" and "Columbia,
+// British Columbia, Canada" are not "Columbia, SC". It applies only when the request names a state.
+func contradicts(location, city string, states map[string]bool) bool {
+	if len(states) == 0 {
+		return false
+	}
+	l := strings.ToLower(location)
+	rest := strings.ReplaceAll(l, city, " ") // the city's own name is not a state: the "Washington" in "Washington, D.C."
+	named, ours := false, false
+	for code := range usStateSet {
+		if capitalWord(location, strings.ToUpper(code)) {
+			named = true
+			ours = ours || states[strings.ToUpper(code)]
+		}
+	}
+	for name, code := range usStateCodes {
+		if containsPlace(rest, name) || strings.Contains(name, city) && containsPlace(l, name) { // "district of columbia" holds the city "columbia"
+			named = true
+			ours = ours || states[strings.ToUpper(code)]
+		}
+	}
+	if ours {
+		return false
+	}
+	return named || foreignRe.MatchString(l) && !usWord.MatchString(l)
 }
 
 // locationMatches reports whether any term appears in the posting location. Two-letter terms are
 // state codes and must match a whole word in capitals, so "in" does not match "Berlin" and "or" in
-// "Oakland or Remote" is not Oregon.
+// "Oakland or Remote" is not Oregon. A city must match as whole words and must not sit in another
+// state or country than the request names.
 func locationMatches(location string, terms []string) bool {
+	return matchTerms(location, terms, requestedStates(terms))
+}
+
+func matchTerms(location string, terms []string, states map[string]bool) bool {
 	l := strings.ToLower(location)
 	for _, t := range terms {
-		if codeLike(t) {
+		switch {
+		case codeLike(t):
 			if capitalWord(location, strings.ToUpper(t)) {
 				return true
 			}
-		} else if strings.Contains(l, t) {
-			return true
+		case containsPlace(l, t):
+			if stateOnly(t, terms) || !contradicts(location, t, states) {
+				return true
+			}
 		}
 	}
 	return false
@@ -165,7 +243,7 @@ var (
 	usNames  = regexp.MustCompile(`\b(united states|usa|u\.s\.|america|alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\b`)
 	usWord   = regexp.MustCompile(`\b(us|usa|united states|u\.s\.|north america|americas)\b|\bus-`)
 	// Countries and regions that mark a remote posting as not for a US-based user.
-	foreignRe = regexp.MustCompile(`\b(australia|new zealand|canada|mexico|brazil|argentina|colombia|costa rica|chile|peru|uk|united kingdom|ireland|england|scotland|germany|france|spain|portugal|italy|netherlands|belgium|poland|sweden|norway|denmark|finland|switzerland|austria|czech|romania|bulgaria|hungary|ukraine|turkey|israel|egypt|nigeria|kenya|south africa|india|pakistan|bangladesh|sri lanka|china|japan|korea|singapore|malaysia|indonesia|philippines|thailand|vietnam|taiwan|hong kong|uae|dubai|emea|apac|latam|europe|eu|asia|africa|oceania)\b`)
+	foreignRe = regexp.MustCompile(`\b(australia|new zealand|canada|british columbia|ontario|quebec|alberta|manitoba|saskatchewan|nova scotia|new brunswick|greece|mexico|brazil|argentina|colombia|costa rica|chile|peru|uk|united kingdom|ireland|england|scotland|germany|france|spain|portugal|italy|netherlands|belgium|poland|sweden|norway|denmark|finland|switzerland|austria|czech|romania|bulgaria|hungary|ukraine|turkey|israel|egypt|nigeria|kenya|south africa|india|pakistan|bangladesh|sri lanka|china|japan|korea|singapore|malaysia|indonesia|philippines|thailand|vietnam|taiwan|hong kong|uae|dubai|emea|apac|latam|europe|eu|asia|africa|oceania)\b`)
 )
 
 // inUS reports whether the requested location terms put the user in the United States.
@@ -188,10 +266,56 @@ func abroad(location string, terms []string) bool {
 	return foreignRe.MatchString(l) && !usWord.MatchString(l) && !usNames.MatchString(l)
 }
 
-// LocationScore is 1 for a location match, 0.5 for remote and 0 otherwise.
+// usStateSet is the lower-case state codes.
+var usStateSet = func() map[string]bool {
+	m := map[string]bool{}
+	for _, code := range usStateCodes {
+		m[code] = true
+	}
+	return m
+}()
+
+// stateOnly reports whether a term names a state (or country) and so cannot tell one city from another.
+func stateOnly(t string, terms []string) bool {
+	for _, group := range placeGroups { // "new york" in a group with "nyc" names the city
+		for _, m := range group {
+			if m == t && len(group) > 2 && !usStateSet[t] && strings.Contains(strings.Join(group, "|"), "city") {
+				return false
+			}
+		}
+	}
+	if usStateSet[t] {
+		return true
+	}
+	// A state's name is a city's name too ("Washington, DC"), so it names the state only when the
+	// request also has the state's code.
+	if code, ok := usStateCodes[t]; ok {
+		return slices.Contains(terms, code)
+	}
+	switch t {
+	case "united states", "usa", "u.s.", "us", "america":
+		return true
+	}
+	return false
+}
+
+// stateScore is what a posting in the right state but not the right city earns.
+const stateScore = 0.6
+
+// LocationScore is 1 for a city match, 0.6 for one that only shares the state, 0.5 for remote and 0
+// otherwise. "Charleston, SC" thus ranks Charleston ahead of Columbia, SC.
 func LocationScore(location, mode string, terms []string) float64 {
 	if len(terms) > 0 && locationMatches(location, terms) {
-		return 1
+		var specific []string
+		for _, t := range terms {
+			if !stateOnly(t, terms) {
+				specific = append(specific, t)
+			}
+		}
+		if len(specific) == 0 || matchTerms(location, specific, requestedStates(terms)) {
+			return 1
+		}
+		return stateScore
 	}
 	if mode == connectors.WorkModeRemote {
 		return 0.5

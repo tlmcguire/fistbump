@@ -320,8 +320,8 @@ func TestJobCreateWithRealParser(t *testing.T) {
 
 	putProfile(t, s) // skills: sql, excel
 	res := expect(t, call(t, s, "POST", fmt.Sprintf("/v1/jobs/%v/analyze", out["id"]), ""), 200)
-	if res["score"] != 0.5 {
-		t.Errorf("score = %v, want 0.5 (sql and excel of four)", res["score"])
+	if res["score"] != 0.75 {
+		t.Errorf("score = %v, want 0.75 (sql and excel, plus half credit for tableau and power bi, which excel suggests)", res["score"])
 	}
 
 	// One long sentence: no title line, no company, so the job cannot be saved.

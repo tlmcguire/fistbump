@@ -229,7 +229,7 @@ Bundled lists of company boards, grouped by industry, give users a starting poin
   - Top level: `technical`, `cybersecurity`, `medical`, `labs`, `pharma_biotech`, `manufacturing`, `aerospace_defense`, `finance`, `insurance`, `energy_climate`, `education`, `media_entertainment`, `government_civic`, `nonprofit`, `food_agriculture`, `retail_ecommerce`, `travel_hospitality`, `transportation_logistics`, `real_estate`, `legal_tech`, `construction_infrastructure`, `consulting_services`, `semiconductors_hardware`, `telecom`.
   - Subsets of `technical`: `ai_ml`, `data_infrastructure`, `developer_tools`, `enterprise_software`, `consumer_internet`, `gaming`, `autonomous_vehicles`, `quantum_computing`.
 - **Subsets.** A category with a `parent` is a subset. Enabling a parent searches its own boards plus every subset's boards. Enabling a subset searches only that subset. Subsets are one level deep. A board listed in a subset is not repeated in the parent.
-- **Current size.** 636 unique boards. Every token returned open postings from the Greenhouse API on the `verified_at` date in the file. Category sizes range from 3 (`food_agriculture`, `construction_infrastructure`) to 66 (`cybersecurity`). Small categories reflect how few employers in that field publish on Greenhouse.
+- **Current size.** 947 unique boards in 34 categories. Every token returned open postings from the Greenhouse API on the `verified_at` date in the file. Category sizes range from 7 (`legal_tech`) to 92 (`finance`). Small categories reflect how few employers in that field publish on Greenhouse.
 - **Format.**
 
 ```json
