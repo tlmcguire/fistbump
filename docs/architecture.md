@@ -241,13 +241,13 @@ Bundled lists of company boards, grouped by industry, give users a starting poin
       "id": "ai_ml",
       "name": "AI and machine learning",
       "parent": "technical",
-      "boards": [{ "token": "example", "company": "Example Inc", "website": "https://example.com/careers" }]
+      "boards": [{ "token": "example", "company": "Example Inc", "website": "https://example.com/" }]
     }
   ]
 }
 ```
 
-- **Website.** Optional. The company's careers page where known, else its home page. Postings use it as `company_url` when Greenhouse does not link to the company's own site (see [phase01.md](phase01.md)).
+- **Website.** Optional. The company's home page, checked to load and to name the company in its title. Postings use it as `company_url`, the Company website button, reduced to the site's front page. Without it, the home page of the posting's own-site link is used when there is one (see [phase01.md](phase01.md)).
 - **Membership.** A company may appear in more than one category. Tokens are de-duplicated when categories are combined.
 - **Selection.** Categories are enabled in the connector settings view and stored as a JSON array in `connectors.greenhouse.categories` (default `[]`). `store/settings.go` returns the default when the key is absent, so no migration is needed.
 - **Coverage.** The lists are not exhaustive and cannot be. The medical category skews toward health-tech, digital health, and diagnostics companies. Large hospital systems, insurers, and medical device manufacturers mostly use other applicant tracking systems and are largely absent. Only employers that publish on Greenhouse have a board, and many large employers use other applicant tracking systems. The settings view and search results state that lists are curated starting points. Responses report `boards_searched` so coverage is visible.
