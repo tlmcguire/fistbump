@@ -6,6 +6,17 @@ A local-first job application assistant. Stores a master resume, parses job post
 
 Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
 
+## What it looks like
+
+| | |
+|---|---|
+| ![Home: what needs you today](docs/images/home.png) | ![Master resume](docs/images/resume.png) |
+| **Home.** Follow-ups that are due, suggestions to decide, and jobs to tailor. | **Master resume.** Your one source of truth, with a live PDF preview. |
+| ![Saved jobs with the full posting](docs/images/jobs.png) | ![Tailoring a resume: suggestions with the skill gap beside them](docs/images/tailor.png) |
+| **Saved jobs.** Search a board, open a link or paste a posting. | **Tailor.** Every change is a suggestion you accept, reject or edit; the skill gap sits beside it. |
+| ![Tracker](docs/images/tracker.png) | ![Settings, with the AI engine and storage](docs/images/settings.png) |
+| **Tracker.** Each application, its stage and its next step. | **Settings.** Rules only, a local model or a remote provider, and what is stored where. |
+
 ## Install
 
 The installers are on the releases page: [github.com/tlmcguire/fistbump/releases](https://github.com/tlmcguire/fistbump/releases).
@@ -38,6 +49,8 @@ npm install          # install the app's dependencies
 npm run build:go     # build the Go backend into bin/<platform>-<arch>/
 npm run dev          # start the app
 ```
+
+The pictures above come from `node scripts/screenshots.js`, which fills a throwaway data folder with the sample resume and a few jobs and photographs each view into `docs/images/`.
 
 `npm run build:go` builds the backend for this computer. To build for another platform or architecture, name it: `node scripts/build-go.js --platform darwin --arch x64`.
 

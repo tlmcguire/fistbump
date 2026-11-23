@@ -106,7 +106,7 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 /* the saved jobs offered on the empty tailor page */
 .stage-jobs { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
 .stage-job-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.stage-job { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 12px; text-align: left; }
+.stage-job { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; height: auto; padding: 8px 12px; text-align: left; }
 .stage-job span, .stage-job small { color: var(--muted); font-size: 12px; font-weight: 400; }
 
 /* what went wrong, and what to do about it */
