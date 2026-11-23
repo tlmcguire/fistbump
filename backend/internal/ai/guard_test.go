@@ -132,7 +132,7 @@ func TestPromptsNeverSendMissingSkills(t *testing.T) {
 		}
 	}
 	user := BuildPrompt(experienceTarget, r)[1].Content
-	for _, want := range []string{"Business Analyst", "Globex", "sql, python", "3 lines or fewer", "Built weekly sales dashboards"} {
+	for _, want := range []string{"Business Analyst", "Globex", "sql, python", "exactly 3 lines", "Built weekly sales dashboards"} {
 		if !strings.Contains(user, want) {
 			t.Errorf("user prompt lacks %q:\n%s", want, user)
 		}
@@ -299,5 +299,24 @@ func TestCheckDropsMarkdownFormatting(t *testing.T) {
 		if got := Check(target, proposed, promptRequest()); got != "uses Markdown formatting" {
 			t.Errorf("Check(%q) = %q", proposed, got)
 		}
+	}
+}
+
+func TestToResumeTextRestoresBullets(t *testing.T) {
+	target := Target{Section: "experience", Original: `\- Wrote SQL` + "\n" + `\- Built dashboards`}
+	got := toResumeText(target, "Wrote SQL reports\n* Built dashboards")
+	if got != `\- Wrote SQL reports`+"\n"+`\- Built dashboards` {
+		t.Errorf("toResumeText = %q", got)
+	}
+	para := Target{Section: "experience", Original: "Wrote SQL reports"}
+	if got := toResumeText(para, "- Wrote SQL reports daily"); got != "Wrote SQL reports daily" {
+		t.Errorf("a paragraph picked up a bullet: %q", got)
+	}
+}
+
+func TestCheckRejectsADroppedLine(t *testing.T) {
+	target := Target{Section: "experience", Original: `\- Wrote SQL` + "\n" + `\- Cut tickets 40%`}
+	if got := Check(target, "- Wrote SQL reports", promptRequest()); got != "a different number of lines than the original" {
+		t.Errorf("Check = %q", got)
 	}
 }
