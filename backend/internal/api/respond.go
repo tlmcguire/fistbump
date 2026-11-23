@@ -118,11 +118,13 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
+// internal is the answer to an error with no apiError of its own. The cause is logged, never sent, so
+// the message says what the user can do instead.
 func internal() *apiError {
 	return &apiError{
 		Status:  http.StatusInternalServerError,
 		Code:    "internal",
-		Message: "An unexpected error occurred",
+		Message: "Something went wrong inside FistBump. Try again, and restart the app if it keeps happening.",
 	}
 }
 
