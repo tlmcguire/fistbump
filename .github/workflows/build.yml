@@ -130,6 +130,15 @@ jobs:
           node scripts/build-go.js --platform ${{ matrix.node_platform }} --arch ${{ matrix.arch }}
           node scripts/fetch-llama-server.js --platform ${{ matrix.node_platform }} --arch ${{ matrix.arch }}
           node scripts/stage-resources.js --platform ${{ matrix.node_platform }} --arch ${{ matrix.arch }}
+      - name: Read release notes
+        id: release_notes
+        run: |
+          {
+            echo 'body<<EOF_RELEASE_NOTES'
+            cat docs/release-notes.md
+            echo ''
+            echo 'EOF_RELEASE_NOTES'
+          } >> "$GITHUB_OUTPUT"
       - name: Build and publish Tauri installers + signed updater artifacts
         uses: tauri-apps/tauri-action@v0
         env:
@@ -139,7 +148,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
-          releaseBodyPath: docs/release-notes.md
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}

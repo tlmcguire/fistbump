@@ -6,6 +6,7 @@
   "author": "tlmcguire",
   "private": true,
   "scripts": {
+    "tauri": "tauri",
     "dev": "tauri dev",
     "build:go": "node scripts/build-go.js",
     "fetch:llama": "node scripts/fetch-llama-server.js",
