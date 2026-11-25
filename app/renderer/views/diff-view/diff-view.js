@@ -1476,7 +1476,7 @@
           if (!panels.pdf.hidden) pdf.load();
         });
         panels.changes = el("div", {class: "panel", id: "tailor-panel-changes", role: "tabpanel", "aria-labelledby": "tailor-tab-changes"},
-          el("label", {class: "hint"}, showAllBox, " Show unchanged text"),
+          el("p", {class: "hint"}, el("label", {class: "changes-toggle-label"}, showAllBox, " Show unchanged text")),
           diffHead,
           hunks);
         //your own edits: the whole resume as text, saved over the tailored version
