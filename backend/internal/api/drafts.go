@@ -28,10 +28,12 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var body struct {
-		Kind     string `json:"kind"`
-		Prompt   string `json:"prompt"`
-		Content  string `json:"content"`
-		Generate bool   `json:"generate"`
+		Kind        string `json:"kind"`
+		Prompt      string `json:"prompt"`
+		Content     string `json:"content"`
+		BaseContent string `json:"base_content"`
+		Instruction string `json:"instruction"`
+		Generate    bool   `json:"generate"`
 	}
 	if err := decodeJSONLimit(w, r, &body, maxFetchBody); err != nil {
 		return err
@@ -52,7 +54,9 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	content := strings.TrimSpace(body.Content)
-	if content == "" || body.Generate {
+	instruction := strings.TrimSpace(body.Instruction)
+	baseContent := strings.TrimSpace(body.BaseContent)
+	if instruction != "" || content == "" || body.Generate {
 		job, err := s.store.GetJob(r.Context(), jobID)
 		if err != nil {
 			return storeError(err, "Job")
@@ -61,7 +65,14 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return storeError(err, "Resume")
 		}
-		content = s.generateDraftText(job, master, kind, prompt)
+		if instruction != "" {
+			if baseContent == "" {
+				baseContent = content
+			}
+			content = s.iterateDraftText(job, master, kind, prompt, baseContent, instruction)
+		} else {
+			content = s.generateDraftText(job, master, kind, prompt)
+		}
 	}
 	created, err := s.store.CreateDraft(r.Context(), jobID, kind, prompt, content)
 	if err != nil {
@@ -207,4 +218,166 @@ func (s *Server) generateDraftText(job models.Job, master models.Master, kind, p
 		}
 	}
 	return b.String()
+}
+
+// iterateDraftText refines an existing cover letter or Q&A draft according to the user's instruction
+// while staying grounded in verified master resume facts.
+func (s *Server) iterateDraftText(job models.Job, master models.Master, kind, prompt, baseContent, instruction string) string {
+	base := strings.TrimSpace(baseContent)
+	if base == "" {
+		base = s.generateDraftText(job, master, kind, prompt)
+	}
+	low := strings.ToLower(instruction)
+	company := strings.TrimSpace(job.CompanyName)
+	if company == "" {
+		company = "your team"
+	}
+	role := strings.TrimSpace(job.PositionTitle)
+	if role == "" {
+		role = "this role"
+	}
+	analysis := s.analyze(job, master)
+	var matched []string
+	for _, m := range analysis.Required.Tech.Matched {
+		matched = append(matched, m.Skill)
+	}
+
+	switch {
+	case strings.Contains(low, "short") || strings.Contains(low, "concise") || strings.Contains(low, "tight"):
+		paras := splitParagraphs(base)
+		if len(paras) >= 4 && kind == "cover_letter" {
+			return strings.Join([]string{paras[0], paras[1], paras[len(paras)-1]}, "\n\n")
+		}
+		sentences := splitSentences(base)
+		if len(sentences) > 2 {
+			return strings.Join(sentences[:2], " ")
+		}
+		return base
+
+	case strings.Contains(low, "detail") || strings.Contains(low, "longer") || strings.Contains(low, "expand"):
+		var extra []string
+		if len(master.Experiences) > 1 {
+			e := master.Experiences[1]
+			line := fmt.Sprintf("Previously as %s at %s", e.JobTitle, e.CompanyName)
+			if e.Impact != nil && strings.TrimSpace(*e.Impact) != "" {
+				line += ", " + strings.TrimSuffix(strings.TrimSpace(*e.Impact), ".") + "."
+			} else if e.Description != nil && strings.TrimSpace(*e.Description) != "" {
+				line += ", " + strings.TrimSuffix(strings.TrimSpace(*e.Description), ".") + "."
+			} else {
+				line += ", I built strong foundations that carry directly into this role."
+			}
+			extra = append(extra, line)
+		}
+		if len(matched) > 0 {
+			extra = append(extra, fmt.Sprintf("Across these roles, I applied %s in day-to-day delivery.", strings.Join(matched[:min(5, len(matched))], ", ")))
+		}
+		if len(extra) == 0 {
+			return base
+		}
+		return insertBeforeSignOff(base, strings.Join(extra, " "))
+
+	case strings.Contains(low, "formal") || strings.Contains(low, "polish") || strings.Contains(low, "executive"):
+		out := base
+		out = strings.ReplaceAll(out, "Hi ", "Dear ")
+		out = strings.ReplaceAll(out, "I'm ", "I am ")
+		out = strings.ReplaceAll(out, "I'd ", "I would ")
+		out = strings.ReplaceAll(out, "excited about", "keenly interested in")
+		out = strings.ReplaceAll(out, "hit the ground running", "contribute effectively from day one")
+		out = strings.ReplaceAll(out, "Thanks,", "Sincerely,")
+		out = strings.ReplaceAll(out, "Best,", "Sincerely,")
+		out = strings.ReplaceAll(out, "Best regards,", "Sincerely,")
+		if kind == "cover_letter" && !strings.HasPrefix(out, "Dear ") {
+			out = fmt.Sprintf("Dear %s Hiring Team,\n\n%s", company, out)
+		}
+		return out
+
+	case strings.Contains(low, "conversational") || strings.Contains(low, "warm") || strings.Contains(low, "friendly"):
+		out := base
+		out = strings.ReplaceAll(out, "Dear "+company+" Hiring Team,", "Hi "+company+" team,")
+		out = strings.ReplaceAll(out, "I am writing to apply for", "I'd love to apply for")
+		out = strings.ReplaceAll(out, "I am excited about", "I'm genuinely excited about")
+		out = strings.ReplaceAll(out, "Sincerely,", "Warmly,")
+		out = strings.ReplaceAll(out, "Best regards,", "Thanks so much,")
+		return out
+
+	case strings.Contains(low, "impact") || strings.Contains(low, "metric") || strings.Contains(low, "result"):
+		var impacts []string
+		for _, e := range master.Experiences {
+			if e.Impact != nil && strings.TrimSpace(*e.Impact) != "" {
+				impacts = append(impacts, fmt.Sprintf("At %s (%s): %s", e.CompanyName, e.JobTitle, strings.TrimSpace(*e.Impact)))
+			}
+			if len(impacts) >= 2 {
+				break
+			}
+		}
+		if len(impacts) == 0 {
+			return base
+		}
+		return insertBeforeSignOff(base, "Key measurable outcomes from my work include: "+strings.Join(impacts, " "))
+
+	case strings.Contains(low, "opening") || strings.Contains(low, "hook") || strings.Contains(low, "stronger"):
+		hook := fmt.Sprintf("With hands-on experience delivering results for roles like %s, I am eager to bring immediate value to %s.", role, company)
+		if len(matched) > 0 {
+			hook = fmt.Sprintf("With hands-on experience in %s, I am eager to bring immediate value as a %s at %s.",
+				strings.Join(matched[:min(4, len(matched))], ", "), role, company)
+		}
+		paras := splitParagraphs(base)
+		if len(paras) >= 2 && strings.HasPrefix(paras[0], "Dear ") {
+			paras[1] = hook + " " + paras[1]
+			return strings.Join(paras, "\n\n")
+		}
+		return hook + "\n\n" + base
+
+	default:
+		focus := strings.TrimSuffix(strings.TrimSpace(instruction), ".")
+		note := fmt.Sprintf("In particular, regarding %s: my background for the %s role at %s", focus, role, company)
+		if len(matched) > 0 {
+			note += fmt.Sprintf(" combines practical work in %s with a track record of shipping reliable outcomes.", strings.Join(matched[:min(4, len(matched))], ", "))
+		} else {
+			note += " focuses on clear execution and measurable team impact."
+		}
+		return insertBeforeSignOff(base, note)
+	}
+}
+
+func splitParagraphs(s string) []string {
+	raw := strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n\n")
+	var out []string
+	for _, p := range raw {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+func splitSentences(s string) []string {
+	flat := strings.Join(strings.Fields(s), " ")
+	var out []string
+	start := 0
+	for i := 0; i < len(flat); i++ {
+		if (flat[i] == '.' || flat[i] == '!' || flat[i] == '?') && (i+1 == len(flat) || flat[i+1] == ' ') {
+			if seg := strings.TrimSpace(flat[start : i+1]); seg != "" {
+				out = append(out, seg)
+			}
+			start = i + 1
+		}
+	}
+	if rest := strings.TrimSpace(flat[start:]); rest != "" {
+		out = append(out, rest)
+	}
+	return out
+}
+
+func insertBeforeSignOff(base, addition string) string {
+	paras := splitParagraphs(base)
+	if len(paras) >= 2 {
+		last := strings.ToLower(paras[len(paras)-1])
+		if strings.HasPrefix(last, "best") || strings.HasPrefix(last, "sincerely") || strings.HasPrefix(last, "warmly") || strings.HasPrefix(last, "thanks") {
+			head := append([]string{}, paras[:len(paras)-1]...)
+			head = append(head, addition, paras[len(paras)-1])
+			return strings.Join(head, "\n\n")
+		}
+	}
+	return base + "\n\n" + addition
 }
