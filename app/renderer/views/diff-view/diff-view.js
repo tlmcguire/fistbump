@@ -44,6 +44,15 @@
       const saveDismissed = () => {
         try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissedJobs])); } catch {}
       };
+      const DRAFT_MODE_KEY = "fistbump.draft-gen-mode";
+      let draftGenMode = (() => {
+        try { return localStorage.getItem(DRAFT_MODE_KEY) === "ai" ? "ai" : "deterministic"; } catch { return "deterministic"; }
+      })();
+      const setDraftGenMode = m => {
+        draftGenMode = m === "ai" ? "ai" : "deterministic";
+        try { localStorage.setItem(DRAFT_MODE_KEY, draftGenMode); } catch {}
+      };
+      let lastBridgeSnapshot = null; // {jobId, targetId, previousContent, createdNew}
       let problem = null;     //what went wrong, when a round could not be written
       let poll = null;
       let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
@@ -306,43 +315,116 @@
           return el("label", {class: "chip skill skill-gap"}, cb, " ", skill);
         }));
         updatePreview();
+        const BRIDGE_LINE_RX = /^\s*(?:Currently learning|Don't have yet \(eager to learn\)|Familiar with \/ ramping up on):.*$/im;
         const insertLineIntoMarkdown = (md, line) => {
           const clean = line.trim();
           if (!clean) return md;
-          const rx = /^\s*(?:Currently learning|Don't have yet \(eager to learn\)|Familiar with \/ ramping up on):.*$/im;
-          if (rx.test(md)) return md.replace(rx, clean);
+          if (BRIDGE_LINE_RX.test(md)) return md.replace(BRIDGE_LINE_RX, clean);
           if (/^##\s+Skills\s*$/im.test(md)) {
             return md.replace(/(^##\s+Skills\s*\n(?:[^#]*))/im, (m) => m.trimEnd() + "\n\n" + clean + "\n\n");
           }
           return md.trimEnd() + "\n\n## Skills\n\n" + clean + "\n";
+        };
+        const removeBridgeLineFromMarkdown = md => {
+          let out = String(md || "").replace(/^\s*(?:Currently learning|Don't have yet \(eager to learn\)|Familiar with \/ ramping up on):.*(?:\r?\n)?/gim, "");
+          out = out.replace(/\n{3,}/g, "\n\n");
+          // Remove an empty trailing Skills section if the bridge was the only thing inside it.
+          out = out.replace(/\n+##\s+Skills\s*$/im, "\n");
+          return out.trimEnd() + "\n";
         };
         const copyBtn = el("button", {type: "button", onclick: async () => {
           if (!preview.value.trim()) return;
           try { await navigator.clipboard.writeText(preview.value.trim()); noteStatus.textContent = "Copied visible note."; }
           catch { noteStatus.textContent = "Select and copy the text above."; }
         }}, "Copy line");
+        const hasUndoForJob = () => Boolean(lastBridgeSnapshot && Number(lastBridgeSnapshot.jobId) === Number(jobId));
+        const undoBtn = el("button", {
+          type: "button",
+          hidden: !hasUndoForJob(),
+          onclick: async () => {
+            undoBtn.disabled = true;
+            try {
+              if (hasUndoForJob()) {
+                const snap = lastBridgeSnapshot;
+                lastBridgeSnapshot = null;
+                if (snap.createdNew) {
+                  const del = await attempt(() => api.tailored.delete(snap.targetId));
+                  if (del) {
+                    if (tailoredId === snap.targetId) tailoredId = null;
+                    await loadRounds(false);
+                    await drawBody();
+                    noteStatus.textContent = "Undid keyword bridge addition.";
+                  }
+                } else {
+                  const restored = await attempt(() => api.tailored.update(snap.targetId, snap.previousContent));
+                  if (restored) {
+                    tailoredId = snap.targetId;
+                    await loadRounds(false);
+                    await drawBody();
+                    noteStatus.textContent = "Undid keyword bridge addition.";
+                  }
+                }
+                return;
+              }
+              if (!tailoredId) return;
+              const cur = await attempt(() => api.tailored.get(tailoredId));
+              if (!cur) return;
+              const cleaned = removeBridgeLineFromMarkdown(cur.value.content || "");
+              const saved = await attempt(() => api.tailored.update(tailoredId, cleaned));
+              if (saved) {
+                await loadRounds(false);
+                await drawBody();
+                noteStatus.textContent = "Removed keyword bridge note.";
+              }
+            } finally {
+              undoBtn.disabled = false;
+              syncUndoBtn();
+            }
+          },
+        }, "Undo");
+        const syncUndoBtn = async () => {
+          if (hasUndoForJob()) {
+            undoBtn.textContent = "Undo";
+            undoBtn.hidden = false;
+            return;
+          }
+          if (!tailoredId) {
+            undoBtn.hidden = true;
+            return;
+          }
+          const cur = await attempt(() => api.tailored.get(tailoredId), () => {});
+          const hasLine = Boolean(cur?.value?.content && BRIDGE_LINE_RX.test(cur.value.content));
+          undoBtn.textContent = "Remove note";
+          undoBtn.hidden = !hasLine;
+        };
+        syncUndoBtn();
         const addBtn = el("button", {type: "button", class: "primary", onclick: async () => {
           const line = preview.value.trim();
           if (!line) return;
           addBtn.disabled = true;
           try {
             let targetId = tailoredId;
+            let createdNew = false;
             if (!targetId) {
               const created = await attempt(() => api.tailored.createBlank(jobId, baseSelect.value ? Number(baseSelect.value) : null));
               if (!created) return;
               targetId = created.value.id;
+              createdNew = true;
             }
             const cur = await attempt(() => api.tailored.get(targetId));
             if (!cur) return;
-            const nextContent = insertLineIntoMarkdown(cur.value.content || "", line);
+            const previousContent = cur.value.content || "";
+            const nextContent = insertLineIntoMarkdown(previousContent, line);
             const saved = await attempt(() => api.tailored.update(targetId, nextContent));
             if (saved) {
+              lastBridgeSnapshot = {jobId, targetId, previousContent, createdNew};
               tailoredId = targetId;
               showDrafts = false;
               nextTab = "changes";
               await loadRounds(false);
               await drawBody();
               noteStatus.textContent = "Added visible note under Skills.";
+              syncUndoBtn();
             }
           } finally {
             addBtn.disabled = false;
@@ -354,7 +436,7 @@
           skillChecks,
           styleSel,
           preview,
-          el("div", {class: "round-actions"}, copyBtn, addBtn),
+          el("div", {class: "round-actions"}, copyBtn, addBtn, undoBtn),
           noteStatus);
       };
 
@@ -556,7 +638,8 @@
         const gen = async (kind, prompt, {blank = false} = {}) => {
           const payload = blank
             ? {kind, prompt, content: "Write your answer here…", generate: false}
-            : {kind, prompt, generate: true};
+            : {kind, prompt, mode: draftGenMode, generate: true};
+          if (!blank && draftGenMode === "ai") say("Generating with AI…");
           let created = null;
           try {
             created = {value: await api.drafts.create(jobId, payload)};
@@ -591,11 +674,11 @@
           if (event.key === "Enter") { event.preventDefault(); submitCustom(false); }
         });
 
-        // Build tailored likely questions from the job posting and skill-gap analysis.
+        // Build tailored likely questions from the job posting and skill-gap analysis (deterministic or AI).
         const likelyTray = el("div", {class: "likely-questions", hidden: true});
         const loadLikelyQuestions = async () => {
           likelyTray.hidden = false;
-          fill(likelyTray, el("p", {class: "hint", text: "Analyzing posting for likely questions…"}));
+          fill(likelyTray, el("p", {class: "hint", text: draftGenMode === "ai" ? "Generating likely questions with AI…" : "Analyzing posting for likely questions…"}));
           const [jobRes, analysisRes] = await Promise.all([
             attempt(() => api.jobs.get(jobId)),
             attempt(() => api.jobs.analyze(jobId)),
@@ -606,21 +689,41 @@
           const role = job.position_title || "this role";
           const matched = (a?.required?.tech?.matched || []).map(m => m.skill);
           const missing = (a?.required?.tech?.missing || []);
-          const candidates = [
-            `Why are you interested in the ${role} role at ${company}?`,
-            matched.length >= 2
-              ? `Tell us about a time you used ${matched[0]} and ${matched[1]} in production.`
-              : matched.length === 1
-                ? `Walk through a concrete project where you used ${matched[0]} and how you measured the impact.`
-                : "Describe a project you're most proud of and how you measured its impact.",
-            missing.length
-              ? `This role mentions ${missing.slice(0, 2).join(" and ")} — how would you ramp up quickly?`
-              : "Tell us about a tough technical trade-off you had to make under constraints.",
-            job.work_mode && job.work_mode !== "Any"
-              ? `How do you collaborate effectively and stay aligned in a ${job.work_mode.toLowerCase()} team?`
-              : "Describe a time you collaborated across teams or resolved a disagreement.",
-            `What excites you most about what ${company} is building right now?`,
-          ];
+          let candidates = null;
+          let fallbackNote = "";
+          if (draftGenMode === "ai") {
+            try {
+              const res = await api.drafts.create(jobId, {kind: "questions", mode: "ai", generate: true});
+              if (Array.isArray(res?.questions) && res.questions.length) {
+                candidates = res.questions;
+                say("");
+              }
+            } catch (err) {
+              if (/kind must be cover_letter or qa/i.test(err?.message || "")) {
+                fallbackNote = "Rebuild the Go backend (npm run build:go) to enable AI questions — showing deterministic questions for now.";
+              } else {
+                say(err?.message || "Could not generate AI questions", true);
+                fallbackNote = "AI unavailable — showing deterministic questions instead.";
+              }
+            }
+          }
+          if (!candidates) {
+            candidates = [
+              `Why are you interested in the ${role} role at ${company}?`,
+              matched.length >= 2
+                ? `Tell us about a time you used ${matched[0]} and ${matched[1]} in production.`
+                : matched.length === 1
+                  ? `Walk through a concrete project where you used ${matched[0]} and how you measured the impact.`
+                  : "Describe a project you're most proud of and how you measured its impact.",
+              missing.length
+                ? `This role mentions ${missing.slice(0, 2).join(" and ")} — how would you ramp up quickly?`
+                : "Tell us about a tough technical trade-off you had to make under constraints.",
+              job.work_mode && job.work_mode !== "Any"
+                ? `How do you collaborate effectively and stay aligned in a ${job.work_mode.toLowerCase()} team?`
+                : "Describe a time you collaborated across teams or resolved a disagreement.",
+              `What excites you most about what ${company} is building right now?`,
+            ];
+          }
           const existingPrompts = new Set(groupOrder.map(k => k.replace(/^[^:]+::/, "")));
           const fresh = candidates.filter(q => !existingPrompts.has(q.toLowerCase()));
           const shown = fresh.length ? fresh : candidates;
@@ -635,13 +738,16 @@
               el("div", {class: "round-actions"},
                 el("button", {type: "button", class: "primary", onclick: async () => {
                   const edited = inputs.map(i => i.value.trim()).filter(Boolean);
+                  if (draftGenMode === "ai") say(`Drafting ${edited.length} answer${edited.length === 1 ? "" : "s"} with AI…`);
                   for (const q of edited) {
-                    await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt: q, generate: true}));
+                    await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt: q, mode: draftGenMode, generate: true}));
                   }
+                  say("");
                   likelyTray.hidden = true;
                   drawDrafts();
                 }}, `Draft all (${shown.length})`),
                 el("button", {type: "button", class: "quiet", onclick: () => { likelyTray.hidden = true; }}, "Hide"))),
+            fallbackNote ? el("p", {class: "hint", text: fallbackNote}) : null,
             el("ul", {class: "likely-q-list"}, inputs.map(inp => el("li", {class: "likely-q-item"},
               inp,
               el("div", {class: "likely-q-actions"},
@@ -660,7 +766,18 @@
           say("Exported all drafts as Markdown.");
         }}, "Export all (.md)") : null;
 
+        const modeSelect = el("select", {
+          class: "draft-mode-select",
+          "aria-label": "Generation mode",
+          title: "Choose Deterministic (instant, built-in templates) or AI (your configured local or remote model)",
+        },
+          el("option", {value: "deterministic", text: "Deterministic (instant)"}),
+          el("option", {value: "ai", text: "AI (local / remote)"}));
+        modeSelect.value = draftGenMode;
+        modeSelect.addEventListener("change", () => setDraftGenMode(modeSelect.value));
+
         const quickBar = el("div", {class: "round-actions"},
+          modeSelect,
           el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
           el("button", {type: "button", onclick: () => gen("interview_prep", "Interview prep")}, "Generate interview prep"),
           el("button", {type: "button", onclick: loadLikelyQuestions}, "Generate likely questions"),
@@ -720,12 +837,13 @@
           const runIterate = async instruction => {
             const clean = String(instruction || "").trim();
             if (!clean) return;
-            copyStatus.textContent = "Creating new version…";
+            copyStatus.textContent = draftGenMode === "ai" ? "Creating new version with AI…" : "Creating new version…";
             const created = await attempt(() => api.drafts.create(jobId, {
               kind: group.kind,
               prompt: group.prompt,
               base_content: area.value,
               instruction: clean,
+              mode: draftGenMode,
               generate: true,
             }));
             if (created?.value) {

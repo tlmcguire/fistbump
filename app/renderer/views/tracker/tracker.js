@@ -55,6 +55,7 @@
       let sortDir = 1;
       let tailoredNames = new Map(); //tailored resume id -> label
       let versionNames = new Map();  //saved resume id -> label
+      let topSkillGaps = [];
       let loadSeq = 0;
 
       const status = el("p", {class: "resume-status", role: "status"});
@@ -101,7 +102,7 @@
         el("button", {type: "button", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
 
       const notifyAppsChanged = () => {
-        window.dispatchEvent(new CustomEvent("fistbump:applications", {detail: {invalidateMatches: false}}));
+        window.dispatchEvent(new CustomEvent("fistbump:applications", {detail: {invalidateMatches: false, source: "tracker"}}));
       };
       const runBulk = async fn => {
         const ids = rows.filter(a => selected.has(a.id)).map(a => a.id);
@@ -448,6 +449,7 @@
             applied.value = updated.date_applied || ""; //Applied fills today's date
             play(stage, "pop", 500);
             draw();
+            notifyAppsChanged();
           }
         });
 
@@ -542,11 +544,28 @@
               el("span", {class: "due-when", text: a.next_step_date < today ? "Overdue" : "Today"}))))));
       };
 
+      const drawStats = () => {
+        if (!rows.length) {
+          statsStrip.textContent = "";
+          statsStrip.hidden = true;
+          return;
+        }
+        const countStage = name => rows.filter(a => a.status === name).length;
+        const gaps = topSkillGaps.slice(0, 4).map(g => `${g.skill} (${g.count})`).join(", ");
+        statsStrip.textContent = `Pipeline: ${rows.length} total · ${countStage("Applied")} applied · ${countStage("Interviewing")} interviewing · ${countStage("Offered")} offered` + (gaps ? ` · Top skill gaps: ${gaps}` : "");
+        statsStrip.hidden = false;
+      };
+
       const draw = () => {
         const today = localToday();
+        if (!rows.length && statuses.size) {
+          statuses.clear();
+          stageChips.forEach(chip => chip.setAttribute("aria-pressed", "false"));
+        }
         const shown = statuses.size ? rows.filter(a => statuses.has(a.status)) : rows;
         drawBulk();
         drawDue(today);
+        drawStats();
         for (const chip of stageChips) {
           const n = rows.filter(a => a.status === chip.dataset.stage).length;
           chip.querySelector(".stage-count").textContent = n ? String(n) : "";
@@ -630,21 +649,43 @@
           await loadNames(list);
           if (mine !== loadSeq) return;
           rows = list;
+          if (!rows.length) topSkillGaps = [];
           for (const id of [...selected]) if (!rows.some(a => a.id === id)) selected.delete(id);
           draw();
-          if (window.api?.applications?.stats) {
+          if (rows.length && window.api?.applications?.stats) {
             api.applications.stats().then(st => {
-              if (!st || !st.total) { statsStrip.hidden = true; return; }
-              const gaps = (st.top_missing_skills || []).slice(0, 4).map(g => `${g.skill} (${g.count})`).join(", ");
-              statsStrip.textContent = `Pipeline: ${st.total} total · ${st.by_stage?.Applied || 0} applied · ${st.by_stage?.Interviewing || 0} interviewing · ${st.by_stage?.Offered || 0} offered` + (gaps ? ` · Top skill gaps: ${gaps}` : "");
-              statsStrip.hidden = false;
-            }).catch(() => {});
+              if (mine !== loadSeq) return;
+              topSkillGaps = (st?.top_missing_skills || []).slice(0, 4);
+              drawStats();
+            }).catch(() => {
+              if (mine !== loadSeq) return;
+              topSkillGaps = [];
+              drawStats();
+            });
           }
         } catch (err) {
           if (mine !== loadSeq) return;
           say(err.message, true);
         }
       };
+
+      const onDataChange = event => {
+        if (event?.detail?.source === "tracker") return;
+        topSkillGaps = [];
+        versionNames.clear();
+        tailoredNames.clear();
+        if (!container.hidden) {
+          load();
+        } else {
+          rows = [];
+          selected.clear();
+          draw();
+        }
+      };
+      window.addEventListener("fistbump:jobs", onDataChange);
+      window.addEventListener("fistbump:applications", onDataChange);
+      window.addEventListener("fistbump:storage-cleaned", onDataChange);
+      window.addEventListener("fistbump:versions", onDataChange);
 
       load();
       return load; //drawn again whenever the view is shown

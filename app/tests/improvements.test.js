@@ -144,8 +144,10 @@ test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', 
   const dv = read('views/diff-view/diff-view.js');
   assert.ok(dv.includes('Honest keyword bridge'), 'diff-view.js should include Honest keyword bridge');
   assert.ok(dv.includes('Currently learning') && dv.includes("Don't have yet (eager to learn)"), 'diff-view.js should offer transparent gap-bridging phrasings');
+  assert.ok(dv.includes('lastBridgeSnapshot') && dv.includes('removeBridgeLineFromMarkdown'), 'diff-view.js should allow easy undo/removal of keyword bridge notes');
   assert.ok(dv.includes('Export DOCX'), 'diff-view.js should offer Export DOCX');
   assert.ok(dv.includes('Cover letter & Q&A') && dv.includes('api.drafts.create'), 'diff-view.js should include Cover letter & Q&A drafts');
+  assert.ok(dv.includes('draftGenMode') && dv.includes('Deterministic (instant)') && dv.includes('AI (local / remote)'), 'diff-view.js should let users choose deterministic or AI generation for drafts and questions');
 
   const rb = read('views/resume-builder/resume-builder.js');
   assert.ok(rb.includes('resume.section_order') && rb.includes('resume.custom_sections'), 'resume-builder.js should support custom sections and section ordering');
@@ -223,6 +225,12 @@ test('Home refreshes and clears stale listings/cache when history, jobs, or stor
   const settings = read('views/settings/settings.js');
   assert.ok(settings.includes('fistbump:storage-cleaned'),
     'settings.js should notify Home after storage cleanup');
+
+  const tr = read('views/tracker/tracker.js');
+  assert.ok(tr.includes('fistbump:jobs') && tr.includes('fistbump:applications') && tr.includes('fistbump:storage-cleaned') && tr.includes('fistbump:versions'),
+    'tracker.js should refresh pipeline stats and stage chips when jobs, applications, storage, or versions change');
+  assert.ok(tr.includes('drawStats') && tr.includes('statsStrip.textContent = ""'),
+    'tracker.js should compute scope-accurate stats and clear statsStrip when empty');
 });
 
 test('App version stays in sync across package.json, tauri.conf.json, and Cargo.toml', () => {
