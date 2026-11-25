@@ -735,25 +735,31 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
 
 /* Saved jobs bulk selection bar & row checkboxes */
 .saved-bulk {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+  gap: 8px 10px;
+  min-height: 40px;
+  padding: 7px 14px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg);
 }
 .saved-select-all {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text);
+  gap: 11px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--muted);
   cursor: pointer;
 }
+.saved-select-all:hover { color: var(--text); }
 .saved-bulk-actions {
   display: inline-flex;
   flex-wrap: wrap;
@@ -761,10 +767,15 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   gap: 6px;
   margin-left: auto;
 }
+.saved-bulk-actions button {
+  height: 25px;
+  padding: 0 9px;
+  font-size: 12px;
+}
 .saved-bulk-actions[hidden] { display: none; }
 .saved-check {
   flex: none;
-  margin-top: 8px;
+  margin-top: 11px;
   cursor: pointer;
 }
 .result.selected-bulk {
