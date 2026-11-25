@@ -624,23 +624,29 @@
           const existingPrompts = new Set(groupOrder.map(k => k.replace(/^[^:]+::/, "")));
           const fresh = candidates.filter(q => !existingPrompts.has(q.toLowerCase()));
           const shown = fresh.length ? fresh : candidates;
+          const inputs = shown.map(q => {
+            const inp = el("input", {type: "text", class: "likely-q-input", value: q, "aria-label": "Edit generated question"});
+            inp.value = q;
+            return inp;
+          });
           fill(likelyTray,
             el("div", {class: "likely-q-head"},
               el("strong", {text: `Likely questions for ${role} at ${company}`}),
               el("div", {class: "round-actions"},
                 el("button", {type: "button", class: "primary", onclick: async () => {
-                  for (const q of shown) {
+                  const edited = inputs.map(i => i.value.trim()).filter(Boolean);
+                  for (const q of edited) {
                     await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt: q, generate: true}));
                   }
                   likelyTray.hidden = true;
                   drawDrafts();
                 }}, `Draft all (${shown.length})`),
                 el("button", {type: "button", class: "quiet", onclick: () => { likelyTray.hidden = true; }}, "Hide"))),
-            el("ul", {class: "likely-q-list"}, shown.map(q => el("li", {class: "likely-q-item"},
-              el("span", {text: q}),
+            el("ul", {class: "likely-q-list"}, inputs.map(inp => el("li", {class: "likely-q-item"},
+              inp,
               el("div", {class: "likely-q-actions"},
-                el("button", {type: "button", onclick: () => gen("qa", q)}, "Draft answer"),
-                el("button", {type: "button", class: "quiet", onclick: () => gen("qa", q, {blank: true})}, "Add blank"))))));
+                el("button", {type: "button", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q); }}, "Draft answer"),
+                el("button", {type: "button", class: "quiet", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q, {blank: true}); }}, "Add blank"))))));
         };
 
         const exportAllBtn = groupOrder.length ? el("button", {type: "button", title: "Download the latest version of every draft for this job as one Markdown file", onclick: () => {
@@ -739,9 +745,16 @@
               iterateInput,
               el("button", {type: "button", onclick: () => runIterate(iterateInput.value)}, "Iterate as new version")));
 
+          const promptInput = group.kind === "qa" ? (() => {
+            const inp = el("input", {type: "text", class: "draft-prompt-input", value: group.prompt, "aria-label": "Edit question"});
+            inp.value = group.prompt;
+            return inp;
+          })() : null;
+          const currentPrompt = () => (promptInput ? promptInput.value.trim() : group.prompt) || group.prompt;
+
           return el("section", {class: "tailor-card draft-card"},
             el("div", {class: "card-head"},
-              el("h3", {text: group.prompt}),
+              promptInput || el("h3", {text: group.prompt}),
               el("span", {class: "engine-badge", text: KIND_LABEL[group.kind] || "Q&A"}),
               versionTabs,
               wc),
@@ -749,11 +762,23 @@
             iterateRow,
             el("div", {class: "tailor-actions"},
               el("button", {type: "button", class: "primary", onclick: async () => {
-                if (await attempt(() => api.drafts.update(jobId, active.id, {prompt: group.prompt, content: area.value}))) copyStatus.textContent = `Saved v${activeIdx + 1}.`;
+                const nextPrompt = currentPrompt();
+                if (nextPrompt !== group.prompt) {
+                  // Rename prompt across all saved versions in this group so they stay grouped together.
+                  for (const v of group.versions) {
+                    const body = v.id === active.id ? area.value : v.content;
+                    await attempt(() => api.drafts.update(jobId, v.id, {prompt: nextPrompt, content: body}));
+                  }
+                  selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, active.id);
+                  drawDrafts();
+                  return;
+                }
+                if (await attempt(() => api.drafts.update(jobId, active.id, {prompt: nextPrompt, content: area.value}))) copyStatus.textContent = `Saved v${activeIdx + 1}.`;
               }}, `Save v${activeIdx + 1}`),
               el("button", {type: "button", title: "Keep the current version and save your edits as a new version", onclick: async () => {
                 if (!area.value.trim()) return;
-                const created = await attempt(() => api.drafts.create(jobId, {kind: group.kind, prompt: group.prompt, content: area.value, generate: false}));
+                const nextPrompt = currentPrompt();
+                const created = await attempt(() => api.drafts.create(jobId, {kind: group.kind, prompt: nextPrompt, content: area.value, generate: false}));
                 if (created?.value) {
                   selectedDraftByGroup.set(key, created.value.id);
                   drawDrafts();
