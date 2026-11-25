@@ -42,14 +42,17 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 	if kind == "" {
 		kind = "qa"
 	}
-	if kind != "cover_letter" && kind != "qa" {
-		return validationError("kind", "kind must be cover_letter or qa")
+	if kind != "cover_letter" && kind != "qa" && kind != "interview_prep" {
+		return validationError("kind", "kind must be cover_letter, qa, or interview_prep")
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		if kind == "cover_letter" {
+		switch kind {
+		case "cover_letter":
 			prompt = "Cover letter"
-		} else {
+		case "interview_prep":
+			prompt = "Interview prep"
+		default:
 			return validationError("prompt", "Enter a question or prompt")
 		}
 	}
@@ -191,11 +194,58 @@ func (s *Server) generateDraftText(job models.Job, master models.Master, kind, p
 		return b.String()
 	}
 
+	if kind == "interview_prep" {
+		var b strings.Builder
+		fmt.Fprintf(&b, "# Interview Prep: %s at %s\n\n", role, company)
+		b.WriteString("## 60-Second Pitch\n")
+		if master.Profile != nil && strings.TrimSpace(master.Profile.Summary) != "" {
+			b.WriteString(strings.TrimSpace(master.Profile.Summary) + "\n")
+		} else if expLine != "" {
+			b.WriteString(expLine + "\n")
+		} else {
+			fmt.Fprintf(&b, "I'm %s, applying for the %s role at %s.\n", name, role, company)
+		}
+		if len(matched) > 0 {
+			fmt.Fprintf(&b, "\n## Core Strengths to Highlight\n- Direct overlap with required skills: %s.\n", strings.Join(matched[:min(6, len(matched))], ", "))
+		}
+		for i, e := range master.Experiences {
+			if i >= 2 {
+				break
+			}
+			line := fmt.Sprintf("- %s at %s", e.JobTitle, e.CompanyName)
+			if e.Impact != nil && strings.TrimSpace(*e.Impact) != "" {
+				line += " — " + strings.TrimSpace(*e.Impact)
+			}
+			b.WriteString(line + "\n")
+		}
+		if len(missing) > 0 {
+			fmt.Fprintf(&b, "\n## Gaps to Address Honestly\n- Skills listed in the posting that aren't on your resume yet: %s.\n- Framing: Be upfront about not having production experience yet, connect adjacent fundamentals you do know, and share how you're ramping up.\n", strings.Join(missing[:min(4, len(missing))], ", "))
+		}
+		b.WriteString("\n## Practice Questions (Use STAR: Situation, Task, Action, Result)\n")
+		fmt.Fprintf(&b, "1. Why %s and why this %s role right now?\n", company, role)
+		if len(matched) > 0 {
+			fmt.Fprintf(&b, "2. Walk through a tough problem you solved using %s and how you measured the outcome.\n", strings.Join(matched[:min(2, len(matched))], " and "))
+		} else {
+			b.WriteString("2. Walk through a complex project you owned end-to-end and how you measured success.\n")
+		}
+		if len(missing) > 0 {
+			fmt.Fprintf(&b, "3. How do you plan to ramp up on %s in your first 30–60 days?\n", missing[0])
+		} else {
+			b.WriteString("3. Tell me about a time you had to make a trade-off under tight constraints.\n")
+		}
+		b.WriteString("4. Describe a time you collaborated across teams or resolved a technical disagreement.\n")
+		b.WriteString("\n## Questions to Ask the Interviewer\n")
+		fmt.Fprintf(&b, "- What would success look like in the first 90 days for this %s role?\n", role)
+		fmt.Fprintf(&b, "- What are the biggest technical or product challenges the team at %s is tackling this quarter?\n", company)
+		b.WriteString("- How does the team collaborate on code reviews, design decisions, and feedback?\n")
+		return strings.TrimSpace(b.String())
+	}
+
 	// Q&A prompt response
 	var b strings.Builder
 	low := strings.ToLower(prompt)
 	switch {
-	case strings.Contains(low, "project") || strings.Contains(low, "proud"):
+	case strings.Contains(low, "project") || strings.Contains(low, "proud") || strings.Contains(low, "production"):
 		if expLine != "" {
 			b.WriteString(expLine)
 		} else {
@@ -203,6 +253,20 @@ func (s *Server) generateDraftText(job models.Job, master models.Master, kind, p
 		}
 		if len(matched) > 0 {
 			fmt.Fprintf(&b, " Key technologies I used that carry over directly include %s.", strings.Join(matched[:min(5, len(matched))], ", "))
+		}
+	case strings.Contains(low, "ramp") || strings.Contains(low, "learn") || strings.Contains(low, "gap") || strings.Contains(low, "missing"):
+		if len(missing) > 0 {
+			fmt.Fprintf(&b, "While I have not used %s in production yet, I am actively learning it and ramping up through hands-on practice.", strings.Join(missing[:min(2, len(missing))], " and "))
+		} else {
+			fmt.Fprintf(&b, "When ramping up on a new tool or stack for the %s role at %s, I start by connecting it to adjacent fundamentals and shipping a small scoped milestone early.", role, company)
+		}
+		if len(matched) > 0 {
+			fmt.Fprintf(&b, " My existing experience with %s gives me a strong foundation to transfer quickly.", strings.Join(matched[:min(3, len(matched))], ", "))
+		}
+	case strings.Contains(low, "collaborat") || strings.Contains(low, "team") || strings.Contains(low, "remote") || strings.Contains(low, "hybrid"):
+		fmt.Fprintf(&b, "I focus on clear written updates, early alignment on requirements, and constructive feedback so everyone on the %s team stays unblocked.", company)
+		if expLine != "" {
+			b.WriteString(" " + expLine)
 		}
 	default:
 		fmt.Fprintf(&b, "I am excited about the %s role at %s because it builds directly on my experience", role, company)

@@ -525,14 +525,79 @@
           return la.updated_at < lb.updated_at ? 1 : la.updated_at > lb.updated_at ? -1 : lb.id - la.id;
         });
 
-        const customPrompt = el("input", {type: "text", placeholder: "Custom question, e.g. Why do you want to work here?"});
-        const gen = async (kind, prompt) => {
-          const created = await attempt(() => api.drafts.create(jobId, {kind, prompt, generate: true}));
+        const customPrompt = el("input", {type: "text", placeholder: "Add a custom question, e.g. Why do you want to work here?"});
+        const gen = async (kind, prompt, {blank = false} = {}) => {
+          const payload = blank
+            ? {kind, prompt, content: "Write your answer here…", generate: false}
+            : {kind, prompt, generate: true};
+          const created = await attempt(() => api.drafts.create(jobId, payload));
           if (created?.value) {
             selectedDraftByGroup.set(`${kind}::${prompt.trim().toLowerCase()}`, created.value.id);
             drawDrafts();
           }
         };
+        const submitCustom = (blank = false) => {
+          const q = customPrompt.value.trim();
+          if (!q) return;
+          customPrompt.value = "";
+          gen("qa", q, {blank});
+        };
+        customPrompt.addEventListener("keydown", event => {
+          if (event.key === "Enter") { event.preventDefault(); submitCustom(false); }
+        });
+
+        // Build tailored likely questions from the job posting and skill-gap analysis.
+        const likelyTray = el("div", {class: "likely-questions", hidden: true});
+        const loadLikelyQuestions = async () => {
+          likelyTray.hidden = false;
+          fill(likelyTray, el("p", {class: "hint", text: "Analyzing posting for likely questions…"}));
+          const [jobRes, analysisRes] = await Promise.all([
+            attempt(() => api.jobs.get(jobId)),
+            attempt(() => api.jobs.analyze(jobId)),
+          ]);
+          const job = jobRes?.value || activeJob || {};
+          const a = analysisRes?.value;
+          const company = job.company_name || "this company";
+          const role = job.position_title || "this role";
+          const matched = (a?.required?.tech?.matched || []).map(m => m.skill);
+          const missing = (a?.required?.tech?.missing || []);
+          const candidates = [
+            `Why are you interested in the ${role} role at ${company}?`,
+            matched.length >= 2
+              ? `Tell us about a time you used ${matched[0]} and ${matched[1]} in production.`
+              : matched.length === 1
+                ? `Walk through a concrete project where you used ${matched[0]} and how you measured the impact.`
+                : "Describe a project you're most proud of and how you measured its impact.",
+            missing.length
+              ? `This role mentions ${missing.slice(0, 2).join(" and ")} — how would you ramp up quickly?`
+              : "Tell us about a tough technical trade-off you had to make under constraints.",
+            job.work_mode && job.work_mode !== "Any"
+              ? `How do you collaborate effectively and stay aligned in a ${job.work_mode.toLowerCase()} team?`
+              : "Describe a time you collaborated across teams or resolved a disagreement.",
+            `What excites you most about what ${company} is building right now?`,
+          ];
+          const existingPrompts = new Set(groupOrder.map(k => k.replace(/^[^:]+::/, "")));
+          const fresh = candidates.filter(q => !existingPrompts.has(q.toLowerCase()));
+          const shown = fresh.length ? fresh : candidates;
+          fill(likelyTray,
+            el("div", {class: "likely-q-head"},
+              el("strong", {text: `Likely questions for ${role} at ${company}`}),
+              el("div", {class: "round-actions"},
+                el("button", {type: "button", class: "primary", onclick: async () => {
+                  for (const q of shown) {
+                    await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt: q, generate: true}));
+                  }
+                  likelyTray.hidden = true;
+                  drawDrafts();
+                }}, `Draft all (${shown.length})`),
+                el("button", {type: "button", class: "quiet", onclick: () => { likelyTray.hidden = true; }}, "Hide"))),
+            el("ul", {class: "likely-q-list"}, shown.map(q => el("li", {class: "likely-q-item"},
+              el("span", {text: q}),
+              el("div", {class: "likely-q-actions"},
+                el("button", {type: "button", onclick: () => gen("qa", q)}, "Draft answer"),
+                el("button", {type: "button", class: "quiet", onclick: () => gen("qa", q, {blank: true})}, "Add blank"))))));
+        };
+
         const exportAllBtn = groupOrder.length ? el("button", {type: "button", title: "Download the latest version of every draft for this job as one Markdown file", onclick: () => {
           const sections = groupOrder.map(k => {
             const g = groups.get(k);
@@ -546,18 +611,16 @@
 
         const quickBar = el("div", {class: "round-actions"},
           el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
-          el("button", {type: "button", onclick: () => gen("qa", "Why this role?")}, "Why this role?"),
-          el("button", {type: "button", onclick: () => gen("qa", "Describe a relevant project")}, "Relevant project"),
+          el("button", {type: "button", onclick: () => gen("interview_prep", "Interview prep")}, "Generate interview prep"),
+          el("button", {type: "button", onclick: loadLikelyQuestions}, "Generate likely questions"),
           exportAllBtn,
           el("button", {type: "button", onclick: () => { showDrafts = false; drawBody(); }}, "Back to resume"));
         const customForm = el("div", {class: "round-actions draft-custom-form"},
           customPrompt,
-          el("button", {type: "button", onclick: () => {
-            const q = customPrompt.value.trim();
-            if (!q) return;
-            gen("qa", q);
-          }}, "Draft answer"));
+          el("button", {type: "button", onclick: () => submitCustom(false)}, "Draft answer"),
+          el("button", {type: "button", class: "quiet", onclick: () => submitCustom(true)}, "Add blank"));
 
+        const KIND_LABEL = {cover_letter: "Cover letter", qa: "Q&A", interview_prep: "Interview prep"};
         const ITERATE_CHIPS = [
           ["Shorter", "Make it shorter and more concise"],
           ["More detailed", "Make it more detailed with another concrete highlight from my resume"],
@@ -574,7 +637,7 @@
           const activeIdx = group.versions.indexOf(active);
           selectedDraftByGroup.set(key, active.id);
 
-          const area = el("textarea", {rows: 8, value: active.content});
+          const area = el("textarea", {rows: group.kind === "interview_prep" ? 12 : 8, value: active.content});
           area.value = active.content;
           const wc = el("span", {class: "hint"});
           const syncWC = () => {
@@ -634,7 +697,7 @@
           return el("section", {class: "tailor-card draft-card"},
             el("div", {class: "card-head"},
               el("h3", {text: group.prompt}),
-              el("span", {class: "engine-badge", text: group.kind === "cover_letter" ? "Cover letter" : "Q&A"}),
+              el("span", {class: "engine-badge", text: KIND_LABEL[group.kind] || "Q&A"}),
               versionTabs,
               wc),
             area,
@@ -673,11 +736,12 @@
                 }
               }}, group.versions.length > 1 ? `Delete v${activeIdx + 1}` : "Delete"),
               copyStatus));
-        }) : [el("p", {class: "hint", text: "No drafts yet. Generate a resume-grounded cover letter or application Q&A answer above."})];
+        }) : [el("p", {class: "hint", text: "No drafts yet. Generate a cover letter, interview prep sheet, or likely questions above—or add your own custom question."})];
 
         fill(stage,
-          el("div", {class: "round-head"}, el("h2", {text: "Cover letter & application Q&A"}), quickBar),
+          el("div", {class: "round-head"}, el("h2", {text: "Cover letter, Q&A & interview prep"}), quickBar),
           customForm,
+          likelyTray,
           el("div", {class: "cards"}, cardsEl));
       };
 
