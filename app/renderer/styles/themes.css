@@ -1,10 +1,11 @@
 /*
- * Color & Style Themes for Fistbump:
- * - 5 distinct style overhauls: Classic, Bubblegum (Hot Pink Barbie), Techno, Cyber (Green Matrix), Retro (CRT)
- * - 12 seasonal themes (January through December) + Auto (current month)
+ * Color, Style & Seasonal Art Themes for Fistbump:
+ * - 11 style overhauls: Classic, Bubblegum (Hot Pink Barbie), Techno, Cyber (Green Matrix),
+ *   Retro (Windows XP Luna), Vaporwave, Dracula, Matcha, Art Deco Gold, Ocean Abyss, 8-Bit Arcade
+ * - 12 seasonal themes (January through December) with distinct non-repetitive palettes + custom SVG art
  *
- * Each theme controls surfaces, panels, dialogs, sidebars, borders, shadows, typography accents,
- * and border radii so the entire app transforms universally.
+ * All SVG artwork is embedded as self-contained data URIs (works offline under strict CSP) with
+ * pointer-events: none so readability and clicks are never affected.
  */
 
 /* ==================== Universal Theme Wiring ==================== */
@@ -34,6 +35,8 @@
   background: var(--raised);
 }
 :root[data-theme] .home-welcome {
+  position: relative;
+  overflow: hidden;
   border-color: var(--note-line);
   background: var(--panel);
   border-radius: calc(var(--radius-card) + 4px);
@@ -47,6 +50,30 @@
 }
 :root[data-theme] .home-welcome-text > p {
   color: var(--muted);
+}
+
+/* Custom subtle themed background art layer on main panes and Home hero */
+:root[data-theme] .main {
+  background-color: var(--bg);
+  background-image: var(--theme-bg-art, none);
+  background-repeat: var(--theme-bg-repeat, repeat);
+  background-size: var(--theme-bg-size, 240px 240px);
+  background-position: var(--theme-bg-pos, center top);
+}
+:root[data-theme] .home-welcome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--theme-hero-art, none);
+  background-repeat: var(--theme-hero-repeat, repeat);
+  background-size: var(--theme-hero-size, 180px 180px);
+  background-position: var(--theme-hero-pos, right top);
+  opacity: var(--theme-hero-opacity, 0.22);
+}
+:root[data-theme] .home-welcome > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Apply theme-specific radii and display typography universally across controls and panels. */
@@ -92,9 +119,9 @@
   font-family: var(--theme-font-display, var(--display));
 }
 
-/* ==================== Style Themes ==================== */
+/* ==================== Style Themes (10 custom + Classic default) ==================== */
 
-/* Bubblegum: iconic Hot Pink Barbie — plush ultra-rounded pills, glossy highlights */
+/* 1. Bubblegum: Hot Pink Barbie — plush ultra-rounded pills, sparkles art */
 :root[data-theme="bubblegum"] {
   --bg: #b8146b;
   --sidebar: #8c0c50;
@@ -128,6 +155,9 @@
   --lit: inset 0 1px 0 rgba(255, 255, 255, 0.30);
   --lift-1: 0 3px 10px rgba(74, 4, 42, 0.35), 0 8px 20px -6px rgba(74, 4, 42, 0.45);
   --lift-2: 0 6px 16px rgba(74, 4, 42, 0.4), 0 20px 40px -10px rgba(74, 4, 42, 0.55);
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='%23ffffff' fill-opacity='0.10'%3E%3Cpath d='M36 18l3 9 9 3-9 3-3 9-3-9-9-3 9-3z'/%3E%3Cpath d='M138 64l2 6 6 2-6 2-2 6-2-6-6-2 6-2z'/%3E%3Cpath d='M86 130l4 10 10 4-10 4-4 10-4-10-10-4 10-4z'/%3E%3Ccircle cx='148' cy='140' r='3'/%3E%3Ccircle cx='30' cy='112' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.55;
 }
 :root[data-theme="bubblegum"] button.primary,
 :root[data-theme="bubblegum"] .button.primary {
@@ -135,7 +165,7 @@
   box-shadow: 0 3px 12px rgba(90, 6, 52, 0.35), inset 0 1px 0 #ffffff;
 }
 
-/* Cyber: Green Matrix Terminal — sharp 2px edges, monospace display, phosphor glow */
+/* 2. Cyber: Green Matrix Terminal — sharp 2px edges, monospace display, Matrix code rain art */
 :root[data-theme="cyber"] {
   --bg: #040b06;
   --sidebar: #020603;
@@ -170,6 +200,9 @@
   --lit: inset 0 1px 0 rgba(0, 255, 102, 0.14);
   --lift-1: 0 0 0 1px rgba(0, 255, 102, 0.14), 0 6px 18px rgba(0, 0, 0, 0.65);
   --lift-2: 0 0 14px rgba(0, 255, 102, 0.16), 0 14px 32px rgba(0, 0, 0, 0.75);
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%2300ff66' fill-opacity='0.08' font-family='monospace' font-size='13'%3E%3Ctext x='14' y='24'%3E01%3C/text%3E%3Ctext x='14' y='44'%3E10%3C/text%3E%3Ctext x='14' y='64'%3E11%3C/text%3E%3Ctext x='64' y='52'%3E10%3C/text%3E%3Ctext x='64' y='72'%3E01%3C/text%3E%3Ctext x='64' y='92'%3E00%3C/text%3E%3Ctext x='118' y='36'%3E01%3C/text%3E%3Ctext x='118' y='56'%3E11%3C/text%3E%3Ctext x='118' y='136'%3E10%3C/text%3E%3Ctext x='38' y='128'%3E00%3C/text%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.65;
 }
 :root[data-theme="cyber"] .home-welcome h2,
 :root[data-theme="cyber"] .view-title {
@@ -184,7 +217,7 @@
   border-radius: 2px;
 }
 
-/* Techno: Electric Cyan Synth — sleek angular 4px corners, crisp neon outlines */
+/* 3. Techno: Electric Cyan Synth — sleek angular 4px corners, circuit grid art */
 :root[data-theme="techno"] {
   --bg: #090d1f;
   --sidebar: #050814;
@@ -215,9 +248,12 @@
   --lit: inset 0 1px 0 rgba(0, 229, 255, 0.18);
   --lift-1: 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 229, 255, 0.10);
   --lift-2: 0 0 16px rgba(0, 229, 255, 0.14), 0 18px 36px -10px rgba(0, 0, 0, 0.65);
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M0 60h42l12-12h66M60 0v32l14 14v74' fill='none' stroke='%2300e5ff' stroke-opacity='0.07' stroke-width='1.2'/%3E%3Ccircle cx='42' cy='60' r='2.5' fill='%2300e5ff' fill-opacity='0.14'/%3E%3Ccircle cx='74' cy='46' r='2.5' fill='%238b5cf6' fill-opacity='0.18'/%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* Retro: Windows XP Luna inspired — Royal Blue task panes, glossy XP Start Green buttons, 3px bevels */
+/* 4. Retro: Windows XP Luna inspired — Royal Blue task panes, glossy XP Start Green buttons */
 :root[data-theme="retro"] {
   --bg: #1b48a1;
   --sidebar: #143985;
@@ -252,6 +288,10 @@
   --lit: inset 0 1px 0 rgba(255, 255, 255, 0.32);
   --lift-1: 0 2px 4px rgba(6, 20, 62, 0.45);
   --lift-2: 0 4px 14px rgba(6, 20, 62, 0.55);
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='220' viewBox='0 0 600 220'%3E%3Cpath d='M0 190 Q150 115 320 165 T600 140 L600 220 L0 220 Z' fill='%234cc24c' fill-opacity='0.14'/%3E%3Cpath d='M0 205 Q200 145 410 185 T600 170 L600 220 L0 220 Z' fill='%2386efac' fill-opacity='0.10'/%3E%3C/svg%3E");
+  --theme-bg-repeat: repeat-x;
+  --theme-bg-size: 600px 220px;
+  --theme-bg-pos: bottom left;
 }
 :root[data-theme="retro"] .toolbar {
   background: linear-gradient(180deg, #3d7ef2 0%, #245edb 58%, #1c4dc2 100%);
@@ -274,232 +314,467 @@
   background: linear-gradient(180deg, #6ed66e 0%, #48b548 55%, #349434 100%);
 }
 
-/* ==================== 12 Seasonal Themes ==================== */
+/* 5. Vaporwave: Miami Synth Sunset — twilight violet, neon pink & aqua, perspective grid art */
+:root[data-theme="vaporwave"] {
+  --bg: #1c0c36;
+  --sidebar: #130726;
+  --sidebar-glass: rgba(19, 7, 38, 0.94);
+  --surface: #29124d;
+  --raised: #381a69;
+  --panel: #251047;
+  --panel-hover: #351863;
+  --panel-line: rgba(255, 79, 216, 0.26);
+  --line: rgba(46, 242, 232, 0.18);
+  --line-strong: rgba(255, 79, 216, 0.42);
+  --accent: #ff4fd8;
+  --accent-hover: #ff7ee3;
+  --accent-ink: #1e0424;
+  --select: rgba(46, 242, 232, 0.22);
+  --select-strong: #0ea5a4;
+  --note: rgba(255, 79, 216, 0.11);
+  --note-line: rgba(46, 242, 232, 0.36);
+  --good: #2ef2e8;
+  --due: #ffe066;
+  --radius: 8px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Ccircle cx='148' cy='52' r='26' fill='%23ff4fd8' fill-opacity='0.12'/%3E%3Cpath d='M122 56h52M124 64h48M128 72h40' stroke='%231c0c36' stroke-width='3'/%3E%3Cpath d='M0 140h200M0 165h200M0 190h200M40 120l-20 80M100 120v80M160 120l20 80' stroke='%232ef2e8' stroke-opacity='0.10' stroke-width='1.2'/%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.6;
+}
 
-/* January — Winter Frost (crisp faceted 6px ice edges) */
+/* 6. Dracula: Classic Developer Dark — slate charcoal, soft purple, pink & mint */
+:root[data-theme="dracula"] {
+  --bg: #21222c;
+  --sidebar: #191a21;
+  --sidebar-glass: rgba(25, 26, 33, 0.94);
+  --surface: #282a36;
+  --raised: #343746;
+  --panel: #282a36;
+  --panel-hover: #343746;
+  --panel-line: rgba(189, 147, 249, 0.22);
+  --line: rgba(248, 248, 242, 0.10);
+  --line-strong: rgba(189, 147, 249, 0.36);
+  --accent: #bd93f9;
+  --accent-hover: #d1b3ff;
+  --accent-ink: #191a21;
+  --select: rgba(189, 147, 249, 0.24);
+  --select-strong: #6272a4;
+  --note: rgba(189, 147, 249, 0.10);
+  --note-line: rgba(189, 147, 249, 0.34);
+  --text: #f8f8f2;
+  --muted: rgba(248, 248, 242, 0.78);
+  --faint: rgba(248, 248, 242, 0.62);
+  --good: #50fa7b;
+  --due: #ffb86c;
+  --bad: #ff5555;
+  --radius: 8px;
+  --radius-card: 10px;
+  --radius-pill: 8px;
+}
+
+/* 7. Matcha Latte: Cozy Japanese Cafe — roasted matcha green & warm oat cream */
+:root[data-theme="matcha"] {
+  --bg: #18261e;
+  --sidebar: #111c16;
+  --sidebar-glass: rgba(17, 28, 22, 0.94);
+  --surface: #213328;
+  --raised: #2b4234;
+  --panel: #1f3026;
+  --panel-hover: #293f32;
+  --panel-line: rgba(167, 215, 148, 0.22);
+  --line: rgba(245, 242, 232, 0.12);
+  --line-strong: rgba(167, 215, 148, 0.36);
+  --accent: #a7d794;
+  --accent-hover: #c2e8b3;
+  --accent-ink: #122117;
+  --select: rgba(167, 215, 148, 0.22);
+  --select-strong: #4d8042;
+  --note: rgba(167, 215, 148, 0.10);
+  --note-line: rgba(167, 215, 148, 0.34);
+  --text: #f5f2e8;
+  --muted: rgba(245, 242, 232, 0.78);
+  --faint: rgba(245, 242, 232, 0.64);
+  --radius: 11px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23a7d794' stroke-opacity='0.10' stroke-width='1.5'%3E%3Cpath d='M35 65 C35 38 68 35 68 35 C68 35 65 68 35 65 Z'/%3E%3Cpath d='M35 65 L60 40'/%3E%3Cpath d='M125 145 C125 120 154 118 154 118 C154 118 152 148 125 145 Z'/%3E%3Cpath d='M125 145 L146 124'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.65;
+}
+
+/* 8. Art Deco Gold: Ultra-Luxe Obsidian & Champagne Gold — sharp 2px geometric fans */
+:root[data-theme="midnight-gold"] {
+  --bg: #0e0f14;
+  --sidebar: #08090d;
+  --sidebar-glass: rgba(8, 9, 13, 0.96);
+  --surface: #161821;
+  --raised: #202330;
+  --panel: #14161e;
+  --panel-hover: #1e212e;
+  --panel-line: rgba(229, 193, 88, 0.26);
+  --line: rgba(229, 193, 88, 0.14);
+  --line-strong: rgba(229, 193, 88, 0.42);
+  --accent: #e5c158;
+  --accent-hover: #f5d87d;
+  --accent-ink: #120e02;
+  --select: rgba(229, 193, 88, 0.20);
+  --select-strong: #9c7c21;
+  --note: rgba(229, 193, 88, 0.09);
+  --note-line: rgba(229, 193, 88, 0.38);
+  --text: #faf6eb;
+  --muted: rgba(250, 246, 235, 0.78);
+  --faint: rgba(250, 246, 235, 0.62);
+  --radius: 2px;
+  --radius-card: 3px;
+  --radius-pill: 2px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23e5c158' stroke-opacity='0.08' stroke-width='1'%3E%3Cpath d='M60 120 A60 60 0 0 1 120 60 M60 120 A40 40 0 0 1 100 80 M60 120 A20 20 0 0 1 80 100 M60 120 L120 60 M60 120 L95 60 M60 120 L60 60'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
+}
+
+/* 9. Ocean Abyss: Bioluminescent Deep Sea — aqua glow & coral accents, wave art */
+:root[data-theme="ocean-abyss"] {
+  --bg: #051829;
+  --sidebar: #03101c;
+  --sidebar-glass: rgba(3, 16, 28, 0.94);
+  --surface: #09243d;
+  --raised: #0f3354;
+  --panel: #082036;
+  --panel-hover: #0e2e4d;
+  --panel-line: rgba(34, 211, 238, 0.22);
+  --line: rgba(34, 211, 238, 0.14);
+  --line-strong: rgba(34, 211, 238, 0.34);
+  --accent: #22d3ee;
+  --accent-hover: #67e8f9;
+  --accent-ink: #031d29;
+  --select: rgba(34, 211, 238, 0.22);
+  --select-strong: #0e7490;
+  --note: rgba(34, 211, 238, 0.09);
+  --note-line: rgba(34, 211, 238, 0.34);
+  --radius: 12px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='140' viewBox='0 0 220 140'%3E%3Cpath d='M0 70 Q55 45 110 70 T220 70 M0 105 Q55 80 110 105 T220 105' fill='none' stroke='%2322d3ee' stroke-opacity='0.09' stroke-width='2'/%3E%3Ccircle cx='46' cy='34' r='4' fill='%2322d3ee' fill-opacity='0.12'/%3E%3Ccircle cx='164' cy='44' r='6' fill='%2322d3ee' fill-opacity='0.09'/%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.65;
+}
+
+/* 10. 8-Bit Arcade: High-voltage cabinet indigo, arcade yellow & pixel sharp 0px edges */
+:root[data-theme="arcade"] {
+  --bg: #120d31;
+  --sidebar: #0a071f;
+  --sidebar-glass: rgba(10, 7, 31, 0.96);
+  --surface: #1c154a;
+  --raised: #281f66;
+  --panel: #191242;
+  --panel-hover: #251c5e;
+  --panel-line: rgba(255, 230, 0, 0.30);
+  --line: rgba(255, 51, 102, 0.22);
+  --line-strong: rgba(255, 230, 0, 0.48);
+  --accent: #ffe600;
+  --accent-hover: #fff052;
+  --accent-ink: #140c00;
+  --select: rgba(255, 51, 102, 0.28);
+  --select-strong: #d91e52;
+  --note: rgba(255, 230, 0, 0.10);
+  --note-line: rgba(255, 230, 0, 0.42);
+  --good: #39ff88;
+  --due: #ff8c33;
+  --bad: #ff3366;
+  --radius: 0px;
+  --radius-card: 0px;
+  --radius-pill: 0px;
+  --theme-font-display: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --lift-1: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  --lift-2: 4px 4px 0 rgba(0, 0, 0, 0.65);
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%23ffe600' fill-opacity='0.10'%3E%3Crect x='24' y='24' width='6' height='6'/%3E%3Crect x='110' y='44' width='6' height='6'/%3E%3Crect x='116' y='50' width='6' height='6'/%3E%3Crect x='104' y='50' width='6' height='6'/%3E%3Crect x='110' y='56' width='6' height='6'/%3E%3C/g%3E%3Cg fill='%23ff3366' fill-opacity='0.12'%3E%3Crect x='50' y='110' width='6' height='6'/%3E%3Crect x='62' y='110' width='6' height='6'/%3E%3Crect x='56' y='116' width='6' height='6'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
+}
+:root[data-theme="arcade"] .chip,
+:root[data-theme="arcade"] .signal,
+:root[data-theme="arcade"] .cost-pill,
+:root[data-theme="arcade"] .fit-pill {
+  border-radius: 0px;
+}
+
+/* ==================== 12 Distinct Seasonal Themes + Custom SVG Art ==================== */
+
+/* January — Winter Frost (arctic blue + snowflakes) */
 :root[data-theme="january"] {
-  --bg: #0d2036;
-  --sidebar: #081526;
-  --sidebar-glass: rgba(8, 21, 38, 0.92);
-  --surface: #132c4a;
-  --raised: #1b3b61;
-  --accent: #7cd4ff;
-  --accent-hover: #a6e2ff;
+  --bg: #0c1f38;
+  --sidebar: #071426;
+  --sidebar-glass: rgba(7, 20, 38, 0.92);
+  --surface: #132d4f;
+  --raised: #1b3d69;
+  --accent: #7dd3fc;
+  --accent-hover: #bae6fd;
   --accent-ink: #062033;
-  --select: rgba(124, 212, 255, 0.22);
+  --select: rgba(125, 211, 252, 0.24);
   --select-strong: #2b7ea8;
-  --note: rgba(124, 212, 255, 0.10);
-  --note-line: rgba(124, 212, 255, 0.34);
+  --note: rgba(125, 211, 252, 0.10);
+  --note-line: rgba(125, 211, 252, 0.36);
   --radius: 5px;
   --radius-card: 8px;
   --radius-pill: 5px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg stroke='%23bae6fd' stroke-opacity='0.16' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M40 24v32M24 40h32M29 29l22 22M51 29L29 51'/%3E%3Cpath d='M145 90v26M132 103h26M136 94l18 18M154 94l-18 18'/%3E%3Cpath d='M70 144v20M60 154h20M63 147l14 14M77 147l-14 14'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='0.14'%3E%3Ccircle cx='120' cy='34' r='2.5'/%3E%3Ccircle cx='28' cy='120' r='2'/%3E%3Ccircle cx='168' cy='162' r='3'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* February — Valentine Rose (soft romantic 12px curves) */
+/* February — Valentine Rose (crimson-berry + hearts) */
 :root[data-theme="february"] {
-  --bg: #2b0f1e;
-  --sidebar: #1e0914;
-  --sidebar-glass: rgba(30, 9, 20, 0.92);
-  --surface: #3a1529;
-  --raised: #4d1d37;
+  --bg: #360d24;
+  --sidebar: #260718;
+  --sidebar-glass: rgba(38, 7, 24, 0.92);
+  --surface: #4a1332;
+  --raised: #611a42;
   --accent: #ff6b9d;
-  --accent-hover: #ff8fb5;
-  --accent-ink: #290613;
-  --select: rgba(255, 107, 157, 0.24);
-  --select-strong: #b83766;
-  --note: rgba(255, 107, 157, 0.11);
-  --note-line: rgba(255, 107, 157, 0.35);
-  --radius: 10px;
-  --radius-card: 16px;
-  --radius-pill: 12px;
+  --accent-hover: #ff94b8;
+  --accent-ink: #290513;
+  --select: rgba(255, 107, 157, 0.26);
+  --select-strong: #c93b6f;
+  --note: rgba(255, 107, 157, 0.12);
+  --note-line: rgba(255, 148, 184, 0.38);
+  --radius: 12px;
+  --radius-card: 18px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='%23ff6b9d' fill-opacity='0.15'%3E%3Cpath d='M42 48c0-6 5-10 10-10 4 0 7 2 8 5 1-3 4-5 8-5 5 0 10 4 10 10 0 9-18 19-18 19S42 57 42 48z'/%3E%3Cpath d='M124 114c0-4.5 3.5-7.5 7.5-7.5 3 0 5.2 1.5 6 3.8.8-2.3 3-3.8 6-3.8 4 0 7.5 3 7.5 7.5 0 6.8-13.5 14-13.5 14s-13.5-7.2-13.5-14z'/%3E%3Cpath d='M28 134c0-3 2.5-5 5-5 2 0 3.5 1 4 2.5.5-1.5 2-2.5 4-2.5 2.5 0 5 2 5 5 0 4.5-9 9.5-9 9.5s-9-5-9-9.5z'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* March — Early Spring Clover */
+/* March — Emerald Clover (lush emerald + shamrocks) */
 :root[data-theme="march"] {
-  --bg: #0d281e;
-  --sidebar: #081c14;
-  --sidebar-glass: rgba(8, 28, 20, 0.92);
-  --surface: #133629;
-  --raised: #1b4736;
-  --accent: #3ddc84;
-  --accent-hover: #65e89f;
-  --accent-ink: #052414;
-  --select: rgba(61, 220, 132, 0.22);
-  --select-strong: #1e874f;
-  --note: rgba(61, 220, 132, 0.10);
-  --note-line: rgba(61, 220, 132, 0.34);
-  --radius: 8px;
+  --bg: #0a2b1e;
+  --sidebar: #061e14;
+  --sidebar-glass: rgba(6, 30, 20, 0.92);
+  --surface: #103d2b;
+  --raised: #17523a;
+  --accent: #34d399;
+  --accent-hover: #6ee7b7;
+  --accent-ink: #042416;
+  --select: rgba(52, 211, 153, 0.24);
+  --select-strong: #15803d;
+  --note: rgba(52, 211, 153, 0.11);
+  --note-line: rgba(52, 211, 153, 0.36);
+  --radius: 9px;
   --radius-card: 14px;
   --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='%2334d399' fill-opacity='0.14'%3E%3Ccircle cx='46' cy='42' r='7'/%3E%3Ccircle cx='37' cy='52' r='7'/%3E%3Ccircle cx='55' cy='52' r='7'/%3E%3Cpath d='M46 53c0 7-2 11-5 15' fill='none' stroke='%2334d399' stroke-opacity='0.16' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='132' cy='116' r='6'/%3E%3Ccircle cx='124' cy='125' r='6'/%3E%3Ccircle cx='140' cy='125' r='6'/%3E%3Cpath d='M132 126c0 6-2 9-4 12' fill='none' stroke='%2334d399' stroke-opacity='0.16' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* April — Cherry Blossom (Sakura) */
+/* April — Cherry Blossom (twilight violet + sakura petals & raindrops) */
 :root[data-theme="april"] {
-  --bg: #23182e;
-  --sidebar: #181021;
-  --sidebar-glass: rgba(24, 16, 33, 0.92);
-  --surface: #2f203d;
-  --raised: #3e2b50;
-  --accent: #f6a6c1;
-  --accent-hover: #ffc2d6;
-  --accent-ink: #290e1c;
-  --select: rgba(246, 166, 193, 0.24);
-  --select-strong: #a85474;
-  --note: rgba(246, 166, 193, 0.11);
-  --note-line: rgba(246, 166, 193, 0.35);
+  --bg: #261838;
+  --sidebar: #1a1026;
+  --sidebar-glass: rgba(26, 16, 38, 0.92);
+  --surface: #35224d;
+  --raised: #462e66;
+  --accent: #f9a8d4;
+  --accent-hover: #fbcfe8;
+  --accent-ink: #2a0d22;
+  --select: rgba(249, 168, 212, 0.24);
+  --select-strong: #b05688;
+  --note: rgba(249, 168, 212, 0.11);
+  --note-line: rgba(249, 168, 212, 0.36);
   --radius: 10px;
   --radius-card: 16px;
   --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='%23f9a8d4' fill-opacity='0.16'%3E%3Cellipse cx='44' cy='40' rx='8' ry='4.5' transform='rotate(-25 44 40)'/%3E%3Cellipse cx='132' cy='58' rx='7' ry='4' transform='rotate(35 132 58)'/%3E%3Cellipse cx='92' cy='128' rx='9' ry='5' transform='rotate(-15 92 128)'/%3E%3Cellipse cx='32' cy='144' rx='6' ry='3.5' transform='rotate(40 32 144)'/%3E%3C/g%3E%3Cg fill='%2393c5fd' fill-opacity='0.14'%3E%3Cpath d='M148 124c0 4-3 7-3 7s-3-3-3-7a3 3 0 0 1 6 0z'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* May — Spring Meadow */
+/* May — Spring Meadow (fresh botanical teal + daisies & sunlit yellow) */
 :root[data-theme="may"] {
-  --bg: #15281c;
-  --sidebar: #0e1c13;
-  --sidebar-glass: rgba(14, 28, 19, 0.92);
-  --surface: #1d3626;
-  --raised: #274732;
-  --accent: #e8cc4a;
-  --accent-hover: #f5de6e;
-  --accent-ink: #221d04;
-  --select: rgba(232, 204, 74, 0.22);
-  --select-strong: #8f7b1b;
-  --note: rgba(232, 204, 74, 0.11);
-  --note-line: rgba(232, 204, 74, 0.35);
-  --radius: 9px;
-  --radius-card: 14px;
-  --radius-pill: 10px;
-}
-
-/* June — Summer Solstice */
-:root[data-theme="june"] {
-  --bg: #0b2a33;
-  --sidebar: #071e25;
-  --sidebar-glass: rgba(7, 30, 37, 0.92);
-  --surface: #113945;
-  --raised: #184a59;
-  --accent: #ff8a65;
-  --accent-hover: #ffa68a;
-  --accent-ink: #2b0f06;
-  --select: rgba(255, 138, 101, 0.24);
-  --select-strong: #b85334;
-  --note: rgba(255, 138, 101, 0.11);
-  --note-line: rgba(255, 138, 101, 0.35);
-  --radius: 9px;
+  --bg: #113026;
+  --sidebar: #0a211a;
+  --sidebar-glass: rgba(10, 33, 26, 0.92);
+  --surface: #184235;
+  --raised: #205746;
+  --accent: #fde047;
+  --accent-hover: #fef08a;
+  --accent-ink: #241f02;
+  --select: rgba(253, 224, 71, 0.22);
+  --select-strong: #9c8617;
+  --note: rgba(253, 224, 71, 0.11);
+  --note-line: rgba(253, 224, 71, 0.36);
+  --radius: 10px;
   --radius-card: 15px;
   --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='%23ffffff' fill-opacity='0.14'%3E%3Ccircle cx='48' cy='38' r='5'/%3E%3Ccircle cx='57' cy='46' r='5'/%3E%3Ccircle cx='48' cy='54' r='5'/%3E%3Ccircle cx='39' cy='46' r='5'/%3E%3Ccircle cx='134' cy='116' r='4.5'/%3E%3Ccircle cx='142' cy='123' r='4.5'/%3E%3Ccircle cx='134' cy='130' r='4.5'/%3E%3Ccircle cx='126' cy='123' r='4.5'/%3E%3C/g%3E%3Cg fill='%23fde047' fill-opacity='0.28'%3E%3Ccircle cx='48' cy='46' r='4.5'/%3E%3Ccircle cx='134' cy='123' r='4'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
 
-/* July — Coastal Sun */
+/* June — Summer Beach (Caribbean turquoise + coral sunset + beach umbrella, sun & waves art) */
+:root[data-theme="june"] {
+  --bg: #083344;
+  --sidebar: #052430;
+  --sidebar-glass: rgba(5, 36, 48, 0.92);
+  --surface: #0d455c;
+  --raised: #135975;
+  --accent: #fb7185;
+  --accent-hover: #fda4af;
+  --accent-ink: #2b0710;
+  --select: rgba(251, 113, 133, 0.24);
+  --select-strong: #c94058;
+  --note: rgba(253, 186, 116, 0.12);
+  --note-line: rgba(253, 186, 116, 0.38);
+  --radius: 10px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='200' viewBox='0 0 220 200'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Ccircle cx='50' cy='46' r='12' fill='%23fde047' fill-opacity='0.18'/%3E%3Cpath d='M50 26v5M50 61v5M30 46h5M65 46h5M36 32l3.5 3.5M60.5 56.5L64 60M64 32l-3.5 3.5M39.5 56.5L36 60' stroke='%23fde047' stroke-opacity='0.18' stroke-width='2'/%3E%3Cpath d='M132 126a22 22 0 0 1 44 0z' fill='%23fb7185' fill-opacity='0.18'/%3E%3Cpath d='M154 126l-6 26' stroke='%23fde68a' stroke-opacity='0.20' stroke-width='2.2'/%3E%3Cpath d='M14 166q22-10 44 0t44 0 44 0 44 0' stroke='%2367e8f9' stroke-opacity='0.14' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
+}
+
+/* July — Starlight Coast (firework royal indigo + sky blue & firework stars art) */
 :root[data-theme="july"] {
-  --bg: #0e2242;
-  --sidebar: #09172e;
-  --sidebar-glass: rgba(9, 23, 46, 0.92);
-  --surface: #142f59;
-  --raised: #1c3f75;
+  --bg: #111c4e;
+  --sidebar: #0a1236;
+  --sidebar-glass: rgba(10, 18, 54, 0.92);
+  --surface: #1a296b;
+  --raised: #23378c;
   --accent: #38bdf8;
-  --accent-hover: #67cefb;
-  --accent-ink: #051e30;
-  --select: rgba(56, 189, 248, 0.24);
-  --select-strong: #1c78a6;
-  --note: rgba(56, 189, 248, 0.11);
-  --note-line: rgba(56, 189, 248, 0.34);
+  --accent-hover: #7dd3fc;
+  --accent-ink: #041d30;
+  --select: rgba(56, 189, 248, 0.26);
+  --select-strong: #1d78a6;
+  --note: rgba(250, 204, 21, 0.11);
+  --note-line: rgba(250, 204, 21, 0.36);
   --radius: 8px;
   --radius-card: 13px;
   --radius-pill: 8px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg stroke-linecap='round' stroke-width='1.8'%3E%3Cpath d='M52 30v12M52 58v12M32 50h12M60 50h12M38 36l8 8M58 56l8 8M66 36l-8 8M46 56l-8 8' stroke='%23facc15' stroke-opacity='0.18'/%3E%3Cpath d='M148 110v10M148 134v10M131 127h10M155 127h10M136 115l7 7M153 132l7 7M160 115l-7 7M143 132l-7 7' stroke='%23fb7185' stroke-opacity='0.18'/%3E%3C/g%3E%3Cg fill='%2338bdf8' fill-opacity='0.16'%3E%3Cpolygon points='136,34 139,41 146,41 140,45 142,52 136,48 130,52 132,45 126,41 133,41'/%3E%3Cpolygon points='46,144 48,149 54,149 49,152 51,158 46,155 41,158 43,152 38,149 44,149'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
 }
 
-/* August — Golden Harvest */
+/* August — Tropical Sunset (deep sunset plum-magenta + golden mango + palm & sun art — NO brown!) */
 :root[data-theme="august"] {
-  --bg: #2b1b12;
-  --sidebar: #1f130c;
-  --sidebar-glass: rgba(31, 19, 12, 0.92);
-  --surface: #3a2519;
-  --raised: #4c3121;
-  --accent: #f4b942;
-  --accent-hover: #ffcf6b;
-  --accent-ink: #261803;
-  --select: rgba(244, 185, 66, 0.24);
-  --select-strong: #a87618;
-  --note: rgba(244, 185, 66, 0.11);
-  --note-line: rgba(244, 185, 66, 0.36);
-  --radius: 8px;
-  --radius-card: 13px;
-  --radius-pill: 8px;
+  --bg: #3b1230;
+  --sidebar: #290b21;
+  --sidebar-glass: rgba(41, 11, 33, 0.92);
+  --surface: #521a43;
+  --raised: #6b2358;
+  --accent: #fbbf24;
+  --accent-hover: #fcd34d;
+  --accent-ink: #291802;
+  --select: rgba(251, 191, 36, 0.24);
+  --select-strong: #b87c0d;
+  --note: rgba(251, 191, 36, 0.12);
+  --note-line: rgba(251, 191, 36, 0.38);
+  --radius: 10px;
+  --radius-card: 15px;
+  --radius-pill: 999px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Ccircle cx='148' cy='54' r='22' fill='%23fbbf24' fill-opacity='0.16'/%3E%3Cpath d='M48 160c2-28 8-48 16-68' fill='none' stroke='%23f472b6' stroke-opacity='0.18' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M64 92c-16-8-30-4-36 6M64 92c-8-16-22-18-32-12M64 92c14-12 28-8 34 2M64 92c18-2 28 8 30 18' fill='none' stroke='%23f472b6' stroke-opacity='0.18' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
 }
 
-/* September — Autumn Cider */
+/* September — Crisp Orchard (deep slate-teal + apple amber + maple leaves art — NO brown!) */
 :root[data-theme="september"] {
-  --bg: #291610;
-  --sidebar: #1c0f0b;
-  --sidebar-glass: rgba(28, 15, 11, 0.92);
-  --surface: #381f17;
-  --raised: #4a2a20;
-  --accent: #e88d38;
-  --accent-hover: #f7a75c;
-  --accent-ink: #261203;
-  --select: rgba(232, 141, 56, 0.24);
-  --select-strong: #a85c18;
-  --note: rgba(232, 141, 56, 0.11);
-  --note-line: rgba(232, 141, 56, 0.35);
+  --bg: #122b36;
+  --sidebar: #0b1e26;
+  --sidebar-glass: rgba(11, 30, 38, 0.92);
+  --surface: #1a3c4a;
+  --raised: #234f61;
+  --accent: #f97316;
+  --accent-hover: #fb923c;
+  --accent-ink: #240d02;
+  --select: rgba(249, 115, 22, 0.24);
+  --select-strong: #c2510a;
+  --note: rgba(249, 115, 22, 0.11);
+  --note-line: rgba(249, 115, 22, 0.36);
   --radius: 7px;
   --radius-card: 11px;
   --radius-pill: 7px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='%23f97316' fill-opacity='0.15'%3E%3Cpath d='M54 34l5 12 12-4-6 11 10 8-13 2-3 12-5-11-12 2 6-11-10-8 13-2z'/%3E%3Cpath d='M146 116l4 10 10-3-5 9 8 6-10 2-3 10-4-9-10 2 5-9-8-6 10-2z' fill='%23facc15' fill-opacity='0.14'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
 }
 
-/* October — Spooky Pumpkin (sharp gothic 4px edges) */
+/* October — Spooky Midnight (haunted purple + pumpkin orange + bats, pumpkins & moon art) */
 :root[data-theme="october"] {
-  --bg: #1b1326;
-  --sidebar: #120c1a;
-  --sidebar-glass: rgba(18, 12, 26, 0.94);
-  --surface: #261b36;
-  --raised: #34254a;
+  --bg: #1c1030;
+  --sidebar: #120921;
+  --sidebar-glass: rgba(18, 9, 33, 0.94);
+  --surface: #291845;
+  --raised: #37205c;
   --accent: #ff7b29;
-  --accent-hover: #ff9a57;
-  --accent-ink: #260d00;
-  --select: rgba(255, 123, 41, 0.24);
+  --accent-hover: #ff9c5c;
+  --accent-ink: #240c00;
+  --select: rgba(255, 123, 41, 0.26);
   --select-strong: #b84d0e;
-  --note: rgba(255, 123, 41, 0.11);
-  --note-line: rgba(255, 123, 41, 0.36);
+  --note: rgba(255, 123, 41, 0.12);
+  --note-line: rgba(255, 123, 41, 0.38);
   --radius: 4px;
   --radius-card: 6px;
   --radius-pill: 4px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='200' viewBox='0 0 220 200'%3E%3Cpath d='M48 34a16 16 0 1 0 16 24 12 12 0 1 1-16-24z' fill='%23fde047' fill-opacity='0.18'/%3E%3Cpath d='M132 54c6-8 14-8 18-2 4-6 12-6 18 2-5 1-8 4-10 8-3-3-6-3-8 0-2-3-5-3-8 0-2-4-5-7-10-8z' fill='%23c084fc' fill-opacity='0.20'/%3E%3Cg fill='%23ff7b29' fill-opacity='0.18'%3E%3Cellipse cx='64' cy='144' rx='18' ry='13'/%3E%3Crect x='61' y='125' width='6' height='7' rx='2' fill='%234ade80' fill-opacity='0.22'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
 }
 
-/* November — Cozy Spice */
+/* November — Cranberry Harvest (deep wine-cranberry + harvest gold + falling autumn leaves — NO muddy brown!) */
 :root[data-theme="november"] {
-  --bg: #261812;
-  --sidebar: #1a100c;
-  --sidebar-glass: rgba(26, 16, 12, 0.92);
-  --surface: #34221a;
-  --raised: #452e23;
-  --accent: #d99242;
-  --accent-hover: #ebac63;
-  --accent-ink: #241304;
-  --select: rgba(217, 146, 66, 0.24);
-  --select-strong: #995f1e;
-  --note: rgba(217, 146, 66, 0.11);
-  --note-line: rgba(217, 146, 66, 0.35);
+  --bg: #38121f;
+  --sidebar: #260a14;
+  --sidebar-glass: rgba(38, 10, 20, 0.92);
+  --surface: #4d192b;
+  --raised: #632238;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-ink: #261402;
+  --select: rgba(245, 158, 11, 0.24);
+  --select-strong: #b46909;
+  --note: rgba(245, 158, 11, 0.12);
+  --note-line: rgba(245, 158, 11, 0.38);
+  --radius: 9px;
+  --radius-card: 13px;
+  --radius-pill: 9px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill-opacity='0.16'%3E%3Cpath d='M48 36c14 4 22 14 20 28-14 2-24-6-20-28z' fill='%23f59e0b'/%3E%3Cpath d='M144 60c-12 6-18 16-14 28 12 0 20-8 14-28z' fill='%23fb7185'/%3E%3Cpath d='M86 132c14-2 24 6 24 20-14 4-24-4-24-20z' fill='%23fb923c'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.75;
+}
+
+/* December — Holiday Evergreen (pine forest + gold & crimson + glowing Christmas lights & snow!) */
+:root[data-theme="december"] {
+  --bg: #0a291c;
+  --sidebar: #061c13;
+  --sidebar-glass: rgba(6, 28, 19, 0.92);
+  --surface: #113b29;
+  --raised: #184f38;
+  --accent: #facc15;
+  --accent-hover: #fde047;
+  --accent-ink: #211803;
+  --select: rgba(239, 68, 68, 0.30);
+  --select-strong: #b91c1c;
+  --note: rgba(250, 204, 21, 0.12);
+  --note-line: rgba(250, 204, 21, 0.38);
   --radius: 8px;
   --radius-card: 12px;
   --radius-pill: 8px;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg stroke='%23e2f8ee' stroke-opacity='0.14' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M44 42v24M32 54h24M36 46l16 16M52 46L36 62'/%3E%3Cpath d='M148 122v20M138 132h20M141 125l14 14M155 125l-14 14'/%3E%3C/g%3E%3Ccircle cx='116' cy='46' r='2.5' fill='%23facc15' fill-opacity='0.22'/%3E%3Ccircle cx='54' cy='154' r='2.5' fill='%23ef4444' fill-opacity='0.22'/%3E%3C/svg%3E");
+  --theme-hero-art: var(--theme-bg-art);
+  --theme-hero-opacity: 0.7;
 }
-
-/* December — Holiday Evergreen */
-:root[data-theme="december"] {
-  --bg: #0c241b;
-  --sidebar: #071912;
-  --sidebar-glass: rgba(7, 25, 18, 0.92);
-  --surface: #123326;
-  --raised: #1a4534;
-  --accent: #e5b842;
-  --accent-hover: #f5cd64;
-  --accent-ink: #211803;
-  --select: rgba(220, 68, 82, 0.28);
-  --select-strong: #a62b38;
-  --note: rgba(229, 184, 66, 0.11);
-  --note-line: rgba(229, 184, 66, 0.35);
-  --radius: 7px;
-  --radius-card: 10px;
-  --radius-pill: 7px;
+/* Festive string of glowing Christmas lights draped along the bottom edge of the toolbar in December! */
+:root[data-theme="december"] .toolbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 5;
+  background-repeat: repeat-x;
+  background-size: 160px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='16' viewBox='0 0 160 16'%3E%3Cpath d='M0 2 Q40 9 80 2 T160 2' fill='none' stroke='%2304120c' stroke-width='1.5'/%3E%3Ccircle cx='20' cy='7' r='3.5' fill='%23ef4444'/%3E%3Ccircle cx='60' cy='7' r='3.5' fill='%23facc15'/%3E%3Ccircle cx='100' cy='7' r='3.5' fill='%2338bdf8'/%3E%3Ccircle cx='140' cy='7' r='3.5' fill='%234ade80'/%3E%3C/svg%3E");
 }

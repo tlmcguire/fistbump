@@ -21,7 +21,10 @@ window.Prefs = (() => {
     "january", "february", "march", "april", "may", "june",
     "july", "august", "september", "october", "november", "december",
   ];
-  const STYLE_THEMES = ["classic", "bubblegum", "techno", "cyber", "retro"];
+  const STYLE_THEMES = [
+    "classic", "bubblegum", "techno", "cyber", "retro",
+    "vaporwave", "dracula", "matcha", "midnight-gold", "ocean-abyss", "arcade",
+  ];
   const ALLOWED = {
     theme: [...STYLE_THEMES, "auto-season", ...SEASONAL_THEMES],
     language: ["system", "en", "es", "fr", "de"],

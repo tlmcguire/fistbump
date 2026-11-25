@@ -161,7 +161,7 @@ test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', 
   assert.ok(routes.includes('"drafts:list"') && routes.includes('"drafts:create"'), 'routes.rs should map drafts IPC channels');
 });
 
-test('Prefs supports 5 style themes, 12 seasonal themes, and auto-season', () => {
+test('Prefs supports 11 style themes, 12 seasonal themes, and auto-season', () => {
   const storage = new Map();
   const dataset = {};
   const sandbox = {
@@ -180,6 +180,7 @@ test('Prefs supports 5 style themes, 12 seasonal themes, and auto-season', () =>
 
   const expected = [
     'bubblegum', 'techno', 'cyber', 'retro',
+    'vaporwave', 'dracula', 'matcha', 'midnight-gold', 'ocean-abyss', 'arcade',
     'january', 'february', 'march', 'april', 'may', 'june',
     'july', 'august', 'september', 'october', 'november', 'december',
   ];
@@ -190,7 +191,7 @@ test('Prefs supports 5 style themes, 12 seasonal themes, and auto-season', () =>
   }
   Prefs.set('theme', 'auto-season');
   assert.equal(Prefs.get('theme'), 'auto-season');
-  assert.ok(expected.slice(4).includes(dataset.theme), `auto-season should resolve to a month, got ${dataset.theme}`);
+  assert.ok(expected.slice(10).includes(dataset.theme), `auto-season should resolve to a month, got ${dataset.theme}`);
 
   Prefs.set('theme', 'not-a-theme');
   assert.equal(Prefs.get('theme'), 'auto-season', 'invalid theme should be ignored');
