@@ -524,12 +524,60 @@
             },
           }, "+ Save new version");
 
+          const aiGenBtn = el("button", {
+            type: "button",
+            title: "Generate a tailored interview prep sheet using your configured local or remote AI model",
+            onclick: async () => {
+              if (!api.drafts?.create) return;
+              aiGenBtn.disabled = true;
+              const started = Date.now();
+              prepStatus.textContent = "Generating prep sheet with AI… 0 s";
+              const timer = setInterval(() => {
+                const sec = Math.round((Date.now() - started) / 1000);
+                prepStatus.textContent = sec >= 20
+                  ? `Generating prep sheet with AI… ${sec} s (taking longer than usual — check Settings → AI suggestions)`
+                  : `Generating prep sheet with AI… ${sec} s`;
+              }, 1000);
+              let timeoutId = null;
+              try {
+                const created = await Promise.race([
+                  api.drafts.create(a.job_id, {kind: "interview_prep", prompt: "Interview prep", mode: "ai", generate: true}),
+                  new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error("AI stalled after 90 s. Check Settings → AI suggestions.")), 90000);
+                  }),
+                ]);
+                const sec = ((Date.now() - started) / 1000).toFixed(1);
+                if (created?.content) {
+                  activeDraft = created;
+                  versions.push(created);
+                  mdContent = created.content;
+                  lastSaved = created.content;
+                  editor.value = mdContent;
+                  syncWC();
+                  if (mode === "preview") preview.replaceChildren(renderSimpleMarkdown(mdContent));
+                  drawVersions();
+                  const eng = created.engine === "local" || created.engine === "remote" ? `${created.engine} AI` : "Instant";
+                  prepStatus.textContent = `Generated with ${eng} in ${sec} s.`;
+                }
+              } catch (err) {
+                const msg = err?.message || "Could not generate with AI";
+                prepStatus.textContent = /unknown field mode|kind must be cover_letter or qa/i.test(msg)
+                  ? "Rebuild Go backend (npm run build:go) to enable AI prep sheets."
+                  : msg;
+              } finally {
+                clearInterval(timer);
+                clearTimeout(timeoutId);
+                aiGenBtn.disabled = false;
+              }
+            },
+          }, "Generate with AI");
+
           const regenBtn = el("button", {
             type: "button",
             class: "quiet",
-            title: "Reset editor to a fresh template from this job and your resume",
+            title: "Reset editor to a fresh Instant template from this job and your resume",
             onclick: async () => {
-              if (editor.value.trim() && !await window.UI.ask("Replace the editor text with a fresh prep sheet template?", {confirm: "Replace", title: "Regenerate prep sheet"})) return;
+              if (editor.value.trim() && !await window.UI.ask("Replace the editor text with a fresh prep sheet template?", {confirm: "Replace", title: "Reset prep sheet"})) return;
               editor.value = buildDefaultPrep();
               mdContent = editor.value;
               syncWC();
@@ -542,6 +590,7 @@
             el("div", {class: "prep-toolbar"},
               modeToggle,
               versionsBar,
+              aiGenBtn,
               saveNewBtn,
               regenBtn,
               wc),

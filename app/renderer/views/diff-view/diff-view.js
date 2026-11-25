@@ -737,9 +737,17 @@
             const {value, elapsed} = isAI
               ? await runTimedAI(label, run, {statusEl})
               : {value: await run(), elapsed: null};
-            if (isAI && elapsed) (statusEl ? (statusEl.textContent = `Done in ${elapsed}.`) : say(`Done in ${elapsed}.`));
-            else if (!statusEl) say("");
-            return {value, groupKind: kind};
+            const actualEngine = value?.engine || "";
+            const usedRealAI = actualEngine === "local" || actualEngine === "remote";
+            if (isAI) {
+              const msg = usedRealAI
+                ? `Done with ${actualEngine} AI in ${elapsed}.`
+                : "Rebuild Go backend (npm run build:go) for AI drafts — used Instant mode.";
+              if (statusEl) statusEl.textContent = msg; else say(msg);
+            } else if (!statusEl) {
+              say("");
+            }
+            return {value, groupKind: kind, engine: actualEngine || "rules"};
           } catch (err) {
             const msg = err?.message || "";
             const oldBinary = /unknown field (?:mode|base_content|instruction)|kind must be cover_letter or qa/i.test(msg);
@@ -818,7 +826,8 @@
               );
               if (Array.isArray(res?.questions) && res.questions.length) {
                 candidates = res.questions;
-                timingNote = `Generated with AI in ${elapsed}.`;
+                const eng = res.engine === "local" || res.engine === "remote" ? `${res.engine} AI` : "Instant";
+                timingNote = `Generated with ${eng} in ${elapsed}.`;
                 say("");
               }
             } catch (err) {
@@ -864,10 +873,17 @@
                 el("button", {type: "button", class: "primary", onclick: async () => {
                   const edited = inputs.map(i => i.value.trim()).filter(Boolean);
                   const started = Date.now();
+                  let aiCount = 0;
+                  let lastAiEngine = "";
                   for (let i = 0; i < edited.length; i++) {
-                    await createDraftSmart("qa", edited[i], {statusEl: null});
+                    const r = await createDraftSmart("qa", edited[i], {statusEl: null});
+                    if (r?.engine === "local" || r?.engine === "remote") { aiCount++; lastAiEngine = r.engine; }
                   }
-                  if (draftGenMode === "ai") say(`Drafted ${edited.length} answers with AI in ${fmtSec(Date.now() - started)}.`);
+                  if (draftGenMode === "ai") {
+                    say(aiCount === edited.length && aiCount > 0
+                      ? `Drafted ${edited.length} answers with ${lastAiEngine} AI in ${fmtSec(Date.now() - started)}.`
+                      : `Drafted ${edited.length} answers (${aiCount} with AI, ${edited.length - aiCount} Instant) in ${fmtSec(Date.now() - started)}.`);
+                  }
                   likelyTray.hidden = true;
                   drawDrafts();
                 }}, `Draft all (${shown.length})`),

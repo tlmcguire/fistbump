@@ -98,6 +98,7 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 	content := strings.TrimSpace(body.Content)
 	instruction := strings.TrimSpace(body.Instruction)
 	baseContent := strings.TrimSpace(body.BaseContent)
+	usedEngine := ""
 	if instruction != "" || content == "" || body.Generate {
 		job, err := s.store.GetJob(r.Context(), jobID)
 		if err != nil {
@@ -113,14 +114,14 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 				if baseContent == "" {
 					baseContent = content
 				}
-				content, aiErr = s.iterateDraftTextAI(r.Context(), job, master, kind, prompt, baseContent, instruction)
+				content, usedEngine, aiErr = s.iterateDraftTextAI(r.Context(), job, master, kind, prompt, baseContent, instruction)
 			} else {
-				content, aiErr = s.generateDraftTextAI(r.Context(), job, master, kind, prompt)
+				content, usedEngine, aiErr = s.generateDraftTextAI(r.Context(), job, master, kind, prompt)
 			}
 			if aiErr != nil {
 				if errors.Is(aiErr, ai.ErrUnavailable) {
 					return apiError{status: http.StatusServiceUnavailable, code: "ai_unavailable",
-						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Deterministic mode."}
+						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Instant mode."}
 				}
 				return apiError{status: http.StatusBadGateway, code: "ai_failed", message: aiErr.Error()}
 			}
@@ -129,15 +130,20 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 				baseContent = content
 			}
 			content = s.iterateDraftText(job, master, kind, prompt, baseContent, instruction)
+			usedEngine = ai.EngineRules
 		} else {
 			content = s.generateDraftText(job, master, kind, prompt)
+			usedEngine = ai.EngineRules
 		}
 	}
 	created, err := s.store.CreateDraft(r.Context(), jobID, kind, prompt, content)
 	if err != nil {
 		return storeError(err, "Draft")
 	}
-	writeJSON(w, http.StatusCreated, created)
+	writeJSON(w, http.StatusCreated, struct {
+		models.Draft
+		Engine string `json:"engine,omitempty"`
+	}{Draft: created, Engine: usedEngine})
 	return nil
 }
 
@@ -610,12 +616,12 @@ func (s *Server) generateQuestionsAI(ctx context.Context, job models.Job, master
 		}
 	}
 	if len(out) == 0 {
-		return s.generateQuestionsDeterministic(job, master), engine, nil
+		return nil, "", errors.New("the AI model did not return readable questions — try again or switch to Instant mode")
 	}
 	return out, engine, nil
 }
 
-func (s *Server) generateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt string) (string, error) {
+func (s *Server) generateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt string) (string, string, error) {
 	mode, _ := s.aiMode(ctx)
 	var task string
 	switch kind {
@@ -639,11 +645,17 @@ func (s *Server) generateDraftTextAI(ctx context.Context, job models.Job, master
 			Content: task + "\n\n" + s.draftContextBlock(job, master),
 		},
 	}
-	reply, _, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
-	return reply, err
+	reply, engine, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
+	if err != nil {
+		return "", "", err
+	}
+	if strings.TrimSpace(reply) == "" {
+		return "", "", errors.New("the AI model returned an empty reply — try again or switch to Instant mode")
+	}
+	return reply, engine, nil
 }
 
-func (s *Server) iterateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt, baseContent, instruction string) (string, error) {
+func (s *Server) iterateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt, baseContent, instruction string) (string, string, error) {
 	mode, _ := s.aiMode(ctx)
 	msgs := []ai.Message{
 		{
@@ -657,6 +669,12 @@ func (s *Server) iterateDraftTextAI(ctx context.Context, job models.Job, master 
 				kind, prompt, instruction, baseContent, s.draftContextBlock(job, master)),
 		},
 	}
-	reply, _, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
-	return reply, err
+	reply, engine, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
+	if err != nil {
+		return "", "", err
+	}
+	if strings.TrimSpace(reply) == "" {
+		return "", "", errors.New("the AI model returned an empty reply — try again or switch to Instant mode")
+	}
+	return reply, engine, nil
 }
