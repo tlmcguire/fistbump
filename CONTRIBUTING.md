@@ -203,13 +203,12 @@ This checks for unused code, error-handling problems, suspicious constructs, sty
 ### Recommended Pre-PR Checklist
 
 ```bash
-gofmt -w .
-go test ./...
-go test -race ./...
-go test -cover ./...
-go vet ./...
-go mod tidy
-golangci-lint run
+# Go backend
+cd backend && gofmt -w . && go test ./... && go test -race ./... && go vet ./... && cd ..
+
+# Rust host & renderer
+npm run test:rust
+npm test
 ```
 
 After running `go mod tidy`, review the resulting changes (`git status`, `git diff`) to confirm that formatting changes, dependency changes, generated files, and test artifacts are intentional before committing.

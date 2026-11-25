@@ -362,7 +362,7 @@ erDiagram
 
 `jobs.searched_at` is refreshed on re-import and drives garbage collection. Applications reference jobs with `ON DELETE RESTRICT`, so tracked jobs are never collected. Skills are stored as JSON arrays on `experiences` and `jobs`, not in a separate table. `settings` is a standalone key-value table with defaults applied in code.
 
-## Planned file structure
+## File structure
 
 ```
 fistbump/
@@ -372,13 +372,18 @@ fistbump/
 ├── src-tauri/
 │   ├── Cargo.toml
 │   ├── tauri.conf.json
+│   ├── capabilities/    default.json
+│   ├── icons/           32x32, 128x128, 128x128@2x, 512x512 PNGs
+│   ├── resources/bin/   staged fistbump-core + llama-server binaries (gitignored)
 │   └── src/             main.rs, lib.rs, backend.rs, commands.rs, routes.rs, secrets.rs, menus.rs, updates.rs
 ├── app/
 │   ├── renderer/
 │   │   ├── index.html
-│   │   ├── styles/      base.css, components.css
-│   │   ├── js/          tauri-bridge.js, app.js, api.js
-│   │   └── views/       resume-builder/, job-parser/, diff-view/, tracker/, settings/
+│   │   ├── error.html
+│   │   ├── styles/      base.css, views.css, finish.css, motion.css
+│   │   ├── js/          tauri-bridge.js, app.js, api.js, pdf-preview.js, prefs.js, i18n.js
+│   │   ├── vendor/      pdfjs/ (synced by postinstall, gitignored)
+│   │   └── views/       home/, resume-builder/, job-parser/, diff-view/, tracker/, settings/
 │   └── tests/
 ├── backend/
 │   ├── go.mod
@@ -386,7 +391,7 @@ fistbump/
 │   ├── internal/
 │   │   ├── api/         server, middleware, respond, resume, jobs, revisions,
 │   │   │                tailored, applications, connectors, ai, models, settings, storage
-│   │   ├── db/          db.go, migrations/001_init.sql
+│   │   ├── db/          db.go, migrations/
 │   │   ├── models/
 │   │   ├── store/       profile, experience, education, resume, job_listing, revision,
 │   │   │                suggestion, tailored_resume, application, settings, gc
@@ -397,13 +402,15 @@ fistbump/
 │   │   ├── connectors/  connector.go, greenhouse/
 │   │   └── pdf/
 │   └── testdata/        seed.sql, postings/, api/
-├── bin/                 Go build output per OS/arch (gitignored)
-├── scripts/             build-go.js, fetch-llama-server.js, verify-greenhouse-boards.js
-├── docs/                architecture.md, schema.md, api.md, proposal.pdf
-└── .github/workflows/   build.yml
+├── e2e/                 harness.js, fixtures.js, smoke.spec.js
+├── bin/                 Go build output + llama-server per OS/arch (gitignored)
+├── build/               installer artwork (icon.icns/ico/png, background.tiff, installerSidebar.bmp)
+├── scripts/             build-go.js, fetch-llama-server.js, stage-resources.js, sync-pdfjs.js, screenshots.js
+├── docs/                architecture.md, schema.md, api.md, user-guide.md, release-checklist.md
+└── .github/workflows/   app.yml, build.yml, e2e.yml, go.yml
 ```
 
-Each Go source file `foo.go` gets an adjacent `foo_test.go`. Most of these files don't exist yet; directories are currently held open with `.gitkeep`.
+Each Go source file `foo.go` has an adjacent `foo_test.go`.
 
 ## API keys and secrets
 
@@ -420,9 +427,9 @@ Greenhouse's public board API needs no key. A future connector that does (USAJOB
 ```mermaid
 sequenceDiagram
     participant R as Renderer
-    participant P as Preload
-    participant M as Main (secrets.js)
-    participant D as OS keystore
+    participant P as Bridge (tauri-bridge.js)
+    participant M as Tauri host (secrets.rs)
+    participant D as OS keychain
     participant G as Go backend
     participant A as Remote AI API
 
@@ -446,18 +453,18 @@ sequenceDiagram
 
 Handling:
 
-- **Entry.** The settings view passes the key through one preload method, `setRemoteKey`. No method returns it. The renderer sees only `has_key` from `GET /v1/ai/status`.
-- **Storage.** `secrets.rs` stores the key in the OS keychain via `keyring` (macOS Keychain, Windows Credential Manager, Linux Secret Service). If no keyring is available, the key is kept for the session only and never written in plaintext.
+- **Entry.** The settings view passes the key through the bridge method `ai.setRemote`. No method returns it. The renderer sees only `has_key` from `GET /v1/ai/status`.
+- **Storage.** `secrets.rs` stores the key in the OS keychain via `keyring` (`com.fistbump.desktop`: macOS Keychain, Windows Credential Manager, Linux Secret Service). If no keyring is available, the key is kept for the session only and never written in plaintext.
 - **Hand-off.** The Tauri host reads the key from the OS keychain and sends it to `PUT /v1/ai/remote`. Go holds it in memory and never writes it to disk. `backend.rs` re-sends it after every restart.
-- **Backend token.** Main generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time.
+- **Backend token.** The Tauri host generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time.
 - **Outbound.** Go sends the key only to the configured `base_url`. HTTPS is required unless the host is loopback (local Ollama). Cross-host redirects are not followed.
 - **Logging.** Middleware redacts `Authorization` and skips bodies on `/v1/ai/remote` and `/v1/models/token`. Remote error messages are trimmed before reaching the UI.
-- **Removal.** Clearing the key deletes the ciphertext in main and calls `DELETE /v1/ai/remote`.
+- **Removal.** Clearing the key removes the entry from the OS keychain and calls `DELETE /v1/ai/remote`.
 - **Limits.** Malware running as the same OS user can read process memory or query the keystore. The design protects against other apps, other users, backups, and the renderer, not a compromised account.
 
 ## Security model
 
-- Renderer is sandboxed from Node; only the preload surface is reachable.
+- Renderer runs inside the OS WebView with no direct filesystem or process access; only the Tauri bridge surface (`window.api`) is reachable.
 - The backend is bound to loopback and gated by a per-launch bearer token.
 - Secrets are handled as described in "API keys and secrets" above: stored in the OS keychain via `keyring`, memory only in Go, never in SQLite or logs.
 - No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search, opens a listing, or saves a posting.
@@ -472,8 +479,10 @@ Handling:
 
 ## Testing
 
-- Go: unit tests beside each source file; fixtures in `backend/testdata` (`seed.sql`, sample postings, saved connector responses).
-- JS: renderer and IPC handler tests in `app/tests`.
+- Go: unit tests beside each source file (`cd backend && go test ./...`); fixtures in `backend/testdata` (`seed.sql`, sample postings, saved connector responses).
+- Rust: host supervisor and IPC route validation tests in `src-tauri/src/` (`npm run test:rust`).
+- JS: renderer wiring, i18n, and helper tests in `app/tests/` (`npm test`).
+- E2E: Playwright Chromium smoke tests backed by `fistbump-core` in `e2e/` (`npm run test:e2e`).
 - Latency check for NFR-3 on skill-gap analysis, plus fallback testing with no model present.
 
 ## Q&A
