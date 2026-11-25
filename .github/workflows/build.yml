@@ -87,18 +87,22 @@ jobs:
             node_platform: linux
             arch: x64
             target: x86_64-unknown-linux-gnu
+            asset_label: Linux-x86_64
           - os: macos-latest
             node_platform: darwin
             arch: arm64
             target: aarch64-apple-darwin
+            asset_label: macOS-arm64
           - os: macos-latest
             node_platform: darwin
             arch: x64
             target: x86_64-apple-darwin
+            asset_label: macOS-x64
           - os: windows-latest
             node_platform: win32
             arch: x64
             target: x86_64-pc-windows-msvc
+            asset_label: Windows-x64
     defaults:
       run:
         shell: bash
@@ -151,4 +155,6 @@ jobs:
           releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
+          assetNamePattern: 'FistBump-[version]-${{ matrix.asset_label }}[ext]'
+          updaterJsonPreferNsis: true
           args: --target ${{ matrix.target }}

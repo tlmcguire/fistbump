@@ -227,10 +227,10 @@ many questions at a time, so this release makes Fistbump a good guest:
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump_0.3.0_x64-setup.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump_0.3.0_aarch64.dmg` | unsigned |
-| macOS 12 and later, Intel | `FistBump_0.3.0_x64.dmg` | unsigned |
-| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump_0.3.0_amd64.AppImage` | x64, unsigned (`libwebkit2gtk-4.1`) |
+| Windows 10 and 11 | `FistBump-0.3.0-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.3.0-macOS-arm64.dmg` | unsigned |
+| macOS 12 and later, Intel | `FistBump-0.3.0-macOS-x64.dmg` | unsigned |
+| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump-0.3.0-Linux-x86_64.AppImage` | x64, unsigned (`libwebkit2gtk-4.1`) |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
