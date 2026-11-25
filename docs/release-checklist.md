@@ -13,7 +13,7 @@ Fill in the numbers on the size line and put the checklist in the release notes.
 
 ## On each platform
 
-Do this on Windows 10 and 11, macOS 12 or later (on both an Apple silicon and an Intel Mac, using the matching `.dmg`) and Linux (Ubuntu 20.04 or later, Fedora 36 or later).
+Do this on Windows 10 and 11, macOS 12 or later (on both an Apple silicon and an Intel Mac, using the matching `.dmg`) and Linux (Ubuntu 22.04 or later, Fedora 36 or later).
 
 Use a **fresh machine or a new user account**, so nothing is left over from an earlier build.
 
@@ -63,11 +63,11 @@ Record the numbers. NFR-5 asks for an install under **250 MB**, not counting mod
 
 - [ ] Installer size: ______
 - [ ] Installed size: ______
-- [ ] Share of the Electron runtime: ______
+- [ ] Share of the Tauri host: ______
 - [ ] Share of `fistbump-core`: ______
 - [ ] Share of `llama-server`: ______
 
-Record the same numbers for each platform. The Electron runtime alone is large, so the limit may be exceeded: record the numbers anyway, and note the options in the release notes.
+Record the same numbers for each platform.
 
 ### Uninstall
 

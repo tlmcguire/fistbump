@@ -33,21 +33,21 @@ test('every element id a script looks up exists in the page or is created by a s
   assert.deepEqual([...new Set(missing)], [], 'ids that nothing defines');
 });
 
-test('every FistBumpAPI group and function the views call is defined and reaches a preload method', () => {
+test('every FistBumpAPI group and function the views call is defined and reaches a Tauri bridge method', () => {
   const api = read('js/api.js');
-  const preload = fs.readFileSync(path.join(__dirname, '..', 'preload', 'preload.js'), 'utf8');
+  const bridge = read('js/tauri-bridge.js');
 
-  // groups wrapped in api.js, with the preload functions they call
+  // groups wrapped in api.js, with the bridge functions they call
   const wrapped = {};
   for (const m of api.matchAll(/FistBumpAPI\.(\w+)\s*=\s*wrap\(\s*"(\w+)"\s*,\s*\[([^\]]*)\]/g)) {
     wrapped[m[1]] = {group: m[2], names: matches(m[3], /"(\w+)"/g)};
   }
   const problems = [];
   for (const [name, {group, names}] of Object.entries(wrapped)) {
-    const block = preload.match(new RegExp(`\\n  ${group}: \\{([\\s\\S]*?)\\n  \\}`));
-    if (!block) { problems.push(`preload has no group ${group}`); continue; }
+    const block = bridge.match(new RegExp(`\\n    ${group}: \\{([\\s\\S]*?)\\n    \\}`));
+    if (!block) { problems.push(`tauri-bridge has no group ${group}`); continue; }
     for (const fn of names) {
-      if (!new RegExp(`\\b${fn}:`).test(block[1])) problems.push(`preload.${group}.${fn} (wrapped as FistBumpAPI.${name}.${fn})`);
+      if (!new RegExp(`\\b${fn}:`).test(block[1])) problems.push(`tauri-bridge.${group}.${fn} (wrapped as FistBumpAPI.${name}.${fn})`);
     }
   }
 

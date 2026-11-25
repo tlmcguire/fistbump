@@ -44,7 +44,7 @@ window.Prefs = (() => {
     root.classList.toggle("reduce-motion", reduce);
     root.classList.toggle("high-contrast", values.highContrast);
     root.classList.toggle("underline-links", values.underlineLinks);
-    //Electron zooms the whole page, layout included; a browser preview has no such call and stays at 100%
+    //The desktop shell zooms the whole page, layout included; a browser preview has no such call and stays at 100%
     window.api?.setZoom?.(ZOOM[values.textSize]);
   };
 

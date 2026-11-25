@@ -65,7 +65,7 @@
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
       const field = (id, label, select) => el("div", {class: "picker"}, el("label", {for: id, text: label}), select);
 
-      const toolbar = el("header", {class: "toolbar drag"},
+      const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
         el("div", {class: "toolbar-form tailor-toolbar"},
           el("h1", {class: "view-title", text: "Tailor"}),
           engineChip,
@@ -419,9 +419,8 @@
       //the wait: Pico thinking, a clock, and cards taking shape
       const writing = rev => {
         const thinking = motion()
-          ? el("video", {class: "mascot thinking", src: "views/graphics/mascots/animations/thinking.webm", autoplay: true, loop: true, muted: true, playsinline: true, "aria-hidden": "true"})
+          ? el("img", {class: "mascot thinking", src: "views/graphics/mascots/animations/thinking-anim.png", alt: "", "aria-hidden": "true"})
           : pico("animations/thinking.png");
-        if (thinking.tagName === "VIDEO") thinking.muted = true;
         return el("div", {class: "writing", role: "status"},
           thinking,
           el("div", {},

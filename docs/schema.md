@@ -311,7 +311,7 @@ Key-value store for non-secret preferences. `store/settings.go` returns defaults
 
 All values are stored as text, so booleans are `'true'` and `'false'` and arrays are JSON strings.
 
-The UI theme and window state are not in this table. Electron keeps them in `userData/prefs.json`, because they apply before the window opens and before the backend starts.
+UI preferences and window state are not in this table. UI preferences live in browser `localStorage`, and window geometry is persisted by `tauri-plugin-window-state` before the backend starts.
 
 ## Garbage collection
 

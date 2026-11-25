@@ -68,7 +68,7 @@ These folders hold 400px poses scaled from the full 1254px canvas without croppi
 
 ## Animations
 
-`animations/` holds five experimental loops (`idle`, `intro`, `loading`, `searching`, `thinking`) as 512px WebM files with transparency, each beside a still PNG to use as its poster. They are not used: the app shows still poses only for now.
+`animations/` holds five loops (`idle`, `intro`, `loading`, `searching`, `thinking`) as 512px WebM files with transparency, each beside a still PNG. `thinking-anim.png` (256px RGBA animated PNG converted from `thinking.webm`) is used in the Tailor loading state so alpha transparency renders cleanly across macOS WKWebView, Windows WebView2, and Linux WebKitGTK.
 
 ## Outside the app
 

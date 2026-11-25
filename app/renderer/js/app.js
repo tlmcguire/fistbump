@@ -78,6 +78,7 @@ const routeName = () => {
 
 function show(name) {
   if (current === name) return;
+  document.querySelector(".pdf-preview.expanded")?.collapse?.();
   for (const [key, v] of Object.entries(VIEWS)) {
     const container = document.getElementById(v.container);
     if (key !== name && !container.hidden) window.ViewState.hide(container);

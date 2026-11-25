@@ -121,7 +121,7 @@
 
       const dueStrip = el("section", {class: "due-strip", "aria-label": "Needs you today", hidden: true});
       const table = el("div", {class: "tracker-table-wrap"});
-      const toolbar = el("header", {class: "toolbar drag"},
+      const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
         el("div", {class: "toolbar-form resume-toolbar"},
           el("h1", {class: "view-title", text: "Tracker"}),
           status,

@@ -42,7 +42,7 @@ There are two files. Download the **arm64** one if you have an Apple silicon Mac
 2. Make it executable: right-click it, choose **Properties**, then tick **Allow executing file as program**.
 3. Double-click it to run it. If your system opens it with a text editor instead, choose **Run as a Program** from the right-click menu.
 
-If your Linux is missing the libraries the app needs, the message will say which one. Installing your distribution's Electron dependencies usually fixes it.
+If your Linux is missing the libraries the app needs, the message will say which one. Installing `libwebkit2gtk-4.1` (Ubuntu 22.04+, Fedora 36+) usually fixes it.
 
 ## First run
 

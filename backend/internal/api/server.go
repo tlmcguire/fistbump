@@ -350,7 +350,7 @@ func New(cfg Config) *Server {
 }
 
 // health reports that the backend is up and which schema version the database is on.
-// Electron calls it after reading the port line.
+// The Tauri host calls it after reading the port line.
 func (s *Server) health(w http.ResponseWriter, r *http.Request) error {
 	var schemaVersion int
 	// PRAGMA user_version is where db.Open records the last migration it applied.

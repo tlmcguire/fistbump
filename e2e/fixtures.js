@@ -1,24 +1,21 @@
-const { test: base, expect, _electron: electron } = require('@playwright/test');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+const { test: base, expect } = require('@playwright/test');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { startHarness } = require('./harness');
 
-// Each test gets a fresh copy of the app with its own data folder, so nothing touches real data.
+// Each test gets a fresh fistbump-core backend with its own temporary data folder.
 const test = base.extend({
-  app: async ({}, use) => {
+  harness: async ({}, use) => {
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fistbump-e2e-'));
-    const app = await electron.launch({
-      args: [path.join(__dirname, '..'), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
-      env: { ...process.env, FISTBUMP_USER_DATA: dataDir },
-    });
-    await use(app);
-    await app.close();
+    const harness = await startHarness(dataDir);
+    await use(harness);
+    await harness.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
   },
-  window: async ({ app }, use) => {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
-    await use(window);
+  window: async ({ page, harness }, use) => {
+    await page.goto(harness.url, { waitUntil: 'domcontentloaded' });
+    await use(page);
   },
 });
 

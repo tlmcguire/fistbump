@@ -1,5 +1,4 @@
-// Node can run under Rosetta on Apple Silicon while Electron runs natively. Scripts use the real CPU,
-// which is what Electron's process.arch reports.
+// Node can run under Rosetta on Apple Silicon while the Tauri app runs natively. Scripts use the real CPU.
 const { spawnSync } = require('child_process');
 
 module.exports = function hostArch() {

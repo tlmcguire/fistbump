@@ -16,13 +16,13 @@ Fistbump is a local-first desktop job application assistant. It stores a master 
 Privacy and human-approved edits together. Data and inference stay on the user's machine (local llama-server model, or the user's own remote key as an explicit opt-in), and every AI change is a suggestion the user accepts, rejects or edits. A cloud resume tool could not truthfully claim both.
 
 ## Operating Context
-Desktop Electron app (vanilla JS renderer, Go backend over localhost, SQLite). Workflow: master resume, then job posting (pasted, or searched via Greenhouse boards), then skill-gap analysis, then AI revision review in a diff view, then PDF export, then tracker. Skill-gap analysis is deterministic and never calls a model (target under 1.5 s).
+Desktop Tauri v2 app (vanilla JS renderer, Rust host, Go backend over localhost, SQLite). Workflow: master resume, then job posting (pasted, or searched via Greenhouse boards), then skill-gap analysis, then AI revision review in a diff view, then PDF export, then tracker. Skill-gap analysis is deterministic and never calls a model (target under 1.5 s).
 
 ## Capabilities and Constraints
 - Windows, macOS, Linux; install under 250 MB excluding model weights, which download on demand.
 - Remote AI is opt-in with the user's own key; no data leaves the machine otherwise.
 - Every AI change must be accept/reject/edit; the user owns the final text.
-- Platform is Electron, recorded as `web`; the stack is vanilla JS, Go and SQLite and is already decided.
+- Platform is Tauri v2, recorded as `web`; the stack is vanilla JS, Rust, Go and SQLite and is already decided.
 - Docs: `docs/architecture.md`, `docs/api.md`, `docs/schema.md`.
 
 ## Brand Commitments

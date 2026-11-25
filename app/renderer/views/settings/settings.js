@@ -563,7 +563,7 @@ window.Settings = {
       if (!info || info.error) return;
       $("app-version").textContent = info.version;
       const platform = {darwin: "macOS", win32: "Windows", linux: "Linux"}[info.platform] || info.platform;
-      $("about-details").textContent = `Version ${info.version} for ${platform} (${info.arch}). Electron ${info.electron}, Chromium ${info.chrome.split(".")[0]}.`;
+      $("about-details").textContent = `Version ${info.version} for ${platform} (${info.arch}). Tauri ${info.tauri}.`;
     };
 
     //Shown every time the view opens, so sizes and counts are current.

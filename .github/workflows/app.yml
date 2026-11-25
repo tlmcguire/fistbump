@@ -1,12 +1,10 @@
 name: App
 
 on:
-  # CI runs on every push and every pull request, and on a version tag (v0.2.0).
   push:
     branches: ['**']
     tags: ['v*', 'phase-*']
   pull_request:
-  # Run it by hand from the Actions tab, or: gh workflow run <file> --ref <branch>
   workflow_dispatch:
 
 permissions:
@@ -18,14 +16,21 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - name: Install Linux WebKitGTK dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libxdo-dev libssl-dev
       - run: npm ci
       - run: npm test
+      - run: npm run test:rust

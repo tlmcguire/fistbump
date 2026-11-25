@@ -4,7 +4,7 @@
 
 A local-first job application assistant. Stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
 
-Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
+Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
 ## What it looks like
 
@@ -25,7 +25,7 @@ The installers are on the releases page: [github.com/tlmcguire/fistbump/releases
 |----------|-----------|---------------|
 | Windows 10 and 11 | NSIS `.exe` | x64 |
 | macOS 12 and later | `.dmg` | arm64 and x64, as two files |
-| Linux (Ubuntu 20.04 and later, Fedora 36 and later) | `.AppImage` | x64 |
+| Linux (Ubuntu 22.04 and later, Fedora 36 and later) | `.AppImage` | x64 |
 
 The builds are unsigned, so the first launch asks you to open the app yourself. The [user guide](docs/user-guide.md) has the steps for each platform.
 
@@ -42,12 +42,12 @@ The builds are unsigned, so the first launch asks you to open the app yourself. 
 
 ## Developer setup
 
-You need Go 1.26 and Node 22.
+You need Rust (stable), Go 1.26, and Node 22. On Linux, also install Tauri's system packages (`libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`, `libsecret-1-dev`).
 
 ```bash
-npm install          # install the app's dependencies
+npm install          # install dependencies and sync PDF.js assets
 npm run build:go     # build the Go backend into bin/<platform>-<arch>/
-npm run dev          # start the app
+npm run dev          # start the Tauri app
 ```
 
 The pictures above come from `node scripts/screenshots.js`, which fills a throwaway data folder with the sample resume and a few jobs and photographs each view into `docs/images/`.
@@ -58,23 +58,27 @@ The pictures above come from `node scripts/screenshots.js`, which fills a throwa
 
 | Path | Contents |
 |------|----------|
-| `app/` | Electron main process, preload bridge, renderer views |
+| `src-tauri/` | Tauri v2 Rust host: Go backend supervisor, IPC commands, OS keychain, menus, updater, icons |
+| `app/` | Vanilla JS/HTML/CSS renderer views, Tauri bridge, PDF.js preview, and renderer tests |
 | `backend/` | Go module (`fistbump-core`): API, SQLite store, parser, analysis, AI providers, connectors |
-| `scripts/` | Build and maintenance scripts |
+| `e2e/` | Playwright Chromium smoke tests backed by the real `fistbump-core` binary |
+| `scripts/` | Build, resource staging, PDF.js sync, and maintenance scripts |
 | `docs/` | Design documentation |
 
-The full planned tree is in [docs/architecture.md](docs/architecture.md#planned-file-structure).
+The full tree is in [docs/architecture.md](docs/architecture.md#file-structure).
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `cd backend && go test ./...` | Run Go tests |
+| `npm run dev` | Start the Tauri desktop app in dev mode |
+| `npm run build:go` | Build the Go backend into `bin/<platform>-<arch>/` |
+| `npm run fetch:llama` | Put a pinned `llama-server` next to the backend so the local AI engine can run (`--all` for every platform) |
+| `npm run stage:resources` | Stage `bin/<platform>-<arch>/` into `src-tauri/resources/bin/` for Tauri bundling |
+| `npm run dist` | Build installers for the current platform (and signed updater artifacts when `TAURI_SIGNING_PRIVATE_KEY` is set) |
+| `npm run dist:mac`, `npm run dist:win`, `npm run dist:linux` | Build installers for one platform |
+| `cd backend && go test ./...` | Run Go backend tests |
+| `npm run test:rust` | Run Rust host tests (`cargo test` in `src-tauri/`) |
+| `npm test` | Run renderer and script tests |
+| `npm run test:e2e` | Run Playwright Chromium end-to-end tests against `fistbump-core` |
 | `node scripts/verify-greenhouse-boards.js` | Validate the Greenhouse board lists against the live API (`--offline` checks structure only) |
-| `npm run fetch:llama` | Put a pinned `llama-server` next to the backend, so the local AI engine can run (`--all` for every platform) |
-| `npm run dist` | Build the installers for the platform this computer runs |
-| `npm run dist:mac`, `npm run dist:win`, `npm run dist:linux` | Build the installers for one platform only |
-| `npm test` | Run the app's tests |
-| `npm run test:e2e` | Run the end-to-end tests |
-
-`npm run dev`, `npm run build:go`, `npm run fetch:llama`, `npm test` and `npm run test:e2e` are defined in `package.json`. `npm run dev` starts the app, `npm run build:go` builds the Go backend into `bin/`, and `npm run fetch:llama` puts the `llama-server` the local engine needs beside it.

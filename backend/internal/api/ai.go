@@ -100,7 +100,7 @@ func (s *Server) aiModePut(w http.ResponseWriter, r *http.Request) error {
 }
 
 // aiRemotePut handles PUT /v1/ai/remote. The key is held in memory only: base URL and model go to
-// settings, the key goes nowhere but the Remote client. Electron sends it again at every launch.
+// settings, the key goes nowhere but the Remote client. The Tauri host sends it again at every launch.
 func (s *Server) aiRemotePut(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		BaseURL string `json:"base_url"`

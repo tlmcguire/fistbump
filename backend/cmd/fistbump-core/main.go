@@ -1,4 +1,4 @@
-// Command fistbump-core is the backend process Electron starts. It serves the API on loopback,
+// Command fistbump-core is the backend process the Tauri host starts. It serves the API on loopback,
 // prints the chosen port on stdout, and exits when stdin closes.
 package main
 
@@ -133,7 +133,7 @@ func run() error {
 		}
 	}()
 
-	// The AI engines. The remote key is not stored here; Electron sends it with PUT /v1/ai/remote
+	// The AI engines. The remote key is not stored here; the Tauri host sends it with PUT /v1/ai/remote
 	// after every start. A keyless provider on this computer (Ollama) works from the settings alone.
 	settings := st
 	remote := ai.NewRemote()
@@ -186,10 +186,10 @@ func run() error {
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()
 
-	// Electron reads this line to find the port. Everything else goes to stderr.
+	// The Tauri host reads this line to find the port. Everything else goes to stderr.
 	fmt.Printf("PORT=%d\n", listener.Addr().(*net.TCPAddr).Port)
 
-	// stdin is a pipe from Electron, so it closes when Electron quits or crashes.
+	// stdin is a pipe from the Tauri host, so it closes when the app quits or crashes.
 	stdinClosed := make(chan struct{})
 	go func() {
 		io.Copy(io.Discard, os.Stdin)
