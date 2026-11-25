@@ -189,6 +189,7 @@
 
     cost: {
       analyze: (body) => call('cost:analyze', body),
+      compare: (body) => call('cost:compare', body),
     },
 
     models: {
@@ -202,6 +203,7 @@
 
     applications: {
       list: (filters) => call('applications:list', filters),
+      stats: () => call('applications:stats'),
       create: (body) => call('applications:create', body),
       get: (id) => call('applications:get', id),
       update: (id, patch) => call('applications:update', id, patch),

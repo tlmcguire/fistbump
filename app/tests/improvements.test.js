@@ -108,3 +108,14 @@ test('Phase B: consecutive resume imports, DOCX export, and 1-page fit audit are
   assert.ok(rb.includes('Export DOCX'), 'resume-builder.js should offer Export DOCX');
   assert.ok(rb.includes('api().resume.audit'), 'resume-builder.js should call resume.audit for 1-page fit check');
 });
+
+test('Phase C & D: Tracker CSV export, .ics calendar export, stats, and offer comparison are wired', () => {
+  const tr = read('views/tracker/tracker.js');
+  assert.ok(tr.includes('Export CSV'), 'tracker.js should include Export CSV button');
+  assert.ok(tr.includes('BEGIN:VCALENDAR'), 'tracker.js should generate RFC 5545 .ics events');
+  assert.ok(tr.includes('api.applications.stats'), 'tracker.js should display pipeline & skill-gap stats');
+
+  const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
+  assert.ok(routes.includes('"applications:stats"'), 'routes.rs should map applications:stats');
+  assert.ok(routes.includes('"cost:compare"'), 'routes.rs should map cost:compare');
+});

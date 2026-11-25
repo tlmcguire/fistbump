@@ -468,11 +468,16 @@ pub fn route_for_channel(
             Some(b) => Ok((Method::POST, "/v1/cost".into(), Some(b.clone()))),
             None => Err(bad("Invalid posting")),
         },
+        "cost:compare" => match as_object(a0) {
+            Some(b) => Ok((Method::POST, "/v1/cost/compare".into(), Some(b.clone()))),
+            None => Err(bad("Invalid comparison")),
+        },
 
         "applications:list" => {
             let qs = build_query(a0, &["status", "q", "archived"]);
             Ok((Method::GET, format!("/v1/applications{qs}"), None))
         }
+        "applications:stats" => Ok((Method::GET, "/v1/applications/stats".into(), None)),
         "applications:create" => match as_object(a0).filter(|b| as_id(b.get("job_id")).is_some()) {
             Some(b) => Ok((Method::POST, "/v1/applications".into(), Some(b.clone()))),
             None => Err(bad("Choose a job first.")),

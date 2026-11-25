@@ -119,16 +119,36 @@
       bulkArchive.addEventListener("click", () => runBulk(ids => api.applications.bulkArchive(ids, true)));
       bulkRestore.addEventListener("click", () => runBulk(ids => api.applications.bulkArchive(ids, false)));
 
+      const downloadBlob = (filename, content, type) => {
+        const blob = new Blob([content], {type});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      const exportCsvButton = el("button", {type: "button", onclick: () => {
+        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const header = ["Company", "Position", "Status", "Date Applied", "Next Step Date", "Notes"].map(esc).join(",");
+        const lines = rows.map(a => [a.company_name, a.position_title, a.status, a.date_applied || "", a.next_step_date || "", a.notes || ""].map(esc).join(","));
+        downloadBlob("Fistbump-Applications.csv", [header, ...lines].join("\r\n") + "\r\n", "text/csv;charset=utf-8");
+        say(`Exported ${rows.length} application${rows.length === 1 ? "" : "s"} to CSV.`);
+      }}, "Export CSV");
+
+      const statsStrip = el("p", {class: "hint", role: "status", hidden: true});
       const dueStrip = el("section", {class: "due-strip", "aria-label": "Needs you today", hidden: true});
       const table = el("div", {class: "tracker-table-wrap"});
       const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
         el("div", {class: "toolbar-form resume-toolbar"},
           el("h1", {class: "view-title", text: "Tracker"}),
           status,
-          el("div", {class: "toolbar-actions"}, search, el("div", {class: "tracker-scopes", role: "group", "aria-label": "Show"}, scopeButtons))));
+          el("div", {class: "toolbar-actions"}, search, exportCsvButton, el("div", {class: "tracker-scopes", role: "group", "aria-label": "Show"}, scopeButtons))));
       fill(container, toolbar,
         el("div", {class: "pane tracker"},
           dueStrip,
+          statsStrip,
           el("div", {class: "stage-chips", role: "group", "aria-label": "Filter by stage"}, stageChips),
           bulkBar,
           table));
@@ -227,7 +247,19 @@
             a.archived_at ? el("span", {class: "hint", text: " (archived)"}) : null),
           el("td", {}, stage),
           el("td", {}, applied),
-          el("td", {}, next, due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
+          el("td", {}, next,
+            a.next_step_date ? el("button", {type: "button", class: "link-button", title: "Download .ics calendar reminder", onclick: () => {
+              const d = a.next_step_date.replace(/-/g, "");
+              const nextDay = new Date(a.next_step_date + "T00:00:00");
+              nextDay.setDate(nextDay.getDate() + 1);
+              const end = `${nextDay.getFullYear()}${String(nextDay.getMonth() + 1).padStart(2, "0")}${String(nextDay.getDate()).padStart(2, "0")}`;
+              const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fistbump//Tracker//EN", "BEGIN:VEVENT",
+                `UID:fistbump-app-${a.id}@local`, `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
+                `SUMMARY:Follow-up: ${a.company_name || "Company"} - ${a.position_title || "Role"}`,
+                `DESCRIPTION:Status: ${a.status}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
+              downloadBlob(`${(a.company_name || "Follow-up").replace(/[^a-z0-9_-]+/gi, "-")}.ics`, ics, "text/calendar;charset=utf-8");
+            }}, ".ics") : null,
+            due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
           el("td", {}, el("span", {text: resumeLabel(a)}), pdf),
           el("td", {}, notes));
       };
@@ -356,6 +388,14 @@
           rows = list;
           for (const id of [...selected]) if (!rows.some(a => a.id === id)) selected.delete(id);
           draw();
+          if (window.api?.applications?.stats) {
+            api.applications.stats().then(st => {
+              if (!st || !st.total) { statsStrip.hidden = true; return; }
+              const gaps = (st.top_missing_skills || []).slice(0, 4).map(g => `${g.skill} (${g.count})`).join(", ");
+              statsStrip.textContent = `Pipeline: ${st.total} total · ${st.by_stage?.Applied || 0} applied · ${st.by_stage?.Interviewing || 0} interviewing · ${st.by_stage?.Offered || 0} offered` + (gaps ? ` · Top skill gaps: ${gaps}` : "");
+              statsStrip.hidden = false;
+            }).catch(() => {});
+          }
         } catch (err) {
           if (mine !== loadSeq) return;
           say(err.message, true);
