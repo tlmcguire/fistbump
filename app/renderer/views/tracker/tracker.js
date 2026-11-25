@@ -96,7 +96,8 @@
         el("option", {value: "", text: "Set status…"}), STAGES.map(s => el("option", {value: s, text: s})));
       const bulkArchive = el("button", {type: "button", title: "Hide these applications from Active. They are kept, not deleted."}, "Archive");
       const bulkRestore = el("button", {type: "button", title: "Bring these applications back to Active."}, "Unarchive");
-      const bulkBar = el("div", {class: "tracker-bulk", hidden: true}, bulkCount, bulkStatus, bulkArchive, bulkRestore,
+      const bulkDelete = el("button", {type: "button", class: "danger-solid", title: "Permanently remove the selected tracked applications from your Tracker."}, "Delete selected");
+      const bulkBar = el("div", {class: "tracker-bulk", hidden: true}, bulkCount, bulkStatus, bulkArchive, bulkRestore, bulkDelete,
         el("button", {type: "button", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
 
       const runBulk = async fn => {
@@ -118,6 +119,26 @@
       });
       bulkArchive.addEventListener("click", () => runBulk(ids => api.applications.bulkArchive(ids, true)));
       bulkRestore.addEventListener("click", () => runBulk(ids => api.applications.bulkArchive(ids, false)));
+      bulkDelete.addEventListener("click", async () => {
+        const ids = rows.filter(a => selected.has(a.id)).map(a => a.id);
+        if (!ids.length) return;
+        const noun = ids.length === 1 ? "tracked application" : "tracked applications";
+        const ok = await window.UI.ask(
+          `Delete ${ids.length} ${noun}?\n\nThis removes ${ids.length === 1 ? "it" : "them"} from your Tracker permanently. Your saved job postings are not deleted.`,
+          {confirm: "Delete", danger: true, title: "Delete tracked applications"}
+        );
+        if (!ok) return;
+        const settled = await Promise.allSettled(ids.map(id => api.applications.delete(id)));
+        const deleted = settled.filter(r => r.status === "fulfilled").length;
+        const failed = settled.length - deleted;
+        selected.clear();
+        if (failed) {
+          say(`Deleted ${deleted} ${deleted === 1 ? "application" : "applications"}; ${failed} could not be deleted.`, true);
+        } else {
+          say(`Deleted ${deleted} ${deleted === 1 ? "application" : "applications"}.`);
+        }
+        load();
+      });
 
       const downloadBlob = (filename, content, type) => {
         const blob = new Blob([content], {type});

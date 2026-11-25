@@ -1142,24 +1142,125 @@ window.JobParser = {
         applyTrashDays();
       };
       loadTrashDays();
+      let savedRows = [];
+      const selectedSaved = new Set();
+
+      const syncSavedBulk = () => {
+        const bar = $("saved-bulk");
+        const selectAll = $("saved-select-all");
+        const countEl = $("saved-selected-count");
+        const actions = $("saved-bulk-actions");
+        const trashBtn = $("saved-bulk-trash");
+        if (!bar) return;
+        bar.hidden = savedRows.length === 0;
+        const shownIds = savedRows.map(j => j.id);
+        const picked = shownIds.filter(id => selectedSaved.has(id)).length;
+        selectAll.checked = savedRows.length > 0 && picked === savedRows.length;
+        selectAll.indeterminate = picked > 0 && picked < savedRows.length;
+        countEl.textContent = picked ? `${picked} selected` : "";
+        actions.hidden = picked === 0;
+        if (trashBtn) trashBtn.hidden = $("saved-scope").value === "trash";
+      };
+
+      const savedRowItem = job => {
+        const item = resultItem(job, openSavedJob);
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.className = "saved-check";
+        check.checked = selectedSaved.has(job.id);
+        check.setAttribute("aria-label", `Select ${job.position_title || "job"} at ${job.company_name || "company"}`);
+        if (check.checked) item.classList.add("selected-bulk");
+        check.addEventListener("click", event => event.stopPropagation());
+        check.addEventListener("change", () => {
+          if (check.checked) selectedSaved.add(job.id);
+          else selectedSaved.delete(job.id);
+          item.classList.toggle("selected-bulk", check.checked);
+          syncSavedBulk();
+        });
+        item.prepend(check);
+        return item;
+      };
+
       const loadSaved = async () => {
         try {
           const jobs = await jobsApi.list($("saved-q").value.trim(), savedScope());
+          savedRows = jobs;
+          const validIds = new Set(jobs.map(j => j.id));
+          for (const id of [...selectedSaved]) if (!validIds.has(id)) selectedSaved.delete(id);
           loadSavedIndex(); //deleted, trashed and newly saved jobs change which listings read as saved
-          $("saved-list").replaceChildren(...jobs.map(job => resultItem(job, openSavedJob)));
+          $("saved-list").replaceChildren(...jobs.map(savedRowItem));
           $("saved-empty-message").textContent = ({
             archived: "No archived jobs. Archived jobs are hidden from Saved jobs, but nothing is deleted — you can bring them back any time.",
             trash: `The Trash is empty. A job you move to the Trash is deleted for good after ${trashDays} days, unless you restore it before then.`,
           })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
+          syncSavedBulk();
           markSelected();
         } catch (error) {
           $("saved-empty-message").textContent = error.message;
           $("saved-empty").hidden = false;
         }
       };
+
+      $("saved-select-all")?.addEventListener("change", event => {
+        const checked = event.target.checked;
+        if (checked) savedRows.forEach(j => selectedSaved.add(j.id));
+        else selectedSaved.clear();
+        for (const row of $("saved-list").querySelectorAll(".result")) {
+          const box = row.querySelector(".saved-check");
+          if (box) box.checked = checked;
+          row.classList.toggle("selected-bulk", checked);
+        }
+        syncSavedBulk();
+      });
+
+      $("saved-bulk-clear")?.addEventListener("click", () => {
+        selectedSaved.clear();
+        for (const row of $("saved-list").querySelectorAll(".result")) {
+          const box = row.querySelector(".saved-check");
+          if (box) box.checked = false;
+          row.classList.remove("selected-bulk");
+        }
+        syncSavedBulk();
+      });
+
+      const runSavedBulk = async mode => {
+        const ids = savedRows.filter(j => selectedSaved.has(j.id)).map(j => j.id);
+        if (!ids.length) return;
+        const noun = ids.length === 1 ? "saved job" : "saved jobs";
+        const question = mode === "trash"
+          ? `Move ${ids.length} ${noun} to the Trash?\n\nJobs with an active application in the Tracker will be skipped.`
+          : `Delete ${ids.length} ${noun} permanently?\n\nThis cannot be undone. Jobs with an application in the Tracker will be skipped until their application is deleted in Tracker.`;
+        const ok = await window.UI.ask(question, {
+          confirm: mode === "trash" ? "Move to Trash" : "Delete permanently",
+          danger: true,
+          title: mode === "trash" ? "Move saved jobs to Trash" : "Delete saved jobs",
+        });
+        if (!ok) return;
+        const settled = await Promise.allSettled(ids.map(id => mode === "trash" ? jobsApi.trash(id) : jobsApi.delete(id)));
+        const succeeded = [];
+        let skipped = 0;
+        settled.forEach((r, idx) => {
+          if (r.status === "fulfilled") succeeded.push(ids[idx]);
+          else skipped++;
+        });
+        if (posting?.id && succeeded.includes(posting.id)) showDetailEmpty();
+        selectedSaved.clear();
+        await loadSaved();
+        if (skipped > 0) {
+          const actionWord = mode === "trash" ? "Moved" : "Deleted";
+          window.UI.alert(
+            `${actionWord} ${succeeded.length} ${succeeded.length === 1 ? "job" : "jobs"}. Skipped ${skipped} ${skipped === 1 ? "job" : "jobs"} because ${skipped === 1 ? "it has" : "they have"} an application in the Tracker — delete ${skipped === 1 ? "that application" : "those applications"} in Tracker first.`,
+            "Some jobs were skipped"
+          );
+        }
+      };
+
+      $("saved-bulk-trash")?.addEventListener("click", () => runSavedBulk("trash"));
+      $("saved-bulk-delete")?.addEventListener("click", () => runSavedBulk("delete"));
+
       $("saved-q").addEventListener("input", loadSaved);
-      $("saved-scope").addEventListener("change", loadSaved);
+      $("saved-scope").addEventListener("change", () => { selectedSaved.clear(); loadSaved(); });
       $("saved-form").addEventListener("submit", event => event.preventDefault());
 
       // Same shape as loadPosting

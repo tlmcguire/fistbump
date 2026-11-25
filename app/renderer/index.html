@@ -623,6 +623,15 @@
 
                     <!--Saved pane: showcases your saved jobs-->
                     <section id="saved-pane" class="pane results-pane" aria-label="Saved jobs" hidden>
+                        <div id="saved-bulk" class="saved-bulk" hidden>
+                            <label class="saved-select-all"><input id="saved-select-all" type="checkbox"> Select all</label>
+                            <span id="saved-selected-count" class="hint" aria-live="polite"></span>
+                            <div id="saved-bulk-actions" class="saved-bulk-actions" hidden>
+                                <button id="saved-bulk-trash" type="button">Move to Trash</button>
+                                <button id="saved-bulk-delete" type="button" class="danger-solid">Delete selected</button>
+                                <button id="saved-bulk-clear" type="button" class="quiet">Clear</button>
+                            </div>
+                        </div>
                         <ul id="saved-list" class="results"></ul>
                         <div id="saved-empty" class="empty" hidden>
                             <img class="mascot" src="views/graphics/mascots/33-empty-tracker.png" alt="">
