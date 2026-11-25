@@ -45,7 +45,7 @@ func (s *Server) savedSearchCreate(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *Server) savedSearchMarkSeen(w http.ResponseWriter, r *http.Request) error {
-	id, err := pathID(r, "id")
+	id, err := pathID(r)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (s *Server) savedSearchMarkSeen(w http.ResponseWriter, r *http.Request) err
 }
 
 func (s *Server) savedSearchDelete(w http.ResponseWriter, r *http.Request) error {
-	id, err := pathID(r, "id")
+	id, err := pathID(r)
 	if err != nil {
 		return err
 	}

@@ -7,9 +7,9 @@ import (
 )
 
 func TestCostCompareAPI(t *testing.T) {
-	s := newTestServer(t)
+	s := newTestServer(t, &fakeFetcher{})
 
-	rec := doJSON(t, s, http.MethodPost, "/v1/cost/compare", map[string]any{
+	rec := apiJSON(t, s, http.MethodPost, "/v1/cost/compare", map[string]any{
 		"offers": []map[string]any{
 			{
 				"label":         "Offer A (Austin)",

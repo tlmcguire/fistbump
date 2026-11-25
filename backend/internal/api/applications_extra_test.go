@@ -9,10 +9,10 @@ import (
 )
 
 func TestApplicationsCSVICSAndStats(t *testing.T) {
-	s := newTestServer(t)
+	s := newTestServer(t, &fakeFetcher{})
 
 	// Create a profile, a job, and an application with a next_step_date.
-	rec := doJSON(t, s, http.MethodPut, "/v1/resume/profile", map[string]any{
+	rec := apiJSON(t, s, http.MethodPut, "/v1/resume/profile", map[string]any{
 		"full_name": "Ada Lovelace",
 		"skills":    []string{"go"},
 	})
@@ -20,7 +20,7 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 		t.Fatalf("put profile: %d %s", rec.Code, rec.Body.String())
 	}
 
-	rec = doJSON(t, s, http.MethodPost, "/v1/jobs", map[string]any{
+	rec = apiJSON(t, s, http.MethodPost, "/v1/jobs", map[string]any{
 		"company_name":   "Acme",
 		"position_title": "Backend Engineer",
 		"source":         "pasted",
@@ -32,7 +32,7 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 	var job struct{ ID int64 }
 	_ = json.Unmarshal(rec.Body.Bytes(), &job)
 
-	rec = doJSON(t, s, http.MethodPost, "/v1/applications", map[string]any{
+	rec = apiJSON(t, s, http.MethodPost, "/v1/applications", map[string]any{
 		"job_id":         job.ID,
 		"status":         "Interviewing",
 		"next_step_date": "2026-12-10",
@@ -45,7 +45,7 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &app)
 
 	// CSV export
-	rec = doJSON(t, s, http.MethodGet, "/v1/applications/export?format=csv", nil)
+	rec = apiJSON(t, s, http.MethodGet, "/v1/applications/export?format=csv", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("csv status=%d", rec.Code)
 	}
@@ -54,7 +54,7 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 	}
 
 	// ICS export
-	rec = doJSON(t, s, http.MethodGet, "/v1/applications/"+strconv.FormatInt(app.ID, 10)+"/ics", nil)
+	rec = apiJSON(t, s, http.MethodGet, "/v1/applications/"+strconv.FormatInt(app.ID, 10)+"/ics", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("ics status=%d body=%s", rec.Code, rec.Body.String())
 	}
@@ -63,7 +63,7 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 	}
 
 	// Funnel & skill-gap stats
-	rec = doJSON(t, s, http.MethodGet, "/v1/applications/stats", nil)
+	rec = apiJSON(t, s, http.MethodGet, "/v1/applications/stats", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("stats status=%d", rec.Code)
 	}

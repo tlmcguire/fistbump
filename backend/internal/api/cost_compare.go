@@ -42,11 +42,11 @@ func (s *Server) costCompare(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	type comparisonItem struct {
-		Label        string        `json:"label"`
-		Bonus        int64         `json:"bonus"`
-		AnnualEquity int64         `json:"annual_equity"`
-		TotalComp    int64         `json:"total_comp"`
-		Analysis     cost.Analysis `json:"analysis"`
+		Label        string      `json:"label"`
+		Bonus        int64       `json:"bonus"`
+		AnnualEquity int64       `json:"annual_equity"`
+		TotalComp    int64       `json:"total_comp"`
+		Analysis     cost.Result `json:"analysis"`
 	}
 	results := make([]comparisonItem, 0, len(body.Offers))
 	for _, o := range body.Offers {

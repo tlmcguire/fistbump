@@ -6,7 +6,7 @@ import (
 )
 
 func TestSavedSearchCRUD(t *testing.T) {
-	st := openTestStore(t)
+	st := newStore(t)
 	ctx := context.Background()
 
 	created, err := st.CreateSavedSearch(ctx, "Go Remote", `{"keywords":["golang"],"work_mode":"Remote"}`, []string{"stripe/1", "stripe/2"})
