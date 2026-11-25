@@ -799,6 +799,37 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
 }
 
 /* Cover letter & Q&A versioning and iteration controls */
+.drafts-head {
+  gap: 10px 14px;
+}
+.drafts-quickbar {
+  margin-left: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.draft-mode-select {
+  height: 30px;
+  padding: 0 26px 0 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  max-width: 190px;
+}
+.draft-export-group {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.draft-export-group button {
+  border: 0;
+  border-radius: 0;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.draft-export-group button + button {
+  border-left: 1px solid var(--line);
+}
 .draft-custom-form { margin-left: 0; }
 .draft-custom-form input { flex: 1 1 260px; min-width: 0; }
 .draft-versions {
@@ -828,7 +859,7 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 .draft-iterate-chips {
   display: flex;
@@ -887,7 +918,7 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 .likely-q-item span { flex: 1 1 260px; font-size: 13px; color: var(--text); }
 .likely-q-input {
