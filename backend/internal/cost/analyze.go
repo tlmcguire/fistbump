@@ -24,13 +24,17 @@ type Input struct {
 
 // Result is the whole analysis. A section that cannot be judged is nil.
 type Result struct {
-	Supported bool       `json:"supported"` // false for places outside the US, where there are no figures
-	Location  Location   `json:"location"`
-	Pay       *Pay       `json:"pay"`
-	Benefits  Benefits   `json:"benefits"`
-	Lifestyle *Lifestyle `json:"lifestyle"`
-	Notes     []string   `json:"notes"`
-	Summary   string     `json:"summary"`
+	Supported     bool       `json:"supported"` // false for places outside the US, where there are no figures
+	Location      Location   `json:"location"`
+	Pay           *Pay       `json:"pay"`
+	Benefits      Benefits   `json:"benefits"`
+	Lifestyle     *Lifestyle `json:"lifestyle"`
+	Notes         []string   `json:"notes"`
+	Summary       string     `json:"summary"`
+	Sources       []Source   `json:"sources"`
+	DataUpdatedAt string     `json:"data_updated_at"`
+	NextUpdateAt  string     `json:"next_update_at"`
+	RefreshDays   int        `json:"refresh_days"`
 }
 
 // Location is the place the costs are worked out for, and why that place.
@@ -222,7 +226,15 @@ func livingPlace(in Input) (place, Location, bool) {
 
 // Analyze runs the whole analysis for one posting.
 func Analyze(in Input) Result {
-	res := Result{Supported: true, Notes: []string{}}
+	cat, nextUpdate := CurrentCatalog()
+	res := Result{
+		Supported:     true,
+		Notes:         []string{},
+		Sources:       cat.Sources,
+		DataUpdatedAt: cat.UpdatedAt,
+		NextUpdateAt:  nextUpdate,
+		RefreshDays:   cat.RefreshDays,
+	}
 	p, loc, ok := livingPlace(in)
 	if !ok {
 		res.Supported = false

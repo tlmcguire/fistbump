@@ -11,10 +11,46 @@ import (
 // minGrounding is the share of a proposal's content words that must appear in the resume.
 const minGrounding = 0.75
 
+// normalizeTypography folds curly quotes, apostrophes, dashes, and non-breaking spaces to
+// standard ASCII equivalents so cosmetic-only typography changes are detected as no-ops.
+func normalizeTypography(s string) string {
+	r := strings.NewReplacer(
+		"\u2018", "'", "\u2019", "'", "\u201a", "'", "\u201b", "'", "\u00b4", "'",
+		"\u201c", `"`, "\u201d", `"`, "\u201e", `"`, "\u201f", `"`,
+		"\u2013", "-", "\u2014", "-", "\u2212", "-", "\u2010", "-", "\u2011", "-",
+		"\u00a0", " ", "\u2009", " ", "\u202f", " ",
+	)
+	lines := strings.Split(strings.ReplaceAll(r.Replace(s), "\r\n", "\n"), "\n")
+	for i, line := range lines {
+		lines[i] = strings.Join(strings.Fields(line), " ")
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+// canonicalWords reduces text to lowercase alphanumeric words (preserving line boundaries),
+// ignoring punctuation, quote style, bullet prefixes, and casing so trivial edits are caught.
+func canonicalWords(s string) string {
+	s = normalizeTypography(s)
+	var outLines []string
+	for _, line := range strings.Split(s, "\n") {
+		line = withoutBullet(line)
+		words := strings.FieldsFunc(strings.ToLower(line), func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '+' && r != '#'
+		})
+		if len(words) > 0 {
+			outLines = append(outLines, strings.Join(words, " "))
+		}
+	}
+	return strings.Join(outLines, "\n")
+}
+
 // Check returns why a model proposal must be dropped, or "" when it may reach the review. A
 // dropped proposal is never repaired; the rules engine fills the item instead.
 func Check(t Target, proposed string, r Request) string {
-	if strings.TrimSpace(proposed) == strings.TrimSpace(t.Original) {
+	origPlain := plainText(t.Original)
+	propPlain := plainText(proposed)
+	if strings.TrimSpace(proposed) == strings.TrimSpace(t.Original) ||
+		normalizeTypography(propPlain) == normalizeTypography(origPlain) {
 		return "no change"
 	}
 	// The resume is printed from plain text, so Markdown emphasis or headings would show as stray symbols.
@@ -26,14 +62,27 @@ func Check(t Target, proposed string, r Request) string {
 		if !sameItems(t.Original, proposed) {
 			return "skills line changed its items"
 		}
+		if sameOrder(t.Original, proposed) {
+			return "no change"
+		}
 		return "" // a reorder of the same items adds nothing
 	case "summary":
-		if sentences(plainText(proposed)) > 3 {
+		if canonicalWords(propPlain) == canonicalWords(origPlain) {
+			return "no meaningful change"
+		}
+		if sentences(propPlain) > 3 {
 			return "summary longer than 3 sentences"
 		}
 	case "experience":
+		if canonicalWords(propPlain) == canonicalWords(origPlain) {
+			return "no meaningful change"
+		}
 		if lineCount(proposed) != lineCount(t.Original) {
 			return "a different number of lines than the original"
+		}
+	default:
+		if canonicalWords(propPlain) == canonicalWords(origPlain) {
+			return "no meaningful change"
 		}
 	}
 	if skill := newSkill(proposed, t, r); skill != "" {
@@ -43,6 +92,21 @@ func Check(t Target, proposed string, r Request) string {
 		return "too many words not found in the resume"
 	}
 	return ""
+}
+
+// sameOrder reports whether two comma-separated lists have the same items in the same order,
+// ignoring case and whitespace.
+func sameOrder(a, b string) bool {
+	x, y := splitList(normalizeTypography(a), ","), splitList(normalizeTypography(b), ",")
+	if len(x) != len(y) {
+		return false
+	}
+	for i := range x {
+		if !strings.EqualFold(x[i], y[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // sameItems compares two comma-separated lists, ignoring order, case and spacing.

@@ -38,8 +38,10 @@ func Master(m models.Master) string {
 		for _, e := range m.Experiences {
 			blocks = append(blocks, "### "+Escape(e.JobTitle+", "+e.CompanyName))
 			meta := []string{}
-			if dates := dateRange(e.StartDate, e.EndDate); dates != "" {
-				meta = append(meta, dates)
+			if !e.DateNA {
+				if dates := dateRange(e.StartDate, e.EndDate); dates != "" {
+					meta = append(meta, dates)
+				}
 			}
 			if e.Location != nil && strings.TrimSpace(*e.Location) != "" {
 				meta = append(meta, strings.TrimSpace(*e.Location))

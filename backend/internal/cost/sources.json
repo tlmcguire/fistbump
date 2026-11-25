@@ -1,0 +1,55 @@
+{
+  "updated_at": "2026-11-25",
+  "refresh_days": 30,
+  "sources": [
+    {
+      "category": "cost_of_living",
+      "name": "U.S. Bureau of Economic Analysis (BEA) Regional Price Parities",
+      "url": "https://www.bea.gov/data/prices-inflation/regional-price-parities-state-and-metro-area",
+      "description": "Metro and state cost-of-living index values (US average = 100).",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "rent",
+      "name": "U.S. HUD Fair Market Rents (FMR)",
+      "url": "https://www.huduser.gov/portal/datasets/fmr.html",
+      "description": "Typical monthly one-bedroom rent estimates by metro area and state.",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "pay",
+      "name": "U.S. Bureau of Labor Statistics (BLS) Occupational Employment and Wage Statistics",
+      "url": "https://www.bls.gov/oes/",
+      "description": "National mid-level salary benchmarks by role family, adjusted for level and local cost of living.",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "taxes",
+      "name": "IRS Federal Income Tax Brackets & SSA Payroll Wage Base",
+      "url": "https://www.irs.gov/filing/federal-income-tax-rates-and-brackets",
+      "description": "2026 single-filer federal income tax brackets, standard deduction ($16,100), and FICA/Social Security cap ($184,500).",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "state_taxes",
+      "name": "Tax Foundation State & Local Income Tax Rates",
+      "url": "https://taxfoundation.org/data/all/state/state-income-tax-rates/",
+      "description": "Effective state and local income tax rate estimates for middle-income single filers.",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "budget",
+      "name": "BLS Consumer Expenditure Surveys & USDA Food Plans",
+      "url": "https://www.bls.gov/cex/",
+      "description": "Single-adult monthly baseline estimates for utilities, groceries, transportation, health care, and personal spending.",
+      "updated_at": "2026-11-25"
+    },
+    {
+      "category": "benefits",
+      "name": "BLS Employee Benefits Survey (weighted against posting text)",
+      "url": "https://www.bls.gov/ebs/",
+      "description": "Benefits are extracted directly from the job posting and weighted by core coverage benchmarks.",
+      "updated_at": "2026-11-25"
+    }
+  ]
+}

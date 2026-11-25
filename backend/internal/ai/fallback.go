@@ -28,11 +28,21 @@ func (Rules) Suggest(ctx context.Context, r Request) ([]Draft, error) {
 		var ok bool
 		switch t.Section {
 		case "skills":
-			proposed, ok = reorderSkills(t.Original, skills)
-			reason = reasonFor(r.Language, "skills")
+			var moved []string
+			proposed, moved, ok = reorderSkills(t.Original, skills)
+			if len(moved) > 0 {
+				reason = reasonFor(r.Language, "skillsNamed", strings.Join(moved[:min(len(moved), 4)], ", "))
+			} else {
+				reason = reasonFor(r.Language, "skills")
+			}
 		case "experience":
-			proposed, ok = reorderLines(t.Original, skills)
-			reason = reasonFor(r.Language, "lines")
+			var cited []string
+			proposed, cited, ok = reorderLines(t.Original, skills)
+			if len(cited) > 0 {
+				reason = reasonFor(r.Language, "linesNamed", strings.Join(cited[:min(len(cited), 4)], ", "))
+			} else {
+				reason = reasonFor(r.Language, "lines")
+			}
 		case "summary":
 			proposed, ok = summaryText(t.Original, r, skills)
 			list := strings.Join(skills[:min(len(skills), 5)], ", ")
@@ -42,7 +52,7 @@ func (Rules) Suggest(ctx context.Context, r Request) ([]Draft, error) {
 				reason = reasonFor(r.Language, "summary", list)
 			}
 		}
-		if !ok || proposed == t.Original {
+		if !ok || proposed == t.Original || normalizeTypography(plainText(proposed)) == normalizeTypography(plainText(t.Original)) {
 			continue
 		}
 		out = append(out, Draft{
@@ -75,8 +85,9 @@ func matchedSkills(a analyze.Result) []string {
 }
 
 // reorderSkills moves matched skills to the front of a comma-separated line, in the order the job
-// lists them. It reports false when the order would not change.
-func reorderSkills(line string, matched []string) (string, bool) {
+// lists them. It returns the matched skills that were prioritized and reports false when the order
+// would not change.
+func reorderSkills(line string, matched []string) (string, []string, bool) {
 	items := splitList(line, ",")
 	rank := map[string]int{}
 	for i, m := range matched {
@@ -95,27 +106,51 @@ func reorderSkills(line string, matched []string) (string, bool) {
 	})
 	ordered := strings.Join(append(first, rest...), ", ")
 	if ordered == strings.Join(items, ", ") {
-		return "", false
+		return "", nil, false
 	}
-	return ordered, true
+	return ordered, first, true
 }
 
 // reorderLines moves lines that mention a matched skill to the front, keeping their order.
-// Text of a single line is left alone.
-func reorderLines(text string, matched []string) (string, bool) {
+// It returns the matched skills cited in the promoted lines and reports false when the order
+// would not change. Text of a single line is left alone.
+func reorderLines(text string, matched []string) (string, []string, bool) {
 	lines := strings.Split(text, "\n")
 	if len(lines) < 2 {
-		return "", false
+		return "", nil, false
 	}
-	var first, rest []string
+	var first, rest, cited []string
+	seen := map[string]bool{}
 	for _, line := range lines {
-		if mentionsSkill(line, matched) {
+		if hits := matchedInLine(line, matched); len(hits) > 0 {
 			first = append(first, line)
+			for _, h := range hits {
+				k := strings.ToLower(h)
+				if !seen[k] {
+					seen[k] = true
+					cited = append(cited, h)
+				}
+			}
 		} else {
 			rest = append(rest, line)
 		}
 	}
-	return strings.Join(append(first, rest...), "\n"), true
+	ordered := strings.Join(append(first, rest...), "\n")
+	if ordered == text {
+		return "", nil, false
+	}
+	return ordered, cited, true
+}
+
+func matchedInLine(line string, matched []string) []string {
+	low := strings.ToLower(line)
+	var hits []string
+	for _, m := range matched {
+		if strings.Contains(low, strings.ToLower(m)) {
+			hits = append(hits, m)
+		}
+	}
+	return hits
 }
 
 // summaryText adds up to five matched skills to the summary, or writes a short one when there is

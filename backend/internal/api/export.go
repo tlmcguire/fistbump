@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/tlmcguire/fistbump/backend/internal/pdf"
 	"github.com/tlmcguire/fistbump/backend/internal/render"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
@@ -24,11 +25,12 @@ var exportFormats = map[string]struct{ contentType, ext string }{
 // exportRequest is the body of both export routes.
 type exportRequest struct {
 	Format string `json:"format"`
+	Style  string `json:"style"`
 }
 
 // resumeExport handles POST /v1/resume/export: the master resume as a PDF or Markdown file.
 func (s *Server) resumeExport(w http.ResponseWriter, r *http.Request) error {
-	format, err := readFormat(w, r)
+	format, style, err := readFormatAndStyle(w, r)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func (s *Server) resumeExport(w http.ResponseWriter, r *http.Request) error {
 	if master.Profile == nil {
 		return notFound("Create a profile before exporting a resume")
 	}
-	return s.sendExport(w, format, render.Master(master), fileName(master.Profile.FullName, "Resume"))
+	return s.sendExport(w, format, style, render.Master(master), fileName(master.Profile.FullName, "Resume"))
 }
 
 // tailoredExport handles POST /v1/tailored-resumes/{id}/export.
@@ -48,7 +50,7 @@ func (s *Server) tailoredExport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	format, err := readFormat(w, r)
+	format, style, err := readFormatAndStyle(w, r)
 	if err != nil {
 		return err
 	}
@@ -69,32 +71,39 @@ func (s *Server) tailoredExport(w http.ResponseWriter, r *http.Request) error {
 	} else if err != store.ErrNotFound {
 		return err
 	}
-	return s.sendExport(w, format, tailored.Content, fileName(name, job.CompanyName, job.PositionTitle))
+	return s.sendExport(w, format, style, tailored.Content, fileName(name, job.CompanyName, job.PositionTitle))
 }
 
-// readFormat reads and checks the "format" of an export request.
-func readFormat(w http.ResponseWriter, r *http.Request) (string, error) {
+// readFormatAndStyle reads and checks the "format" and optional "style" of an export request.
+func readFormatAndStyle(w http.ResponseWriter, r *http.Request) (string, string, error) {
 	var req exportRequest
 	if err := decodeJSON(w, r, &req); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if _, ok := exportFormats[req.Format]; !ok {
-		return "", validationError("format", "format must be pdf or md")
+		return "", "", validationError("format", "format must be pdf or md")
 	}
-	return req.Format, nil
+	style := strings.TrimSpace(req.Style)
+	if !pdf.ValidStyle(style) {
+		return "", "", validationError("style", "style must be classic, modern, minimal, compact, or executive")
+	}
+	if style == "" {
+		style = pdf.StyleClassic
+	}
+	return req.Format, style, nil
 }
 
 // sendExport writes markdown as a file download in the given format. Go only returns the bytes;
 // the Tauri host asks the user where to save them.
-func (s *Server) sendExport(w http.ResponseWriter, format, markdown, name string) error {
+func (s *Server) sendExport(w http.ResponseWriter, format, style, markdown, name string) error {
 	body := []byte(markdown)
 	if format == "pdf" {
-		pdf, err := s.makePDF(markdown, name+"."+exportFormats[format].ext)
+		pdfBytes, err := s.makePDF(markdown, name+"."+exportFormats[format].ext, style)
 		if err != nil {
 			slog.Error("pdf export failed", "error", err)
 			return pdfFailed()
 		}
-		body = pdf
+		body = pdfBytes
 	}
 
 	kind := exportFormats[format]
@@ -112,8 +121,8 @@ func (s *Server) sendExport(w http.ResponseWriter, format, markdown, name string
 
 // makePDF runs the PDF renderer. A renderer that is missing, fails or panics is an error, so the
 // caller can offer Markdown instead.
-func (s *Server) makePDF(markdown, fileName string) (pdf []byte, err error) {
-	if s.renderPDF == nil {
+func (s *Server) makePDF(markdown, fileName, style string) (out []byte, err error) {
+	if s.renderPDFStyled == nil && s.renderPDF == nil {
 		return nil, fmt.Errorf("no PDF renderer is configured")
 	}
 	defer func() {
@@ -121,6 +130,9 @@ func (s *Server) makePDF(markdown, fileName string) (pdf []byte, err error) {
 			err = fmt.Errorf("pdf renderer panicked: %v", v)
 		}
 	}()
+	if s.renderPDFStyled != nil {
+		return s.renderPDFStyled(markdown, fileName, style)
+	}
 	return s.renderPDF(markdown, fileName)
 }
 

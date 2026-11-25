@@ -36,22 +36,29 @@ const (
 var headings = map[string]section{
 	"summary": secSummary, "professional summary": secSummary, "profile": secSummary, "professional profile": secSummary, "about": secSummary,
 	"about me": secSummary, "objective": secSummary, "career objective": secSummary, "overview": secSummary, "career summary": secSummary,
+	"executive summary": secSummary, "statement of purpose": secSummary, "personal statement": secSummary, "qualifications summary": secSummary,
 	"experience": secExperience, "work experience": secExperience, "professional experience": secExperience, "employment": secExperience,
 	"employment history": secExperience, "work history": secExperience, "relevant experience": secExperience, "career history": secExperience,
-	"professional history": secExperience, "experience highlights": secExperience,
+	"professional history": secExperience, "experience highlights": secExperience, "work": secExperience, "career": secExperience,
+	"professional background": secExperience, "selected experience": secExperience, "industry experience": secExperience,
+	"engineering experience": secExperience, "software experience": secExperience, "military experience": secExperience,
+	"internships": secExperience, "internship experience": secExperience,
 	"education": secEducation, "academic background": secEducation, "education and training": secEducation, "academics": secEducation,
-	"education and certifications": secEducation,
-	"skills":                       secSkills, "technical skills": secSkills, "core competencies": secSkills, "skills and tools": secSkills, "technologies": secSkills,
+	"education and certifications": secEducation, "education and honors": secEducation, "academic history": secEducation, "degrees": secEducation,
+	"skills": secSkills, "technical skills": secSkills, "core competencies": secSkills, "skills and tools": secSkills, "technologies": secSkills,
 	"key skills": secSkills, "competencies": secSkills, "tools": secSkills, "skills and technologies": secSkills, "technical proficiencies": secSkills,
 	"skills and abilities": secSkills, "areas of expertise": secSkills, "expertise": secSkills, "skills and interests": secSkills,
+	"technical expertise": secSkills, "skills summary": secSkills, "core skills": secSkills, "programming languages": secSkills,
+	"frameworks and tools": secSkills, "tools and technologies": secSkills,
 	"certifications": secCerts, "licenses": secCerts, "certifications and licenses": secCerts, "licenses and certifications": secCerts,
 	"clearance": secCerts, "security clearance": secCerts, "certificates": secCerts, "certifications and training": secCerts,
-	"statement of purpose": secSummary, "personal statement": secSummary, "qualifications summary": secSummary,
 	"projects": secActivities, "personal projects": secActivities, "research": secActivities, "research experience": secActivities,
 	"volunteer": secActivities, "volunteer experience": secActivities, "leadership": secActivities, "activities": secActivities,
 	"extracurricular": secActivities, "extracurriculars": secActivities, "extracurricular activities": secActivities, "involvement": secActivities,
 	"campus involvement": secActivities, "leadership and activities": secActivities, "academic projects": secActivities,
-	"awards": secOther, "honors and awards": secOther, "publications": secOther, "interests": secOther,
+	"open source": secActivities, "open-source": secActivities, "side projects": secActivities, "selected projects": secActivities,
+	"community": secActivities, "community involvement": secActivities,
+	"awards": secOther, "honors": secOther, "honors and awards": secOther, "awards and honors": secOther, "publications": secOther, "interests": secOther,
 	"references": secOther, "languages": secOther, "additional information": secOther, "achievements": secOther, "relevant coursework": secOther,
 	"coursework": secOther,
 }
@@ -61,10 +68,10 @@ var headingWords = []struct {
 	re  *regexp.Regexp
 	sec section
 }{
-	{regexp.MustCompile(`\b(volunteer|research|project|projects|leadership|extracurricular|activities|involvement)\b`), secActivities},
-	{regexp.MustCompile(`\b(experience|employment|work history)\b`), secExperience},
-	{regexp.MustCompile(`\beducation\b`), secEducation},
-	{regexp.MustCompile(`\b(skills|technologies|competencies|proficiencies|toolkit)\b`), secSkills},
+	{regexp.MustCompile(`\b(volunteer|research|project|projects|leadership|extracurricular|activities|involvement|open[- ]source|community)\b`), secActivities},
+	{regexp.MustCompile(`\b(experience|employment|work history|internships?)\b`), secExperience},
+	{regexp.MustCompile(`\b(education|academics?)\b`), secEducation},
+	{regexp.MustCompile(`\b(skills|technologies|competencies|proficiencies|toolkit|expertise)\b`), secSkills},
 	{regexp.MustCompile(`\b(summary|objective|profile|purpose)\b`), secSummary},
 	{regexp.MustCompile(`\b(certifications?|licenses?|clearance)\b`), secCerts},
 	{regexp.MustCompile(`\b(awards?|honors|publications?|interests|coursework|references|languages)\b`), secOther},
@@ -72,28 +79,28 @@ var headingWords = []struct {
 
 // Regex
 var (
-	bulletRe = regexp.MustCompile(`^\s*(?:[•●▪◦‣∙·*\-–]|\x{f0b7}|o\s)\s*`)
+	bulletRe = regexp.MustCompile(`^\s*(?:[•●▪◦‣∙·*\-–—➢➤▸▹►▻❖✓✔⁃»›]|\x{f0b7}|o\s)\s*`)
 	emailRe  = regexp.MustCompile(`[\w.+-]+@[\w-]+\.[\w.-]+`)
-	phoneRe  = regexp.MustCompile(`(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}`)
-	urlRe    = regexp.MustCompile(`(?i)\b(?:https?://|www\.|linkedin\.com|github\.com)\S*`)
+	phoneRe  = regexp.MustCompile(`(?:\+?\d{1,3}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}`)
+	urlRe    = regexp.MustCompile(`(?i)\b(?:https?://|www\.|linkedin\.com|github\.com|gitlab\.com)\S*`)
 	// City, ST (two-letter state or a state name). "Inc., Charleston, SC" yields "Charleston, SC".
 	cityRe     = regexp.MustCompile(`\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2},\s*(?:[A-Z]{2}|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|Canada|UK|England|India|Germany))\b`)
 	month      = `(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|Spring|Summer|Fall|Autumn|Winter)\.?`
-	datePart   = `(?:` + month + `\s+\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}|\d{4})`
-	rangeRe    = regexp.MustCompile(`(?i)(` + datePart + `)\s*(?:–|—|-|to|until)\s*(` + datePart + `|present|current|now|today)`)
-	singleRe   = regexp.MustCompile(`(?i)(?:expected\s+)?(` + month + `\s+\d{4}|\d{1,2}/\d{4}|\b(?:19|20)\d{2}\b)`)
+	datePart   = `(?:` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\d{4}[-/]\d{2}|\d{4})`
+	rangeRe    = regexp.MustCompile(`(?i)(` + datePart + `)\s*(?:–|—|-|to|until|through)\s*(` + datePart + `|present|current|now|today|ongoing|in progress)`)
+	singleRe   = regexp.MustCompile(`(?i)(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\b(?:19|20)\d{2}\b)`)
 	quantRe    = regexp.MustCompile(`\d+(?:\.\d+)?\s*(?:%|x\b|k\b|m\b|\+)|\$\s?\d|\b\d{2,}\b`)
-	gpaRe      = regexp.MustCompile(`(?i)GPA[:\s]*([0-4]\.\d{1,2})`)
-	degreeRe   = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+)?|A\.?A\.?S?\.?|A\.?S\.?)(?:\s|,|$)`)
-	schoolRe   = regexp.MustCompile(`(?i)\b(university|college|institute|school|academy|polytechnic|conservatory)\b`)
+	gpaRe      = regexp.MustCompile(`(?i)(?:cumulative\s+)?GPA[:\s]*([0-4]\.\d{1,2})(?:\s*/\s*[45]\.0{0,2})?`)
+	degreeRe   = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?(?: of [A-Z][a-z]+)?|J\.?D\.?|M\.?D\.?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|A\.?A\.?S?\.?|A\.?S\.?|High School Diploma|Certificate)\b`)
+	schoolRe   = regexp.MustCompile(`(?i)\b(university|college|institute|school|academy|polytechnic|conservatory|bootcamp)\b`)
 	honorsRe   = regexp.MustCompile(`(?i)(summa|magna)? ?cum laude|honors|dean'?s list|valedictorian`)
 	clearRe    = regexp.MustCompile(`(?i)\b(TS/SCI(?: with (?:full scope |CI )?poly(?:graph)?)?|top secret(?: clearance)?|secret clearance|public trust)\b`)
-	titleWords = regexp.MustCompile(`(?i)\b(engineer|developer|manager|analyst|intern|director|specialist|consultant|designer|scientist|lead|architect|administrator|coordinator|associate|officer|technician|assistant|representative|president|founder|programmer|researcher|teacher|nurse|accountant|head|vp|chief|owner|supervisor|instructor|fellow|editor|writer|strategist|producer|recruiter|advisor|agent|operator|trainer|clerk|attorney|paralegal|counsel|executive|member)\b`)
+	titleWords = regexp.MustCompile(`(?i)\b(engineer|developer|manager|analyst|intern|director|specialist|consultant|designer|scientist|lead|architect|administrator|coordinator|associate|officer|technician|assistant|representative|president|founder|programmer|researcher|teacher|nurse|accountant|head|vp|chief|owner|supervisor|instructor|fellow|editor|writer|strategist|producer|recruiter|advisor|agent|operator|trainer|clerk|attorney|paralegal|counsel|executive|member|swe|sre|devops|pm|cto|ceo|cfo|coo|ciso|partner|principal|staff|apprentice|professor|lecturer|mentor|tutor|coach|auditor|actuary|copywriter|marketer|postdoc|scholar)\b`)
 	schoolSep  = regexp.MustCompile(`\s*\|\s*|\s+[—–-]\s+|,\s+`)
-	sepRe      = regexp.MustCompile(`\s+(?:\||—|–|-|@|at)\s+|\s*\|\s*|,\s+`)
+	sepRe      = regexp.MustCompile(`\s+(?:\||—|–|-|@|at|•|·)\s+|\s*[|•·]\s*|,\s+`)
 	monthNums  = map[string]string{"jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05", "jun": "06", "jul": "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12",
 		"spr": "05", "sum": "08", "fal": "12", "aut": "12", "win": "12"}
-	dateLineRe = regexp.MustCompile(`(?i)^\(?(?:expected\s+|anticipated\s+)?(` + month + `\s+\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}|(?:19|20)\d{2})\)?(?:\s*\(.*\))?$`)
+	dateLineRe = regexp.MustCompile(`(?i)^\(?(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\d{4}[-/]\d{2}|(?:19|20)\d{2})\)?(?:\s*\(.*\))?$`)
 )
 
 // Tidy up the heading
@@ -148,22 +155,40 @@ func normStart(s string) string {
 var seasonStart = map[string]string{"spr": "03", "sum": "06", "fal": "09", "aut": "09", "win": "12"}
 
 // Turns a resume date into YYYY-MM, or YYYY when there is no month.
+func expandShortYear(yy string) string {
+	n, err := strconv.Atoi(yy)
+	if err != nil {
+		return yy
+	}
+	if n <= 49 {
+		return fmt.Sprintf("20%02d", n)
+	}
+	return fmt.Sprintf("19%02d", n)
+}
+
 func normMonth(s string) string {
 	s = strings.TrimSpace(strings.TrimSuffix(strings.ToLower(s), "."))
 	switch s {
-	case "present", "current", "now", "today":
+	case "present", "current", "now", "today", "ongoing", "in progress":
 		return ""
 	}
-	if m := regexp.MustCompile(`^(\d{1,2})/(\d{4})$`).FindStringSubmatch(s); m != nil {
+	if m := regexp.MustCompile(`^(\d{1,2})[/.](\d{4})$`).FindStringSubmatch(s); m != nil {
 		n, _ := strconv.Atoi(m[1])
 		if n >= 1 && n <= 12 {
-			return m[2] + "-" + strconv.Itoa(100 + n)[1:]
+			return m[2] + "-" + strconv.Itoa(100+n)[1:]
 		}
 		return m[2]
 	}
-	if m := regexp.MustCompile(`^([a-z]+)\.?\s+(\d{4})$`).FindStringSubmatch(s); m != nil && len(m[1]) >= 3 {
+	if m := regexp.MustCompile(`^(\d{4})[-/](\d{2})$`).FindStringSubmatch(s); m != nil {
+		return m[1] + "-" + m[2]
+	}
+	if m := regexp.MustCompile(`^([a-z]+)\.?\s+(?:'(\d{2})|(\d{4}))$`).FindStringSubmatch(s); m != nil && len(m[1]) >= 3 {
+		year := m[3]
+		if year == "" {
+			year = expandShortYear(m[2])
+		}
 		if mm, ok := monthNums[m[1][:3]]; ok {
-			return m[2] + "-" + mm
+			return year + "-" + mm
 		}
 	}
 	if regexp.MustCompile(`^\d{4}(-\d{2})?$`).MatchString(s) {
@@ -222,10 +247,13 @@ func endsSentence(l string) bool {
 
 var urlTail = regexp.MustCompile(`(?i)(?:https?://|www\.)\S+$`)
 
-// Joins a line that wrapped in the PDF onto the text before it. A web address broken across lines is rejoined without a space.
+// Joins a line that wrapped in the PDF onto the text before it. A web address or hyphenated word broken across lines is rejoined cleanly.
 func joinWrapped(prev, next string) string {
 	if urlTail.MatchString(prev) && next != "" && !strings.HasPrefix(next, " ") {
 		return prev + next
+	}
+	if len(prev) >= 2 && strings.HasSuffix(prev, "-") && !strings.HasSuffix(prev, " -") && next != "" && unicode.IsLower([]rune(next)[0]) {
+		return strings.TrimSuffix(prev, "-") + next
 	}
 	return prev + " " + next
 }
@@ -325,13 +353,23 @@ func Parse(text string) Draft {
 	return d
 }
 
-var markdownHeadingRe = regexp.MustCompile(`^#{1,6}\s+`)
+var (
+	markdownHeadingRe = regexp.MustCompile(`^#{1,6}\s+`)
+	boldLineRe        = regexp.MustCompile(`^(?:\*\*|__)(.+?)(?:\*\*|__)$`)
+	decorHeadingRe    = regexp.MustCompile(`^[-=_*]{2,}\s*(.+?)\s*[-=_*]{2,}$`)
+)
 
-// markdownLine undoes the Markdown a .md resume carries: a heading mark is dropped, and so is the
-// backslash that render.Escape puts before a leading #, - or * so that text is not read as markup.
+// markdownLine undoes the Markdown a .md resume carries: heading marks, bold wrappers, decorative
+// rules around headings, and the backslash render.Escape puts before a leading #, - or *.
 func markdownLine(l string) string {
 	if m := markdownHeadingRe.FindString(l); m != "" {
-		return strings.TrimSpace(l[len(m):])
+		l = strings.TrimSpace(l[len(m):])
+	}
+	if m := boldLineRe.FindStringSubmatch(l); m != nil {
+		l = strings.TrimSpace(m[1])
+	}
+	if m := decorHeadingRe.FindStringSubmatch(l); m != nil {
+		l = strings.TrimSpace(m[1])
 	}
 	if len(l) > 1 && l[0] == '\\' && strings.ContainsRune("#-*", rune(l[1])) {
 		return l[1:]
@@ -453,8 +491,10 @@ func parseHeader(d *Draft, lines []string) {
 // activity or project ("Cybersecurity Club", "Hackathon").
 func IsJobTitle(s string) bool { return titleWords.MatchString(s) }
 
+var nameCredRe = regexp.MustCompile(`(?i)(?:,\s*(?:Ph\.?D\.?|M\.?B\.?A\.?|M\.?D\.?|J\.?D\.?|C\.?P\.?A\.?|P\.?E\.?|P\.?M\.?P\.?|CISSP|Jr\.?|Sr\.?|II|III|IV))+$`)
+
 func looksLikeName(s string) bool {
-	s = strings.TrimSpace(s)
+	s = strings.TrimSpace(nameCredRe.ReplaceAllString(strings.TrimSpace(s), ""))
 	f := strings.Fields(s)
 	if len(f) < 2 || len(f) > 5 || emailRe.MatchString(s) || phoneRe.MatchString(s) || urlRe.MatchString(s) || strings.ContainsAny(s, "|@:,0123456789") {
 		return false
@@ -689,7 +729,11 @@ func parseExperiences(lines []string, defaultOrg string, warnings *[]string) []m
 			*warnings = append(*warnings, fmt.Sprintf("Could not read the job title at %q", e.CompanyName))
 		}
 		if e.StartDate == nil {
-			*warnings = append(*warnings, fmt.Sprintf("Could not read a date for %q", e.JobTitle))
+			if defaultOrg != "" {
+				e.DateNA = true
+			} else {
+				*warnings = append(*warnings, fmt.Sprintf("Could not read a date for %q", e.JobTitle))
+			}
 		}
 		// Bullets with numbers are results; paragraphs stay together as the description.
 		var desc, impact []string

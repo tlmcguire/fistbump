@@ -6,17 +6,26 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/models"
 )
 
-const experienceCols = `id, profile_id, company_name, job_title, start_date, end_date, location, description, impact, skills, sort_order`
+const experienceCols = `id, profile_id, company_name, job_title, start_date, end_date, date_na, location, description, impact, skills, sort_order`
 
 func scanExperience(row scanner) (models.Experience, error) {
 	var e models.Experience
 	var skills string
-	if err := row.Scan(&e.ID, &e.ProfileID, &e.CompanyName, &e.JobTitle, &e.StartDate, &e.EndDate, &e.Location,
+	var dateNA int
+	if err := row.Scan(&e.ID, &e.ProfileID, &e.CompanyName, &e.JobTitle, &e.StartDate, &e.EndDate, &dateNA, &e.Location,
 		&e.Description, &e.Impact, &skills, &e.SortOrder); err != nil {
 		return e, mapErr(err)
 	}
+	e.DateNA = dateNA != 0
 	e.Skills = decodeList(skills)
 	return e, nil
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // ListExperiences returns the experiences by sort_order, then id.
@@ -59,8 +68,8 @@ func (s *Store) CreateExperience(ctx context.Context, e models.Experience) (mode
 			}
 		}
 		res, err := tx.db.ExecContext(ctx, `INSERT INTO experiences (profile_id, company_name, job_title, start_date, end_date,
-  location, description, impact, skills, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			p.ID, e.CompanyName, e.JobTitle, e.StartDate, e.EndDate, e.Location, e.Description, e.Impact,
+  date_na, location, description, impact, skills, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			p.ID, e.CompanyName, e.JobTitle, e.StartDate, e.EndDate, boolInt(e.DateNA), e.Location, e.Description, e.Impact,
 			encodeList(cleanList(e.Skills)), e.SortOrder)
 		if err != nil {
 			return mapErr(err)
@@ -75,8 +84,8 @@ func (s *Store) CreateExperience(ctx context.Context, e models.Experience) (mode
 // UpdateExperience replaces every editable field of experience id.
 func (s *Store) UpdateExperience(ctx context.Context, id int64, e models.Experience) (models.Experience, error) {
 	res, err := s.db.ExecContext(ctx, `UPDATE experiences SET company_name = ?, job_title = ?, start_date = ?, end_date = ?,
-  location = ?, description = ?, impact = ?, skills = ?, sort_order = ? WHERE id = ?`,
-		e.CompanyName, e.JobTitle, e.StartDate, e.EndDate, e.Location, e.Description, e.Impact,
+  date_na = ?, location = ?, description = ?, impact = ?, skills = ?, sort_order = ? WHERE id = ?`,
+		e.CompanyName, e.JobTitle, e.StartDate, e.EndDate, boolInt(e.DateNA), e.Location, e.Description, e.Impact,
 		encodeList(cleanList(e.Skills)), e.SortOrder, id)
 	if err != nil {
 		return e, mapErr(err)

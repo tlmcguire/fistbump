@@ -138,13 +138,16 @@
         input.addEventListener("input", update);
         update();
         extra = preview;
+      } else if (field.type === "checkbox") {
+        input = el("input", {id, type: "checkbox", checked: Boolean(values[field.name])});
       } else if (field.type === "month") {
         input = supportsMonthInput
           ? el("input", {id, type: "month", value: toMonth(values[field.name])})
           : makeMonthPicker(id, toMonth(values[field.name]));
         if (field.current) {
-          const box = el("input", {type: "checkbox", checked: Boolean(values[field.current.when]) && !values[field.name]});
+          const box = el("input", {type: "checkbox", checked: Boolean(values[field.current.when]) && !values[field.name] && !values.date_na});
           const sync = () => {
+            if (inputs.date_na?.checked) return;
             input.disabled = box.checked;
             if (box.checked) input.value = "";
           };
@@ -163,6 +166,12 @@
       inputs[field.name] = input;
       errors[field.name] = el("p", {class: "field-error", id: `${id}-error`, hidden: true});
       input.setAttribute("aria-describedby", `${id}-error`);
+      if (field.type === "checkbox") {
+        return el("div", {class: `form-row${field.wide ? " wide" : ""}`},
+          el("label", {class: "check", for: id}, input, field.label),
+          field.hint ? el("p", {class: "hint", text: field.hint}) : null,
+          errors[field.name]);
+      }
       return el("div", {class: `form-row${field.wide ? " wide" : ""}`},
         el("label", {for: id}, field.label, field.required ? el("span", {class: "required", "aria-hidden": "true", text: " *"}) : null),
         input,
@@ -170,6 +179,23 @@
         field.hint ? el("p", {class: "hint", text: field.hint}) : null,
         errors[field.name]);
     });
+
+    // When "Date range not applicable" is toggled, disable and clear Start/End date inputs.
+    if (inputs.date_na && inputs.start_date && inputs.end_date) {
+      const syncDateNA = () => {
+        const na = inputs.date_na.checked;
+        inputs.start_date.disabled = na;
+        if (na) inputs.start_date.value = "";
+        if (inputs.end_date.currentBox) {
+          inputs.end_date.currentBox.disabled = na;
+          if (na) inputs.end_date.currentBox.checked = false;
+        }
+        inputs.end_date.disabled = na || Boolean(inputs.end_date.currentBox?.checked);
+        if (na) inputs.end_date.value = "";
+      };
+      inputs.date_na.addEventListener("change", syncDateNA);
+      syncDateNA();
+    }
  
     const clearErrors = () => {
       formError.hidden = true;
@@ -184,12 +210,14 @@
       inputs,
       read() {
         const body = {...keep};
+        const dateNA = Boolean(inputs.date_na?.checked);
         for (const field of spec) {
           const input = inputs[field.name];
+          if (field.type === "checkbox") { body[field.name] = Boolean(input.checked); continue; }
           const raw = input.value.trim();
           if (field.type === "list") body[field.name] = textToList(input.value);
           else if (field.type === "number") body[field.name] = raw === "" ? null : Number(raw);
-          else if (field.type === "month") body[field.name] = input.currentBox?.checked || raw === "" ? null : raw;
+          else if (field.type === "month") body[field.name] = dateNA || input.currentBox?.checked || raw === "" ? null : raw;
           // The name is plain text on the backend, so a blank name is sent as "" rather than null.
           else if (field.required || field.name === "full_name") body[field.name] = raw;
           else body[field.name] = raw === "" ? null : (field.type === "textarea" ? input.value.replace(/\s+$/, "") : raw);
@@ -233,6 +261,7 @@
   const EXPERIENCE_FIELDS = [
     {name: "job_title", label: "Job title", required: true},
     {name: "company_name", label: "Company", required: true},
+    {name: "date_na", label: "Date range not applicable", type: "checkbox", wide: true, hint: "Check this for projects, volunteer work, or entries where dates do not apply."},
     {name: "start_date", label: "Start", type: "month"},
     {name: "end_date", label: "End", type: "month", current: {label: "I work here now", when: "start_date"}},
     {name: "location", label: "Location"},
@@ -355,12 +384,32 @@
  
     const previewText = el("div", {class: "resume-doc"});
     const exportNote = el("div");
+    const PDF_STYLES = [
+      ["classic", "Classic"],
+      ["modern", "Modern"],
+      ["minimal", "Minimal"],
+      ["compact", "Compact"],
+      ["executive", "Executive"],
+    ];
+    const styleSelect = el("select", {id: "resume-pdf-style", class: "pdf-style-select", "aria-label": "PDF style", title: "Choose PDF layout style"},
+      PDF_STYLES.map(([v, label]) => el("option", {value: v, text: label})));
+    styleSelect.value = window.Prefs?.get("pdfStyle") || "classic";
     const exportButton = el("button", {type: "button"}, "Export PDF");
     const versionsList = el("ul", {class: "versions"});
     const versionForm = el("form", {class: "version-form", hidden: true});
 
     //the preview as text or as the PDF it exports
-    const pdf = window.PdfPreview.create(async () => (await api().resume.previewPdf()).data_base64, {title: "Master resume as a PDF"});
+    const pdf = window.PdfPreview.create(async () => (await api().resume.previewPdf(styleSelect.value)).data_base64, {title: "Master resume as a PDF"});
+    styleSelect.addEventListener("change", () => {
+      window.Prefs?.set("pdfStyle", styleSelect.value);
+      if (previewKind === "pdf") pdf.load();
+    });
+    window.Prefs?.onChange((key, value) => {
+      if (key === "pdfStyle" && styleSelect.value !== value) {
+        styleSelect.value = value;
+        if (previewKind === "pdf") pdf.load();
+      }
+    });
     const previewPanels = {
       text: el("div", {class: "panel", id: "resume-panel-text", role: "tabpanel", "aria-labelledby": "resume-tab-text"},
         el("p", {class: "hint", text: "This text is what saved versions, tailoring and PDF export start from."}), previewText),
@@ -387,7 +436,7 @@
 
     const side = el("div", {class: "pane resume-side"},
       el("section", {class: "resume-section"},
-        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), exportButton),
+        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, styleSelect, exportButton)),
         el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
         exportNote,
         previewPanels.text,
@@ -413,7 +462,7 @@
     exportButton.addEventListener("click", async () => {
       exportButton.disabled = true;
       exportNote.replaceChildren();
-      const result = await attempt(() => exportFile(format => api().resume.export(format)));
+      const result = await attempt(() => exportFile(format => api().resume.export(format, styleSelect.value)));
       if (disposed) return;
       exportButton.disabled = false;
       if (result?.saved) exportNote.replaceChildren(savedNote(result.path));
@@ -497,7 +546,7 @@
         reload: async () => { master.experiences = (await api().resume.get()).experiences; },
         fields: EXPERIENCE_FIELDS,
         title: e => [e.job_title, e.company_name].filter(Boolean).join(", "),
-        meta: e => [dateRange(e.start_date, e.end_date), e.location].filter(Boolean).join(" · "),
+        meta: e => [e.date_na ? "" : dateRange(e.start_date, e.end_date), e.location].filter(Boolean).join(" · "),
         body: e => [e.description, e.impact].filter(Boolean),
         skills: e => e.skills || [],
       },
@@ -523,7 +572,7 @@
     //The request body for a full replace of an entry: its writable fields as stored.
     const bodyOf = (kind, entry) => {
       const body = {};
-      for (const f of KINDS[kind].fields) body[f.name] = entry[f.name] ?? (f.type === "list" ? [] : null);
+      for (const f of KINDS[kind].fields) body[f.name] = entry[f.name] ?? (f.type === "list" ? [] : f.type === "checkbox" ? false : null);
       body.sort_order = entry.sort_order;
       return body;
     };

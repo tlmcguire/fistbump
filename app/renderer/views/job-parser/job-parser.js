@@ -2,14 +2,25 @@ window.JobParser = {
     mount() {
       const $ = id => document.getElementById(id);
       const main = $("main");
-      const form = $("job-form");
-      const input = $("job-url");
-      const loadButton = form.querySelector('button[type="submit"]');
       const searchForm = $("search-form");
       const searchButton = searchForm.querySelector('button[type="submit"]');
 
-      const tabs = {find: $("tab-find"), link: $("tab-link"), paste: $("tab-paste"), saved: $("tab-saved"), settings: $("tab-settings")};
-      const forms = {find: searchForm, link: form, paste: $("paste-title"), saved: $("saved-form"), settings: $("settings-title")};
+      const tabs = {find: $("tab-find"), paste: $("tab-paste"), saved: $("tab-saved"), settings: $("tab-settings")};
+      const forms = {find: searchForm, paste: $("paste-title"), saved: $("saved-form"), settings: $("settings-title")};
+
+      // Detects a pasted job URL in the search box so users can open links without a separate page.
+      const looksLikeJobLink = value => {
+        const t = String(value || "").trim();
+        if (!t || /\s/.test(t)) return false;
+        return /^https?:\/\//i.test(t) || /^(?:job-)?boards\.greenhouse\.io\//i.test(t) || /^grnh\.se\//i.test(t);
+      };
+      const normalizeJobLink = value => {
+        const t = String(value || "").trim();
+        return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+      };
+      const syncSearchButton = () => {
+        searchButton.textContent = looksLikeJobLink($("search-keywords").value) ? "Open link" : "Search";
+      };
 
       //The results pane and the detail pane each show one state at a time.
       const RESULT_STATES = ["state-initial", "state-loading", "state-results", "state-error"];
@@ -38,12 +49,9 @@ window.JobParser = {
         poseDetailMascot();
       };
 
-      //The mascot in the empty detail pane: it holds out a link card in Open a link, and a job card beside a
-      //list of results. Next to the search's own message or an empty list there is one mascot already.
+      //The mascot in the empty detail pane: it holds out a job card beside a list of results.
       const poseDetailMascot = () => {
-        const pose = activeTab === "link" ? "06-open-link"
-          : !$("state-results").hidden && results?.postings.length ? "07-results-found"
-          : "";
+        const pose = !$("state-results").hidden && results?.postings.length ? "07-results-found" : "";
         $("detail-mascot").hidden = !pose;
         if (pose) $("detail-mascot").src = `views/graphics/mascots/${pose}.png`;
       };
@@ -65,9 +73,7 @@ window.JobParser = {
 
       //the placeholder in the detail pane, worded for the view it is in
       const showDetailEmpty = () => {
-        $("detail-empty-message").textContent = activeTab === "link"
-          ? "Paste a Greenhouse job link above and press Open."
-          : "Choose a job from the list to see the full posting.";
+        $("detail-empty-message").textContent = "Choose a job from the list, or paste a Greenhouse job link into the search bar.";
         detailSeq++;
         posting = null;
         selectedKey = "";
@@ -77,9 +83,7 @@ window.JobParser = {
         showDetail("detail-empty");
       };
 
-      //a search and a link load run separately, so each only locks its own button
       const setSearchBusy = busy => { searchButton.disabled = busy; };
-      const setLinkBusy = busy => { loadButton.disabled = busy; };
 
       //The listing each of Find jobs and Open a link had open, and how far each tab's panes were
       //scrolled, so switching back shows them as they were.
@@ -113,7 +117,6 @@ window.JobParser = {
         }
 
         main.classList.toggle("view-find", name === "find" || name === "saved");
-        main.classList.toggle("view-link", name === "link");
         main.classList.toggle("view-paste", name === "paste");
         main.classList.toggle("view-settings", name === "settings");
         $("settings-pane").hidden = name !== "settings";
@@ -136,14 +139,9 @@ window.JobParser = {
         if (name === "saved") loadSaved();
 
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
-          showInitial("Search by job title, location, company or industry. An industry alone is enough: no keywords needed.");
+          showInitial("Search by job title, location, company or industry — or paste a Greenhouse job link directly into the search bar.");
         }
-        ({find: $("search-keywords"), link: input, paste: $("paste-text"), saved: $("saved-q")})[name]?.focus();
-
-        if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
-          showInitial("Search by job title, location, company or industry. An industry alone is enough: no keywords needed.");
-        }
-        (name === "find" ? $("search-keywords") : input).focus();
+        ({find: $("search-keywords"), paste: $("paste-text"), saved: $("saved-q")})[name]?.focus();
       };
 
       //Puts a search error in the results pane.
@@ -312,19 +310,20 @@ window.JobParser = {
         showDetail("detail-loading");
       };
 
-      //opens a pasted job link
+      //opens a pasted job link directly from the search bar
       const loadPosting = async url => {
-        detailRetry = () => loadPosting(url);
-        setLinkBusy(true);
+        const normalized = normalizeJobLink(url);
+        detailRetry = () => loadPosting(normalized);
+        setSearchBusy(true);
         showDetailLoading("Opening the listing\u2026");
         const mine = detailSeq;
         try {
-          const data = await window.FistBumpAPI.link(url);
+          const data = await window.FistBumpAPI.link(normalized);
           if (mine === detailSeq) displayPosting(data);
         } catch (error) {
           if (mine === detailSeq) showDetailError(error);
         } finally {
-          setLinkBusy(false);
+          setSearchBusy(false);
         }
       };
 
@@ -981,18 +980,22 @@ window.JobParser = {
         $("results-pane").scrollTop = 0;
       };
 
-      //rest of script is state handling and button events (updated 10/22 for tabs and new retry system replacing lastUrl)
+      //rest of script is state handling and button events
       tabs.find.addEventListener("click", () => selectTab("find"));
-      tabs.link.addEventListener("click", () => selectTab("link"));
-
       tabs.paste.addEventListener("click", () => selectTab("paste"));
       tabs.saved.addEventListener("click", () => selectTab("saved"));
-
-
       tabs.settings.addEventListener("click", () => selectTab("settings"));
+
+      $("search-keywords").addEventListener("input", syncSearchButton);
 
       searchForm.addEventListener("submit", event => {
         event.preventDefault();
+
+        const rawKeywords = $("search-keywords").value.trim();
+        if (looksLikeJobLink(rawKeywords)) {
+          loadPosting(rawKeywords);
+          return;
+        }
 
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
@@ -1029,7 +1032,7 @@ window.JobParser = {
           }
         }
         if (!query.keywords.length && !query.location && !query.categories.length && !query.company) {
-          showInitial("Enter keywords, a location, a company or an industry to search.");
+          showInitial("Enter keywords, a location, a company, an industry, or paste a Greenhouse job link.");
           $("search-keywords").focus();
           return;
         }
@@ -1042,15 +1045,6 @@ window.JobParser = {
           window.Suggest.remember("location", [query.location]);
           window.Suggest.remember("company", [query.company]);
         });
-      });
-
-      form.addEventListener("submit", event => {
-        event.preventDefault();
-        const url = input.value.trim();
-  
-        if (url) {
-          loadPosting(url);
-        }
       });
 
       $("back-to-results").addEventListener("click", () => main.classList.remove("has-detail"));
@@ -1119,7 +1113,7 @@ window.JobParser = {
           $("saved-empty-message").textContent = ({
             archived: "No archived jobs. Archived jobs are hidden from Saved jobs, but nothing is deleted — you can bring them back any time.",
             trash: `The Trash is empty. A job you move to the Trash is deleted for good after ${trashDays} days, unless you restore it before then.`,
-          })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs, Open a link, or Paste a job.";
+          })[$("saved-scope").value] || "No saved jobs yet. Save one from Find jobs or Paste a job.";
           $("saved-empty").hidden = jobs.length > 0;
           markSelected();
         } catch (error) {
@@ -1389,6 +1383,21 @@ window.JobParser = {
           }
           for (const note of c.notes) parts.push(el("p", {class: "note", text: note}));
           parts.push(el("p", {class: "cost-meta", text: "Estimates from average figures for one person with a modest budget, not live prices. Taxes are simplified. Use them to compare, then check the real numbers."}));
+          if (Array.isArray(c.sources) && c.sources.length) {
+            const freshness = [c.data_updated_at ? `Updated ${c.data_updated_at}` : "",
+              c.refresh_days ? `Refreshes automatically every ${c.refresh_days} days` : "",
+              c.next_update_at ? `next check ${c.next_update_at}` : ""].filter(Boolean).join(" · ");
+            const items = c.sources.map(src => {
+              const href = safeURL(src.url);
+              const link = href
+                ? el("a", {href, target: "_blank", rel: "noopener noreferrer", text: src.name})
+                : el("strong", {text: src.name});
+              return el("li", {}, link, src.description ? ` — ${src.description}` : "");
+            });
+            parts.push(el("details", {class: "cost-sources"},
+              el("summary", {text: freshness ? `Data sources (${freshness})` : "Data sources"}),
+              el("ul", {class: "cost-source-list"}, items)));
+          }
           fill(box, ...parts);
           box.hidden = false;
         } catch {
@@ -1762,7 +1771,7 @@ window.JobParser = {
           }
           if (event.key === "f") {
             event.preventDefault();
-            const box = activeTab === "find" ? $("search-keywords") : input;
+            const box = $("search-keywords");
             box.focus();
             box.select();
           } else if (event.key === ",") {

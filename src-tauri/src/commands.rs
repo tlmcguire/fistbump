@@ -26,10 +26,15 @@ async fn request_export_bytes(
     state: &AppState,
     url_path: &str,
     format: &str,
+    style: Option<&str>,
 ) -> Result<(Vec<u8>, Option<String>), Value> {
+    let mut payload = json!({ "format": format });
+    if let Some(s) = style.filter(|s| !s.is_empty()) {
+        payload["style"] = json!(s);
+    }
     let raw = state
         .backend
-        .request_raw(Method::POST, url_path, Some(json!({ "format": format })))
+        .request_raw(Method::POST, url_path, Some(payload))
         .await
         .map_err(|msg| {
             json!({
@@ -74,14 +79,20 @@ async fn request_export_bytes(
     }))
 }
 
-async fn save_export(app: &AppHandle, state: &AppState, url_path: &str, format: &str) -> Value {
+async fn save_export(
+    app: &AppHandle,
+    state: &AppState,
+    url_path: &str,
+    format: &str,
+    style: Option<&str>,
+) -> Value {
     let (filter_name, ext) = match format {
         "pdf" => ("PDF", "pdf"),
         "md" => ("Markdown", "md"),
         _ => return bad("Format must be pdf or md"),
     };
 
-    let (bytes, disposition) = match request_export_bytes(state, url_path, format).await {
+    let (bytes, disposition) = match request_export_bytes(state, url_path, format, style).await {
         Ok(res) => res,
         Err(err) => return err,
     };
@@ -152,8 +163,8 @@ async fn record_export(state: &AppState, tailored_id: i64, file_path: &str) -> O
     }
 }
 
-async fn preview_pdf(state: &AppState, url_path: &str) -> Value {
-    match request_export_bytes(state, url_path, "pdf").await {
+async fn preview_pdf(state: &AppState, url_path: &str, style: Option<&str>) -> Value {
+    match request_export_bytes(state, url_path, "pdf", style).await {
         Ok((bytes, _)) => json!({ "data_base64": BASE64.encode(bytes) }),
         Err(err) => err,
     }
@@ -406,17 +417,22 @@ pub async fn ipc_call(
         },
 
         "resume:export" => match a0.and_then(|v| v.as_str()) {
-            Some(fmt) => save_export(&app, &state, "/v1/resume/export", fmt).await,
+            Some(fmt) => {
+                let style = a1.and_then(|v| v.as_str());
+                save_export(&app, &state, "/v1/resume/export", fmt, style).await
+            }
             None => bad("Format must be pdf or md"),
         },
 
         "tailored:export" => match (as_id(a0), a1.and_then(|v| v.as_str())) {
             (Some(id), Some(fmt)) => {
+                let style = args.get(2).and_then(|v| v.as_str());
                 let mut res = save_export(
                     &app,
                     &state,
                     &format!("/v1/tailored-resumes/{id}/export"),
                     fmt,
+                    style,
                 )
                 .await;
                 if res.get("saved").and_then(|v| v.as_bool()) == Some(true) && fmt == "pdf" {
@@ -435,9 +451,15 @@ pub async fn ipc_call(
             (_, None) => bad("Format must be pdf or md"),
         },
 
-        "resume:previewPdf" => preview_pdf(&state, "/v1/resume/export").await,
+        "resume:previewPdf" => {
+            let style = a0.and_then(|v| v.as_str());
+            preview_pdf(&state, "/v1/resume/export", style).await
+        }
         "tailored:previewPdf" => match as_id(a0) {
-            Some(id) => preview_pdf(&state, &format!("/v1/tailored-resumes/{id}/export")).await,
+            Some(id) => {
+                let style = a1.and_then(|v| v.as_str());
+                preview_pdf(&state, &format!("/v1/tailored-resumes/{id}/export"), style).await
+            }
             None => bad("Invalid id"),
         },
 

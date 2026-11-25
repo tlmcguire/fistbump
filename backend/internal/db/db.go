@@ -49,6 +49,7 @@ func Open(file string) (*sql.DB, error) {
 // column then fails ("table suggestions has no column named reason").
 var columnMigrations = []struct{ table, column, file string }{
 	{"suggestions", "reason", "004_suggestion_reason.sql"},
+	{"experiences", "date_na", "005_experience_date_na.sql"},
 }
 
 func ensureColumns(conn *sql.DB) error {

@@ -294,7 +294,8 @@ func suggestWith(ctx context.Context, engine string, chat chatFunc, req Request)
 			logDrop(engine, t, reason)
 			continue
 		}
-		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Reason: localizeReason(req.Language, t.Section, why), Engine: engine})
+		finalReason := verifyReason(req.Language, t.Section, t.Original, proposed, why, matchedSkills(req.Analysis))
+		out = append(out, Draft{Section: t.Section, TargetID: t.TargetID, Original: t.Original, Proposed: proposed, Reason: finalReason, Engine: engine})
 	}
 	if calls > 0 && failures == calls {
 		return nil, lastErr

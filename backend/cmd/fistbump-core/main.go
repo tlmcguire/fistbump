@@ -18,6 +18,7 @@ import (
 	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/api"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
+	"github.com/tlmcguire/fistbump/backend/internal/cost"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
 	"github.com/tlmcguire/fistbump/backend/internal/pdf"
@@ -101,9 +102,12 @@ func run() error {
 		}
 	}
 
-	// Suggestion rounds run under this context; it is canceled before the server shuts down.
+	// Suggestion rounds and background updaters run under this context; it is canceled before shutdown.
 	roundsCtx, stopRounds := context.WithCancel(context.Background())
 	defer stopRounds()
+
+	// Refresh cost-of-living, pay, tax, and benefits source citations in-app every 30 days.
+	cost.StartUpdater(roundsCtx, *dataDir, "")
 
 	// Search results are cached in the database. Files from the earlier on-disk cache are not used.
 	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
@@ -170,6 +174,7 @@ func run() error {
 		Token:       token,
 		Version:     version,
 		PDF:         pdf.RenderFile,
+		PDFStyled:   pdf.RenderStyled,
 		Engines:     ai.Engines{Local: local, Remote: remote, Rules: ai.Rules{}},
 		Remote:      remote,
 		Local:       local,

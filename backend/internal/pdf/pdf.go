@@ -1,20 +1,10 @@
 // Package pdf renders resume Markdown to a one-column PDF with an embedded Unicode font.
 //
-// # Layout
+// # Styles
 //
-// US Letter, portrait. Side margins 18 mm, top and bottom margins 16 mm. The Markdown is read line
-// by line; no Markdown library is used because the render package only produces this subset:
-//
-//	Markdown                    Drawn as
-//	# Name                      Inter Bold 21 pt, ink
-//	first line after the name   contact line: Inter 9 pt, muted, parts joined by " · ", links clickable
-//	## Section                  Inter Bold 9.2 pt, ink, upper case, thin rule underneath
-//	### Entry                   Inter Bold 10.3 pt, ink; a following date line ("Jan 2020 to Present |
-//	                            Austin") goes right-aligned on the same row in Inter 9 pt muted, or below
-//	- item, * item, • item      bullet with hanging indent, Inter 9.8 pt, ink
-//	anything else               paragraph, Inter 9.8 pt, ink
-//
-// A leading "\#", "\-" or "\*" (render.Escape's escape for user text) is drawn without the backslash.
+// Five built-in styles are supported: "classic" (default), "modern", "minimal", "compact", and
+// "executive". Every style keeps text dark on white, at MinFontSize (9 pt) or larger, with no
+// filled background rectangles and no hidden characters.
 //
 // # No hidden text
 //
@@ -40,22 +30,11 @@ import (
 const (
 	family = "Inter"
 
+	// Default margins (used by tests to validate the classic layout).
 	marginX = 18.0 // mm, left and right
 	marginY = 16.0 // mm, top and bottom
 
-	nameSize    = 21.0 // pt
-	sectionSize = 9.2
-	entrySize   = 10.3
-	bodySize    = 9.8
-	smallSize   = 9.0 // contact line and entry dates; the smallest text in the file
-
-	nameH    = 9.0 // mm line heights
-	sectionH = 5.0
-	entryH   = 5.2
-	lineH    = 4.7
-	smallH   = 4.6
-
-	bulletIndent = 4.8 // mm from the left margin to bullet text
+	smallSize = 9.0 // smallest text in the file
 
 	// Creator is written to the PDF's metadata.
 	Creator = "FistBump"
@@ -64,11 +43,166 @@ const (
 // MinFontSize is the smallest text size Render uses, in points.
 const MinFontSize = smallSize
 
-var (
-	ink   = [3]int{17, 24, 39}
-	muted = [3]int{88, 96, 120}
-	rule  = [3]int{200, 205, 218}
+// Style names accepted by RenderStyled.
+const (
+	StyleClassic   = "classic"
+	StyleModern    = "modern"
+	StyleMinimal   = "minimal"
+	StyleCompact   = "compact"
+	StyleExecutive = "executive"
+)
 
+// StyleInfo describes a selectable PDF style.
+type StyleInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// Styles returns the available PDF style options in display order.
+func Styles() []StyleInfo {
+	return []StyleInfo{
+		{ID: StyleClassic, Name: "Classic", Description: "Clean, balanced layout with clear section rules."},
+		{ID: StyleModern, Name: "Modern", Description: "Deep navy accents with crisp visual hierarchy."},
+		{ID: StyleMinimal, Name: "Minimal", Description: "Centered header with airy spacing and hairline rules."},
+		{ID: StyleCompact, Name: "Compact", Description: "Tighter margins and spacing to fit more on one page."},
+		{ID: StyleExecutive, Name: "Executive", Description: "Strong header divider with deep slate-green accents."},
+	}
+}
+
+// ValidStyle reports whether name is a recognized style ID (empty means classic).
+func ValidStyle(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "", StyleClassic, StyleModern, StyleMinimal, StyleCompact, StyleExecutive:
+		return true
+	}
+	return false
+}
+
+// theme defines all visual parameters for a PDF style. All ink/accent RGB channels stay <= 125
+// so text always remains dark and clearly readable on white paper.
+type theme struct {
+	marginX      float64
+	marginY      float64
+	nameSize     float64
+	sectionSize  float64
+	entrySize    float64
+	bodySize     float64
+	smallSize    float64
+	nameH        float64
+	sectionH     float64
+	entryH       float64
+	lineH        float64
+	smallH       float64
+	bulletIndent float64
+	contactGap   float64
+	sectionGap   float64
+	entryGap     float64
+	bulletGap    float64
+	paraGap      float64
+	ruleWidth    float64
+	centered     bool
+	headerRule   bool
+	doubleRule   bool
+	ink          [3]int
+	accent       [3]int
+	muted        [3]int
+	rule         [3]int
+}
+
+func themeFor(style string) theme {
+	base := theme{
+		marginX:      marginX,
+		marginY:      marginY,
+		nameSize:     21.0,
+		sectionSize:  9.4,
+		entrySize:    10.4,
+		bodySize:     9.8,
+		smallSize:    smallSize,
+		nameH:        9.0,
+		sectionH:     5.0,
+		entryH:       5.2,
+		lineH:        4.7,
+		smallH:       4.6,
+		bulletIndent: 4.8,
+		contactGap:   6.0,
+		sectionGap:   3.2,
+		entryGap:     1.6,
+		bulletGap:    0.6,
+		paraGap:      1.3,
+		ruleWidth:    0.25,
+		ink:          [3]int{17, 24, 39},
+		accent:       [3]int{17, 24, 39},
+		muted:        [3]int{82, 90, 110},
+		rule:         [3]int{110, 118, 132},
+	}
+	switch strings.ToLower(strings.TrimSpace(style)) {
+	case StyleModern:
+		base.marginX = 17.0
+		base.marginY = 15.0
+		base.nameSize = 22.0
+		base.sectionSize = 9.5
+		base.entrySize = 10.5
+		base.ruleWidth = 0.45
+		base.headerRule = true
+		base.accent = [3]int{24, 52, 102} // deep navy
+		base.rule = [3]int{45, 76, 122}
+		base.muted = [3]int{75, 85, 105}
+	case StyleMinimal:
+		base.marginX = 20.0
+		base.marginY = 18.0
+		base.nameSize = 20.0
+		base.sectionSize = 9.2
+		base.entrySize = 10.2
+		base.bodySize = 9.6
+		base.lineH = 4.9
+		base.contactGap = 7.0
+		base.sectionGap = 4.0
+		base.entryGap = 2.0
+		base.ruleWidth = 0.18
+		base.centered = true
+		base.ink = [3]int{24, 24, 27}
+		base.accent = [3]int{24, 24, 27}
+		base.muted = [3]int{92, 92, 100}
+		base.rule = [3]int{115, 115, 122}
+	case StyleCompact:
+		base.marginX = 12.5
+		base.marginY = 12.0
+		base.nameSize = 18.0
+		base.sectionSize = 9.0
+		base.entrySize = 9.8
+		base.bodySize = 9.2
+		base.smallSize = 9.0
+		base.nameH = 7.6
+		base.sectionH = 4.4
+		base.entryH = 4.6
+		base.lineH = 4.2
+		base.smallH = 4.2
+		base.bulletIndent = 4.2
+		base.contactGap = 4.2
+		base.sectionGap = 2.2
+		base.entryGap = 1.0
+		base.bulletGap = 0.3
+		base.paraGap = 0.8
+		base.ruleWidth = 0.22
+	case StyleExecutive:
+		base.marginX = 17.5
+		base.marginY = 15.5
+		base.nameSize = 22.5
+		base.sectionSize = 9.6
+		base.entrySize = 10.6
+		base.bodySize = 9.8
+		base.headerRule = true
+		base.doubleRule = true
+		base.ruleWidth = 0.4
+		base.accent = [3]int{20, 62, 56} // deep slate-green
+		base.rule = [3]int{36, 80, 74}
+		base.muted = [3]int{78, 88, 96}
+	}
+	return base
+}
+
+var (
 	emailR = regexp.MustCompile(`^[\w.+-]+@[\w-]+(\.[\w-]+)+$`)
 	// Contact-line tokens may be bare domains ("joe.dev", "linkedin.com/in/joe").
 	urlR = regexp.MustCompile(`(?i)^(https?://)?([a-z0-9-]+\.)+[a-z]{2,}(/\S*)?$`)
@@ -84,22 +218,24 @@ var compress = true
 
 type doc struct {
 	*fpdf.Fpdf
+	th     theme
 	usable float64
 	pageH  float64
 }
 
-func newDoc(title string) (*doc, error) {
+func newDoc(title, style string) (*doc, error) {
+	th := themeFor(style)
 	p := fpdf.New("P", "mm", "Letter", "")
 	p.SetCompression(compress)
 	p.AddUTF8FontFromBytes(family, "", fonts.Regular)
 	p.AddUTF8FontFromBytes(family, "B", fonts.Bold)
-	p.SetMargins(marginX, marginY, marginX)
-	p.SetAutoPageBreak(true, marginY)
+	p.SetMargins(th.marginX, th.marginY, th.marginX)
+	p.SetAutoPageBreak(true, th.marginY)
 	p.SetTitle(title, true)
 	p.SetCreator(Creator, true)
 	p.AddPage()
 	w, h := p.GetPageSize()
-	return &doc{Fpdf: p, usable: w - 2*marginX, pageH: h}, p.Error()
+	return &doc{Fpdf: p, th: th, usable: w - 2*th.marginX, pageH: h}, p.Error()
 }
 
 func (d *doc) color(c [3]int) { d.SetTextColor(c[0], c[1], c[2]) }
@@ -107,7 +243,7 @@ func (d *doc) color(c [3]int) { d.SetTextColor(c[0], c[1], c[2]) }
 // room starts a new page when less than mm of space is left, so a heading is never stranded at the
 // bottom of a page without the text it introduces.
 func (d *doc) room(mm float64) {
-	if d.GetY()+mm > d.pageH-marginY {
+	if d.GetY()+mm > d.pageH-d.th.marginY {
 		d.AddPage()
 	}
 }
@@ -204,90 +340,119 @@ func (d *doc) flow(h float64, text string) {
 }
 
 func (d *doc) name(text string) {
-	d.SetFont(family, "B", nameSize)
-	d.color(ink)
-	d.MultiCell(d.usable, nameH, text, "", "L", false)
+	d.SetFont(family, "B", d.th.nameSize)
+	d.color(d.th.accent)
+	align := "L"
+	if d.th.centered {
+		align = "C"
+	}
+	d.MultiCell(d.usable, d.th.nameH, text, "", align, false)
 	d.Ln(0.8)
 }
 
 // contact writes the line under the name, with email addresses and web addresses as links.
 func (d *doc) contact(line string) {
-	d.SetFont(family, "", smallSize)
-	d.color(muted)
-	for i, part := range sepR.Split(line, -1) {
-		if i > 0 {
-			d.Write(smallH, "  ·  ")
-		}
-		if target := linkTarget(part); target != "" {
-			d.WriteLinkString(smallH, part, target)
-		} else {
-			d.Write(smallH, part)
+	d.SetFont(family, "", d.th.smallSize)
+	d.color(d.th.muted)
+	parts := sepR.Split(line, -1)
+	if d.th.centered {
+		joined := strings.Join(parts, "  ·  ")
+		w := d.GetStringWidth(joined)
+		if w < d.usable {
+			d.SetX(d.th.marginX + (d.usable-w)/2)
 		}
 	}
-	d.Ln(6.5)
+	for i, part := range parts {
+		if i > 0 {
+			d.Write(d.th.smallH, "  ·  ")
+		}
+		if target := linkTarget(part); target != "" {
+			d.WriteLinkString(d.th.smallH, part, target)
+		} else {
+			d.Write(d.th.smallH, part)
+		}
+	}
+	if d.th.headerRule {
+		d.Ln(d.th.smallH + 1.2)
+		y := d.GetY()
+		d.SetDrawColor(d.th.rule[0], d.th.rule[1], d.th.rule[2])
+		d.SetLineWidth(d.th.ruleWidth)
+		d.Line(d.th.marginX, y, d.th.marginX+d.usable, y)
+		if d.th.doubleRule {
+			d.SetLineWidth(0.18)
+			d.Line(d.th.marginX, y+0.9, d.th.marginX+d.usable, y+0.9)
+		}
+		d.Ln(2.4)
+	} else {
+		d.Ln(d.th.contactGap)
+	}
 }
 
 func (d *doc) section(title string) {
 	d.room(22)
-	d.Ln(3)
-	d.SetFont(family, "B", sectionSize)
-	d.color(ink)
-	d.MultiCell(d.usable, sectionH, strings.ToUpper(title), "", "L", false)
+	d.Ln(d.th.sectionGap)
+	d.SetFont(family, "B", d.th.sectionSize)
+	d.color(d.th.accent)
+	align := "L"
+	if d.th.centered {
+		align = "C"
+	}
+	d.MultiCell(d.usable, d.th.sectionH, strings.ToUpper(title), "", align, false)
 	y := d.GetY() + 0.6
-	d.SetDrawColor(rule[0], rule[1], rule[2])
-	d.SetLineWidth(0.25)
-	d.Line(marginX, y, marginX+d.usable, y)
-	d.Ln(2.6)
+	d.SetDrawColor(d.th.rule[0], d.th.rule[1], d.th.rule[2])
+	d.SetLineWidth(d.th.ruleWidth)
+	d.Line(d.th.marginX, y, d.th.marginX+d.usable, y)
+	d.Ln(2.4)
 }
 
 // entry writes a role or school heading. When the next line holds dates, they go right-aligned on
 // the same row if both fit; otherwise below the heading.
 func (d *doc) entry(title, meta string) {
 	d.room(16)
-	d.Ln(1.4)
-	d.SetFont(family, "B", entrySize)
+	d.Ln(d.th.entryGap)
+	d.SetFont(family, "B", d.th.entrySize)
 	tw := d.GetStringWidth(title)
-	d.SetFont(family, "", smallSize)
+	d.SetFont(family, "", d.th.smallSize)
 	mw := d.GetStringWidth(meta)
 	if meta != "" && tw+mw+6 <= d.usable {
-		d.SetFont(family, "B", entrySize)
-		d.color(ink)
-		d.CellFormat(d.usable-mw-2, entryH, title, "", 0, "L", false, 0, "")
-		d.SetFont(family, "", smallSize)
-		d.color(muted)
-		d.CellFormat(mw+2, entryH, meta, "", 1, "R", false, 0, "")
+		d.SetFont(family, "B", d.th.entrySize)
+		d.color(d.th.ink)
+		d.CellFormat(d.usable-mw-2, d.th.entryH, title, "", 0, "L", false, 0, "")
+		d.SetFont(family, "", d.th.smallSize)
+		d.color(d.th.muted)
+		d.CellFormat(mw+2, d.th.entryH, meta, "", 1, "R", false, 0, "")
 	} else {
-		d.SetFont(family, "B", entrySize)
-		d.color(ink)
-		d.MultiCell(d.usable, entryH, title, "", "L", false)
+		d.SetFont(family, "B", d.th.entrySize)
+		d.color(d.th.ink)
+		d.MultiCell(d.usable, d.th.entryH, title, "", "L", false)
 		if meta != "" {
-			d.SetFont(family, "", smallSize)
-			d.color(muted)
-			d.MultiCell(d.usable, smallH, meta, "", "L", false)
+			d.SetFont(family, "", d.th.smallSize)
+			d.color(d.th.muted)
+			d.MultiCell(d.usable, d.th.smallH, meta, "", "L", false)
 		}
 	}
-	d.Ln(0.8)
+	d.Ln(0.7)
 }
 
 func (d *doc) bullet(text string) {
-	d.room(lineH)
-	d.SetFont(family, "", bodySize)
-	d.color(ink)
-	d.SetX(marginX + 1.2)
-	d.CellFormat(3.6, lineH, "•", "", 0, "L", false, 0, "")
-	d.SetLeftMargin(marginX + bulletIndent)
-	d.SetX(marginX + bulletIndent)
-	d.flow(lineH, text)
-	d.SetLeftMargin(marginX)
-	d.Ln(lineH + 0.5)
+	d.room(d.th.lineH)
+	d.SetFont(family, "", d.th.bodySize)
+	d.color(d.th.ink)
+	d.SetX(d.th.marginX + 1.2)
+	d.CellFormat(3.6, d.th.lineH, "•", "", 0, "L", false, 0, "")
+	d.SetLeftMargin(d.th.marginX + d.th.bulletIndent)
+	d.SetX(d.th.marginX + d.th.bulletIndent)
+	d.flow(d.th.lineH, text)
+	d.SetLeftMargin(d.th.marginX)
+	d.Ln(d.th.lineH + d.th.bulletGap)
 }
 
 func (d *doc) para(text string) {
-	d.SetFont(family, "", bodySize)
-	d.color(ink)
-	d.SetX(marginX)
-	d.flow(lineH, text)
-	d.Ln(lineH + 1.2)
+	d.SetFont(family, "", d.th.bodySize)
+	d.color(d.th.ink)
+	d.SetX(d.th.marginX)
+	d.flow(d.th.lineH, text)
+	d.Ln(d.th.lineH + d.th.paraGap)
 }
 
 // isMeta reports a short line of dates and places that follows an entry heading.
@@ -302,12 +467,14 @@ func isBullet(t string) bool {
 // Render converts resume Markdown to PDF bytes, titled "Resume". See RenderFile.
 func Render(markdown string) ([]byte, error) { return RenderFile(markdown, "Resume.pdf") }
 
-// RenderFile converts the Markdown produced by the render package (#, ##, ###, "- " bullets, plain
-// lines) to PDF bytes, following the Layout in the package comment. The document title is filename
-// without its directory or extension. Other text renders as paragraphs, so saved resumes in any shape
-// still export. Errors from the PDF library, including panics, are returned, so callers can offer
-// the Markdown instead.
-func RenderFile(markdown, filename string) (out []byte, err error) {
+// RenderFile converts resume Markdown to PDF bytes using the classic style.
+func RenderFile(markdown, filename string) ([]byte, error) {
+	return RenderStyled(markdown, filename, StyleClassic)
+}
+
+// RenderStyled converts the Markdown produced by the render package (#, ##, ###, "- " bullets, plain
+// lines) to PDF bytes using the chosen style ("classic", "modern", "minimal", "compact", "executive").
+func RenderStyled(markdown, filename, style string) (out []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			out, err = nil, fmt.Errorf("pdf: render failed: %v", r)
@@ -317,7 +484,7 @@ func RenderFile(markdown, filename string) (out []byte, err error) {
 	if title == "" || title == "." || title == string(filepath.Separator) {
 		title = "Resume"
 	}
-	d, err := newDoc(title)
+	d, err := newDoc(title, style)
 	if err != nil {
 		return nil, fmt.Errorf("pdf: %w", err)
 	}

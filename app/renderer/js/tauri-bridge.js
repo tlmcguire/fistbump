@@ -91,8 +91,8 @@
       importData: (filename, bytes) => call('resume:importData', filename, bytesToBase64(bytes)),
       importText: (text) => call('resume:importText', text),
       importApply: (body) => call('resume:importApply', body),
-      export: (format) => call('resume:export', format),
-      previewPdf: () => call('resume:previewPdf'),
+      export: (format, style) => call('resume:export', format, style),
+      previewPdf: (style) => call('resume:previewPdf', style),
     },
 
     resumes: {
@@ -125,8 +125,8 @@
       update: (id, content) => call('tailored:update', id, content),
       diff: (id) => call('tailored:diff', id),
       delete: (id) => call('tailored:delete', id),
-      export: (id, format) => call('tailored:export', id, format),
-      previewPdf: (id) => call('tailored:previewPdf', id),
+      export: (id, format, style) => call('tailored:export', id, format, style),
+      previewPdf: (id, style) => call('tailored:previewPdf', id, style),
     },
 
     ai: {

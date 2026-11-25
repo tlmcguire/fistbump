@@ -22,7 +22,7 @@ type Profile struct {
 	UpdatedAt       string   `json:"updated_at"`
 }
 
-// Experience is one work history entry. A nil EndDate means the role is current.
+// Experience is one work history entry. A nil EndDate means the role is current unless DateNA is true.
 type Experience struct {
 	ID          int64    `json:"id"`
 	ProfileID   int64    `json:"profile_id"`
@@ -30,6 +30,7 @@ type Experience struct {
 	JobTitle    string   `json:"job_title"`
 	StartDate   *string  `json:"start_date"`
 	EndDate     *string  `json:"end_date"`
+	DateNA      bool     `json:"date_na"`
 	Location    *string  `json:"location"`
 	Description *string  `json:"description"`
 	Impact      *string  `json:"impact"`

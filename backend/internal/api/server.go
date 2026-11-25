@@ -59,6 +59,8 @@ type Config struct {
 	// PDF turns resume Markdown into a PDF titled after fileName (the download name, extension
 	// included). Without it, PDF export fails and offers Markdown.
 	PDF func(markdown, fileName string) ([]byte, error)
+	// PDFStyled turns resume Markdown into a PDF using a named style ("classic", "modern", etc.).
+	PDFStyled func(markdown, fileName, style string) ([]byte, error)
 	// BaseContext is the parent of every background round. Cancel it to stop them at shutdown.
 	// Nil means context.Background().
 	BaseContext context.Context
@@ -83,8 +85,9 @@ type Server struct {
 	local     *ai.Local
 	downloads *ai.Downloads
 	// renderPDF makes the PDF for the export routes; tests swap it for a fake.
-	renderPDF func(markdown, fileName string) ([]byte, error)
-	handler   http.Handler // the mux wrapped in middleware, built once in New
+	renderPDF       func(markdown, fileName string) ([]byte, error)
+	renderPDFStyled func(markdown, fileName, style string) ([]byte, error)
+	handler         http.Handler // the mux wrapped in middleware, built once in New
 }
 
 // route pairs a mux pattern ("METHOD /path/{wildcard}") with its handler.
@@ -294,7 +297,8 @@ func New(cfg Config) *Server {
 		parse:   parser.Parse,
 		analyze: analyze.Run,
 
-		renderPDF: cfg.PDF,
+		renderPDF:       cfg.PDF,
+		renderPDFStyled: cfg.PDFStyled,
 	}
 	s.remote = cfg.Remote
 	if s.remote == nil {

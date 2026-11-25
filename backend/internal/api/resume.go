@@ -171,6 +171,7 @@ type experienceBody struct {
 	JobTitle    string   `json:"job_title"`
 	StartDate   *string  `json:"start_date"`
 	EndDate     *string  `json:"end_date"`
+	DateNA      bool     `json:"date_na"`
 	Location    *string  `json:"location"`
 	Description *string  `json:"description"`
 	Impact      *string  `json:"impact"`
@@ -187,15 +188,18 @@ func (b experienceBody) validate() (models.Experience, error) {
 	if e.JobTitle, err = requiredText("job_title", b.JobTitle); err != nil {
 		return e, err
 	}
-	if e.StartDate, err = date("start_date", b.StartDate); err != nil {
-		return e, err
-	}
-	if e.EndDate, err = date("end_date", b.EndDate); err != nil {
-		return e, err
-	}
-	// ISO dates compare correctly as text.
-	if e.StartDate != nil && e.EndDate != nil && *e.EndDate < *e.StartDate {
-		return e, validationError("end_date", "end_date cannot be before start_date")
+	e.DateNA = b.DateNA
+	if !e.DateNA {
+		if e.StartDate, err = date("start_date", b.StartDate); err != nil {
+			return e, err
+		}
+		if e.EndDate, err = date("end_date", b.EndDate); err != nil {
+			return e, err
+		}
+		// ISO dates compare correctly as text.
+		if e.StartDate != nil && e.EndDate != nil && *e.EndDate < *e.StartDate {
+			return e, validationError("end_date", "end_date cannot be before start_date")
+		}
 	}
 	if e.Location, err = shortText("location", b.Location); err != nil {
 		return e, err

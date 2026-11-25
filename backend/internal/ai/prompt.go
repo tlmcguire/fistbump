@@ -14,13 +14,15 @@ import (
 const systemPrompt = `You edit one piece of a resume so it reads well for a specific job.
 Rules:
 - Keep every fact. Do not add skills, tools, numbers, job titles, employers, dates or achievements that are not in the text you are given.
+- Only make changes that meaningfully improve alignment with the job's skills or make wording clearer and more concise. Never make cosmetic-only edits (such as changing apostrophes, quotes, dashes, punctuation, capitalization, or swapping synonyms with no real benefit).
+- If the original text already fits the job well and needs no meaningful change, reply with {"proposed": "", "reason": ""}.
 - Do not mention the job posting or the company you are applying to.
 - Write in the same voice and tense as the original.
 - Plain text only, because the resume is printed from it: no Markdown (no **bold**, no # headings, no backticks, no tables), no emoji, no quotation marks around the text, no placeholders such as [Company].
 - Keep the original's layout. Bullet lines start with "- " and stay bullets; a paragraph stays a paragraph. Do not add a heading, a name, a section title or a contact line.
 - Keep the original's dates, job titles and punctuation style. Spell out nothing that is abbreviated and abbreviate nothing that is spelled out.
 - Write short, concrete lines that start with a verb where the original does. No first person ("I", "my"), no filler such as "responsible for" or "passionate", and no buzzword stuffing.
-- Also give a "reason": one short sentence (at most 25 words) telling the person why this change helps them for this job, for example why skills were reordered or why a line was reworded. Do not claim anything the original does not show.
+- Also give a "reason": one short, specific sentence (at most 25 words) naming the exact matched skill(s) surfaced or concrete wording improvement made for this role. Never claim you added, removed, or reordered something that was not actually changed in "proposed".
 - Reply with JSON only, in exactly this form: {"proposed": "the rewritten text", "reason": "why you changed it"}`
 
 // sectionRule is the extra instruction for each kind of target.

@@ -24,8 +24,6 @@
                         <div id="tree-jobs" class="tree-body" role="tablist" aria-label="Jobs">
                             <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Find jobs</button>
                             <ul id="tree-searches" class="tree-children" aria-label="Recent searches"></ul>
-                            <button type="button" id="tab-link" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>Open a link</button>
-
                             <button type="button" id="tab-paste" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg>Paste a job</button>
                             <button type="button" id="tab-saved" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg>Saved jobs</button>
                         </div>
@@ -71,13 +69,13 @@
             </svg>
 
             <main id="main" class="main view-find">
-                <!--Toolbar: the search bar for Find jobs, or the link box for Open a link. It doubles as a drag region.-->
+                <!--Toolbar: the search bar for Find jobs (also accepts a pasted Greenhouse job link). It doubles as a drag region.-->
                 <header class="toolbar drag" data-tauri-drag-region>
                     <div id="settings-title" class="toolbar-title" hidden><h1>Settings</h1></div>
 
                     <form id="search-form" class="toolbar-form" autocomplete="off">
                         <div class="field grow">
-                            <input id="search-keywords" type="search" aria-label="Keywords" placeholder="Job title, keywords or company, e.g. data analyst">
+                            <input id="search-keywords" type="search" aria-label="Keywords or job link" placeholder="Job title, keywords, company, or paste a Greenhouse job link">
                         </div>
                         <div class="field">
                             <input id="search-location" type="search" aria-label="Location" placeholder="Location">
@@ -225,12 +223,6 @@
                         </div>
                     </form>
 
-                    <form id="job-form" class="toolbar-form" hidden>
-                        <div class="field grow">
-                            <input id="job-url" type="url" aria-label="Greenhouse job link" placeholder="Paste a Greenhouse job link" required>
-                        </div>
-                        <button type="submit" class="primary">Open</button>
-                    </form>
 
                     <div id="paste-title" class="toolbar-title" hidden><h1>Paste a job</h1></div>
 

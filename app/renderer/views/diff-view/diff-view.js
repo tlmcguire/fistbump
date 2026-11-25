@@ -36,6 +36,7 @@
       let poll = null;
       let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
       let gaps = [];          //skills the job asks for that the master resume lacks
+      let experienceTitles = {}; //experience id -> "Title, Company" for clear card headings
       let cards = [];         //the cards on screen, for the keyboard
       let current = 0;
       let pdf = null;         //the open PDF preview, so its blob is let go
@@ -239,6 +240,7 @@
         const preferredHave = prefGroups.reduce((n, g) => n + g.matched.length, 0);
         const preferredTotal = prefGroups.reduce((n, g) => n + g.matched.length + (g.likely || []).length + g.missing.length, 0);
         const titles = Object.fromEntries((master?.value?.experiences || []).map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
+        experienceTitles = titles;
         const match = a ? window.ResumeBuilder.skillMatch(a, titles) : null;
         const score = a ? Math.round(a.score * 100) : null;
         const scoreNode = el("span", {class: "score-number", text: String(score ?? 0)});
@@ -492,7 +494,9 @@
       };
 
       const card = (rev, s, onDecided) => {
-        const node = el("section", {class: "tailor-card", "data-state": s.state, tabindex: "-1", "aria-label": `${SECTION[s.section] || s.section} suggestion`});
+        const roleTitle = s.target_id && experienceTitles[s.target_id] ? experienceTitles[s.target_id] : "";
+        const heading = roleTitle ? `${SECTION[s.section] || s.section} — ${roleTitle}` : (SECTION[s.section] || s.section);
+        const node = el("section", {class: "tailor-card", "data-state": s.state, tabindex: "-1", "aria-label": `${heading} suggestion`});
         const paint = () => {
           const final = s.state === "edited" ? s.edited_text : s.proposed_text;
           const words = window.WordDiff.diff(s.original_text, final);
@@ -514,10 +518,11 @@
           }, label, el("kbd", {text: key}));
           fill(node,
             el("div", {class: "card-head"},
-              el("h3", {text: SECTION[s.section] || s.section}),
+              el("h3", {text: heading}),
+              s.engine ? el("span", {class: "engine-badge", text: ENGINE[s.engine] || s.engine}) : null,
               el("span", {class: "state-chip", "data-state": s.state}, icon(st.icon), st.label),
               el("ul", {class: "chips brings-in", "aria-label": "Skills this brings in that the job asks for"})),
-            s.reason ? el("p", {class: "reason"}, el("strong", {text: "Why: "}), s.reason) : null,
+            s.reason ? el("div", {class: "reason"}, el("span", {class: "reason-label", text: "Why this helps"}), el("p", {text: s.reason})) : null,
             el("div", {class: "diff-cols"},
               el("div", {class: "diff-col"}, el("h4", {text: "Current"}),
                 s.original_text ? window.WordDiff.render(words, "before") : el("span", {class: "hint", text: "Nothing yet (new text)"})),
@@ -600,12 +605,22 @@
             el("div", {class: "diff-col"}, side(h, "after")));
         }));
 
+        const PDF_STYLES = [
+          ["classic", "Classic"],
+          ["modern", "Modern"],
+          ["minimal", "Minimal"],
+          ["compact", "Compact"],
+          ["executive", "Executive"],
+        ];
+        const styleSelect = el("select", {id: "tailor-pdf-style", class: "pdf-style-select", "aria-label": "PDF style", title: "Choose PDF layout style"},
+          PDF_STYLES.map(([v, label]) => el("option", {value: v, text: label})));
+        styleSelect.value = window.Prefs?.get("pdfStyle") || "classic";
         const exportNote = el("div");
         const exportButton = el("button", {type: "button", class: "primary", title: "Export the tailored resume as a PDF file"}, "Export PDF");
         exportButton.addEventListener("click", async () => {
           exportButton.disabled = true;
           exportNote.replaceChildren();
-          const r = await attempt(() => exportFile(format => api.tailored.export(t.value.id, format)));
+          const r = await attempt(() => exportFile(format => api.tailored.export(t.value.id, format, styleSelect.value)));
           exportButton.disabled = false;
           if (r?.value?.saved) {
             exportNote.replaceChildren(el("div", {class: "exported"}, pico("20-pdf-exported.png"), savedNote(r.value.path)));
@@ -636,7 +651,11 @@
         //Changes or PDF, as tabs
         const panels = {};
         const tabs = [["changes", "Changes"], ["edit", "Edit resume"], ["pdf", "PDF preview"]];
-        pdf = window.PdfPreview.create(async () => (await api.tailored.previewPdf(t.value.id)).data_base64, {title: "Tailored resume as a PDF"});
+        pdf = window.PdfPreview.create(async () => (await api.tailored.previewPdf(t.value.id, styleSelect.value)).data_base64, {title: "Tailored resume as a PDF"});
+        styleSelect.addEventListener("change", () => {
+          window.Prefs?.set("pdfStyle", styleSelect.value);
+          if (!panels.pdf.hidden) pdf.load();
+        });
         panels.changes = el("div", {class: "panel", id: "tailor-panel-changes", role: "tabpanel", "aria-labelledby": "tailor-tab-changes"},
           el("label", {class: "hint"},
             el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }}),
@@ -688,6 +707,7 @@
           el("div", {class: "round-head"},
             el("h2", {text: "Tailored resume"}),
             el("div", {class: "round-actions"},
+              styleSelect,
               exportButton,
               trackButton,
               el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, t.value.revision_id ? "Back to suggestions" : "Close"),

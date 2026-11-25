@@ -79,6 +79,10 @@ function routeRequest(channel, args) {
     'resume:get': () => ['GET', '/v1/resume'],
     'resume:putProfile': () => ['PUT', '/v1/resume/profile', a0],
     'resume:preview': () => ['GET', '/v1/resume/preview'],
+    'experiences:create': () => ['POST', '/v1/resume/experiences', a0],
+    'experiences:update': () => ['PUT', `/v1/resume/experiences/${a0}`, a1],
+    'experiences:delete': () => ['DELETE', `/v1/resume/experiences/${a0}`],
+    'connectors:link': () => ['GET', `/v1/connectors/greenhouse/link?url=${encodeURIComponent(a0 || '')}`],
     'resumes:list': () => ['GET', '/v1/resumes'],
     'settings:get': () => ['GET', '/v1/settings'],
     'settings:put': () => ['PUT', '/v1/settings', a0],
@@ -160,10 +164,12 @@ async function startHarness(dataDir) {
       }
       if (channel === 'resume:previewPdf' || channel === 'tailored:previewPdf') {
         const p = channel === 'resume:previewPdf' ? '/v1/resume/export' : `/v1/tailored-resumes/${args[0]}/export`;
+        const style = channel === 'resume:previewPdf' ? args[0] : args[1];
+        const payload = { format: 'pdf', ...(style ? { style } : {}) };
         const r = await fetch(`${apiBase}${p}`, {
           method: 'POST',
           headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ format: 'pdf' }),
+          body: JSON.stringify(payload),
         });
         const buf = Buffer.from(await r.arrayBuffer());
         res.writeHead(200, { 'content-type': 'application/json' });

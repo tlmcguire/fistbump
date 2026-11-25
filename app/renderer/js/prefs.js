@@ -11,6 +11,7 @@ window.Prefs = (() => {
     pageSize: 20,            // 20 | 30 | 50 results a page
     defaultSort: "relevance",
     showLogos: true,
+    pdfStyle: "classic",     // classic | modern | minimal | compact | executive
     notifyUpdates: true,     // look for a new version when Fistbump opens, and say so
     skippedUpdate: "",       // a version the user chose not to hear about again
   };
@@ -21,6 +22,7 @@ window.Prefs = (() => {
     reduceMotion: ["system", "on", "off"],
     pageSize: [20, 30, 50],
     defaultSort: ["relevance", "newest"],
+    pdfStyle: ["classic", "modern", "minimal", "compact", "executive"],
   };
 
   let values = {...DEFAULTS};

@@ -542,3 +542,72 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 .update-notice progress { width: 100%; margin-top: 12px; }
 .aside-preferred { margin: 4px 0 8px; font-size: 0.9rem; }
 .score-number { display: inline-block; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Improved suggestion formatting: structured lines, engine badge, and reason callout */
+.engine-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+}
+.reason {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.045);
+}
+.reason-label {
+  color: var(--accent-hover);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.reason p { margin: 0; color: var(--text); font-size: 13px; line-height: 1.45; }
+
+.diff-line {
+  padding: 3px 6px;
+  margin: 0 -6px 3px;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+.diff-line.diff-bullet { padding-left: 16px; text-indent: -10px; }
+.diff-line.diff-changed { background: rgba(255, 255, 255, 0.035); }
+.tailor-main ins, .tailor-main del {
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+/* PDF style picker */
+.pdf-controls { display: inline-flex; align-items: center; gap: 8px; }
+.pdf-style-select { height: 28px; min-width: 110px; font-size: 12.5px; }
+
+/* Cost of living & pay source citations */
+.cost-sources {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  color: var(--muted);
+}
+.cost-sources summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.cost-source-list {
+  margin: 8px 0 2px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  line-height: 1.45;
+}
+.cost-source-list a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }

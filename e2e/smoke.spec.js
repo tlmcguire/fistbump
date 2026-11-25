@@ -82,3 +82,62 @@ test('master resume saves profile and renders PDF preview without stuck overlay 
   await expect(window.locator('.pdf-preview.expanded')).toHaveCount(0);
   await expect(window.locator('.pdf-backdrop')).toHaveCount(0);
 });
+
+test('open link page is merged into search bar and detects pasted Greenhouse URLs', async ({ window }) => {
+  await window.locator('#tab-find').click();
+  await expect(window.locator('#tab-link')).toHaveCount(0);
+  await expect(window.locator('#job-form')).toHaveCount(0);
+
+  const searchInput = window.locator('#search-keywords');
+  const submitBtn = window.locator('#search-form button[type="submit"]');
+  await expect(submitBtn).toHaveText('Search');
+
+  await searchInput.fill('https://boards.greenhouse.io/acme/jobs/12345');
+  await expect(submitBtn).toHaveText('Open link');
+
+  await searchInput.fill('data analyst');
+  await expect(submitBtn).toHaveText('Search');
+});
+
+test('experience supports date range not applicable and resume preview supports PDF styles', async ({ window }) => {
+  await window.locator('#nav-resume').click();
+  const nameInput = window.locator('input[id$="-full_name"]');
+  await nameInput.fill('Grace Hopper');
+  await window.getByRole('button', { name: /Create profile|Save profile/ }).click();
+  await expect(window.locator('.resume-doc')).toContainText('Grace Hopper');
+
+  // Switch PDF styles in preview
+  const styleSelect = window.locator('#resume-pdf-style');
+  await expect(styleSelect).toBeVisible();
+  await styleSelect.selectOption('modern');
+  await expect(styleSelect).toHaveValue('modern');
+  await styleSelect.selectOption('compact');
+  await expect(styleSelect).toHaveValue('compact');
+
+  // Add an experience with Date range not applicable checked
+  await window.getByRole('button', { name: 'Add experience' }).click();
+  await window.locator('input[id$="-job_title"]').fill('Open Source Maintainer');
+  await window.locator('input[id$="-company_name"]').fill('Community Project');
+  await window.locator('input[id$="-date_na"]').check();
+  await window.locator('.entry-form button[type="submit"]').click();
+
+  await expect(window.locator('.resume-doc')).toContainText('Open Source Maintainer');
+  await expect(window.locator('.resume-doc')).not.toContainText('to Present');
+});
+
+test('cost analysis returns cited sources and 30-day refresh metadata', async ({ window }) => {
+  const result = await window.evaluate(() => window.api.cost.analyze({
+    title: 'Software Engineer',
+    location: 'Austin, TX',
+    work_mode: 'Hybrid',
+    pay_min: 130000,
+    pay_max: 150000,
+    text: 'We offer health insurance, dental, 401(k) match, and paid time off.',
+  }));
+  expect(result.supported).toBe(true);
+  expect(result.refresh_days).toBe(30);
+  expect(result.data_updated_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(result.next_update_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(Array.isArray(result.sources)).toBe(true);
+  expect(result.sources.length).toBeGreaterThanOrEqual(5);
+});

@@ -32,6 +32,18 @@ const maxCells = 4_000_000
 // tokens splits text into words and the whitespace between them, so nothing is lost.
 var tokens = regexp.MustCompile(`\s+|\S+`)
 
+// normToken folds curly quotes, apostrophes, and dashes when comparing tokens so typographic
+// differences like "Bachelor’s" vs "Bachelor's" are never flagged as edits.
+var typoFold = strings.NewReplacer(
+	"\u2018", "'", "\u2019", "'", "\u201a", "'", "\u201b", "'", "\u00b4", "'",
+	"\u201c", `"`, "\u201d", `"`, "\u201e", `"`, "\u201f", `"`,
+	"\u2013", "-", "\u2014", "-", "\u2212", "-", "\u00a0", " ",
+)
+
+func tokensEqual(a, b string) bool {
+	return a == b || typoFold.Replace(a) == typoFold.Replace(b)
+}
+
 // Words compares two texts word by word using the longest common subsequence of their tokens.
 func Words(before, after string) []Word {
 	a, b := tokens.FindAllString(before, -1), tokens.FindAllString(after, -1)
@@ -46,7 +58,7 @@ func Words(before, after string) []Word {
 	}
 	for i := len(a) - 1; i >= 0; i-- {
 		for j := len(b) - 1; j >= 0; j-- {
-			if a[i] == b[j] {
+			if tokensEqual(a[i], b[j]) {
 				lcs[i][j] = lcs[i+1][j+1] + 1
 			} else {
 				lcs[i][j] = max(lcs[i+1][j], lcs[i][j+1])
@@ -58,8 +70,8 @@ func Words(before, after string) []Word {
 	i, j := 0, 0
 	for i < len(a) && j < len(b) {
 		switch {
-		case a[i] == b[j]:
-			out = append(out, Word{"eq", a[i]})
+		case tokensEqual(a[i], b[j]):
+			out = append(out, Word{"eq", b[j]})
 			i++
 			j++
 		case lcs[i+1][j] >= lcs[i][j+1]:
