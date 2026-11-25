@@ -1,14 +1,33 @@
 /*
- * Color themes for Fistbump: 5 style themes (Classic, Bubblegum, Techno, Cyber, Retro)
- * and 12 seasonal themes (January through December). All themes preserve >= 4.5:1 contrast.
+ * Color & Style Themes for Fistbump:
+ * - 5 distinct style overhauls: Classic, Bubblegum (Hot Pink Barbie), Techno, Cyber (Green Matrix), Retro (CRT)
+ * - 12 seasonal themes (January through December) + Auto (current month)
+ *
+ * Each theme controls surfaces, panels, dialogs, sidebars, borders, shadows, typography accents,
+ * and border radii so the entire app transforms universally.
  */
 
-/* Let platform-translucent sidebars and tooltips follow the active theme. */
+/* ==================== Universal Theme Wiring ==================== */
+
+:root[data-theme] {
+  --panel: var(--surface);
+  --panel-hover: var(--raised);
+  --radius-card: 12px;
+  --radius-pill: 8px;
+}
+
+/* Ensure translucent macOS/Windows sidebars, dialogs, tooltips, and Home hero follow the active theme. */
+:root[data-theme] .sidebar,
+:root[data-theme].platform-darwin .sidebar,
+:root[data-theme].platform-win32 .sidebar,
 :root[data-theme] .platform-darwin .sidebar,
-:root[data-theme] .platform-win32 .sidebar,
-.platform-darwin:root[data-theme] .sidebar,
-.platform-win32:root[data-theme] .sidebar {
+:root[data-theme] .platform-win32 .sidebar {
   background: var(--sidebar-glass, var(--sidebar));
+}
+:root[data-theme] dialog.ask {
+  background: var(--raised);
+  border-radius: var(--radius-card);
+  border-color: var(--panel-line);
 }
 :root[data-theme] .tip,
 :root[data-theme] .tip::after {
@@ -16,104 +35,252 @@
 }
 :root[data-theme] .home-welcome {
   border-color: var(--note-line);
-  background: var(--note);
+  background: var(--panel);
+  border-radius: calc(var(--radius-card) + 4px);
 }
 :root[data-theme] .home-welcome .home-row {
-  background: rgba(0, 0, 0, 0.24);
+  background: var(--bg);
+  border-radius: var(--radius);
 }
 :root[data-theme] .home-welcome .home-row:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.38);
+  background: var(--panel-hover);
+}
+:root[data-theme] .home-welcome-text > p {
+  color: var(--muted);
+}
+
+/* Apply theme-specific radii and display typography universally across controls and panels. */
+:root[data-theme] button,
+:root[data-theme] .button,
+:root[data-theme] input:not([type="checkbox"]):not(.switch),
+:root[data-theme] select,
+:root[data-theme] textarea {
+  border-radius: var(--radius);
+}
+:root[data-theme] .nav-item {
+  border-radius: var(--radius-pill);
+}
+:root[data-theme] .settings-card,
+:root[data-theme] .tailor-card,
+:root[data-theme] .pdf-preview,
+:root[data-theme] .due-strip,
+:root[data-theme] .tracker-table-wrap,
+:root[data-theme] .writing,
+:root[data-theme] .decide-bar,
+:root[data-theme] .home-section .home-rows,
+:root[data-theme] .cost-card,
+:root[data-theme] .compare-card,
+:root[data-theme] .compare-table-wrap,
+:root[data-theme] .entry,
+:root[data-theme] .entry-form,
+:root[data-theme] .version,
+:root[data-theme] .model-row {
+  border-radius: var(--radius-card);
+  border-color: var(--panel-line);
+}
+:root[data-theme] .home-section .home-row {
+  border-radius: var(--radius);
+}
+:root[data-theme] .view-title,
+:root[data-theme] .toolbar-title h1,
+:root[data-theme] .home-welcome h2,
+:root[data-theme] .home-section h3,
+:root[data-theme] .resume-section > h2,
+:root[data-theme] .section-head h2,
+:root[data-theme] dialog.ask h2,
+:root[data-theme] #job-title {
+  font-family: var(--theme-font-display, var(--display));
 }
 
 /* ==================== Style Themes ==================== */
 
-/* Bubblegum: deep berry plum with bright bubblegum pink accents */
+/* Bubblegum: iconic Hot Pink Barbie — plush ultra-rounded pills, glossy highlights */
 :root[data-theme="bubblegum"] {
-  --bg: #2a122e;
-  --sidebar: #1f0c23;
-  --sidebar-glass: rgba(31, 12, 35, 0.90);
-  --surface: #36173c;
-  --raised: #471e4f;
-  --accent: #ff6ec7;
-  --accent-hover: #ff8fd4;
-  --accent-ink: #24081d;
-  --select: rgba(255, 110, 199, 0.24);
-  --select-strong: #c93b93;
-  --note: rgba(255, 110, 199, 0.12);
-  --note-line: rgba(255, 143, 212, 0.36);
-  --text: #fdf2fa;
-  --muted: rgba(253, 242, 250, 0.76);
-  --faint: rgba(253, 242, 250, 0.62);
-  --dim: rgba(253, 242, 250, 0.68);
+  --bg: #b8146b;
+  --sidebar: #8c0c50;
+  --sidebar-glass: rgba(140, 12, 80, 0.94);
+  --surface: #d11a7c;
+  --raised: #e6298f;
+  --panel: #cc1878;
+  --panel-hover: #e3248a;
+  --panel-line: rgba(255, 224, 240, 0.30);
+  --line: rgba(255, 224, 240, 0.22);
+  --line-strong: rgba(255, 224, 240, 0.42);
+  --accent: #fff0f7;
+  --accent-hover: #ffffff;
+  --accent-ink: #800948;
+  --select: rgba(255, 255, 255, 0.26);
+  --select-strong: #ff4da6;
+  --control: rgba(255, 255, 255, 0.18);
+  --control-hover: rgba(255, 255, 255, 0.28);
+  --note: rgba(255, 255, 255, 0.14);
+  --note-line: rgba(255, 224, 240, 0.45);
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.88);
+  --faint: rgba(255, 255, 255, 0.76);
+  --dim: rgba(255, 255, 255, 0.82);
+  --good: #c2ffd6;
+  --due: #fff2a6;
+  --bad: #ffe0e6;
+  --radius: 14px;
+  --radius-card: 22px;
+  --radius-pill: 999px;
+  --lit: inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  --lift-1: 0 3px 10px rgba(74, 4, 42, 0.35), 0 8px 20px -6px rgba(74, 4, 42, 0.45);
+  --lift-2: 0 6px 16px rgba(74, 4, 42, 0.4), 0 20px 40px -10px rgba(74, 4, 42, 0.55);
+}
+:root[data-theme="bubblegum"] button.primary,
+:root[data-theme="bubblegum"] .button.primary {
+  border-radius: 999px;
+  box-shadow: 0 3px 12px rgba(90, 6, 52, 0.35), inset 0 1px 0 #ffffff;
 }
 
-/* Techno: deep midnight indigo with electric cyan pulse */
-:root[data-theme="techno"] {
-  --bg: #0c1021;
-  --sidebar: #070a16;
-  --sidebar-glass: rgba(7, 10, 22, 0.92);
-  --surface: #121833;
-  --raised: #1a2347;
-  --accent: #00e5ff;
-  --accent-hover: #52f0ff;
-  --accent-ink: #041b24;
-  --select: rgba(0, 229, 255, 0.20);
-  --select-strong: #008ca3;
-  --note: rgba(0, 229, 255, 0.10);
-  --note-line: rgba(0, 229, 255, 0.34);
-  --text: #eef8ff;
-  --muted: rgba(238, 248, 255, 0.74);
-  --faint: rgba(238, 248, 255, 0.60);
-  --dim: rgba(238, 248, 255, 0.66);
-}
-
-/* Cyber: obsidian violet with neon cyber yellow & magenta highlights */
+/* Cyber: Green Matrix Terminal — sharp 2px edges, monospace display, phosphor glow */
 :root[data-theme="cyber"] {
-  --bg: #130b24;
-  --sidebar: #0b0617;
-  --sidebar-glass: rgba(11, 6, 23, 0.92);
-  --surface: #1c1136;
-  --raised: #28194c;
-  --accent: #f7d002;
-  --accent-hover: #ffe142;
-  --accent-ink: #160c00;
-  --select: rgba(217, 70, 239, 0.26);
-  --select-strong: #a21caf;
-  --note: rgba(247, 208, 2, 0.10);
-  --note-line: rgba(247, 208, 2, 0.36);
-  --text: #f5f0ff;
-  --muted: rgba(245, 240, 255, 0.76);
-  --faint: rgba(245, 240, 255, 0.62);
-  --dim: rgba(245, 240, 255, 0.68);
+  --bg: #040b06;
+  --sidebar: #020603;
+  --sidebar-glass: rgba(2, 6, 3, 0.96);
+  --surface: #08150c;
+  --raised: #0e2415;
+  --panel: #07130a;
+  --panel-hover: #0d2113;
+  --panel-line: rgba(0, 255, 102, 0.24);
+  --line: rgba(0, 255, 102, 0.16);
+  --line-strong: rgba(0, 255, 102, 0.36);
+  --accent: #00ff66;
+  --accent-hover: #5cff9d;
+  --accent-ink: #021408;
+  --select: rgba(0, 255, 102, 0.18);
+  --select-strong: #00a844;
+  --control: rgba(0, 255, 102, 0.10);
+  --control-hover: rgba(0, 255, 102, 0.18);
+  --note: rgba(0, 255, 102, 0.08);
+  --note-line: rgba(0, 255, 102, 0.34);
+  --text: #d8ffe4;
+  --muted: rgba(180, 255, 205, 0.78);
+  --faint: rgba(140, 240, 175, 0.64);
+  --dim: rgba(160, 248, 190, 0.72);
+  --good: #00ff66;
+  --due: #d4ff4d;
+  --bad: #ff6b6b;
+  --radius: 2px;
+  --radius-card: 2px;
+  --radius-pill: 2px;
+  --theme-font-display: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --lit: inset 0 1px 0 rgba(0, 255, 102, 0.14);
+  --lift-1: 0 0 0 1px rgba(0, 255, 102, 0.14), 0 6px 18px rgba(0, 0, 0, 0.65);
+  --lift-2: 0 0 14px rgba(0, 255, 102, 0.16), 0 14px 32px rgba(0, 0, 0, 0.75);
+}
+:root[data-theme="cyber"] .home-welcome h2,
+:root[data-theme="cyber"] .view-title {
+  text-shadow: 0 0 12px rgba(0, 255, 102, 0.35);
+}
+:root[data-theme="cyber"] .chip,
+:root[data-theme="cyber"] .signal,
+:root[data-theme="cyber"] .cost-pill,
+:root[data-theme="cyber"] .fit-pill,
+:root[data-theme="cyber"] .stage-chip,
+:root[data-theme="cyber"] .filter-chip {
+  border-radius: 2px;
 }
 
-/* Retro: warm vintage CRT espresso with amber phosphor */
+/* Techno: Electric Cyan Synth — sleek angular 4px corners, crisp neon outlines */
+:root[data-theme="techno"] {
+  --bg: #090d1f;
+  --sidebar: #050814;
+  --sidebar-glass: rgba(5, 8, 20, 0.94);
+  --surface: #0f1633;
+  --raised: #17214a;
+  --panel: #0e1530;
+  --panel-hover: #162047;
+  --panel-line: rgba(0, 229, 255, 0.22);
+  --line: rgba(0, 229, 255, 0.14);
+  --line-strong: rgba(0, 229, 255, 0.34);
+  --accent: #00e5ff;
+  --accent-hover: #59f0ff;
+  --accent-ink: #031924;
+  --select: rgba(139, 92, 246, 0.28);
+  --select-strong: #7c3aed;
+  --control: rgba(0, 229, 255, 0.10);
+  --control-hover: rgba(0, 229, 255, 0.18);
+  --note: rgba(0, 229, 255, 0.09);
+  --note-line: rgba(0, 229, 255, 0.36);
+  --text: #eef9ff;
+  --muted: rgba(220, 242, 255, 0.78);
+  --faint: rgba(195, 230, 255, 0.62);
+  --dim: rgba(210, 236, 255, 0.70);
+  --radius: 4px;
+  --radius-card: 6px;
+  --radius-pill: 4px;
+  --lit: inset 0 1px 0 rgba(0, 229, 255, 0.18);
+  --lift-1: 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 229, 255, 0.10);
+  --lift-2: 0 0 16px rgba(0, 229, 255, 0.14), 0 18px 36px -10px rgba(0, 0, 0, 0.65);
+}
+
+/* Retro: Windows XP Luna inspired — Royal Blue task panes, glossy XP Start Green buttons, 3px bevels */
 :root[data-theme="retro"] {
-  --bg: #201a16;
-  --sidebar: #16110e;
-  --sidebar-glass: rgba(22, 17, 14, 0.92);
-  --surface: #2c231d;
-  --raised: #3a2e26;
-  --accent: #f0a030;
-  --accent-hover: #ffba52;
-  --accent-ink: #1e1204;
-  --select: rgba(240, 160, 48, 0.22);
-  --select-strong: #b06c14;
-  --note: rgba(240, 160, 48, 0.11);
-  --note-line: rgba(240, 160, 48, 0.35);
-  --text: #f7eedc;
-  --muted: rgba(247, 238, 220, 0.75);
-  --faint: rgba(247, 238, 220, 0.62);
-  --dim: rgba(247, 238, 220, 0.68);
+  --bg: #1b48a1;
+  --sidebar: #143985;
+  --sidebar-glass: rgba(20, 57, 133, 0.94);
+  --surface: #245edb;
+  --raised: #2f6ce6;
+  --panel: #163e8f;
+  --panel-hover: #2152b5;
+  --panel-line: rgba(164, 202, 255, 0.34);
+  --line: rgba(164, 202, 255, 0.22);
+  --line-strong: rgba(196, 222, 255, 0.45);
+  --accent: #3ba33b;
+  --accent-hover: #4cc24c;
+  --accent-ink: #ffffff;
+  --select: rgba(114, 178, 255, 0.32);
+  --select-strong: #316ac5;
+  --control: rgba(255, 255, 255, 0.14);
+  --control-hover: rgba(255, 255, 255, 0.24);
+  --note: rgba(114, 178, 255, 0.14);
+  --note-line: rgba(164, 202, 255, 0.42);
+  --text: #ffffff;
+  --muted: rgba(235, 244, 255, 0.86);
+  --faint: rgba(220, 236, 255, 0.72);
+  --dim: rgba(228, 240, 255, 0.78);
+  --good: #9dff9d;
+  --due: #ffe875;
+  --bad: #ffb8b8;
+  --radius: 3px;
+  --radius-card: 5px;
+  --radius-pill: 3px;
+  --theme-font-display: Tahoma, "Trebuchet MS", Verdana, system-ui, sans-serif;
+  --lit: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  --lift-1: 0 2px 4px rgba(6, 20, 62, 0.45);
+  --lift-2: 0 4px 14px rgba(6, 20, 62, 0.55);
+}
+:root[data-theme="retro"] .toolbar {
+  background: linear-gradient(180deg, #3d7ef2 0%, #245edb 58%, #1c4dc2 100%);
+  border-bottom: 1px solid #0e2e7a;
+}
+:root[data-theme="retro"] button,
+:root[data-theme="retro"] .button {
+  border-color: rgba(204, 226, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(6, 20, 62, 0.45);
+}
+:root[data-theme="retro"] button.primary:not(:disabled),
+:root[data-theme="retro"] .button.primary {
+  background: linear-gradient(180deg, #5cc75c 0%, #3a9f3a 55%, #2c802c 100%);
+  border-color: #216621;
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="retro"] button.primary:hover:not(:disabled),
+:root[data-theme="retro"] .button.primary:hover {
+  background: linear-gradient(180deg, #6ed66e 0%, #48b548 55%, #349434 100%);
 }
 
 /* ==================== 12 Seasonal Themes ==================== */
 
-/* January — Winter Frost */
+/* January — Winter Frost (crisp faceted 6px ice edges) */
 :root[data-theme="january"] {
   --bg: #0d2036;
   --sidebar: #081526;
-  --sidebar-glass: rgba(8, 21, 38, 0.90);
+  --sidebar-glass: rgba(8, 21, 38, 0.92);
   --surface: #132c4a;
   --raised: #1b3b61;
   --accent: #7cd4ff;
@@ -123,13 +290,16 @@
   --select-strong: #2b7ea8;
   --note: rgba(124, 212, 255, 0.10);
   --note-line: rgba(124, 212, 255, 0.34);
+  --radius: 5px;
+  --radius-card: 8px;
+  --radius-pill: 5px;
 }
 
-/* February — Valentine Rose */
+/* February — Valentine Rose (soft romantic 12px curves) */
 :root[data-theme="february"] {
   --bg: #2b0f1e;
   --sidebar: #1e0914;
-  --sidebar-glass: rgba(30, 9, 20, 0.90);
+  --sidebar-glass: rgba(30, 9, 20, 0.92);
   --surface: #3a1529;
   --raised: #4d1d37;
   --accent: #ff6b9d;
@@ -139,13 +309,16 @@
   --select-strong: #b83766;
   --note: rgba(255, 107, 157, 0.11);
   --note-line: rgba(255, 107, 157, 0.35);
+  --radius: 10px;
+  --radius-card: 16px;
+  --radius-pill: 12px;
 }
 
 /* March — Early Spring Clover */
 :root[data-theme="march"] {
   --bg: #0d281e;
   --sidebar: #081c14;
-  --sidebar-glass: rgba(8, 28, 20, 0.90);
+  --sidebar-glass: rgba(8, 28, 20, 0.92);
   --surface: #133629;
   --raised: #1b4736;
   --accent: #3ddc84;
@@ -155,13 +328,16 @@
   --select-strong: #1e874f;
   --note: rgba(61, 220, 132, 0.10);
   --note-line: rgba(61, 220, 132, 0.34);
+  --radius: 8px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
 }
 
 /* April — Cherry Blossom (Sakura) */
 :root[data-theme="april"] {
   --bg: #23182e;
   --sidebar: #181021;
-  --sidebar-glass: rgba(24, 16, 33, 0.90);
+  --sidebar-glass: rgba(24, 16, 33, 0.92);
   --surface: #2f203d;
   --raised: #3e2b50;
   --accent: #f6a6c1;
@@ -171,13 +347,16 @@
   --select-strong: #a85474;
   --note: rgba(246, 166, 193, 0.11);
   --note-line: rgba(246, 166, 193, 0.35);
+  --radius: 10px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
 }
 
 /* May — Spring Meadow */
 :root[data-theme="may"] {
   --bg: #15281c;
   --sidebar: #0e1c13;
-  --sidebar-glass: rgba(14, 28, 19, 0.90);
+  --sidebar-glass: rgba(14, 28, 19, 0.92);
   --surface: #1d3626;
   --raised: #274732;
   --accent: #e8cc4a;
@@ -187,13 +366,16 @@
   --select-strong: #8f7b1b;
   --note: rgba(232, 204, 74, 0.11);
   --note-line: rgba(232, 204, 74, 0.35);
+  --radius: 9px;
+  --radius-card: 14px;
+  --radius-pill: 10px;
 }
 
 /* June — Summer Solstice */
 :root[data-theme="june"] {
   --bg: #0b2a33;
   --sidebar: #071e25;
-  --sidebar-glass: rgba(7, 30, 37, 0.90);
+  --sidebar-glass: rgba(7, 30, 37, 0.92);
   --surface: #113945;
   --raised: #184a59;
   --accent: #ff8a65;
@@ -203,13 +385,16 @@
   --select-strong: #b85334;
   --note: rgba(255, 138, 101, 0.11);
   --note-line: rgba(255, 138, 101, 0.35);
+  --radius: 9px;
+  --radius-card: 15px;
+  --radius-pill: 999px;
 }
 
 /* July — Coastal Sun */
 :root[data-theme="july"] {
   --bg: #0e2242;
   --sidebar: #09172e;
-  --sidebar-glass: rgba(9, 23, 46, 0.90);
+  --sidebar-glass: rgba(9, 23, 46, 0.92);
   --surface: #142f59;
   --raised: #1c3f75;
   --accent: #38bdf8;
@@ -219,13 +404,16 @@
   --select-strong: #1c78a6;
   --note: rgba(56, 189, 248, 0.11);
   --note-line: rgba(56, 189, 248, 0.34);
+  --radius: 8px;
+  --radius-card: 13px;
+  --radius-pill: 8px;
 }
 
 /* August — Golden Harvest */
 :root[data-theme="august"] {
   --bg: #2b1b12;
   --sidebar: #1f130c;
-  --sidebar-glass: rgba(31, 19, 12, 0.90);
+  --sidebar-glass: rgba(31, 19, 12, 0.92);
   --surface: #3a2519;
   --raised: #4c3121;
   --accent: #f4b942;
@@ -235,13 +423,16 @@
   --select-strong: #a87618;
   --note: rgba(244, 185, 66, 0.11);
   --note-line: rgba(244, 185, 66, 0.36);
+  --radius: 8px;
+  --radius-card: 13px;
+  --radius-pill: 8px;
 }
 
 /* September — Autumn Cider */
 :root[data-theme="september"] {
   --bg: #291610;
   --sidebar: #1c0f0b;
-  --sidebar-glass: rgba(28, 15, 11, 0.90);
+  --sidebar-glass: rgba(28, 15, 11, 0.92);
   --surface: #381f17;
   --raised: #4a2a20;
   --accent: #e88d38;
@@ -251,13 +442,16 @@
   --select-strong: #a85c18;
   --note: rgba(232, 141, 56, 0.11);
   --note-line: rgba(232, 141, 56, 0.35);
+  --radius: 7px;
+  --radius-card: 11px;
+  --radius-pill: 7px;
 }
 
-/* October — Spooky Pumpkin */
+/* October — Spooky Pumpkin (sharp gothic 4px edges) */
 :root[data-theme="october"] {
   --bg: #1b1326;
   --sidebar: #120c1a;
-  --sidebar-glass: rgba(18, 12, 26, 0.92);
+  --sidebar-glass: rgba(18, 12, 26, 0.94);
   --surface: #261b36;
   --raised: #34254a;
   --accent: #ff7b29;
@@ -267,13 +461,16 @@
   --select-strong: #b84d0e;
   --note: rgba(255, 123, 41, 0.11);
   --note-line: rgba(255, 123, 41, 0.36);
+  --radius: 4px;
+  --radius-card: 6px;
+  --radius-pill: 4px;
 }
 
 /* November — Cozy Spice */
 :root[data-theme="november"] {
   --bg: #261812;
   --sidebar: #1a100c;
-  --sidebar-glass: rgba(26, 16, 12, 0.90);
+  --sidebar-glass: rgba(26, 16, 12, 0.92);
   --surface: #34221a;
   --raised: #452e23;
   --accent: #d99242;
@@ -283,13 +480,16 @@
   --select-strong: #995f1e;
   --note: rgba(217, 146, 66, 0.11);
   --note-line: rgba(217, 146, 66, 0.35);
+  --radius: 8px;
+  --radius-card: 12px;
+  --radius-pill: 8px;
 }
 
 /* December — Holiday Evergreen */
 :root[data-theme="december"] {
   --bg: #0c241b;
   --sidebar: #071912;
-  --sidebar-glass: rgba(7, 25, 18, 0.90);
+  --sidebar-glass: rgba(7, 25, 18, 0.92);
   --surface: #123326;
   --raised: #1a4534;
   --accent: #e5b842;
@@ -299,4 +499,7 @@
   --select-strong: #a62b38;
   --note: rgba(229, 184, 66, 0.11);
   --note-line: rgba(229, 184, 66, 0.35);
+  --radius: 7px;
+  --radius-card: 10px;
+  --radius-pill: 7px;
 }
