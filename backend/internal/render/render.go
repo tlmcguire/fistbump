@@ -29,70 +29,109 @@ func Master(m models.Master) string {
 		if len(contact) > 0 {
 			blocks = append(blocks, strings.Join(contact, " · "))
 		}
-		if p.Summary != nil && strings.TrimSpace(*p.Summary) != "" {
-			blocks = append(blocks, "## Summary", Escape(strings.TrimSpace(*p.Summary)))
+	}
+	order := m.SectionOrder
+	if len(order) == 0 {
+		order = []string{"summary", "experience", "education", "skills", "custom"}
+	}
+	seenSec := map[string]bool{}
+	var finalOrder []string
+	for _, k := range order {
+		k = strings.ToLower(strings.TrimSpace(k))
+		if k != "" && !seenSec[k] {
+			seenSec[k] = true
+			finalOrder = append(finalOrder, k)
 		}
 	}
-	if len(m.Experiences) > 0 {
-		blocks = append(blocks, "## Experience")
-		for _, e := range m.Experiences {
-			blocks = append(blocks, "### "+Escape(e.JobTitle+", "+e.CompanyName))
-			meta := []string{}
-			if !e.DateNA {
-				if dates := dateRange(e.StartDate, e.EndDate); dates != "" {
-					meta = append(meta, dates)
-				}
-			}
-			if e.Location != nil && strings.TrimSpace(*e.Location) != "" {
-				meta = append(meta, strings.TrimSpace(*e.Location))
-			}
-			if len(meta) > 0 {
-				blocks = append(blocks, strings.Join(meta, " | "))
-			}
-			for _, text := range []*string{e.Description, e.Impact} {
-				if text != nil && strings.TrimSpace(*text) != "" {
-					blocks = append(blocks, Escape(*text))
-				}
-			}
+	for _, def := range []string{"summary", "experience", "education", "skills", "custom"} {
+		if !seenSec[def] {
+			finalOrder = append(finalOrder, def)
 		}
 	}
-	if len(m.Education) > 0 {
-		blocks = append(blocks, "## Education")
-		for _, e := range m.Education {
-			heading := e.Institution
-			var degree []string
-			for _, v := range []*string{e.DegreeLevel, e.Discipline} {
-				if v != nil && strings.TrimSpace(*v) != "" {
-					degree = append(degree, strings.TrimSpace(*v))
+
+	for _, sec := range finalOrder {
+		switch sec {
+		case "summary":
+			if p := m.Profile; p != nil && p.Summary != nil && strings.TrimSpace(*p.Summary) != "" {
+				blocks = append(blocks, "## Summary", Escape(strings.TrimSpace(*p.Summary)))
+			}
+		case "experience":
+			if len(m.Experiences) > 0 {
+				blocks = append(blocks, "## Experience")
+				for _, e := range m.Experiences {
+					blocks = append(blocks, "### "+Escape(e.JobTitle+", "+e.CompanyName))
+					meta := []string{}
+					if !e.DateNA {
+						if dates := dateRange(e.StartDate, e.EndDate); dates != "" {
+							meta = append(meta, dates)
+						}
+					}
+					if e.Location != nil && strings.TrimSpace(*e.Location) != "" {
+						meta = append(meta, strings.TrimSpace(*e.Location))
+					}
+					if len(meta) > 0 {
+						blocks = append(blocks, strings.Join(meta, " | "))
+					}
+					for _, text := range []*string{e.Description, e.Impact} {
+						if text != nil && strings.TrimSpace(*text) != "" {
+							blocks = append(blocks, Escape(*text))
+						}
+					}
 				}
 			}
-			if len(degree) == 2 {
-				heading = degree[0] + " in " + degree[1] + ", " + e.Institution
-			} else if len(degree) == 1 {
-				heading = degree[0] + ", " + e.Institution
-			}
-			blocks = append(blocks, "### "+Escape(heading))
-			meta := []string{}
-			if e.GraduationDate != nil {
-				if d := formatDate(*e.GraduationDate); d != "" {
-					meta = append(meta, d)
+		case "education":
+			if len(m.Education) > 0 {
+				blocks = append(blocks, "## Education")
+				for _, e := range m.Education {
+					heading := e.Institution
+					var degree []string
+					for _, v := range []*string{e.DegreeLevel, e.Discipline} {
+						if v != nil && strings.TrimSpace(*v) != "" {
+							degree = append(degree, strings.TrimSpace(*v))
+						}
+					}
+					if len(degree) == 2 {
+						heading = degree[0] + " in " + degree[1] + ", " + e.Institution
+					} else if len(degree) == 1 {
+						heading = degree[0] + ", " + e.Institution
+					}
+					blocks = append(blocks, "### "+Escape(heading))
+					meta := []string{}
+					if e.GraduationDate != nil {
+						if d := formatDate(*e.GraduationDate); d != "" {
+							meta = append(meta, d)
+						}
+					}
+					if e.GPA != nil {
+						meta = append(meta, fmt.Sprintf("GPA %.2f", *e.GPA))
+					}
+					if len(meta) > 0 {
+						blocks = append(blocks, strings.Join(meta, " | "))
+					}
+					for _, text := range []*string{e.Honors, e.Details} {
+						if text != nil && strings.TrimSpace(*text) != "" {
+							blocks = append(blocks, Escape(*text))
+						}
+					}
 				}
 			}
-			if e.GPA != nil {
-				meta = append(meta, fmt.Sprintf("GPA %.2f", *e.GPA))
+		case "skills":
+			if skills := m.Skills(); len(skills) > 0 {
+				blocks = append(blocks, "## Skills", strings.Join(skills, ", "))
 			}
-			if len(meta) > 0 {
-				blocks = append(blocks, strings.Join(meta, " | "))
-			}
-			for _, text := range []*string{e.Honors, e.Details} {
-				if text != nil && strings.TrimSpace(*text) != "" {
-					blocks = append(blocks, Escape(*text))
+		case "custom":
+			for _, cs := range m.CustomSections {
+				if !cs.Visible {
+					continue
 				}
+				title := strings.TrimSpace(cs.Title)
+				content := strings.TrimSpace(cs.Content)
+				if title == "" || content == "" {
+					continue
+				}
+				blocks = append(blocks, "## "+Escape(title), content)
 			}
 		}
-	}
-	if skills := m.Skills(); len(skills) > 0 {
-		blocks = append(blocks, "## Skills", strings.Join(skills, ", "))
 	}
 	if len(blocks) == 0 {
 		return ""

@@ -28,6 +28,7 @@
       let jobId = window.Tailor.jobId;
       let revId = null;       //the round being reviewed
       let tailoredId = null;  //set while a tailored resume is open
+      let showDrafts = false; //true while viewing Answers & Cover Letter for the chosen job
       const warned = new Map(); //warnings from building a tailored resume, by its id
       let rounds = [];        //newest first, each with its number n
       let tailored = [];
@@ -72,8 +73,9 @@
 
       const jobSelect = el("select", {id: "tailor-job"});
       const baseSelect = el("select", {id: "tailor-base"});
-      const generate = el("button", {type: "button", class: "primary", title: "Write a new round of suggestions for the chosen job", onclick: () => startRound()}, "Generate suggestions");
-      const ownEdit = el("button", {type: "button", title: "Start from your resume and edit it yourself, with no suggestions", onclick: () => startOwnEdit()}, "Edit it myself");
+      const generate = el("button", {type: "button", class: "primary", title: "Write a new round of suggestions for the chosen job", onclick: () => { showDrafts = false; startRound(); }}, "Generate suggestions");
+      const ownEdit = el("button", {type: "button", title: "Start from your resume and edit it yourself, with no suggestions", onclick: () => { showDrafts = false; startOwnEdit(); }}, "Edit it myself");
+      const draftsBtn = el("button", {type: "button", title: "Write a cover letter or application Q&A answers for this job", onclick: () => { showDrafts = !showDrafts; drawBody(); }}, "Cover letter & Q&A");
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
       const field = (id, label, select) => el("div", {class: "picker"}, el("label", {for: id, text: label}), select);
 
@@ -85,6 +87,7 @@
           el("div", {class: "toolbar-actions"},
             field("tailor-job", "Job", jobSelect),
             field("tailor-base", "Based on", baseSelect),
+            draftsBtn,
             ownEdit,
             generate)));
 
@@ -159,6 +162,8 @@
       const loadRounds = async (draw = true) => {
         generate.disabled = !jobId;
         ownEdit.disabled = !jobId;
+        draftsBtn.disabled = !jobId;
+        if (!jobId) showDrafts = false;
         if (!jobId) {
           rounds = [];
           tailored = [];
@@ -257,6 +262,7 @@
         const scoreNode = el("span", {class: "score-number", text: String(score ?? 0)});
         const ring = el("div", {class: "score-ring"}, scoreNode, "%");
         ring.style.setProperty("--pct", String(score ?? 0)); //a style attribute would break the page's CSP
+        const bridgeBox = missing.length ? buildKeywordBridge(missing) : null;
         fill(aside,
           el("h2", {text: job.value.position_title}),
           el("p", {class: "aside-company", text: job.value.company_name}),
@@ -264,11 +270,92 @@
             el("p", {text: "of required skills are already on your resume"})) : null,
           a && preferredTotal ? el("p", {class: "aside-preferred", text: `${preferredHave} of ${preferredTotal} nice-to-have skills are on your resume`}) : null,
           match ? el("div", {class: "skill-match"}, el("h3", {text: match.heading}), ...match.groups) : null,
+          bridgeBox,
           !a ? el("p", {class: "hint", text: analysis === null ? "" : "Add your master resume to see how it matches."}) : null,
           el("p", {class: "hint", text: "Suggestions only reword what is already true. Skills you have not used stay missing until you add them yourself."}));
         if (a && asideJob !== jobId) play(aside, "in", 220);
         asideJob = jobId;
         if (revId !== null && !tailoredId) markGaps();
+      };
+
+      // Transparent, visible keyword gap-bridging (no hidden text): lets candidates honestly list missing keywords
+      // as "Currently learning" or "Don't have yet (eager to learn)" so automated filters pass them to a human.
+      const BRIDGE_STYLES = [
+        ["learning", "Currently learning"],
+        ["dont_have", "Don't have yet (eager to learn)"],
+        ["exploring", "Familiar with / ramping up on"],
+      ];
+      const buildKeywordBridge = missingSkills => {
+        const picked = new Set(missingSkills.slice(0, 6));
+        const styleSel = el("select", {"aria-label": "Honest phrasing style"},
+          BRIDGE_STYLES.map(([v, label]) => el("option", {value: v, text: label})));
+        const preview = el("textarea", {rows: 2, "aria-label": "Visible skill note preview"});
+        const noteStatus = el("p", {class: "hint", role: "status"});
+        const updatePreview = () => {
+          const list = missingSkills.filter(s => picked.has(s));
+          const prefix = BRIDGE_STYLES.find(([v]) => v === styleSel.value)?.[1] || "Currently learning";
+          preview.value = list.length ? `${prefix}: ${list.join(", ")}` : "";
+        };
+        styleSel.addEventListener("change", updatePreview);
+        const skillChecks = el("div", {class: "chips"}, missingSkills.slice(0, 10).map(skill => {
+          const cb = el("input", {type: "checkbox", checked: picked.has(skill)});
+          cb.addEventListener("change", () => {
+            if (cb.checked) picked.add(skill); else picked.delete(skill);
+            updatePreview();
+          });
+          return el("label", {class: "chip skill skill-gap"}, cb, " ", skill);
+        }));
+        updatePreview();
+        const insertLineIntoMarkdown = (md, line) => {
+          const clean = line.trim();
+          if (!clean) return md;
+          const rx = /^\s*(?:Currently learning|Don't have yet \(eager to learn\)|Familiar with \/ ramping up on):.*$/im;
+          if (rx.test(md)) return md.replace(rx, clean);
+          if (/^##\s+Skills\s*$/im.test(md)) {
+            return md.replace(/(^##\s+Skills\s*\n(?:[^#]*))/im, (m) => m.trimEnd() + "\n\n" + clean + "\n\n");
+          }
+          return md.trimEnd() + "\n\n## Skills\n\n" + clean + "\n";
+        };
+        const copyBtn = el("button", {type: "button", onclick: async () => {
+          if (!preview.value.trim()) return;
+          try { await navigator.clipboard.writeText(preview.value.trim()); noteStatus.textContent = "Copied visible note."; }
+          catch { noteStatus.textContent = "Select and copy the text above."; }
+        }}, "Copy line");
+        const addBtn = el("button", {type: "button", class: "primary", onclick: async () => {
+          const line = preview.value.trim();
+          if (!line) return;
+          addBtn.disabled = true;
+          try {
+            let targetId = tailoredId;
+            if (!targetId) {
+              const created = await attempt(() => api.tailored.createBlank(jobId, baseSelect.value ? Number(baseSelect.value) : null));
+              if (!created) return;
+              targetId = created.value.id;
+            }
+            const cur = await attempt(() => api.tailored.get(targetId));
+            if (!cur) return;
+            const nextContent = insertLineIntoMarkdown(cur.value.content || "", line);
+            const saved = await attempt(() => api.tailored.update(targetId, nextContent));
+            if (saved) {
+              tailoredId = targetId;
+              showDrafts = false;
+              nextTab = "changes";
+              await loadRounds(false);
+              await drawBody();
+              noteStatus.textContent = "Added visible note under Skills.";
+            }
+          } finally {
+            addBtn.disabled = false;
+          }
+        }}, "Add to tailored resume");
+        return el("div", {class: "cost-card keyword-bridge"},
+          el("h3", {text: "Honest keyword bridge"}),
+          el("p", {class: "hint", text: "Visible, honest phrasing (no hidden text) so automated keyword filters pass your resume to a human."}),
+          skillChecks,
+          styleSel,
+          preview,
+          el("div", {class: "round-actions"}, copyBtn, addBtn),
+          noteStatus);
       };
 
       //skills a suggestion brings in that the job asks for
@@ -396,10 +483,69 @@
         el("p", {class: "hint", text: "You have no saved jobs yet. Save one in the Jobs view first."}),
         el("button", {type: "button", onclick: () => window.App.go("jobs")}, "Find jobs"));
 
+      const drawDrafts = async () => {
+        drawRounds();
+        const listRes = await attempt(() => api.drafts.list(jobId));
+        const drafts = listRes?.value || [];
+        const customPrompt = el("input", {type: "text", placeholder: "Custom question, e.g. Why do you want to work here?"});
+        const gen = async (kind, prompt) => {
+          const created = await attempt(() => api.drafts.create(jobId, {kind, prompt, generate: true}));
+          if (created) drawDrafts();
+        };
+        const quickBar = el("div", {class: "round-actions"},
+          el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
+          el("button", {type: "button", onclick: () => gen("qa", "Why this role?")}, "Why this role?"),
+          el("button", {type: "button", onclick: () => gen("qa", "Describe a relevant project")}, "Relevant project"),
+          el("button", {type: "button", onclick: () => { showDrafts = false; drawBody(); }}, "Back to resume"));
+        const customForm = el("div", {class: "round-actions"},
+          customPrompt,
+          el("button", {type: "button", onclick: () => {
+            const q = customPrompt.value.trim();
+            if (!q) return;
+            gen("qa", q);
+          }}, "Draft answer"));
+        const cardsEl = drafts.length ? drafts.map(d => {
+          const area = el("textarea", {rows: 7, value: d.content});
+          area.value = d.content;
+          const wc = el("span", {class: "hint"});
+          const syncWC = () => {
+            const n = area.value.trim() ? area.value.trim().split(/\s+/).length : 0;
+            wc.textContent = `${n} word${n === 1 ? "" : "s"}`;
+          };
+          syncWC();
+          area.addEventListener("input", syncWC);
+          const copyStatus = el("span", {class: "hint"});
+          return el("section", {class: "tailor-card"},
+            el("div", {class: "card-head"},
+              el("h3", {text: d.prompt}),
+              el("span", {class: "engine-badge", text: d.kind === "cover_letter" ? "Cover letter" : "Q&A"}),
+              wc),
+            area,
+            el("div", {class: "tailor-actions"},
+              el("button", {type: "button", class: "primary", onclick: async () => {
+                if (await attempt(() => api.drafts.update(jobId, d.id, {prompt: d.prompt, content: area.value}))) copyStatus.textContent = "Saved.";
+              }}, "Save"),
+              el("button", {type: "button", onclick: async () => {
+                try { await navigator.clipboard.writeText(area.value); copyStatus.textContent = "Copied."; } catch {}
+              }}, "Copy"),
+              el("button", {type: "button", class: "quiet", onclick: async () => {
+                if (await attempt(() => api.drafts.delete(jobId, d.id))) drawDrafts();
+              }}, "Delete"),
+              copyStatus));
+        }) : [el("p", {class: "hint", text: "No drafts yet. Generate a resume-grounded cover letter or application Q&A answer above."})];
+        fill(stage,
+          el("div", {class: "round-head"}, el("h2", {text: "Cover letter & application Q&A"}), quickBar),
+          customForm,
+          el("div", {class: "cards"}, cardsEl));
+      };
+
       const drawBody = async () => {
         stopPolling();
         releasePdf();
         cards = [];
+        if (showDrafts && jobId) {
+          return drawDrafts();
+        }
         if (tailoredId) {
           const tab = nextTab;
           nextTab = "changes";
@@ -668,6 +814,17 @@
             play(exportNote, "enter", 500);
           }
         });
+        const exportDocxButton = el("button", {type: "button", title: "Export the tailored resume as an ATS-safe DOCX file"}, "Export DOCX");
+        exportDocxButton.addEventListener("click", async () => {
+          exportDocxButton.disabled = true;
+          exportNote.replaceChildren();
+          const r = await attempt(() => api.tailored.export(t.value.id, "docx", styleSelect.value));
+          exportDocxButton.disabled = false;
+          if (r?.value?.saved) {
+            exportNote.replaceChildren(el("div", {class: "exported"}, pico("20-pdf-exported.png"), savedNote(r.value.path)));
+            play(exportNote, "enter", 500);
+          }
+        });
 
         //track the job with this tailored resume, or set it on the job's application
         const trackButton = el("button", {type: "button", title: "Add this job to the Tracker with this resume"}, "Track with this resume");
@@ -750,6 +907,7 @@
             el("div", {class: "round-actions"},
               styleSelect,
               exportButton,
+              exportDocxButton,
               trackButton,
               el("button", {type: "button", onclick: () => { tailoredId = null; drawRounds(); drawBody(); }}, t.value.revision_id ? "Back to suggestions" : "Close"),
               confirmFirst(el("button", {type: "button", class: "quiet"}, "Delete"), "Delete resume?", async () => {

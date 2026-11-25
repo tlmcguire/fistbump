@@ -63,11 +63,21 @@ type ResumeVersion struct {
 	UpdatedAt      string  `json:"updated_at"`
 }
 
-// Master is the master resume: the profile with its experiences and education.
+// CustomSection is a user-defined optional resume section (Projects, Certifications, Awards, etc.).
+type CustomSection struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Visible bool   `json:"visible"`
+}
+
+// Master is the master resume: the profile with its experiences, education, custom sections, and section order.
 type Master struct {
-	Profile     *Profile
-	Experiences []Experience
-	Education   []Education
+	Profile        *Profile
+	Experiences    []Experience
+	Education      []Education
+	SectionOrder   []string
+	CustomSections []CustomSection
 }
 
 // Skills returns the de-duplicated union of the profile's skills and every experience's skills,

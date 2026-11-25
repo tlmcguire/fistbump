@@ -272,6 +272,88 @@ window.Settings = {
     if (api?.platform === "darwin") $("show-data-folder").textContent = "Show in Finder";
     if (api?.platform === "win32") $("show-data-folder").textContent = "Show in Explorer";
 
+    // ---------- Local JSON backup & restore ----------
+    $("backup-export")?.addEventListener("click", async () => {
+      storageStatus("Creating local backup\u2026");
+      try {
+        const fb = window.FistBumpAPI;
+        const [master, resumes, jobs, apps, savedSearches, settings] = await Promise.all([
+          fb.resume.get().catch(() => null),
+          fb.resumes.list().catch(() => []),
+          fb.jobs.list("", {archived: "include"}).catch(() => []),
+          fb.applications.list({archived: "include"}).catch(() => []),
+          api?.savedSearches?.list ? fb.savedSearches.list().catch(() => []) : [],
+          api?.settings?.get ? fb.request(() => api.settings.get()).catch(() => ({})) : {},
+        ]);
+        const bundle = {
+          schema: "fistbump-backup-v1",
+          exported_at: new Date().toISOString(),
+          master,
+          resumes,
+          jobs,
+          applications: apps,
+          saved_searches: savedSearches,
+          settings,
+        };
+        const stamp = new Date().toISOString().slice(0, 10);
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], {type: "application/json;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Fistbump-Backup-${stamp}.json`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        storageStatus(`Backup exported (${jobs.length} jobs, ${apps.length} applications).`);
+      } catch (err) {
+        storageStatus(err.message);
+      }
+    });
+
+    $("backup-restore")?.addEventListener("click", () => $("backup-file")?.click());
+    $("backup-file")?.addEventListener("change", async event => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      storageStatus("Restoring backup\u2026");
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || data.schema !== "fistbump-backup-v1") {
+          throw new Error("That file is not a valid Fistbump backup.");
+        }
+        const fb = window.FistBumpAPI;
+        if (data.master?.profile) {
+          await fb.resume.importApply({
+            draft: {
+              profile: data.master.profile,
+              experiences: data.master.experiences || [],
+              education: data.master.education || [],
+              skills: data.master.profile.skills || [],
+            },
+            replace: false,
+          });
+        }
+        if (data.settings && typeof data.settings === "object" && api?.settings?.put) {
+          const safe = {};
+          for (const k of ["connectors.custom_boards", "resume.section_order", "resume.custom_sections", "jobs.retention_days", "jobs.trash_days"]) {
+            if (k in data.settings) safe[k] = data.settings[k];
+          }
+          if (Object.keys(safe).length) await fb.request(() => api.settings.put(safe));
+        }
+        if (Array.isArray(data.saved_searches) && api?.savedSearches?.create) {
+          for (const ss of data.saved_searches) {
+            if (ss.name && ss.query_json) {
+              await fb.savedSearches.create({name: ss.name, query_json: ss.query_json, seen_keys: ss.seen_keys || []}).catch(() => {});
+            }
+          }
+        }
+        showWatchlist();
+        storageStatus("Backup restored (resume profile, custom sections, watchlist, and saved searches).");
+      } catch (err) {
+        storageStatus(err.message || "Could not restore backup.");
+      }
+    });
+
     // ---------- AI suggestions ----------
 
     const ai = window.FistBumpAPI.ai;

@@ -471,6 +471,17 @@
                                     </div>
                                     <button type="button" id="show-data-folder">Show folder</button>
                                 </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Local backup &amp; restore</span>
+                                        <p>Export your resume, jobs, applications, saved searches, and settings as a single local JSON file.</p>
+                                    </div>
+                                    <div class="setting-actions">
+                                        <button type="button" id="backup-export">Export backup</button>
+                                        <button type="button" id="backup-restore">Restore backup</button>
+                                        <input type="file" id="backup-file" accept=".json,application/json" hidden>
+                                    </div>
+                                </div>
                                 <p id="storage-status" class="setting-status" role="status"></p>
                             </div>
                             <p class="group-note">What leaves your computer: a job search asks public job boards for postings, a model is downloaded from the model library, and a remote provider only sees what you send it.</p>

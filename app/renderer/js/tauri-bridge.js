@@ -220,6 +220,13 @@
       markSeen: (id, seenKeys) => call('savedSearches:markSeen', id, seenKeys),
       delete: (id) => call('savedSearches:delete', id),
     },
+
+    drafts: {
+      list: (jobId) => call('drafts:list', jobId),
+      create: (jobId, body) => call('drafts:create', jobId, body),
+      update: (jobId, did, body) => call('drafts:update', jobId, did, body),
+      delete: (jobId, did) => call('drafts:delete', jobId, did),
+    },
   };
 
   // Native-style Windows titlebar buttons for frameless Mica windows.

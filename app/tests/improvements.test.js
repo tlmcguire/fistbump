@@ -139,3 +139,24 @@ test('Tailor suggested jobs support hover dismiss with localStorage persistence'
   const css = read('styles/views.css');
   assert.ok(css.includes('.stage-job-item:hover .stage-job-dismiss'), 'views.css should reveal dismiss button on hover');
 });
+
+test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', () => {
+  const dv = read('views/diff-view/diff-view.js');
+  assert.ok(dv.includes('Honest keyword bridge'), 'diff-view.js should include Honest keyword bridge');
+  assert.ok(dv.includes('Currently learning') && dv.includes("Don't have yet (eager to learn)"), 'diff-view.js should offer transparent gap-bridging phrasings');
+  assert.ok(dv.includes('Export DOCX'), 'diff-view.js should offer Export DOCX');
+  assert.ok(dv.includes('Cover letter & Q&A') && dv.includes('api.drafts.create'), 'diff-view.js should include Cover letter & Q&A drafts');
+
+  const rb = read('views/resume-builder/resume-builder.js');
+  assert.ok(rb.includes('resume.section_order') && rb.includes('resume.custom_sections'), 'resume-builder.js should support custom sections and section ordering');
+
+  const tr = read('views/tracker/tracker.js');
+  assert.ok(tr.includes('Compare offers') && tr.includes('api.cost.compare'), 'tracker.js should wire side-by-side offer comparison');
+  assert.ok(tr.includes('Prep sheet') && tr.includes('openPrepSheet'), 'tracker.js should wire printable interview prep sheet');
+
+  const html = read('index.html');
+  assert.ok(html.includes('id="backup-export"') && html.includes('id="backup-restore"'), 'index.html should include local backup & restore controls');
+
+  const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
+  assert.ok(routes.includes('"drafts:list"') && routes.includes('"drafts:create"'), 'routes.rs should map drafts IPC channels');
+});

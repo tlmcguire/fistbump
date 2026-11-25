@@ -576,6 +576,35 @@ pub fn route_for_channel(
             None => Err(bad("Invalid saved search id")),
         },
 
+        "drafts:list" => match as_id(a0) {
+            Some(job_id) => Ok((Method::GET, format!("/v1/jobs/{job_id}/drafts"), None)),
+            None => Err(bad("Invalid job id")),
+        },
+        "drafts:create" => match (as_id(a0), as_object(a1)) {
+            (Some(job_id), Some(body)) => Ok((
+                Method::POST,
+                format!("/v1/jobs/{job_id}/drafts"),
+                Some(body.clone()),
+            )),
+            _ => Err(bad("Invalid draft")),
+        },
+        "drafts:update" => match (as_id(a0), as_id(a1), as_object(a2)) {
+            (Some(job_id), Some(did), Some(body)) => Ok((
+                Method::PUT,
+                format!("/v1/jobs/{job_id}/drafts/{did}"),
+                Some(body.clone()),
+            )),
+            _ => Err(bad("Invalid draft")),
+        },
+        "drafts:delete" => match (as_id(a0), as_id(a1)) {
+            (Some(job_id), Some(did)) => Ok((
+                Method::DELETE,
+                format!("/v1/jobs/{job_id}/drafts/{did}"),
+                None,
+            )),
+            _ => Err(bad("Invalid draft id")),
+        },
+
         _ => return None,
     };
 

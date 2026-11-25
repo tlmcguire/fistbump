@@ -615,3 +615,11 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
   line-height: 1.45;
 }
 .cost-source-list a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Honest keyword bridge, Interview prep sheet, and Offer comparison dialogs */
+.keyword-bridge textarea { width: 100%; font-size: 12px; }
+dialog.prep-dialog, dialog.compare-dialog { width: min(760px, calc(100vw - 48px)); max-height: 85vh; overflow-y: auto; }
+.prep-body { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.compare-inputs { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
+.compare-row { display: grid; grid-template-columns: minmax(180px, 1fr) 130px 130px; gap: 8px; align-items: center; }
+.compare-results { margin-top: 8px; overflow-x: auto; }

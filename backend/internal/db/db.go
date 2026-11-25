@@ -95,7 +95,7 @@ func hasColumn(conn *sql.DB, table, column string) (bool, error) {
 // cacheMigrations only create tables with IF NOT EXISTS, so they are run on every open as well as in
 // order. That repairs a database whose user_version another build moved past them (an experimental build
 // that shared the data folder did), which would otherwise never get its tables.
-var cacheMigrations = []string{"002_greenhouse_cache.sql", "003_logo_cache.sql", "006_saved_searches.sql"}
+var cacheMigrations = []string{"002_greenhouse_cache.sql", "003_logo_cache.sql", "006_saved_searches.sql", "007_application_drafts.sql"}
 
 func ensureCaches(conn *sql.DB) error {
 	for _, name := range cacheMigrations {

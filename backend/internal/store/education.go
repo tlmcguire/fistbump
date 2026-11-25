@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/tlmcguire/fistbump/backend/internal/models"
 )
@@ -100,8 +101,21 @@ func (s *Store) GetMaster(ctx context.Context) (models.Master, error) {
 		if m.Experiences, err = tx.ListExperiences(ctx); err != nil {
 			return err
 		}
-		m.Education, err = tx.ListEducation(ctx)
-		return err
+		if m.Education, err = tx.ListEducation(ctx); err != nil {
+			return err
+		}
+		if vals, err := tx.GetSettings(ctx); err == nil {
+			if order, ok := vals["resume.section_order"].([]string); ok && len(order) > 0 {
+				m.SectionOrder = order
+			}
+			if raw, ok := vals["resume.custom_sections"].(string); ok && raw != "" {
+				var sections []models.CustomSection
+				if json.Unmarshal([]byte(raw), &sections) == nil {
+					m.CustomSections = sections
+				}
+			}
+		}
+		return nil
 	})
 	return m, err
 }

@@ -379,8 +379,9 @@
     const profileSection = el("section", {class: "resume-section", "aria-labelledby": "resume-profile-h"});
     const experienceSection = el("section", {class: "resume-section", "aria-labelledby": "resume-exp-h"});
     const educationSection = el("section", {class: "resume-section", "aria-labelledby": "resume-edu-h"});
+    const customSectionsPanel = el("section", {class: "resume-section", "aria-labelledby": "resume-custom-h"});
     const importSection = el("section", {class: "resume-section import-review", "aria-labelledby": "resume-import-h", hidden: true});
-    const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection);
+    const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection, customSectionsPanel);
  
     const previewText = el("div", {class: "resume-doc"});
     const exportNote = el("div");
@@ -838,7 +839,7 @@
 
     const showEditor = shown => {
       importSection.hidden = shown;
-      for (const section of [profileSection, experienceSection, educationSection]) section.hidden = !shown;
+      for (const section of [profileSection, experienceSection, educationSection, customSectionsPanel]) section.hidden = !shown;
       importButton.disabled = pasteButton.disabled = importing;
     };
 
@@ -999,14 +1000,97 @@
       runImport(() => api().resume.importData(file.name, bytes), file.name);
     });
 
+    // --- Custom sections & section ordering ---
+    const DEFAULT_ORDER = ["summary", "experience", "education", "skills", "custom"];
+    const ORDER_LABELS = {summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", custom: "Custom sections"};
+    let sectionOrder = [...DEFAULT_ORDER];
+    let customSections = [];
+
+    const saveCustomSettings = async (patch, msg) => {
+      if (!window.api?.settings?.put) return;
+      try {
+        await window.FistBumpAPI.request(() => window.api.settings.put(patch));
+        say(msg);
+        refreshPreview();
+      } catch (err) {
+        say(err.message, true);
+      }
+    };
+
+    function renderCustomSections() {
+      const orderList = el("div", {class: "chips"}, sectionOrder.map((key, idx) => el("span", {class: "chip"},
+        ORDER_LABELS[key] || key, " ",
+        el("button", {type: "button", class: "link-button", disabled: idx === 0, "aria-label": `Move ${ORDER_LABELS[key]} up`, onclick: async () => {
+          [sectionOrder[idx - 1], sectionOrder[idx]] = [sectionOrder[idx], sectionOrder[idx - 1]];
+          renderCustomSections();
+          await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
+        }}, "↑"), " ",
+        el("button", {type: "button", class: "link-button", disabled: idx === sectionOrder.length - 1, "aria-label": `Move ${ORDER_LABELS[key]} down`, onclick: async () => {
+          [sectionOrder[idx + 1], sectionOrder[idx]] = [sectionOrder[idx], sectionOrder[idx + 1]];
+          renderCustomSections();
+          await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
+        }}, "↓"))));
+
+      const titleInput = el("input", {type: "text", placeholder: "e.g. Projects, Certifications, Awards"});
+      const bodyInput = el("textarea", {rows: 3, placeholder: "- Built an open-source CLI tool in Go..."});
+      const addBtn = el("button", {type: "button", class: "primary", onclick: async () => {
+        const t = titleInput.value.trim();
+        const c = bodyInput.value.trim();
+        if (!t || !c) { say("Enter both a section title and content.", true); return; }
+        customSections = [...customSections, {id: String(Date.now()), title: t, content: c, visible: true}];
+        titleInput.value = "";
+        bodyInput.value = "";
+        renderCustomSections();
+        await saveCustomSettings({"resume.custom_sections": JSON.stringify(customSections)}, `Added "${t}" section.`);
+      }}, "Add custom section");
+
+      const cards = customSections.map((cs, i) => el("article", {class: "entry"},
+        el("div", {class: "entry-head"},
+          el("div", {}, el("h3", {text: cs.title}), el("p", {class: "entry-meta", text: cs.visible ? "Shown in resume" : "Hidden"})),
+          el("div", {class: "entry-actions"},
+            el("button", {type: "button", onclick: async () => {
+              customSections[i] = {...cs, visible: !cs.visible};
+              renderCustomSections();
+              await saveCustomSettings({"resume.custom_sections": JSON.stringify(customSections)}, cs.visible ? "Section hidden." : "Section shown.");
+            }}, cs.visible ? "Hide" : "Show"),
+            el("button", {type: "button", class: "danger", onclick: async () => {
+              customSections = customSections.filter((_, idx) => idx !== i);
+              renderCustomSections();
+              await saveCustomSettings({"resume.custom_sections": JSON.stringify(customSections)}, "Custom section removed.");
+            }}, "Delete"))),
+        el("p", {class: "entry-text", text: cs.content})));
+
+      fill(customSectionsPanel,
+        el("h2", {id: "resume-custom-h", text: "Custom sections & section order"}),
+        el("p", {class: "hint", text: "Reorder how sections appear in your preview, PDF, and DOCX exports."}),
+        orderList,
+        cards,
+        el("div", {class: "entry-form"},
+          el("div", {class: "form-grid"},
+            el("div", {class: "form-row wide"}, el("label", {text: "Section title"}), titleInput),
+            el("div", {class: "form-row wide"}, el("label", {text: "Content (Markdown bullets supported)"}), bodyInput)),
+          el("div", {class: "form-actions"}, addBtn)));
+    }
+
     // --- Load ---
  
     const ready = (async () => {
       const loaded = await attempt(() => api().resume.get());
       if (disposed) return;
       if (loaded) master = loaded;
+      if (window.api?.settings?.get) {
+        try {
+          const st = await window.FistBumpAPI.request(() => window.api.settings.get());
+          if (Array.isArray(st?.["resume.section_order"]) && st["resume.section_order"].length) sectionOrder = [...st["resume.section_order"]];
+          if (typeof st?.["resume.custom_sections"] === "string") {
+            const parsed = JSON.parse(st["resume.custom_sections"] || "[]");
+            if (Array.isArray(parsed)) customSections = parsed;
+          }
+        } catch {}
+      }
       renderProfile();
       renderEntries();
+      renderCustomSections();
       refreshPreview();
       await loadVersions();
     })();

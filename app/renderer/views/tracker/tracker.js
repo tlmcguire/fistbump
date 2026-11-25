@@ -137,6 +137,133 @@
         say(`Exported ${rows.length} application${rows.length === 1 ? "" : "s"} to CSV.`);
       }}, "Export CSV");
 
+      const money = n => `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n || 0)).toLocaleString()}`;
+
+      // --- Side-by-side offer comparison dialog (Item 13) ---
+      const openCompareOffers = async () => {
+        if (rows.length < 2) {
+          say("Track at least 2 jobs to compare offers side by side.", true);
+          return;
+        }
+        const picked = rows.filter(a => selected.has(a.id));
+        const initial = (picked.length >= 2 ? picked : rows).slice(0, 3);
+        const dialog = el("dialog", {class: "ask compare-dialog", "aria-label": "Compare offers side by side"});
+        const resultBox = el("div", {class: "compare-results"});
+        const inputs = initial.map(a => {
+          const bonus = el("input", {type: "number", min: "0", step: "1000", placeholder: "Bonus ($/yr)"});
+          const equity = el("input", {type: "number", min: "0", step: "1000", placeholder: "Equity ($/yr)"});
+          return {app: a, bonus, equity};
+        });
+        const runCompare = async () => {
+          resultBox.replaceChildren(el("p", {class: "hint", text: "Calculating comparison\u2026"}));
+          try {
+            const jobs = await Promise.all(inputs.map(x => api.jobs.get(x.app.job_id)));
+            const offers = inputs.map((x, i) => ({
+              label: `${x.app.company_name || "Company"} \u2014 ${x.app.position_title || "Role"}`,
+              title: jobs[i]?.position_title || x.app.position_title || "",
+              location: jobs[i]?.location || "",
+              work_mode: jobs[i]?.work_mode || "",
+              pay_min: jobs[i]?.pay_min || 0,
+              pay_max: jobs[i]?.pay_max || 0,
+              bonus: Math.max(0, Number(x.bonus.value) || 0),
+              annual_equity: Math.max(0, Number(x.equity.value) || 0),
+              text: jobs[i]?.raw_text || "",
+            }));
+            const res = await api.cost.compare({offers});
+            const cols = res.offers || [];
+            const tr = (label, fn) => el("tr", {}, el("th", {scope: "row", text: label}), ...cols.map(c => el("td", {text: fn(c)})));
+            resultBox.replaceChildren(el("table", {class: "cost-table"},
+              el("thead", {}, el("tr", {}, el("th", {text: "Metric"}), ...cols.map(c => el("th", {text: c.label})))),
+              el("tbody", {},
+                tr("Total comp (est. yr)", c => c.total_comp ? money(c.total_comp) : (c.analysis?.lifestyle?.gross ? money(c.analysis.lifestyle.gross) : "N/A")),
+                tr("Bonus + Equity", c => money((c.bonus || 0) + (c.annual_equity || 0))),
+                tr("Effective tax rate", c => c.analysis?.lifestyle ? `${c.analysis.lifestyle.tax_rate}%` : "N/A"),
+                tr("Monthly take-home", c => c.analysis?.lifestyle ? money(c.analysis.lifestyle.net_monthly) : "N/A"),
+                tr("Monthly leftover", c => c.analysis?.lifestyle ? money(c.analysis.lifestyle.left_monthly) : "N/A"),
+                tr("Pay verdict", c => c.analysis?.pay?.verdict || "N/A"),
+                tr("Benefits", c => c.analysis?.benefits?.rating || "N/A"),
+                tr("Cost of living", c => c.analysis?.lifestyle?.verdict || "N/A"))));
+          } catch (err) {
+            resultBox.replaceChildren(el("p", {class: "resume-status error", text: err.message}));
+          }
+        };
+        const close = () => { dialog.close(); dialog.remove(); };
+        dialog.append(
+          el("h2", {text: "Side-by-side offer comparison"}),
+          el("p", {class: "hint", text: "Add optional annual bonus or equity to compare total compensation and cost of living."}),
+          el("div", {class: "compare-inputs"}, inputs.map(x => el("div", {class: "compare-row"},
+            el("strong", {text: `${x.app.company_name} \u2014 ${x.app.position_title}`}), x.bonus, x.equity))),
+          resultBox,
+          el("div", {class: "ask-actions"},
+            el("button", {type: "button", onclick: close}, "Close"),
+            el("button", {type: "button", class: "primary", onclick: runCompare}, "Recalculate")));
+        dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
+        document.body.append(dialog);
+        dialog.showModal();
+        runCompare();
+      };
+
+      // --- Interview Prep Sheet dialog (Item 10) ---
+      const openPrepSheet = async a => {
+        const dialog = el("dialog", {class: "ask prep-dialog", "aria-label": "Interview prep sheet"});
+        const body = el("div", {class: "prep-body"}, el("p", {class: "hint", text: "Loading interview prep sheet\u2026"}));
+        let mdContent = "";
+        const close = () => { dialog.close(); dialog.remove(); };
+        const dlBtn = el("button", {type: "button", onclick: () => {
+          if (!mdContent) return;
+          downloadBlob(`${(a.company_name || "Interview").replace(/[^a-z0-9_-]+/gi, "-")}-Prep-Sheet.md`, mdContent, "text/markdown;charset=utf-8");
+        }}, "Download .md");
+        const printBtn = el("button", {type: "button", class: "primary", onclick: () => window.print()}, "Print");
+        dialog.append(
+          el("h2", {text: `Interview prep: ${a.company_name || "Company"} \u2014 ${a.position_title || "Role"}`}),
+          body,
+          el("div", {class: "ask-actions"}, el("button", {type: "button", onclick: close}, "Close"), dlBtn, printBtn));
+        dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
+        document.body.append(dialog);
+        dialog.showModal();
+        try {
+          const [job, analysis, resumeObj] = await Promise.all([
+            api.jobs.get(a.job_id),
+            api.jobs.analyze(a.job_id).catch(() => null),
+            a.tailored_resume_id ? api.tailored.get(a.tailored_resume_id).catch(() => null) : api.resume.preview().catch(() => null),
+          ]);
+          const matched = (analysis?.required?.tech?.matched || []).map(x => x.skill);
+          const missing = analysis?.required?.tech?.missing || [];
+          const questions = [
+            ...missing.slice(0, 3).map(s => `Skill gap (${s}): How are you ramping up on ${s}, and what similar tool or concept from your past work transfers directly?`),
+            ...matched.slice(0, 3).map(s => `Deep dive (${s}): Walk through a concrete production problem you solved with ${s} and how you measured the impact.`),
+            `Role fit: Why ${a.company_name || "this company"} and why the ${a.position_title || "role"} right now?`,
+          ];
+          const resumeText = resumeObj?.content || resumeObj?.markdown || "";
+          mdContent = [
+            `# Interview Prep: ${a.company_name} — ${a.position_title}`,
+            `Status: ${a.status}${a.next_step_date ? ` | Next step: ${a.next_step_date}` : ""}`,
+            a.notes ? `\n## Your Notes\n${a.notes}` : "",
+            `\n## Matched Required Skills\n${matched.length ? matched.join(", ") : "None listed"}`,
+            `\n## Missing Required Skills (Prepare Honest Framing)\n${missing.length ? missing.join(", ") : "None"}`,
+            `\n## Practice Questions\n${questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`,
+            job?.raw_text ? `\n## Saved Job Description\n${job.raw_text.slice(0, 1800)}` : "",
+            resumeText ? `\n## Submitted Resume Snapshot\n${resumeText.slice(0, 1800)}` : "",
+          ].filter(Boolean).join("\n");
+          body.replaceChildren(
+            el("p", {class: "hint", text: `Stage: ${a.status}${a.next_step_date ? ` \u00b7 Next step: ${a.next_step_date}` : ""}`}),
+            a.notes ? el("div", {class: "cost-card"}, el("h4", {text: "Your notes"}), el("p", {text: a.notes})) : null,
+            el("div", {class: "cost-card"},
+              el("h4", {text: "Skills summary"}),
+              el("p", {text: `Matched: ${matched.length ? matched.join(", ") : "None listed"}`}),
+              el("p", {text: `Missing: ${missing.length ? missing.join(", ") : "None"}`})),
+            el("div", {class: "cost-card"},
+              el("h4", {text: "Practice questions"}),
+              el("ol", {class: "problem-steps"}, questions.map(q => el("li", {text: q})))),
+            job?.raw_text ? el("details", {class: "cost-sources"},
+              el("summary", {text: "Job description"}),
+              el("pre", {class: "preview-text", text: job.raw_text.slice(0, 3000)})) : null);
+        } catch (err) {
+          body.replaceChildren(el("p", {class: "resume-status error", text: err.message}));
+        }
+      };
+
+      const compareButton = el("button", {type: "button", title: "Compare 2\u20133 tracked offers side by side", onclick: openCompareOffers}, "Compare offers");
       const statsStrip = el("p", {class: "hint", role: "status", hidden: true});
       const dueStrip = el("section", {class: "due-strip", "aria-label": "Needs you today", hidden: true});
       const table = el("div", {class: "tracker-table-wrap"});
@@ -144,7 +271,7 @@
         el("div", {class: "toolbar-form resume-toolbar"},
           el("h1", {class: "view-title", text: "Tracker"}),
           status,
-          el("div", {class: "toolbar-actions"}, search, exportCsvButton, el("div", {class: "tracker-scopes", role: "group", "aria-label": "Show"}, scopeButtons))));
+          el("div", {class: "toolbar-actions"}, search, compareButton, exportCsvButton, el("div", {class: "tracker-scopes", role: "group", "aria-label": "Show"}, scopeButtons))));
       fill(container, toolbar,
         el("div", {class: "pane tracker"},
           dueStrip,
@@ -260,7 +387,8 @@
               downloadBlob(`${(a.company_name || "Follow-up").replace(/[^a-z0-9_-]+/gi, "-")}.ics`, ics, "text/calendar;charset=utf-8");
             }}, ".ics") : null,
             due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
-          el("td", {}, el("span", {text: resumeLabel(a)}), pdf),
+          el("td", {}, el("span", {text: resumeLabel(a)}), pdf,
+            el("button", {type: "button", class: "link-button", title: "Open printable interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep sheet")),
           el("td", {}, notes));
       };
 
