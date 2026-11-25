@@ -141,3 +141,24 @@ test('cost analysis returns cited sources and 30-day refresh metadata', async ({
   expect(Array.isArray(result.sources)).toBe(true);
   expect(result.sources.length).toBeGreaterThanOrEqual(5);
 });
+
+test('themes and accessibility preferences apply cleanly in Settings', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  const themeSelect = window.locator('#pref-theme');
+  await expect(themeSelect).toBeVisible();
+
+  for (const theme of ['bubblegum', 'cyber', 'retro', 'december']) {
+    await themeSelect.selectOption(theme);
+    await expect(window.locator('html')).toHaveAttribute('data-theme', theme);
+  }
+  await themeSelect.selectOption('auto-season');
+  await expect(window.locator('html')).toHaveAttribute('data-theme', /^(january|february|march|april|may|june|july|august|september|october|november|december)$/);
+
+  await window.locator('#pref-high-contrast').check();
+  await expect(window.locator('html')).toHaveClass(/high-contrast/);
+  await window.locator('#pref-underline-links').check();
+  await expect(window.locator('html')).toHaveClass(/underline-links/);
+
+  await themeSelect.selectOption('classic');
+  await expect(window.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+});

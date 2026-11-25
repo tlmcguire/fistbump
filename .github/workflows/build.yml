@@ -88,10 +88,12 @@ jobs:
       - name: Check the tag matches the app version
         run: |
           expected="${GITHUB_REF_NAME#v}"
-          actual=$(node -p "require('./package.json').version")
-          if [ "$expected" != "$actual" ]; then
-            echo "Tag $GITHUB_REF_NAME points at a commit whose package.json version is $actual."
-            echo "Move the tag to the commit that sets version $expected."
+          pkg=$(node -p "require('./package.json').version")
+          tauri=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n 1)
+          if [ "$expected" != "$pkg" ] || [ "$expected" != "$tauri" ] || [ "$expected" != "$cargo" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match all app manifests (package.json=$pkg, tauri.conf.json=$tauri, Cargo.toml=$cargo)."
+            echo "Ensure all three versions are set to $expected before tagging."
             exit 1
           fi
       - name: Create the draft release if it does not exist

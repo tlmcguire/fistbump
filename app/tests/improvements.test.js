@@ -200,4 +200,38 @@ test('Prefs supports 11 style themes, 12 seasonal themes, and auto-season', () =
   for (const t of expected) {
     assert.ok(css.includes(`[data-theme="${t}"]`), `themes.css should define [data-theme="${t}"]`);
   }
+  assert.ok(css.includes(':root[data-theme].high-contrast'), 'themes.css should enforce high-contrast across all themes');
+  assert.ok(css.includes(':root[data-theme].underline-links'), 'themes.css should enforce underline-links across all themes');
+
+  const html = read('index.html');
+  const selectMatch = html.match(/<select[^>]*id="pref-theme"[^>]*>([\s\S]*?)<\/select>/);
+  assert.ok(selectMatch, 'index.html should contain #pref-theme select');
+  assert.ok(!/[()]/.test(selectMatch[1]), '#pref-theme option labels should not contain parenthetical names');
+});
+
+test('Home refreshes and clears stale listings/cache when history, jobs, or storage are deleted', () => {
+  const home = read('views/home/home.js');
+  assert.ok(home.includes('fistbump:jobs') && home.includes('fistbump:applications') && home.includes('fistbump:storage-cleaned'),
+    'home.js should listen for job, application, and storage cleanup events');
+  assert.ok(home.includes('invalidateMatches') && home.includes('clearLastListing'),
+    'home.js should invalidate match cache and drop deleted remembered listings');
+
+  const jp = read('views/job-parser/job-parser.js');
+  assert.ok(jp.includes('forgetListingIfMatching') && jp.includes('notifyJobsChanged'),
+    'job-parser.js should forget deleted listings and notify Home');
+
+  const settings = read('views/settings/settings.js');
+  assert.ok(settings.includes('fistbump:storage-cleaned'),
+    'settings.js should notify Home after storage cleanup');
+});
+
+test('App version stays in sync across package.json, tauri.conf.json, and Cargo.toml', () => {
+  const root = path.join(__dirname, '..', '..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+  const tauri = JSON.parse(fs.readFileSync(path.join(root, 'src-tauri', 'tauri.conf.json'), 'utf8')).version;
+  const cargoToml = fs.readFileSync(path.join(root, 'src-tauri', 'Cargo.toml'), 'utf8');
+  const cargoMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+  assert.ok(cargoMatch, 'Cargo.toml should declare a version');
+  assert.equal(tauri, pkg, 'tauri.conf.json version must match package.json');
+  assert.equal(cargoMatch[1], pkg, 'Cargo.toml version must match package.json');
 });
