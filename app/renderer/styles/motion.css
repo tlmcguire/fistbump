@@ -21,23 +21,19 @@
 /* ---------- Arrivals ---------- */
 
 @keyframes arrive {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
 
-/* A page as it is shown: the content arrives, the toolbar it sits under stays where it is */
-.view-enter > :not(.toolbar) { animation: arrive 220ms var(--ease-out) both; }
+/* A page as it is shown: pure opacity fade avoids WebKit compositor-layer subpixel snap */
+.view-enter > :not(.toolbar) { animation: arrive 160ms ease-out both; }
 /* A panel, stage or note as it is filled */
-.enter { animation: arrive 240ms var(--ease-out) both; }
+.enter { animation: arrive 180ms ease-out both; }
 /* A list, one child after another (the script sets --i on each and caps it) */
-.stagger > * { animation: arrive 260ms var(--ease-out) both; animation-delay: var(--i, 0ms); }
-.tailor-aside.in > * { animation: arrive 300ms var(--ease-out) both; }
-.tailor-aside.in > *:nth-child(2) { animation-delay: 30ms; }
-.tailor-aside.in > *:nth-child(3) { animation-delay: 60ms; }
-.tailor-aside.in > *:nth-child(4) { animation-delay: 90ms; }
-.tailor-aside.in > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > * { animation: arrive 180ms ease-out both; animation-delay: var(--i, 0ms); }
+.tailor-aside.in > * { animation: arrive 180ms ease-out both; }
 
 /* ---------- Search filters: a drawer that opens under the search bar ---------- */
 
@@ -137,9 +133,9 @@ html[data-vt="language"]::view-transition-new(root) {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-3px); }
 }
-/* Pico pops in and settles once; it does not keep moving while you read */
+/* Pico fades in cleanly without bobbing */
 .stage-empty .mascot, .tracker-empty .mascot, .aside-empty .mascot, .exported .mascot, .pdf-state .mascot {
-  animation: pop 460ms var(--ease-out) both, settle 1.6s ease-in-out 600ms 1;
+  animation: fade-in 200ms ease-out both;
 }
 
 /* ---------- Waiting ---------- */
@@ -158,19 +154,14 @@ html[data-vt="language"]::view-transition-new(root) {
 
 /* ---------- Deciding ---------- */
 
-/* A card breathes once when it is decided */
+/* A card highlights cleanly when decided without scaling text */
 @keyframes decided {
-  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
-  35%  { transform: scale(1.006); box-shadow: 0 2px 0 5px rgba(143, 227, 176, 0.14); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
+  35%  { box-shadow: 0 0 0 3px rgba(143, 227, 176, 0.22); }
+  100% { box-shadow: 0 0 0 0 rgba(143, 227, 176, 0); }
 }
-.tailor-card.decided { animation: decided 560ms var(--ease-out); }
-.tailor-card.decided[data-state="rejected"] { animation-name: decided-quiet; }
-@keyframes decided-quiet {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(0.994); }
-  100% { transform: scale(1); }
-}
+.tailor-card.decided { animation: decided 420ms var(--ease-out); }
+.tailor-card.decided[data-state="rejected"] { animation: none; }
 
 /* The check draws itself */
 @keyframes draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
@@ -191,9 +182,8 @@ html[data-vt="language"]::view-transition-new(root) {
 }
 button.ready { animation: ready 900ms var(--ease-out) 1; }
 
-/* The match score fills round as it counts up */
-@keyframes fill-ring { from { --pct: 0; } }
-.score-ring { animation: fill-ring 800ms var(--ease-out) both; }
+/* Static conic-gradient ring avoids 60fps custom-property repaints in WebKit */
+.score-ring { animation: none; }
 
 /* ---------- The tracker ---------- */
 
@@ -245,8 +235,7 @@ dialog.ask.closing::backdrop { animation: fade-out 130ms ease both; }
 
 /* ---------- Controls ---------- */
 
-button, .button { transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--ease-out), box-shadow 200ms ease, filter 120ms ease; }
-button:active:not(:disabled), .button:active { transform: scale(0.97); }
+button, .button { transition: background-color 120ms ease, color 120ms ease, box-shadow 200ms ease, filter 120ms ease; }
 button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 10px rgba(206, 166, 21, 0.28); }
 .nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
 

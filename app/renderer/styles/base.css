@@ -483,6 +483,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 .pane {
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .results-pane {

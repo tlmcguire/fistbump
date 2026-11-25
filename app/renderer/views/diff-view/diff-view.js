@@ -102,8 +102,8 @@
         cards = [];
         stage.replaceChildren();
         roundsBar.replaceChildren();
-        await loadRounds(false);
-        await Promise.all([drawBody(), drawAside()]);
+        await Promise.all([loadRounds(false), drawAside()]);
+        await drawBody();
       };
 
       jobSelect.addEventListener("change", () => chooseJob(jobSelect.value ? Number(jobSelect.value) : null));
@@ -241,7 +241,7 @@
         const titles = Object.fromEntries((master?.value?.experiences || []).map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
         const match = a ? window.ResumeBuilder.skillMatch(a, titles) : null;
         const score = a ? Math.round(a.score * 100) : null;
-        const scoreNode = el("span", {class: "score-number", text: "0"});
+        const scoreNode = el("span", {class: "score-number", text: String(score ?? 0)});
         const ring = el("div", {class: "score-ring"}, scoreNode, "%");
         ring.style.setProperty("--pct", String(score ?? 0)); //a style attribute would break the page's CSP
         fill(aside,
@@ -253,14 +253,7 @@
           match ? el("div", {class: "skill-match"}, el("h3", {text: match.heading}), ...match.groups) : null,
           !a ? el("p", {class: "hint", text: analysis === null ? "" : "Add your master resume to see how it matches."}) : null,
           el("p", {class: "hint", text: "Suggestions only reword what is already true. Skills you have not used stay missing until you add them yourself."}));
-        if (a) countTo(scoreNode, score);
-        //the sidebar arrives once per job; redrawing the same job in place does not replay it
-        if (a && motion() && asideJob !== jobId) {
-          aside.classList.remove("in");
-          void aside.offsetWidth;
-          aside.classList.add("in");
-          setTimeout(() => aside.classList.remove("in"), 500);
-        }
+        if (a && asideJob !== jobId) play(aside, "in", 220);
         asideJob = jobId;
         if (revId !== null && !tailoredId) markGaps();
       };
@@ -413,7 +406,7 @@
           rev.status === "failed" ? problemPanel(explain(rev.error)) : null,
           busy && writing(rev),
           rev.status === "done" && suggestions(rev));
-        if (!busy) play(stage, "enter", 500);
+        if (!busy && (rev.status !== "done" || !rev.suggestions?.length)) play(stage, "enter", 220);
       };
 
       //the wait: Pico thinking, a clock, and cards taking shape
@@ -447,12 +440,16 @@
           show(rev);
         };
 
-        const bar = el("div", {class: "decide-bar"});
+        const countText = el("strong");
+        const countBox = el("div", {class: "decide-count"}, countText, " decided");
         const meter = el("div", {class: "meter", role: "progressbar", "aria-label": "Suggestions decided", "aria-valuemin": "0", "aria-valuemax": String(list.length)},
           el("div", {class: "meter-fill"}));
+        const actionsSlot = el("div", {class: "round-actions"});
+        const bar = el("div", {class: "decide-bar"}, countBox, meter, actionsSlot);
         const drawBar = () => {
           const left = pending().length;
           const done = list.length - left;
+          countText.textContent = `${done} of ${list.length}`;
           meter.setAttribute("aria-valuenow", String(done));
           meter.firstChild.style.width = `${(done / list.length) * 100}%`;
           const build = el("button", {
@@ -467,11 +464,7 @@
             },
           }, left ? `Decide ${left} more to build` : "Build tailored resume");
           const all = left > 1 ? confirmFirst(el("button", {type: "button", class: "quiet"}, `Accept the other ${left}`), `Accept all ${left}?`, acceptAll) : null;
-          fill(bar,
-            el("div", {class: "decide-count"}, el("strong", {text: `${done} of ${list.length}`}), " decided"),
-            meter,
-            all,
-            build);
+          fill(actionsSlot, all, build);
           return left;
         };
 
@@ -479,7 +472,7 @@
         cards = list.map(s => ({s, node: card(rev, s, () => { drawBar(); })}));
         wrap.append(...cards.map(c => c.node));
         drawBar();
-        stagger(wrap, 45, 8);
+        stagger(wrap, 20, 6);
         current = Math.min(current, cards.length - 1);
         const firstPending = cards.findIndex(c => c.s.state === "pending");
         current = firstPending >= 0 ? firstPending : 0;
@@ -533,7 +526,7 @@
             el("div", {class: "tailor-actions"},
               act("Accept", "A", () => api.suggestions.accept(rev.id, s.id), s.state === "accepted", s.state === "pending"),
               act("Reject", "R", () => api.suggestions.reject(rev.id, s.id), s.state === "rejected", false),
-              el("button", {type: "button", title: "Write your own version", onclick: () => edit(rev, s, node, paint)}, "Edit", el("kbd", {text: "E"})),
+              el("button", {type: "button", title: "Write your own version", onclick: () => edit(rev, s, node, paint, onDecided)}, "Edit", el("kbd", {text: "E"})),
               s.state !== "pending" ? el("span", {class: "hint", text: "You can still change your mind."}) : null));
           const list = node.querySelector(".brings-in");
           if (list) list.replaceChildren(...bringsIn(s).map(g => el("li", {class: "chip gap", text: g})));
@@ -550,7 +543,7 @@
         if (next >= 0) { current = next; markCurrent(true); }
       };
 
-      const edit = (rev, s, node, paint) => {
+      const edit = (rev, s, node, paint, onDecided) => {
         const area = el("textarea", {rows: 6, "aria-label": `Edit ${SECTION[s.section] || s.section}`, value: s.state === "edited" ? s.edited_text : s.proposed_text});
         fill(node,
           el("h3", {text: `Edit ${SECTION[s.section] || s.section}`}),
@@ -558,7 +551,7 @@
           el("div", {class: "tailor-actions"},
             el("button", {type: "button", class: "primary", onclick: async () => {
               const r = await attempt(() => api.suggestions.edit(rev.id, s.id, area.value));
-              if (r) { Object.assign(s, r.value); paint(); play(node, "decided", 700); show(rev); }
+              if (r) { Object.assign(s, r.value); paint(); play(node, "decided", 460); onDecided?.(); }
             }}, "Save edit"),
             el("button", {type: "button", onclick: paint}, "Cancel")));
         area.focus();
@@ -673,14 +666,14 @@
           "aria-selected": String(key === "changes"), tabindex: key === "changes" ? "0" : "-1",
           onclick: () => pick(key),
         }, label));
-        const pick = key => {
+        const pick = (key, animate = true) => {
           tabs.forEach(([k], i) => {
             tabButtons[i].setAttribute("aria-selected", String(k === key));
             tabButtons[i].tabIndex = k === key ? 0 : -1;
             panels[k].hidden = k !== key;
           });
           if (key === "pdf") pdf.load();
-          else play(panels.changes, "enter", 400);
+          else if (animate) play(panels[key], "enter", 220);
         };
         const tablist = el("div", {class: "tabs", role: "tablist", "aria-label": "Tailored resume view"}, tabButtons);
         tablist.addEventListener("keydown", event => {
@@ -708,8 +701,8 @@
           panels.edit,
           panels.pdf);
         drawHunks();
-        if (startTab !== "changes") pick(startTab);
-        play(stage, "enter", 500);
+        if (startTab !== "changes") pick(startTab, false);
+        play(stage, "enter", 220);
       };
 
       // ---------- entry, runs now and every time the view is shown again ----------

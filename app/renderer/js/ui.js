@@ -7,26 +7,8 @@ window.UI = (() => {
   //the stylesheets are switched off by the same .reduce-motion class.
   const motion = () => !root.classList.contains("reduce-motion");
 
-  //Icon gestures (motion.css): a control plays its icon's gesture when the pointer arrives on it or the
-  //keyboard focuses it. data-ico stays on for the longest gesture, so the gesture finishes even if the
-  //pointer leaves at once, and moving about inside the control does not start it again.
-  const ICON_CONTROL = "button, a, [role='tab'], .nav-item";
-  const playIcon = control => {
-    if (!motion() || !control?.matches?.(ICON_CONTROL) || control.disabled || control.hasAttribute("data-ico")) return;
-    if (!control.querySelector(":scope > svg.icon, :scope > * > svg.icon")) return;
-    control.setAttribute("data-ico", "");
-    setTimeout(() => control.removeAttribute("data-ico"), 1000);
-  };
-  //pointerenter alone is not reliable on Windows, where hover never started the gesture while selecting did.
-  //pointerover and mouseover bubble and name the element under the pointer, so any of them finds the control it
-  //is inside; playIcon ignores a control that is already playing.
-  const onHover = event => playIcon(event.target?.closest?.(ICON_CONTROL));
-  document.addEventListener("pointerenter", event => playIcon(event.target), true);
-  document.addEventListener("pointerover", onHover);
-  document.addEventListener("mouseover", onHover);
-  document.addEventListener("focusin", event => {
-    if (event.target.matches?.(":focus-visible")) playIcon(event.target);
-  });
+  //Icon gestures play via CSS on active nav/tab selection; avoid firing hover animations on every button
+  //across the window, which causes subpixel text jitter in WebKit.
 
   const make = (tag, attrs = {}, ...kids) => {
     const node = document.createElement(tag);
@@ -116,22 +98,34 @@ window.UI = (() => {
   //The mascot, drawn as an image with its own pop-in class
   const pico = (file, className = "mascot") => make("img", {class: className, src: `views/graphics/mascots/${file}`, alt: ""});
 
+  //Track active animation timers per element so rapid updates do not strip classes mid-animation.
+  const timers = new WeakMap();
+  const after = (node, key, ms, fn) => {
+    let map = timers.get(node);
+    if (!map) { map = new Map(); timers.set(node, map); }
+    clearTimeout(map.get(key));
+    map.set(key, setTimeout(() => { map.delete(key); fn(); }, ms));
+  };
+
   //Plays a one-shot class on a node, then takes it off again. Does nothing when motion is off.
   const play = (node, className, ms = 600) => {
     if (!motion() || !node) return;
     node.classList.remove(className);
     void node.offsetWidth; //restart if it is already running
     node.classList.add(className);
-    setTimeout(() => node.classList.remove(className), ms);
+    after(node, className, ms, () => node.classList.remove(className));
   };
 
-  //Makes a list's children arrive one after another. Each child gets --i for the CSS delay.
-  const stagger = (parent, step = 28, max = 12) => {
-    if (!motion()) return;
+  //Makes a list's children arrive one after another, then cleans up .stagger so view switches never replay it.
+  const stagger = (parent, step = 20, max = 8) => {
+    if (!motion() || !parent) return;
+    const count = parent.children.length;
     [...parent.children].forEach((child, i) => child.style.setProperty("--i", String(Math.min(i, max) * step) + "ms"));
     parent.classList.remove("stagger");
     void parent.offsetWidth;
     parent.classList.add("stagger");
+    const totalMs = Math.min(count, max) * step + 240;
+    after(parent, "stagger", totalMs, () => parent.classList.remove("stagger"));
   };
 
   //Counts a number up to its value (progress, scores). Plain text under reduced motion.
