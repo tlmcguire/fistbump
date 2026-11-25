@@ -1,6 +1,6 @@
 const { defineConfig } = require('@playwright/test');
 
-// Smoke tests that launch the real Electron app with the real Go backend. Build the backend first:
+// Smoke tests that run the renderer in Playwright Chromium against the real Go backend. Build the backend first:
 //   npm run build:go && npm run test:e2e
 module.exports = defineConfig({
   testDir: './e2e',

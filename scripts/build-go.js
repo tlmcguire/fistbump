@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the Go backend into bin/<os>-<arch>/. No cgo is needed, so any host can build any target.
-// The folders use Node's names, so electron-builder's ${arch} macro finds them.
+// The folders use Node's platform/arch names, which scripts/stage-resources.js stages for Tauri.
 //   node scripts/build-go.js                                 the platform this computer runs
 //   node scripts/build-go.js --platform darwin --arch x64    one platform and architecture
 //   node scripts/build-go.js --platform darwin               a platform, with the architectures it ships

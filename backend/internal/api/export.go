@@ -85,7 +85,7 @@ func readFormat(w http.ResponseWriter, r *http.Request) (string, error) {
 }
 
 // sendExport writes markdown as a file download in the given format. Go only returns the bytes;
-// Electron asks the user where to save them.
+// the Tauri host asks the user where to save them.
 func (s *Server) sendExport(w http.ResponseWriter, format, markdown, name string) error {
 	body := []byte(markdown)
 	if format == "pdf" {

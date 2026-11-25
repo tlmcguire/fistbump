@@ -1,6 +1,6 @@
 # FistBump Backend API
 
-Routes exposed by the Go backend (`fistbump-core`). Only the Electron main process calls it. See [architecture.md](architecture.md) for the design and [schema.md](schema.md) for tables.
+Routes exposed by the Go backend (`fistbump-core`). Only the Tauri Rust host calls it. See [architecture.md](architecture.md) for the design and [schema.md](schema.md) for tables.
 
 JSON field names match column names in [schema.md](schema.md). The "DB" column lists the tables each route reads and writes.
 
@@ -8,7 +8,7 @@ JSON field names match column names in [schema.md](schema.md). The "DB" column l
 
 **Transport**
 - HTTP/1.1 on `127.0.0.1`, random port, JSON bodies (`Content-Type: application/json`) unless noted.
-- Every request needs `Authorization: Bearer <token>`. Electron generates the token per launch and passes it to Go in the `FISTBUMP_TOKEN` environment variable. A missing or wrong token returns `401`.
+- Every request needs `Authorization: Bearer <token>`. The Tauri host generates the token per launch and passes it to Go in the `FISTBUMP_TOKEN` environment variable. A missing or wrong token returns `401`.
 - All routes live under `/v1`.
 
 **Process contract (not HTTP)**
@@ -97,7 +97,7 @@ AI routes do not fail on a missing model in `auto` mode. They fall back to the `
 |-------|---------|----------|----|
 | `GET /v1/health` | none | `{ "status": "ok", "version": "0.1.0", "schema_version": 1 }` | Reads `PRAGMA user_version` |
 
-Electron calls this after the port line to confirm readiness.
+The Tauri host calls this after the port line to confirm readiness.
 
 ## Resume (`resume.go`)
 
@@ -216,7 +216,7 @@ A revision is one suggestion-generating pass for a job.
 | `POST /v1/revisions/{id}/suggestions/{sid}/reject` | none | Suggestion with `state: "rejected"` | UPDATE `suggestions.state` |
 | `POST /v1/revisions/{id}/suggestions/{sid}/edit` | `{ "edited_text": "..." }` (non-empty) | Suggestion with `state: "edited"` | UPDATE `suggestions.edited_text`, `state` |
 
-Generation runs in the background. Electron polls `GET /v1/revisions/{id}` until `status` is `done`, `failed`, or `canceled`. In `auto` mode, if the chosen engine errors mid-run, the backend retries with the next engine and updates `revisions.engine` to the engine that produced the suggestions. A `failed` revision has `error` set. Each suggestion has `section` and `target_id` pointing at its source text, with `original_text` copied from it. The prompt contains only master resume text and the job text.
+Generation runs in the background. The UI polls `GET /v1/revisions/{id}` until `status` is `done`, `failed`, or `canceled`. In `auto` mode, if the chosen engine errors mid-run, the backend retries with the next engine and updates `revisions.engine` to the engine that produced the suggestions. A `failed` revision has `error` set. Each suggestion has `section` and `target_id` pointing at its source text, with `original_text` copied from it. The prompt contains only master resume text and the job text.
 
 ## Tailored resumes (`tailored.go`)
 
@@ -231,7 +231,7 @@ Generation runs in the background. Electron polls `GET /v1/revisions/{id}` until
 
 Final text per suggestion: `edited_text` if `state` is `edited`, `proposed_text` if `accepted`, `original_text` if `rejected`. The base is the `resumes.content` of the revision's `base_resume_id`, or the rendered master resume when that is `null`. `content` is stored in full.
 
-Export returns bytes. Electron shows the save dialog and writes the file, so Go never accepts a filesystem path from the UI. After saving, Electron records the path with `PUT /v1/applications/{id}` (`exported_pdf_path`) when the tailored resume belongs to an application. On PDF failure the response is `500` and the UI offers `md`.
+Export returns bytes. The Tauri host shows the save dialog and writes the file, so Go never accepts a filesystem path from the UI. After saving, the host records the path with `PUT /v1/applications/{id}` (`exported_pdf_path`) when the tailored resume belongs to an application. On PDF failure the response is `500` and the UI offers `md`.
 
 ## Applications (`applications.go`)
 
@@ -292,7 +292,7 @@ Errors: `400` for malformed JSON, `422` for a bad query, `502` with the upstream
 | `DELETE /v1/ai/remote` | none | `204` | Clears the remote settings and drops the in-memory key |
 | `POST /v1/ai/test` | `{ "engine": "local" }` or `"remote"` | `{ "ok": true, "latency_ms": 840, "sample": "pong", "error": null }`. Failures return `ok: false` with `error`, still `200`. | None |
 
-Electron calls `PUT /v1/ai/remote` at every launch to supply the stored key. See "API keys and secrets" in architecture.md.
+The Tauri host calls `PUT /v1/ai/remote` at every launch to supply the stored key. See "API keys and secrets" in architecture.md.
 
 ## Models (`models.go`)
 

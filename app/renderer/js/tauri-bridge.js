@@ -1,5 +1,5 @@
-// Tauri v2 bridge implementing `window.api` identically to `app/preload/preload.js`.
-// Skips initialization when Electron's preload (or a test mock) already defines `window.api`.
+// Tauri v2 bridge implementing `window.api` for the renderer.
+// Skips initialization when a test harness or mock already defines `window.api`.
 (() => {
   if (window.api || !window.__TAURI__) return;
 
@@ -212,7 +212,7 @@
     },
   };
 
-  // Native-style Windows titlebar buttons (replaces Electron's titleBarOverlay on frameless Mica windows).
+  // Native-style Windows titlebar buttons for frameless Mica windows.
   if (platform === 'win32' && window.__TAURI__.window?.getCurrentWindow) {
     const mountWinControls = () => {
       if (document.querySelector('.win-controls')) return;
@@ -238,7 +238,7 @@
     else mountWinControls();
   }
 
-  // Right-click menu for https: links (Open in Browser / Copy Link) matching `app/main/menus.js`.
+  // Right-click menu for https: links (Open in Browser / Copy Link).
   let ctxMenu = null;
   const closeCtxMenu = () => {
     if (ctxMenu) {

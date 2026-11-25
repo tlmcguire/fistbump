@@ -419,9 +419,8 @@
       //the wait: Pico thinking, a clock, and cards taking shape
       const writing = rev => {
         const thinking = motion()
-          ? el("video", {class: "mascot thinking", src: "views/graphics/mascots/animations/thinking.webm", autoplay: true, loop: true, muted: true, playsinline: true, "aria-hidden": "true"})
+          ? el("img", {class: "mascot thinking", src: "views/graphics/mascots/animations/thinking-anim.png", alt: "", "aria-hidden": "true"})
           : pico("animations/thinking.png");
-        if (thinking.tagName === "VIDEO") thinking.muted = true;
         return el("div", {class: "writing", role: "status"},
           thinking,
           el("div", {},

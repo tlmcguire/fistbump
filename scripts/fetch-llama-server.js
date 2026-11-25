@@ -26,8 +26,8 @@ const ASSETS = {
   'windows-amd64': {file: 'llama-' + TAG + '-bin-win-cpu-x64.zip', sha256: 'bad9fe0c1b554bcb1ce5630d66ad34a2285a8b390400513cc02f56feafd62c8e'},
 };
 
-// Each asset lands in the folder the backend for that platform is built into: Node's names, so
-// electron-builder's ${arch} macro finds them.
+// Each asset lands in the folder the backend for that platform is built into (staged into
+// src-tauri/resources/bin/ by scripts/stage-resources.js).
 const TARGETS = {
   'darwin-arm64': {asset: 'darwin-arm64', folder: 'darwin-arm64'},
   'darwin-x64': {asset: 'darwin-amd64', folder: 'darwin-x64'},

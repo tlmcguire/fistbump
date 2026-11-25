@@ -597,9 +597,6 @@ pub async fn ipc_call(
             json!({
                 "version": app.package_info().version.to_string(),
                 "tauri": tauri::VERSION,
-                "electron": "",
-                "chrome": "",
-                "node": "",
                 "platform": platform,
                 "arch": arch,
                 "dataDir": state.backend.data_dir().to_string_lossy().to_string(),

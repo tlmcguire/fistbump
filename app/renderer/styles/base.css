@@ -1689,7 +1689,7 @@ input.switch:checked::after { transform: translateX(16px); }
 .link-button { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .link-button:disabled { color: var(--muted); cursor: default; text-decoration: none; }
 
-/* Custom Windows titlebar controls (overlaying the 52px toolbar, matching Electron's titleBarOverlay). */
+/* Custom Windows titlebar controls overlaying the 52px toolbar. */
 .win-controls {
   position: fixed;
   top: 0;

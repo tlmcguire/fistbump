@@ -6,7 +6,7 @@ use serde_json::json;
 
 use crate::backend::BackendManager;
 
-const SERVICE_NAME: &str = "com.fistbump.app";
+const SERVICE_NAME: &str = "com.fistbump.desktop";
 const REMOTE_KEY_USER: &str = "ai-remote-key";
 
 pub struct SecretsStore {
