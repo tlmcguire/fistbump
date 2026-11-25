@@ -60,6 +60,7 @@ button.danger-solid:hover:not(:disabled) { background: #cc2f26; }
 
 /* A question in the page, not the system's alert */
 dialog.ask {
+  position: relative;
   width: min(420px, calc(100vw - 48px));
   padding: 20px 22px 18px;
   border: 1px solid var(--line-strong);
@@ -69,9 +70,23 @@ dialog.ask {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 dialog.ask::backdrop { background: rgba(4, 12, 32, 0.55); }
-dialog.ask h2 { margin-bottom: 6px; }
+dialog.ask h2 { margin-bottom: 6px; padding-right: 32px; }
 dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-select: text; -webkit-user-select: text; white-space: pre-line; }
-.ask-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.dialog-close:hover { background: var(--control-hover); color: var(--text); border-color: var(--line); }
+.dialog-close .icon { width: 13px; height: 13px; }
+.ask-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
 /* ---------- Tailor ---------- */
 
@@ -95,8 +110,9 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 .engine-chip .icon { width: 14px; height: 14px; }
 
 .tailor-content { grid-template-columns: minmax(0, 1fr) minmax(250px, min(28%, 340px)); }
-.tailor-main { display: flex; flex-direction: column; gap: 14px; padding: 20px 28px 0; border-right: 1px solid var(--line); }
-.tailor-stage { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+.tailor-main { display: flex; flex-direction: column; gap: 14px; padding: 20px 28px 32px; border-right: 1px solid var(--line); scrollbar-gutter: stable; }
+.tailor-stage { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; min-width: 0; }
+.tailor-stage .tabs { margin-bottom: 0; }
 
 .tailor-rounds { display: flex; flex-wrap: wrap; gap: 6px; }
 .tailor-rounds:empty { display: none; }
@@ -234,7 +250,13 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 @media (max-width: 720px) { .diff-cols { grid-template-columns: 1fr; } }
 
 /* Tailored resume: the PDF */
-.panel { display: flex; flex-direction: column; gap: 10px; }
+.panel { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; }
+.panel[hidden] { display: none; }
+.panel > :first-child { margin-top: 0; }
+.panel .pdf-preview { width: 100%; min-height: 420px; }
+.changes-toggle-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+button .icon, .button .icon { width: 14px; height: 14px; flex: none; }
+.round-actions, .tailor-actions, .toolbar-actions { align-items: center; gap: 8px; }
 .exported { display: flex; align-items: center; gap: 12px; }
 .exported .mascot { width: 64px; height: 64px; margin: 0; flex: none; }
 .pdf-preview { position: relative; display: flex; flex-direction: column; min-height: 420px; border: 1px solid var(--line-strong); border-radius: 10px; background: #2b2f39; overflow: hidden; }

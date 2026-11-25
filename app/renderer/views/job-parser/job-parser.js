@@ -1667,6 +1667,12 @@ window.JobParser = {
         $("filters-toggle").setAttribute("aria-expanded", String(open));
       };
       $("filters-toggle").addEventListener("click", () => setFiltersOpen($("filters").hidden));
+      document.addEventListener("pointerdown", event => {
+        if ($("filters").hidden) return;
+        const t = event.target;
+        if ($("filters").contains(t) || $("filters-toggle").contains(t)) return;
+        setFiltersOpen(false);
+      });
       //an industry on its own is a complete search, so the empty page points straight at it
       $("browse-industry").addEventListener("click", () => {
         setFiltersOpen(true);

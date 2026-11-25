@@ -751,6 +751,7 @@ window.Settings = {
           : `You have ${result.current}. No installer is published for this computer, so the release page has it.`}),
         make("label", {class: "update-skip"}, skip, " Don't remind me about this version"),
         make("div", {class: "ask-actions"}, later, update));
+      window.UI.wireDialogClose(dialog, close);
       dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
       document.body.append(dialog);
       dialog.showModal();

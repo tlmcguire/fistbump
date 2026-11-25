@@ -314,6 +314,7 @@
           el("div", {class: "ask-actions"},
             el("button", {type: "button", onclick: close}, "Close"),
             el("button", {type: "button", class: "primary", onclick: runCompare}, "Recalculate")));
+        window.UI.wireDialogClose(dialog, close);
         dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
         document.body.append(dialog);
         dialog.showModal();
@@ -381,6 +382,7 @@
           el("h2", {text: `Interview prep: ${a.company_name || "Company"} \u2014 ${a.position_title || "Role"}`}),
           body,
           el("div", {class: "ask-actions prep-actions"}, prepStatus, tailorBtn, copyBtn, dlBtn, printBtn, el("button", {type: "button", onclick: close}, "Done")));
+        window.UI.wireDialogClose(dialog, close);
         dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
         document.body.append(dialog);
         dialog.showModal();

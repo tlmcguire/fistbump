@@ -33,7 +33,27 @@ window.UI = (() => {
     return svg;
   };
 
-  //Asks a question in a dialog and gives true or false. Esc and Cancel give false.
+  //Adds a top-right close button and backdrop-click-to-close to any modal dialog.
+  const wireDialogClose = (dialog, onClose) => {
+    if (!dialog || dialog.dataset.closeWired) return;
+    dialog.dataset.closeWired = "1";
+    const closeBtn = make("button", {
+      type: "button",
+      class: "dialog-close",
+      "aria-label": "Close",
+      title: "Close (Esc)",
+      onclick: () => onClose(),
+    }, icon("x"));
+    dialog.prepend(closeBtn);
+    dialog.addEventListener("click", event => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+      if (outside) onClose();
+    });
+  };
+
+  //Asks a question in a dialog and gives true or false. Esc, backdrop click, and Cancel give false.
   //{confirm, cancel, danger, title}; cancel: null makes it a notice with one button.
   const ask = (message, {confirm = "OK", cancel = "Cancel", danger = false, title = null} = {}) => new Promise(resolve => {
     const previous = document.activeElement;
@@ -58,6 +78,7 @@ window.UI = (() => {
       make("p", {text: message}),
       make("div", {class: "ask-actions"}, no, yes),
     ].filter(Boolean));
+    wireDialogClose(dialog, () => finish(false));
     dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
     document.body.append(dialog);
     dialog.showModal();
@@ -152,5 +173,5 @@ window.UI = (() => {
     t.finished.finally(() => { delete root.dataset.vt; });
   };
 
-  return {motion, transition, make, icon, ask, alert, confirmFirst, pico, play, stagger, countTo};
+  return {motion, transition, make, icon, wireDialogClose, ask, alert, confirmFirst, pico, play, stagger, countTo};
 })();
