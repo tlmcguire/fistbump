@@ -147,7 +147,7 @@ test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', 
   assert.ok(dv.includes('lastBridgeSnapshot') && dv.includes('removeBridgeLineFromMarkdown'), 'diff-view.js should allow easy undo/removal of keyword bridge notes');
   assert.ok(dv.includes('Export DOCX'), 'diff-view.js should offer Export DOCX');
   assert.ok(dv.includes('Cover letter & Q&A') && dv.includes('api.drafts.create'), 'diff-view.js should include Cover letter & Q&A drafts');
-  assert.ok(dv.includes('draftGenMode') && dv.includes('Deterministic (instant)') && dv.includes('AI (local / remote)'), 'diff-view.js should let users choose deterministic or AI generation for drafts and questions');
+  assert.ok(dv.includes('draftGenMode') && dv.includes('draft-mode-toggle') && dv.includes('runTimedAI'), 'diff-view.js should offer 1-click Instant/AI toggle and AI processing timers');
 
   const rb = read('views/resume-builder/resume-builder.js');
   assert.ok(rb.includes('resume.section_order') && rb.includes('resume.custom_sections'), 'resume-builder.js should support custom sections and section ordering');

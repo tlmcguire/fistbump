@@ -461,15 +461,71 @@
         clearInterval(poll);
         poll = null;
       };
+      const fmtSec = ms => ms < 10000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 1000)} s`;
+      const runTimedAI = async (label, fn, {statusEl = null, warnMs = 20000, timeoutMs = 90000} = {}) => {
+        const started = Date.now();
+        const setMsg = (msg, isError = false) => {
+          if (statusEl) {
+            statusEl.textContent = msg;
+            statusEl.classList.toggle("error", isError);
+          } else {
+            say(msg, isError);
+          }
+        };
+        setMsg(`${label}… 0 s`);
+        let timer = null;
+        let timeoutId = null;
+        const tick = () => {
+          const ms = Date.now() - started;
+          const s = Math.round(ms / 1000);
+          if (ms >= warnMs) {
+            setMsg(`${label}… ${s} s (taking longer than usual — check Settings → AI suggestions if stalled)`);
+          } else {
+            setMsg(`${label}… ${s} s`);
+          }
+        };
+        timer = setInterval(tick, 1000);
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            timeoutId = setTimeout(() => {
+              reject(new Error(`AI stalled after ${Math.round(timeoutMs / 1000)} s without responding. Check Settings → AI suggestions or switch to Instant mode.`));
+            }, timeoutMs);
+          });
+          const res = await Promise.race([fn(), timeoutPromise]);
+          const elapsed = fmtSec(Date.now() - started);
+          return {value: res, elapsed};
+        } finally {
+          clearInterval(timer);
+          clearTimeout(timeoutId);
+        }
+      };
+
       const watch = id => {
         stopPolling();
         const started = Date.now();
         poll = setInterval(async () => {
+          const ms = Date.now() - started;
+          const sec = Math.round(ms / 1000);
           const elapsed = document.getElementById("tailor-elapsed");
-          if (elapsed) elapsed.textContent = `${Math.round((Date.now() - started) / 1000)} s`;
+          if (elapsed) elapsed.textContent = `${sec} s`;
+          const stall = document.getElementById("tailor-stall");
+          if (stall) {
+            if (ms >= 90000) {
+              stall.textContent = `AI appears stalled after ${sec} s. Click Cancel to stop, check Settings → AI suggestions, or switch to Built-in rules.`;
+              stall.className = "resume-status error tailor-stall-warn";
+              stall.hidden = false;
+            } else if (ms >= 25000) {
+              stall.textContent = `Taking longer than usual (${sec} s) — your local or remote model may be loading or stalled. You can keep waiting or click Cancel.`;
+              stall.className = "hint tailor-stall-warn";
+              stall.hidden = false;
+            }
+          }
           const r = await attempt(() => api.revisions.get(id));
           if (r && ["queued", "running"].includes(r.value.status)) return;
           stopPolling();
+          if (r?.value?.status === "done") {
+            say(`Suggestions ready in ${fmtSec(Date.now() - started)}.`);
+          }
           if (revId === id && !tailoredId) {
             await loadRounds();
             drawBody();
@@ -496,8 +552,8 @@
         const chip = el("button", {
           type: "button",
           class: "tailor-round",
-          "aria-pressed": String(r.id === revId && !tailoredId),
-          onclick: () => { revId = r.id; tailoredId = null; drawRounds(); drawBody(); },
+          "aria-pressed": String(r.id === revId && !tailoredId && !showDrafts),
+          onclick: () => { showDrafts = false; revId = r.id; tailoredId = null; drawRounds(); drawBody(); },
         }, `Round ${r.n}`, el("span", {class: "round-meta", text: `${STATUS[r.status] || r.status} · ${ENGINE[r.engine] || r.engine}`}));
         return el("div", {class: "tailor-round-item"}, chip, remove);
       }), ...ownDrafts().map((t, i, all) => {
@@ -512,8 +568,8 @@
           drawBody();
         });
         const chip = el("button", {
-          type: "button", class: "tailor-round", "aria-pressed": String(t.id === tailoredId),
-          onclick: () => { tailoredId = t.id; drawRounds(); drawBody(); },
+          type: "button", class: "tailor-round", "aria-pressed": String(t.id === tailoredId && !showDrafts),
+          onclick: () => { showDrafts = false; tailoredId = t.id; drawRounds(); drawBody(); },
         }, label, el("span", {class: "round-meta", text: "Edited by you"}));
         return el("div", {class: "tailor-round-item"}, chip, remove);
       })]);
@@ -611,6 +667,7 @@
         });
 
         const customPrompt = el("input", {type: "text", placeholder: "Add a custom question, e.g. Why do you want to work here?"});
+        const cleanDot = s => String(s || "").trim().replace(/\.+$/, "");
         const buildFallbackInterviewPrep = async () => {
           const [jobRes, analysisRes, masterRes] = await Promise.all([
             attempt(() => api.jobs.get(jobId)),
@@ -620,52 +677,108 @@
           const job = jobRes?.value || activeJob || {};
           const a = analysisRes?.value;
           const master = masterRes?.value || {};
-          const company = job.company_name || "this company";
-          const role = job.position_title || "this role";
+          const company = cleanDot(job.company_name) || "this company";
+          const role = cleanDot(job.position_title) || "this role";
           const matched = (a?.required?.tech?.matched || []).map(m => m.skill);
           const missing = a?.required?.tech?.missing || [];
           const exps = (master.experiences || []).slice(0, 2);
           const pitch = master.profile?.summary?.trim() ||
-            (exps[0] ? `Most recently as ${exps[0].job_title} at ${exps[0].company_name}${exps[0].impact ? `, ${exps[0].impact}` : "."}` : `Applying for ${role} at ${company}.`);
+            (exps[0] ? `Most recently as ${cleanDot(exps[0].job_title)} at ${cleanDot(exps[0].company_name)}${exps[0].impact ? `, ${cleanDot(exps[0].impact)}.` : "."}` : `Applying for ${role} at ${company}.`);
           return [
             `# Interview Prep: ${role} at ${company}`,
             `\n## 60-Second Pitch\n${pitch}`,
             matched.length ? `\n## Core Strengths to Highlight\n- Direct overlap with required skills: ${matched.slice(0, 6).join(", ")}.` : "",
-            exps.length ? exps.map(e => `- ${e.job_title} at ${e.company_name}${e.impact ? ` — ${e.impact}` : ""}`).join("\n") : "",
+            exps.length ? exps.map(e => `- ${cleanDot(e.job_title)} at ${cleanDot(e.company_name)}${e.impact ? ` — ${cleanDot(e.impact)}` : ""}`).join("\n") : "",
             missing.length ? `\n## Gaps to Address Honestly\n- Skills not yet on your resume: ${missing.slice(0, 4).join(", ")}.\n- Framing: Be upfront about ramping up, connect adjacent fundamentals, and share how you're practicing.` : "",
             `\n## Practice Questions (STAR)\n1. Why ${company} and why this ${role} role right now?\n2. Walk through a tough problem you solved${matched.length ? ` using ${matched.slice(0, 2).join(" and ")}` : ""} and how you measured the outcome.\n3. ${missing.length ? `How do you plan to ramp up on ${missing[0]} in your first 30–60 days?` : "Tell me about a tough trade-off you had to make under tight constraints."}\n4. Describe a time you collaborated across teams or resolved a technical disagreement.`,
             `\n## Questions to Ask the Interviewer\n- What would success look like in the first 90 days for this ${role} role?\n- What are the biggest technical or product challenges the team at ${company} is tackling this quarter?\n- How does the team collaborate on code reviews, design decisions, and feedback?`,
           ].filter(Boolean).join("\n");
         };
 
-        const gen = async (kind, prompt, {blank = false} = {}) => {
+        // Client-side fallback when an older fistbump-core binary rejects base_content / instruction / mode.
+        const applyClientIteration = (baseText, instruction) => {
+          const base = String(baseText || "").trim();
+          const low = String(instruction || "").toLowerCase();
+          const paras = base.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+          if (/short|concise|tight/.test(low)) {
+            if (paras.length >= 4) return [paras[0], paras[1], paras.at(-1)].join("\n\n");
+            const sents = base.split(/(?<=[.!?])\s+/).filter(Boolean);
+            return sents.length > 2 ? sents.slice(0, 2).join(" ") : base;
+          }
+          if (/formal|polish|executive/.test(low)) {
+            return base
+              .replace(/\bI'm\b/g, "I am")
+              .replace(/\bI'd\b/g, "I would")
+              .replace(/excited about/gi, "keenly interested in")
+              .replace(/Best regards,|Thanks,|Best,/g, "Sincerely,");
+          }
+          if (/conversational|warm|friendly/.test(low)) {
+            return base
+              .replace(/Dear ([^,\n]+) Hiring Team,/i, "Hi $1 team,")
+              .replace(/I am writing to apply for/gi, "I'd love to apply for")
+              .replace(/Sincerely,/g, "Warmly,");
+          }
+          return `${base}\n\n[${cleanDot(instruction)}]`;
+        };
+
+        const createDraftSmart = async (kind, prompt, {blank = false, baseContent = "", instruction = "", statusEl = null} = {}) => {
+          const isAI = !blank && draftGenMode === "ai";
           const payload = blank
             ? {kind, prompt, content: "Write your answer here…", generate: false}
-            : {kind, prompt, mode: draftGenMode, generate: true};
-          if (!blank && draftGenMode === "ai") say("Generating with AI…");
-          let created = null;
+            : instruction
+              ? {kind, prompt, base_content: baseContent, instruction, mode: draftGenMode, generate: true}
+              : {kind, prompt, mode: draftGenMode, generate: true};
+          const label = instruction ? (isAI ? "Iterating with AI" : "Iterating")
+            : kind === "cover_letter" ? (isAI ? "Writing cover letter with AI" : "Writing cover letter")
+            : kind === "interview_prep" ? (isAI ? "Building interview prep with AI" : "Building interview prep")
+            : (isAI ? "Drafting answer with AI" : "Drafting answer");
+          const run = () => api.drafts.create(jobId, payload);
           try {
-            created = {value: await api.drafts.create(jobId, payload)};
-            say("");
+            const {value, elapsed} = isAI
+              ? await runTimedAI(label, run, {statusEl})
+              : {value: await run(), elapsed: null};
+            if (isAI && elapsed) (statusEl ? (statusEl.textContent = `Done in ${elapsed}.`) : say(`Done in ${elapsed}.`));
+            else if (!statusEl) say("");
+            return {value, groupKind: kind};
           } catch (err) {
-            // If an older fistbump-core binary is still running before `npm run build:go`,
-            // fall back cleanly to saving interview prep under kind: "qa" with generated content.
-            if (kind === "interview_prep" && /kind must be cover_letter or qa/i.test(err?.message || "")) {
-              const content = await buildFallbackInterviewPrep();
-              created = await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt, content, generate: false}));
-              if (created?.value) {
-                selectedDraftByGroup.set(`qa::${prompt.trim().toLowerCase()}`, created.value.id);
-                drawDrafts();
+            const msg = err?.message || "";
+            const oldBinary = /unknown field (?:mode|base_content|instruction)|kind must be cover_letter or qa/i.test(msg);
+            if (oldBinary) {
+              let fallbackKind = kind === "interview_prep" ? "qa" : kind;
+              let fallbackPayload;
+              if (instruction) {
+                fallbackPayload = {kind: fallbackKind, prompt, content: applyClientIteration(baseContent, instruction), generate: false};
+              } else if (kind === "interview_prep") {
+                const content = await buildFallbackInterviewPrep();
+                fallbackPayload = {kind: "qa", prompt, content, generate: false};
+              } else {
+                fallbackPayload = {kind: fallbackKind, prompt, generate: true};
               }
-              return;
+              const res = await attempt(() => api.drafts.create(jobId, fallbackPayload));
+              if (res?.value) {
+                if (isAI) say("Rebuild Go backend (npm run build:go) for AI drafts — saved using Instant mode for now.");
+                else say("");
+                return {value: res.value, groupKind: fallbackKind};
+              }
+              return null;
             }
-            say(err?.message || "Could not create draft", true);
-            return;
+            if (statusEl) {
+              statusEl.textContent = msg || "Could not create draft";
+              statusEl.classList.add("error");
+            } else {
+              say(msg || "Could not create draft", true);
+            }
+            return null;
           }
-          if (created?.value) {
-            selectedDraftByGroup.set(`${kind}::${prompt.trim().toLowerCase()}`, created.value.id);
-            drawDrafts();
+        };
+
+        const gen = async (kind, prompt, {blank = false, redraw = true} = {}) => {
+          const res = await createDraftSmart(kind, prompt, {blank});
+          if (res?.value) {
+            selectedDraftByGroup.set(`${res.groupKind}::${prompt.trim().toLowerCase()}`, res.value.id);
+            if (redraw) await drawDrafts();
           }
+          return res;
         };
         const submitCustom = (blank = false) => {
           const q = customPrompt.value.trim();
@@ -677,11 +790,12 @@
           if (event.key === "Enter") { event.preventDefault(); submitCustom(false); }
         });
 
-        // Build tailored likely questions from the job posting and skill-gap analysis (deterministic or AI).
+        // Build tailored likely questions from the job posting and skill-gap analysis (Instant or AI).
         const likelyTray = el("div", {class: "likely-questions", hidden: true});
         const loadLikelyQuestions = async () => {
           likelyTray.hidden = false;
-          fill(likelyTray, el("p", {class: "hint", text: draftGenMode === "ai" ? "Generating likely questions with AI…" : "Analyzing posting for likely questions…"}));
+          const trayStatus = el("p", {class: "hint", text: draftGenMode === "ai" ? "Generating likely questions with AI… 0 s" : "Analyzing posting for likely questions…"});
+          fill(likelyTray, trayStatus);
           const [jobRes, analysisRes] = await Promise.all([
             attempt(() => api.jobs.get(jobId)),
             attempt(() => api.jobs.analyze(jobId)),
@@ -694,19 +808,26 @@
           const missing = (a?.required?.tech?.missing || []);
           let candidates = null;
           let fallbackNote = "";
+          let timingNote = "";
           if (draftGenMode === "ai") {
             try {
-              const res = await api.drafts.create(jobId, {kind: "questions", mode: "ai", generate: true});
+              const {value: res, elapsed} = await runTimedAI(
+                "Generating likely questions with AI",
+                () => api.drafts.create(jobId, {kind: "questions", mode: "ai", generate: true}),
+                {statusEl: trayStatus},
+              );
               if (Array.isArray(res?.questions) && res.questions.length) {
                 candidates = res.questions;
+                timingNote = `Generated with AI in ${elapsed}.`;
                 say("");
               }
             } catch (err) {
-              if (/kind must be cover_letter or qa/i.test(err?.message || "")) {
-                fallbackNote = "Rebuild the Go backend (npm run build:go) to enable AI questions — showing deterministic questions for now.";
+              const msg = err?.message || "";
+              if (/unknown field mode|kind must be cover_letter or qa/i.test(msg)) {
+                fallbackNote = "Rebuild the Go backend (npm run build:go) for AI questions — showing Instant questions for now.";
               } else {
-                say(err?.message || "Could not generate AI questions", true);
-                fallbackNote = "AI unavailable — showing deterministic questions instead.";
+                say(msg || "Could not generate AI questions", true);
+                fallbackNote = `${msg || "AI unavailable"} — showing Instant questions instead.`;
               }
             }
           }
@@ -738,14 +859,15 @@
           fill(likelyTray,
             el("div", {class: "likely-q-head"},
               el("strong", {text: `Likely questions for ${role} at ${company}`}),
+              timingNote ? el("span", {class: "hint", text: timingNote}) : null,
               el("div", {class: "round-actions"},
                 el("button", {type: "button", class: "primary", onclick: async () => {
                   const edited = inputs.map(i => i.value.trim()).filter(Boolean);
-                  if (draftGenMode === "ai") say(`Drafting ${edited.length} answer${edited.length === 1 ? "" : "s"} with AI…`);
-                  for (const q of edited) {
-                    await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt: q, mode: draftGenMode, generate: true}));
+                  const started = Date.now();
+                  for (let i = 0; i < edited.length; i++) {
+                    await createDraftSmart("qa", edited[i], {statusEl: null});
                   }
-                  say("");
+                  if (draftGenMode === "ai") say(`Drafted ${edited.length} answers with AI in ${fmtSec(Date.now() - started)}.`);
                   likelyTray.hidden = true;
                   drawDrafts();
                 }}, `Draft all (${shown.length})`),
@@ -754,8 +876,8 @@
             el("ul", {class: "likely-q-list"}, inputs.map(inp => el("li", {class: "likely-q-item"},
               inp,
               el("div", {class: "likely-q-actions"},
-                el("button", {type: "button", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q); }}, "Draft answer"),
-                el("button", {type: "button", class: "quiet", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q, {blank: true}); }}, "Add blank"))))));
+                el("button", {type: "button", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q); }}, "Draft"),
+                el("button", {type: "button", class: "quiet", onclick: () => { const q = inp.value.trim(); if (q) gen("qa", q, {blank: true}); }}, "Blank"))))));
         };
 
         const exportAllBtn = groupOrder.length ? el("button", {type: "button", title: "Download the latest version of every draft for this job as one Markdown file", onclick: () => {
@@ -769,36 +891,64 @@
           say("Exported all drafts as Markdown.");
         }}, "Export all (.md)") : null;
 
-        const modeSelect = el("select", {
-          class: "draft-mode-select",
-          "aria-label": "Generation mode",
-          title: "Choose Deterministic (instant, built-in templates) or AI (your configured local or remote model)",
-        },
-          el("option", {value: "deterministic", text: "Deterministic (instant)"}),
-          el("option", {value: "ai", text: "AI (local / remote)"}));
-        modeSelect.value = draftGenMode;
-        modeSelect.addEventListener("change", () => setDraftGenMode(modeSelect.value));
+        // 1-click segmented mode toggle (Instant | AI)
+        const modeBtns = [["deterministic", "Instant", "Fast built-in resume-grounded templates"], ["ai", "AI", "Use your configured local or remote AI model"]].map(([val, label, tip]) => {
+          const btn = el("button", {
+            type: "button",
+            class: "draft-mode-btn",
+            "aria-pressed": String(draftGenMode === val),
+            title: tip,
+            onclick: () => {
+              setDraftGenMode(val);
+              modeBtns.forEach(([v, b]) => b.setAttribute("aria-pressed", String(draftGenMode === v)));
+            },
+          }, label);
+          return [val, btn];
+        });
+        const modeToggle = el("div", {class: "draft-mode-toggle", role: "group", "aria-label": "Generation mode"}, modeBtns.map(([, b]) => b));
+
+        const generateKitBtn = el("button", {
+          type: "button",
+          class: "primary",
+          title: "One-click: generate a cover letter and interview prep sheet together",
+          onclick: async () => {
+            generateKitBtn.disabled = true;
+            try {
+              const hasCL = groupOrder.some(k => k.startsWith("cover_letter::"));
+              const hasPrep = groupOrder.some(k => k.startsWith("interview_prep::") || k === "qa::interview prep");
+              if (!hasCL) await gen("cover_letter", "Cover letter", {redraw: false});
+              if (!hasPrep) await gen("interview_prep", "Interview prep", {redraw: false});
+              await drawDrafts();
+            } finally {
+              generateKitBtn.disabled = false;
+            }
+          },
+        }, "Generate kit");
 
         const quickBar = el("div", {class: "round-actions drafts-quickbar"},
-          modeSelect,
-          el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
-          el("button", {type: "button", onclick: () => gen("interview_prep", "Interview prep")}, "Generate interview prep"),
-          el("button", {type: "button", onclick: loadLikelyQuestions}, "Generate likely questions"),
+          modeToggle,
+          generateKitBtn,
+          el("button", {type: "button", onclick: () => gen("cover_letter", "Cover letter")}, "+ Cover letter"),
+          el("button", {type: "button", onclick: () => gen("interview_prep", "Interview prep")}, "+ Interview prep"),
+          el("button", {type: "button", onclick: loadLikelyQuestions}, "Likely questions"),
           exportAllBtn,
-          el("button", {type: "button", onclick: () => { showDrafts = false; drawBody(); }}, "Back to resume"));
+          el("button", {type: "button", class: "quiet", onclick: () => { showDrafts = false; drawBody(); }}, "Back to resume"));
         const customForm = el("div", {class: "round-actions draft-custom-form"},
           customPrompt,
           el("button", {type: "button", onclick: () => submitCustom(false)}, "Draft answer"),
           el("button", {type: "button", class: "quiet", onclick: () => submitCustom(true)}, "Add blank"));
 
         const KIND_LABEL = {cover_letter: "Cover letter", qa: "Q&A", interview_prep: "Interview prep"};
+        const badgeForGroup = g => g.kind === "qa" && String(g.prompt || "").trim().toLowerCase() === "interview prep"
+          ? "Interview prep"
+          : (KIND_LABEL[g.kind] || "Q&A");
         const ITERATE_CHIPS = [
           ["Shorter", "Make it shorter and more concise"],
           ["More detailed", "Make it more detailed with another concrete highlight from my resume"],
           ["Stronger opening", "Give it a stronger opening hook"],
           ["More formal", "Make the tone more formal and polished"],
-          ["More conversational", "Make the tone warmer and more conversational"],
-          ["Highlight impact", "Highlight quantified impact and measurable results"],
+          ["Warm tone", "Make the tone warmer and more conversational"],
+          ["Impact", "Highlight quantified impact and measurable results"],
         ];
 
         const cardsEl = groupOrder.length ? groupOrder.map(key => {
@@ -808,7 +958,7 @@
           const activeIdx = group.versions.indexOf(active);
           selectedDraftByGroup.set(key, active.id);
 
-          const area = el("textarea", {rows: group.kind === "interview_prep" ? 12 : 8, value: active.content});
+          const area = el("textarea", {rows: (group.kind === "interview_prep" || badgeForGroup(group) === "Interview prep") ? 10 : 7, value: active.content});
           area.value = active.content;
           area.addEventListener("focus", () => {
             if (area.value.trim() === "Write your answer here…") area.select();
@@ -819,9 +969,56 @@
             wc.textContent = `${n} word${n === 1 ? "" : "s"}`;
           };
           syncWC();
-          area.addEventListener("input", syncWC);
           const copyStatus = el("span", {class: "hint"});
-          const fileBase = `${jobSlug}-${safeFileSlug(group.prompt)}-v${activeIdx + 1}`;
+
+          const promptInput = group.kind === "qa" ? (() => {
+            const inp = el("input", {type: "text", class: "draft-prompt-input", value: group.prompt, "aria-label": "Edit question"});
+            inp.value = group.prompt;
+            return inp;
+          })() : null;
+          const currentPrompt = () => (promptInput ? promptInput.value.trim() : group.prompt) || group.prompt;
+
+          // Auto-save edits (debounced 600ms + on blur) so users never need to click Save manually.
+          let saveTimer = null;
+          let lastSavedText = active.content;
+          let lastSavedPrompt = group.prompt;
+          const persistEdits = async () => {
+            clearTimeout(saveTimer);
+            const nextText = area.value;
+            const nextPrompt = currentPrompt();
+            if (!nextText.trim()) return;
+            if (nextText === lastSavedText && nextPrompt === lastSavedPrompt) return;
+            copyStatus.textContent = "Saving…";
+            if (nextPrompt !== lastSavedPrompt) {
+              for (const v of group.versions) {
+                const body = v.id === active.id ? nextText : v.content;
+                await attempt(() => api.drafts.update(jobId, v.id, {prompt: nextPrompt, content: body}));
+              }
+              lastSavedPrompt = nextPrompt;
+              lastSavedText = nextText;
+              active.content = nextText;
+              group.prompt = nextPrompt;
+              selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, active.id);
+              copyStatus.textContent = `Saved v${activeIdx + 1}`;
+              return;
+            }
+            if (await attempt(() => api.drafts.update(jobId, active.id, {prompt: nextPrompt, content: nextText}))) {
+              lastSavedText = nextText;
+              active.content = nextText;
+              copyStatus.textContent = `Saved v${activeIdx + 1}`;
+            }
+          };
+          const scheduleSave = () => {
+            syncWC();
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(persistEdits, 600);
+          };
+          area.addEventListener("input", scheduleSave);
+          area.addEventListener("blur", persistEdits);
+          if (promptInput) {
+            promptInput.addEventListener("input", scheduleSave);
+            promptInput.addEventListener("blur", persistEdits);
+          }
 
           const versionTabs = el("div", {class: "draft-versions", role: "group", "aria-label": "Saved versions"},
             group.versions.map((v, i) => el("button", {
@@ -835,33 +1032,22 @@
               },
             }, `v${i + 1}`)));
 
-          const promptInput = group.kind === "qa" ? (() => {
-            const inp = el("input", {type: "text", class: "draft-prompt-input", value: group.prompt, "aria-label": "Edit question"});
-            inp.value = group.prompt;
-            return inp;
-          })() : null;
-          const currentPrompt = () => (promptInput ? promptInput.value.trim() : group.prompt) || group.prompt;
-
           const iterateInput = el("input", {
             type: "text",
             class: "draft-iterate-input",
-            placeholder: "Iterate on this draft, e.g. emphasize Python & leadership…",
+            placeholder: "Custom tweak (press Enter), e.g. emphasize Python & leadership…",
           });
           const runIterate = async instruction => {
             const clean = String(instruction || "").trim();
             if (!clean) return;
             const nextPrompt = currentPrompt();
-            copyStatus.textContent = draftGenMode === "ai" ? "Creating new version with AI…" : "Creating new version…";
-            const created = await attempt(() => api.drafts.create(jobId, {
-              kind: group.kind,
-              prompt: nextPrompt,
-              base_content: area.value,
+            const res = await createDraftSmart(group.kind, nextPrompt, {
+              baseContent: area.value,
               instruction: clean,
-              mode: draftGenMode,
-              generate: true,
-            }));
-            if (created?.value) {
-              selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, created.value.id);
+              statusEl: copyStatus,
+            });
+            if (res?.value) {
+              selectedDraftByGroup.set(`${res.groupKind}::${nextPrompt.toLowerCase()}`, res.value.id);
               drawDrafts();
             }
           };
@@ -878,32 +1064,18 @@
               }, label))),
             el("div", {class: "draft-iterate-bar"},
               iterateInput,
-              el("button", {type: "button", onclick: () => runIterate(iterateInput.value)}, "Iterate as new version")));
+              el("button", {type: "button", onclick: () => runIterate(iterateInput.value)}, "Iterate")));
 
           return el("section", {class: "tailor-card draft-card"},
             el("div", {class: "card-head"},
               promptInput || el("h3", {text: group.prompt}),
-              el("span", {class: "engine-badge", text: KIND_LABEL[group.kind] || "Q&A"}),
+              el("span", {class: "engine-badge", text: badgeForGroup(group)}),
               versionTabs,
               wc),
             area,
             iterateRow,
             el("div", {class: "tailor-actions"},
-              el("button", {type: "button", class: "primary", onclick: async () => {
-                const nextPrompt = currentPrompt();
-                if (nextPrompt !== group.prompt) {
-                  // Rename prompt across all saved versions in this group so they stay grouped together.
-                  for (const v of group.versions) {
-                    const body = v.id === active.id ? area.value : v.content;
-                    await attempt(() => api.drafts.update(jobId, v.id, {prompt: nextPrompt, content: body}));
-                  }
-                  selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, active.id);
-                  drawDrafts();
-                  return;
-                }
-                if (await attempt(() => api.drafts.update(jobId, active.id, {prompt: nextPrompt, content: area.value}))) copyStatus.textContent = `Saved v${activeIdx + 1}.`;
-              }}, `Save v${activeIdx + 1}`),
-              el("button", {type: "button", title: "Keep the current version and save your edits as a new version", onclick: async () => {
+              el("button", {type: "button", title: "Keep the current version and snapshot your edits as a new version", onclick: async () => {
                 if (!area.value.trim()) return;
                 const nextPrompt = currentPrompt();
                 const created = await attempt(() => api.drafts.create(jobId, {kind: group.kind, prompt: nextPrompt, content: area.value, generate: false}));
@@ -911,7 +1083,7 @@
                   selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, created.value.id);
                   drawDrafts();
                 }
-              }}, "Save as new version"),
+              }}, `+ Save v${group.versions.length + 1}`),
               el("button", {type: "button", onclick: async () => {
                 try { await navigator.clipboard.writeText(area.value); copyStatus.textContent = "Copied."; } catch {}
               }}, "Copy"),
@@ -943,7 +1115,7 @@
                 }
               }}, group.versions.length > 1 ? `Delete v${activeIdx + 1}` : "Delete"),
               copyStatus));
-        }) : [el("p", {class: "hint", text: "No drafts yet. Generate a cover letter, interview prep sheet, or likely questions above—or add your own custom question."})];
+        }) : [el("p", {class: "hint", text: "No drafts yet. Click Generate kit above for a cover letter + interview prep in one click, or add a custom question."})];
 
         fill(stage,
           el("div", {class: "round-head drafts-head"}, el("h2", {text: "Cover letter, Q&A & interview prep"}), quickBar),
@@ -1023,7 +1195,8 @@
           thinking,
           el("div", {},
             el("p", {class: "writing-title", text: `Writing suggestions with the ${(ENGINE[rev.engine] || "engine").toLowerCase()}`}),
-            el("p", {class: "hint"}, el("span", {id: "tailor-elapsed", text: "0 s"}), " so far. Nothing is changed in your resume yet.")),
+            el("p", {class: "hint"}, el("span", {id: "tailor-elapsed", text: "0 s"}), " elapsed. Nothing is changed in your resume yet."),
+            el("p", {id: "tailor-stall", class: "hint tailor-stall-warn", hidden: true})),
           el("div", {class: "skeletons", "aria-hidden": "true"}, [0, 1, 2].map(() => el("div", {class: "skeleton"}))));
       };
 
