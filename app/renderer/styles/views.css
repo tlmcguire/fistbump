@@ -852,3 +852,42 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   flex: 1 1 240px;
   min-width: 0;
 }
+
+/* Likely questions tray inside Cover letter, Q&A & interview prep */
+.likely-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.likely-questions[hidden] { display: none; }
+.likely-q-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.likely-q-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.likely-q-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.likely-q-item span { flex: 1 1 260px; font-size: 13px; color: var(--text); }
+.likely-q-actions { display: inline-flex; gap: 6px; flex: none; }
