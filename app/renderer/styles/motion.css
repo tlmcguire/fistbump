@@ -24,16 +24,34 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes arrive-up {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.992); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
 
-/* A page as it is shown: pure opacity fade avoids WebKit compositor-layer subpixel snap */
-.view-enter > :not(.toolbar) { animation: arrive 160ms ease-out both; }
+/* A page as it is shown: soft rise and fade onto the desk */
+.view-enter > :not(.toolbar) { animation: arrive-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 /* A panel, stage or note as it is filled */
-.enter { animation: arrive 180ms ease-out both; }
+.enter { animation: arrive-up 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 /* A list, one child after another (the script sets --i on each and caps it) */
-.stagger > * { animation: arrive 180ms ease-out both; animation-delay: var(--i, 0ms); }
-.tailor-aside.in > * { animation: arrive 180ms ease-out both; }
+.stagger > * { animation: arrive-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--i, 0ms); }
+.tailor-aside.in > * { animation: arrive-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cards > .draft-card { animation: card-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cards > .draft-card:nth-child(2) { animation-delay: 35ms; }
+.cards > .draft-card:nth-child(3) { animation-delay: 70ms; }
+.cards > .draft-card:nth-child(n+4) { animation-delay: 100ms; }
+.likely-questions:not([hidden]), .tracker-bulk:not([hidden]) { animation: card-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+#history:not([hidden]) { animation: menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: top right; }
 
 /* ---------- Search filters: a drawer that opens under the search bar ---------- */
 
@@ -115,8 +133,8 @@ html[data-vt="language"]::view-transition-new(root) {
   transform: translateX(var(--pill-x));
   border-radius: 6px;
   background: var(--raised);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: var(--lit, inset 0 1px 0 rgba(255, 255, 255, 0.08)), 0 1px 3px rgba(0, 0, 0, 0.28);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), width 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .pill-still::before { transition: none !important; }
 :is(.tabs, .tracker-scopes, .draft-mode-toggle, .draft-versions, .segmented).has-pill :is([aria-selected="true"], [aria-pressed="true"]) { background: transparent; box-shadow: none; }
@@ -217,10 +235,12 @@ button.ready { animation: ready 900ms var(--ease-out) 1; }
 @keyframes dialog-out {
   to { opacity: 0; transform: translateY(4px) scale(0.98); }
 }
-dialog.ask[open] { animation: dialog-in 220ms var(--ease-out) both; }
-dialog.ask[open]::backdrop { animation: fade-in 220ms ease both; }
+dialog.ask[open] { animation: dialog-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+dialog.ask[open]::backdrop { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fade-in 220ms ease both; }
 dialog.ask.closing { animation: dialog-out 130ms cubic-bezier(0.4, 0, 1, 1) both; }
 dialog.ask.closing::backdrop { animation: fade-out 130ms ease both; }
+.dialog-close { transition: background-color 140ms ease, color 140ms ease, transform 200ms var(--ease-spring); }
+.dialog-close:hover { transform: rotate(90deg); }
 
 /* ---------- Tooltips ---------- */
 
@@ -232,10 +252,16 @@ dialog.ask.closing::backdrop { animation: fade-out 130ms ease both; }
 @keyframes tip-in-right { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: none; } }
 .tip.in[data-side="right"] { animation: tip-in-right 140ms var(--ease-out) both; }
 
-/* ---------- Controls ---------- */
+/* ---------- Controls & tactile surfaces ---------- */
 
-button, .button { transition: background-color 120ms ease, color 120ms ease, box-shadow 200ms ease, filter 120ms ease; }
-button.primary:hover:not(:disabled), .button.primary:hover { box-shadow: 0 2px 10px rgba(206, 166, 21, 0.28); }
+button, .button { transition: background-color 130ms ease, color 130ms ease, border-color 130ms ease, box-shadow 200ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1), filter 120ms ease; }
+button.primary:hover:not(:disabled), .button.primary:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 12px rgba(206, 166, 21, 0.28); }
+button:active:not(:disabled), .button:active { transform: scale(0.98); }
+.home-row { transition: background-color 140ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.home-row svg { transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms ease; }
+.home-row:hover:not(:disabled) svg { transform: translateX(3px); }
+.tracker-table tbody tr { transition: background-color 140ms ease; }
+.tracker-row-actions { transition: opacity 160ms ease; }
 .nav-item .icon { transition: transform 200ms var(--ease-out), color 140ms ease; }
 
 /* ---------- Icons: each one acts out what it stands for, once ---------- */
@@ -339,11 +365,16 @@ svg.icon:has(> use[href="#i-check"])    { --ico: ico-pop 520ms var(--ease-spring
 .reduce-motion .enter,
 .reduce-motion .stagger > *,
 .reduce-motion .tailor-aside.in > *,
+.reduce-motion .cards > .draft-card,
+.reduce-motion .likely-questions:not([hidden]),
+.reduce-motion .tracker-bulk:not([hidden]),
+.reduce-motion #history:not([hidden]),
 .reduce-motion #filters:not([hidden]),
 .reduce-motion .tip.in,
 .reduce-motion dialog.ask[open],
 .reduce-motion .pdf-preview.expanded,
 .reduce-motion .pdf-frame.reveal { animation: fade-in 140ms ease both !important; }
+.reduce-motion button:hover, .reduce-motion button:active, .reduce-motion .dialog-close:hover, .reduce-motion .home-row:hover svg { transform: none !important; }
 .reduce-motion dialog.ask.closing { animation: fade-out 90ms ease both !important; }
 html.reduce-motion[data-vt]::view-transition-old(root) { animation: fade-out 120ms ease both; filter: none; }
 html.reduce-motion[data-vt]::view-transition-new(root) { animation: fade-in 160ms ease both; filter: none; }
