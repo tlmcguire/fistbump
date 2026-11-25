@@ -142,11 +142,11 @@
 
   //Steps due or overdue, suggestions still to decide, and saved jobs with no tailored resume yet: the work in
   //flight, most urgent first. Kept to a few rows; the Tracker and Tailor hold the rest.
-  async function pipeline(limit = 4) {
+  async function pipeline(limit = 4, preloadedApps = null, preloadedJobs = null) {
     const today = window.Tracker?.localToday?.() || new Date().toISOString().slice(0, 10);
     const [apps, jobs] = await Promise.all([
-      api().applications.list({}).catch(() => []),
-      api().jobs.list("").catch(() => []),
+      preloadedApps !== null ? Promise.resolve(preloadedApps) : api().applications.list({}).catch(() => []),
+      preloadedJobs !== null ? Promise.resolve(preloadedJobs) : api().jobs.list("").catch(() => []),
     ]);
     const items = [];
     for (const a of (apps || []).filter(a => a.next_step_date && a.next_step_date <= today && !a.archived_at)
@@ -189,6 +189,13 @@
   const MATCH_SHOWN = 5;
   let matchCache = null; // {key, at, items}
   let matchLoad = null; // {key, promise}
+  const invalidateMatches = () => {
+    matchCache = null;
+    matchLoad = null;
+  };
+  const clearLastListing = () => {
+    try { localStorage.removeItem(LISTING_KEY); } catch {}
+  };
 
   const modeOf = p => ["Remote", "Hybrid", "On-site"].includes(p.preferred_mode) ? p.preferred_mode : "Any";
   const matchQuery = p => ({
@@ -298,12 +305,19 @@
     let seq = 0;
     async function refresh() {
       const mine = ++seq;
-      const [master, versions, needs] = await Promise.all([
+      const [master, versions, apps, jobs] = await Promise.all([
         api().resume.get().catch(() => null),
         api().resumes.list().catch(() => []),
-        pipeline().catch(() => []),
+        api().applications.list({}).catch(() => []),
+        api().jobs.list("").catch(() => []),
       ]);
+      const needs = await pipeline(4, apps || [], jobs || []).catch(() => []);
       if (mine !== seq) return;
+      // Drop the remembered "Keep reading" listing if it was a saved job that was deleted, trashed, or archived.
+      const kept = readJSON(LISTING_KEY);
+      if (kept?.id && !(jobs || []).some(j => j.id === kept.id)) {
+        clearLastListing();
+      }
       render(master || {profile: null, experiences: [], education: []}, versions || [], needs || []);
     }
 
@@ -470,10 +484,35 @@
         searches.length ? rows(searches) : null);
     }
 
+    const refreshIfVisible = () => {
+      if (!container.hidden) refresh();
+    };
+    const onDataChange = event => {
+      const detail = event?.detail || {};
+      if (detail.invalidateMatches !== false) invalidateMatches();
+      if (detail.clearListing) clearLastListing();
+      refreshIfVisible();
+    };
+    window.addEventListener("fistbump:history", () => {
+      invalidateMatches();
+      refreshIfVisible();
+    });
+    window.addEventListener("fistbump:versions", refreshIfVisible);
+    window.addEventListener("fistbump:jobs", onDataChange);
+    window.addEventListener("fistbump:applications", onDataChange);
+    window.addEventListener("fistbump:storage-cleaned", onDataChange);
+    window.addEventListener("storage", event => {
+      if (!event.key || event.key === HISTORY_KEY || event.key === LISTING_KEY) {
+        invalidateMatches();
+        refreshIfVisible();
+      }
+    });
+
+    window.Home.refresh = refresh;
     refresh();
     return refresh;
   }
 
   //The sidebar lists the same searches and opens versions the same way.
-  window.Home = {mount, recentSearches, openResume};
+  window.Home = {mount, recentSearches, openResume, invalidate: invalidateMatches};
 })();

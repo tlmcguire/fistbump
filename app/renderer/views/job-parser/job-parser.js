@@ -296,7 +296,7 @@ window.JobParser = {
       //opens again as it was without asking Greenhouse; Reload fetches it fresh.
       const LISTING_KEY = "fistbump.last-listing";
       function rememberListing(data) {
-        if (!data.board || !data.external_id) return;
+        if (!data.board || !data.external_id || data.archived_at || data.trashed_at) return;
         try {
           const {id, source, board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
           localStorage.setItem(LISTING_KEY, JSON.stringify({id, source, board, external_id, position_title, company_name, location, work_mode,
@@ -305,6 +305,23 @@ window.JobParser = {
           //Home just won't offer it
         }
       }
+      function forgetListingIfMatching(removedJobs) {
+        try {
+          const kept = JSON.parse(localStorage.getItem(LISTING_KEY) || "null");
+          if (!kept) return;
+          const list = Array.isArray(removedJobs) ? removedJobs : [removedJobs];
+          const matches = list.some(j => j && (
+            (j.id && kept.id === j.id) ||
+            (j.board && j.external_id && kept.board === j.board && kept.external_id === j.external_id)
+          ));
+          if (matches) localStorage.removeItem(LISTING_KEY);
+        } catch {
+          // ignore storage errors
+        }
+      }
+      const notifyJobsChanged = (detail = {}) => {
+        window.dispatchEvent(new CustomEvent("fistbump:jobs", {detail}));
+      };
 
       //Opens a remembered listing in Find jobs as it was kept, without asking Greenhouse.
       const openSaved = async saved => {
@@ -1104,6 +1121,7 @@ window.JobParser = {
             markSavedRows();
             if (posting === current) displayPosting({...current, ...job}, fromResults); //now shown as saved
             loadSaved();
+            notifyJobsChanged();
           }
         } catch (error) {
           btn.disabled = false;
@@ -1244,6 +1262,11 @@ window.JobParser = {
           if (r.status === "fulfilled") succeeded.push(ids[idx]);
           else skipped++;
         });
+        if (succeeded.length) {
+          const removedObjs = savedRows.filter(j => succeeded.includes(j.id));
+          forgetListingIfMatching(removedObjs);
+          notifyJobsChanged();
+        }
         if (posting?.id && succeeded.includes(posting.id)) showDetailEmpty();
         selectedSaved.clear();
         await loadSaved();
@@ -1355,7 +1378,10 @@ window.JobParser = {
       });
 
       const archiveJob = async () => {
-        await jobsApi.archive(posting.id, {archive_application: Boolean(trackedApp) && $("archive-app").checked});
+        const target = posting;
+        await jobsApi.archive(target.id, {archive_application: Boolean(trackedApp) && $("archive-app").checked});
+        forgetListingIfMatching(target);
+        notifyJobsChanged();
         await refreshJob();
       };
 
@@ -1372,6 +1398,7 @@ window.JobParser = {
         if (!posting?.id) return;
         try {
           await jobsApi.unarchive(posting.id);
+          notifyJobsChanged();
           await refreshJob();
         } catch (error) {
           window.UI.alert(error.message);
@@ -1395,7 +1422,10 @@ window.JobParser = {
         const question = `Move "${posting.position_title}" at ${posting.company_name} to the Trash?\n\nIt leaves Saved jobs now, and it is deleted for good after ${trashDays} days, unless you restore it before then.`;
         if (!await window.UI.ask(question, {confirm: "Move to Trash", danger: true, title: "Move to Trash"})) return;
         try {
-          await jobsApi.trash(posting.id);
+          const target = posting;
+          await jobsApi.trash(target.id);
+          forgetListingIfMatching(target);
+          notifyJobsChanged();
           showDetailEmpty();
           loadSaved();
         } catch (error) {
@@ -1409,6 +1439,7 @@ window.JobParser = {
         if (!posting?.id) return;
         try {
           await jobsApi.restore(posting.id);
+          notifyJobsChanged();
           await refreshJob();
         } catch (error) {
           window.UI.alert(error.message);
@@ -1432,7 +1463,10 @@ window.JobParser = {
         const question = `Delete "${posting.position_title}" at ${posting.company_name} now?\n\nThis cannot be undone. To keep the job for a while and delete it later, move it to the Trash instead.`;
         if (!await window.UI.ask(question, {confirm: "Delete now", danger: true, title: "Delete job"})) return;
         try {
-          await jobsApi.delete(posting.id);
+          const target = posting;
+          await jobsApi.delete(target.id);
+          forgetListingIfMatching(target);
+          notifyJobsChanged();
           showDetailEmpty();
           loadSaved();
         } catch (error) {

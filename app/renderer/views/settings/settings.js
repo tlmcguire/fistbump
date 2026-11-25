@@ -170,15 +170,37 @@ window.Settings = {
 
     // ---------- History ----------
 
+    const readHistoryCount = () => {
+      if (typeof window.JobParser?.historyCount === "function") return window.JobParser.historyCount();
+      try {
+        const list = JSON.parse(localStorage.getItem("fistbump.search-history") || "[]");
+        return Array.isArray(list) ? list.length : 0;
+      } catch {
+        return 0;
+      }
+    };
+    const hasLastListing = () => {
+      try { return Boolean(localStorage.getItem("fistbump.last-listing")); } catch { return false; }
+    };
     const showHistory = () => {
-      const count = window.JobParser?.historyCount?.() ?? 0;
+      const count = readHistoryCount();
+      const hasListing = hasLastListing();
       $("history-summary").textContent = count
         ? `${count} recent ${count === 1 ? "search" : "searches"}, and the suggestions each search box remembers.`
-        : "No recent searches.";
-      $("settings-clear-history").disabled = count === 0;
+        : hasListing
+          ? "No recent searches, but your last opened listing is still remembered on Home."
+          : "No recent searches.";
+      $("settings-clear-history").disabled = count === 0 && !hasListing;
     };
     confirmFirst($("settings-clear-history"), "Clear all?", async () => {
-      window.JobParser?.clearHistory?.();
+      if (typeof window.JobParser?.clearHistory === "function") {
+        window.JobParser.clearHistory();
+      } else {
+        try { localStorage.removeItem("fistbump.search-history"); } catch {}
+        try { localStorage.removeItem("fistbump.last-listing"); } catch {}
+        window.Suggest?.clearRecent?.();
+        window.dispatchEvent(new Event("fistbump:history"));
+      }
       showHistory();
       setStatus("history-status", "Recent searches and suggestions cleared.", {cleaned: true});
     });
@@ -259,7 +281,13 @@ window.Settings = {
         return;
       }
       cleanupStatus(describeCleanup(result, dryRun), {cleaned: !dryRun});
-      if (!dryRun) await showStorage();
+      if (!dryRun) {
+        await showStorage();
+        const clearListing = payload.targets.includes("old_jobs") || payload.targets.includes("trash");
+        window.dispatchEvent(new CustomEvent("fistbump:storage-cleaned", {
+          detail: {targets: payload.targets, clearListing, invalidateMatches: true},
+        }));
+      }
     };
 
     $("cleanup-preview").addEventListener("click", () => runCleanup(true));

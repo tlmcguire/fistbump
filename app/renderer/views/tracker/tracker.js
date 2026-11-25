@@ -100,6 +100,9 @@
       const bulkBar = el("div", {class: "tracker-bulk", hidden: true}, bulkCount, bulkStatus, bulkArchive, bulkRestore, bulkDelete,
         el("button", {type: "button", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
 
+      const notifyAppsChanged = () => {
+        window.dispatchEvent(new CustomEvent("fistbump:applications", {detail: {invalidateMatches: false}}));
+      };
       const runBulk = async fn => {
         const ids = rows.filter(a => selected.has(a.id)).map(a => a.id);
         if (!ids.length) return;
@@ -107,6 +110,7 @@
           await fn(ids);
           selected.clear();
           say(`Updated ${ids.length} application${ids.length === 1 ? "" : "s"}.`);
+          notifyAppsChanged();
         } catch (err) {
           say(err.message, true); //all or nothing: no row changed
         }
@@ -132,6 +136,7 @@
         const deleted = settled.filter(r => r.status === "fulfilled").length;
         const failed = settled.length - deleted;
         selected.clear();
+        if (deleted > 0) notifyAppsChanged();
         if (failed) {
           say(`Deleted ${deleted} ${deleted === 1 ? "application" : "applications"}; ${failed} could not be deleted.`, true);
         } else {
