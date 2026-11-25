@@ -142,7 +142,10 @@ func TestExportErrors(t *testing.T) {
 	wantError(t, call(t, s, "POST", "/v1/tailored-resumes/abc/export", `{"format":"pdf"}`), 404, "not_found")
 
 	id := seedTailored(t, s, "Ada", "Acme", "Analyst")
-	for _, body := range []string{`{"format":"docx"}`, `{"format":""}`, `{}`, `{"format":"PDF"}`} {
+	if rec := call(t, s, "POST", "/v1/resume/export", `{"format":"docx"}`); rec.Code != 200 || !strings.Contains(rec.Header().Get("Content-Type"), "wordprocessingml.document") {
+		t.Errorf("docx export: status %d, type %q", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	for _, body := range []string{`{"format":"rtf"}`, `{"format":""}`, `{}`, `{"format":"PDF"}`} {
 		expectField(t, call(t, s, "POST", "/v1/tailored-resumes/"+id+"/export", body), "format")
 		expectField(t, call(t, s, "POST", "/v1/resume/export", body), "format")
 	}

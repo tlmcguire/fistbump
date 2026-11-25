@@ -355,8 +355,8 @@ func TestConnectorList(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].ID != "greenhouse" || got[0].Name != "Greenhouse" {
-		t.Errorf("connectors = %+v, want just greenhouse", got)
+	if len(got) != 3 || got[0].ID != "greenhouse" || got[1].ID != "lever" || got[2].ID != "ashby" {
+		t.Errorf("connectors = %+v, want greenhouse, lever, ashby", got)
 	}
 }
 
