@@ -210,6 +210,13 @@
       unarchive: (id) => call('applications:unarchive', id),
       bulkArchive: (ids, archived) => call('applications:bulkArchive', ids, archived),
     },
+
+    savedSearches: {
+      list: () => call('savedSearches:list'),
+      create: (body) => call('savedSearches:create', body),
+      markSeen: (id, seenKeys) => call('savedSearches:markSeen', id, seenKeys),
+      delete: (id) => call('savedSearches:delete', id),
+    },
   };
 
   // Native-style Windows titlebar buttons for frameless Mica windows.

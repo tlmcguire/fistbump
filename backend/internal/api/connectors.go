@@ -11,7 +11,9 @@ import (
 	"sync"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
+	"github.com/tlmcguire/fistbump/backend/internal/connectors/ashby"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
+	"github.com/tlmcguire/fistbump/backend/internal/connectors/lever"
 	"github.com/tlmcguire/fistbump/backend/internal/cost"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
@@ -27,11 +29,11 @@ var (
 	jobIDPattern = regexp.MustCompile(`^[0-9]{1,20}$`)
 )
 
-// connectorList is the fixed body of GET /v1/connectors. Greenhouse is the only connector so far.
+// connectorList is the fixed body of GET /v1/connectors.
 var connectorList = []struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-}{{"greenhouse", "Greenhouse"}}
+}{{"greenhouse", "Greenhouse"}, {"lever", "Lever"}, {"ashby", "Ashby"}}
 
 const (
 	// maxLinkLen caps the pasted link before it is parsed.
@@ -204,7 +206,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	boards := chooseBoards(q)
+	boards := s.chooseBoardsWithCustom(r.Context(), q)
 	named := strings.TrimSpace(q.Company) != "" && len(q.Boards) == 0 // the search is for one company
 	guessed := false
 	if len(boards) == 0 && named {
@@ -434,15 +436,75 @@ func (s *Server) greenhouseJob(w http.ResponseWriter, r *http.Request) error {
 	return s.writePosting(w, r, board, jobID)
 }
 
-// greenhouseLink opens a pasted job link: it reads the board and job id from the link, then
-// fetches the posting. This is how a listing first enters the app.
+// chooseBoardsWithCustom merges user-watchlisted Greenhouse boards from connectors.custom_boards.
+func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query) []string {
+	boards := chooseBoards(q)
+	if len(q.Boards) > 0 || len(q.Categories) > 0 {
+		return boards
+	}
+	vals, err := s.store.GetSettings(ctx)
+	if err != nil {
+		return boards
+	}
+	custom, _ := vals["connectors.custom_boards"].([]string)
+	if len(custom) == 0 {
+		return boards
+	}
+	want := strings.ToLower(strings.TrimSpace(q.Company))
+	seen := make(map[string]bool, len(boards)+len(custom))
+	for _, b := range boards {
+		seen[b] = true
+	}
+	for _, entry := range custom {
+		src, token := "greenhouse", strings.TrimSpace(strings.ToLower(entry))
+		if p, t, ok := strings.Cut(token, ":"); ok {
+			src, token = strings.TrimSpace(p), strings.TrimSpace(t)
+		}
+		if src != "greenhouse" || !boardPattern.MatchString(token) || seen[token] {
+			continue
+		}
+		if want != "" && !strings.Contains(token, want) {
+			continue
+		}
+		seen[token] = true
+		boards = append(boards, token)
+	}
+	return boards
+}
+
+// greenhouseLink opens a pasted job link from Greenhouse, Lever, or Ashby.
 func (s *Server) greenhouseLink(w http.ResponseWriter, r *http.Request) error {
 	raw := r.URL.Query().Get("url")
 	if raw == "" {
-		return validationFailed("Enter a Greenhouse job link")
+		return validationFailed("Enter a Greenhouse, Lever, or Ashby job link")
 	}
 	if len(raw) > maxLinkLen {
 		return validationFailed("The job link is too long")
+	}
+
+	if board, jobID, err := lever.ParseLink(raw); err == nil {
+		client := s.lever
+		if client == nil {
+			client = lever.NewClient()
+		}
+		p, err := client.FetchJob(r.Context(), board, jobID)
+		if err != nil {
+			return leverError(err)
+		}
+		writeJSON(w, http.StatusOK, p)
+		return nil
+	}
+	if board, jobID, err := ashby.ParseLink(raw); err == nil {
+		client := s.ashby
+		if client == nil {
+			client = ashby.NewClient()
+		}
+		p, err := client.FetchJob(r.Context(), board, jobID)
+		if err != nil {
+			return ashbyError(err)
+		}
+		writeJSON(w, http.StatusOK, p)
+		return nil
 	}
 
 	// ParseLink's error text is written for the user (for example, the explanation for links
@@ -455,6 +517,32 @@ func (s *Server) greenhouseLink(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return s.writePosting(w, r, board, jobID)
+}
+
+func leverError(err error) error {
+	switch {
+	case errors.Is(err, lever.ErrorNotFound):
+		return notFound("This Lever job is closed or does not exist.")
+	case errors.Is(err, lever.ErrorRateLimited):
+		return upstreamError("Lever is limiting requests right now. Wait a minute, then try again.")
+	case errors.Is(err, lever.ErrorUpstream):
+		return upstreamError("Lever did not respond. Try again.")
+	default:
+		return err
+	}
+}
+
+func ashbyError(err error) error {
+	switch {
+	case errors.Is(err, ashby.ErrorNotFound):
+		return notFound("This Ashby job is closed or does not exist.")
+	case errors.Is(err, ashby.ErrorRateLimited):
+		return upstreamError("Ashby is limiting requests right now. Wait a minute, then try again.")
+	case errors.Is(err, ashby.ErrorUpstream):
+		return upstreamError("Ashby did not respond. Try again.")
+	default:
+		return err
+	}
 }
 
 // writePosting fetches one posting and writes it as JSON. Both routes share it so they cannot
@@ -492,6 +580,7 @@ const maxImport = 50
 func (s *Server) greenhouseImport(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Postings []struct {
+			Source     string `json:"source"`
 			Board      string `json:"board"`
 			ExternalID string `json:"external_id"`
 		} `json:"postings"`
@@ -502,14 +591,24 @@ func (s *Server) greenhouseImport(w http.ResponseWriter, r *http.Request) error 
 	if len(body.Postings) == 0 || len(body.Postings) > maxImport {
 		return validationError("postings", "postings must have 1 to 50 entries")
 	}
-	type key struct{ board, id string }
+	type key struct{ source, board, id string }
 	var keys []key
 	seen := map[key]bool{}
 	for _, p := range body.Postings {
-		if err := validateIDs(p.Board, p.ExternalID); err != nil {
-			return err
+		src := strings.ToLower(strings.TrimSpace(p.Source))
+		if src == "" {
+			src = "greenhouse"
 		}
-		k := key{p.Board, p.ExternalID}
+		if src == "greenhouse" {
+			if err := validateIDs(p.Board, p.ExternalID); err != nil {
+				return err
+			}
+		} else if src != "lever" && src != "ashby" {
+			return validationFailed("Unsupported connector source")
+		} else if strings.TrimSpace(p.Board) == "" || strings.TrimSpace(p.ExternalID) == "" {
+			return validationFailed("Board and job id are required")
+		}
+		k := key{src, p.Board, p.ExternalID}
 		if !seen[k] {
 			seen[k] = true
 			keys = append(keys, k)
@@ -537,7 +636,24 @@ func (s *Server) greenhouseImport(w http.ResponseWriter, r *http.Request) error 
 			if ctx.Err() != nil {
 				return
 			}
-			p, err := s.gh.FetchJob(ctx, k.board, k.id)
+			var p connectors.Posting
+			var err error
+			switch k.source {
+			case "lever":
+				client := s.lever
+				if client == nil {
+					client = lever.NewClient()
+				}
+				p, err = client.FetchJob(ctx, k.board, k.id)
+			case "ashby":
+				client := s.ashby
+				if client == nil {
+					client = ashby.NewClient()
+				}
+				p, err = client.FetchJob(ctx, k.board, k.id)
+			default:
+				p, err = s.gh.FetchJob(ctx, k.board, k.id)
+			}
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil && failed == nil {
@@ -588,10 +704,14 @@ func (s *Server) greenhouseImport(w http.ResponseWriter, r *http.Request) error 
 // jobFromPosting builds the job saved for a Greenhouse posting: the posting's own fields, with the
 // parser's skills and requirements, and its inferred values only where the posting has none.
 func (s *Server) jobFromPosting(p connectors.Posting) models.Job {
+	src := p.Source
+	if src == "" {
+		src = "greenhouse"
+	}
 	j := models.Job{
 		CompanyName:   p.CompanyName,
 		PositionTitle: p.PositionTitle,
-		Source:        "greenhouse",
+		Source:        src,
 		ExternalID:    &p.ExternalID,
 		Board:         &p.Board,
 		CompanyURL:    p.CompanyURL,

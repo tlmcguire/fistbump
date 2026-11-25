@@ -122,6 +122,7 @@ window.FistBumpAPI = {
     "archive", "unarchive", "trash", "restore"]);
 
   window.FistBumpAPI.cost = wrap("cost", ["analyze"]);
+  window.FistBumpAPI.savedSearches = wrap("savedSearches", ["list", "create", "markSeen", "delete"]);
 
   //phase 7: the application tracker
   window.FistBumpAPI.applications = wrap("applications", ["list", "create", "get", "update", "delete",

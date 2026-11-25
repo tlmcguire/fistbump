@@ -193,3 +193,13 @@ type Application struct {
 	CompanyName      string  `json:"company_name"`
 	PositionTitle    string  `json:"position_title"`
 }
+
+// SavedSearch is a user-pinned search query with seen posting keys for "New" badges.
+type SavedSearch struct {
+	ID        int64    `json:"id"`
+	Name      string   `json:"name"`
+	QueryJSON string   `json:"query_json"`
+	LastRunAt *string  `json:"last_run_at"`
+	SeenKeys  []string `json:"seen_keys"`
+	CreatedAt string   `json:"created_at"`
+}

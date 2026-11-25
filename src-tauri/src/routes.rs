@@ -546,6 +546,24 @@ pub fn route_for_channel(
         "connectors:list" => Ok((Method::GET, "/v1/connectors".into(), None)),
         "storage:report" => Ok((Method::GET, "/v1/storage".into(), None)),
 
+        "savedSearches:list" => Ok((Method::GET, "/v1/saved-searches".into(), None)),
+        "savedSearches:create" => match as_object(a0) {
+            Some(b) => Ok((Method::POST, "/v1/saved-searches".into(), Some(b.clone()))),
+            None => Err(bad("Invalid saved search")),
+        },
+        "savedSearches:markSeen" => match (as_id(a0), a1.and_then(|v| v.as_array())) {
+            (Some(id), Some(keys)) => Ok((
+                Method::POST,
+                format!("/v1/saved-searches/{id}/mark-seen"),
+                Some(json!({ "seen_keys": keys })),
+            )),
+            _ => Err(bad("Invalid saved search")),
+        },
+        "savedSearches:delete" => match as_id(a0) {
+            Some(id) => Ok((Method::DELETE, format!("/v1/saved-searches/{id}"), None)),
+            None => Err(bad("Invalid saved search id")),
+        },
+
         _ => return None,
     };
 

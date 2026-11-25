@@ -36,6 +36,7 @@ var knownSettings = map[string]settingDef{
 	"jobs.trash_days":                  {kind: kindInt, def: 7, min: 1},
 	"connectors.greenhouse.boards":     {kind: kindStrings, def: []string{}},
 	"connectors.greenhouse.categories": {kind: kindStrings, def: []string{}},
+	"connectors.custom_boards":         {kind: kindStrings, def: []string{}},
 }
 
 // SettingError names the key that failed validation.

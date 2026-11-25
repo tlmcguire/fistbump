@@ -8,11 +8,11 @@ window.JobParser = {
       const tabs = {find: $("tab-find"), paste: $("tab-paste"), saved: $("tab-saved"), settings: $("tab-settings")};
       const forms = {find: searchForm, paste: $("paste-title"), saved: $("saved-form"), settings: $("settings-title")};
 
-      // Detects a pasted job URL in the search box so users can open links without a separate page.
+      // Detects a pasted job URL (Greenhouse, Lever, or Ashby) in the search box.
       const looksLikeJobLink = value => {
         const t = String(value || "").trim();
         if (!t || /\s/.test(t)) return false;
-        return /^https?:\/\//i.test(t) || /^(?:job-)?boards\.greenhouse\.io\//i.test(t) || /^grnh\.se\//i.test(t);
+        return /^https?:\/\//i.test(t) || /^(?:job-)?boards\.greenhouse\.io\//i.test(t) || /^grnh\.se\//i.test(t) || /^jobs\.(?:eu\.)?lever\.co\//i.test(t) || /^jobs\.ashbyhq\.com\//i.test(t);
       };
       const normalizeJobLink = value => {
         const t = String(value || "").trim();
@@ -631,6 +631,19 @@ window.JobParser = {
           open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
+          // Subtle ATS source badge and "New" pill for pinned searches.
+          if (result.source && ["greenhouse", "lever", "ashby"].includes(String(result.source).toLowerCase())) {
+            const srcLabel = ({greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby"})[String(result.source).toLowerCase()];
+            const badge = el("small", srcLabel);
+            badge.className = "result-state result-source";
+            body.append(badge);
+          }
+          if (activePinnedSeen && !activePinnedSeen.has(keyOf(result))) {
+            const fresh = el("small", "New");
+            fresh.className = "result-state result-new";
+            body.append(fresh);
+          }
+
           //says what state the job is in, so an archived job and a trashed job do not look alike
           if (result.trashed_at || result.archived_at) {
             const state = el("small", result.trashed_at ? "In the Trash" : "Archived");
@@ -884,6 +897,7 @@ window.JobParser = {
           results = data;
           $("result-sort").value = query.sort || "relevance";
           renderResults(data);
+          syncPinnedSeen(data);
           showState("state-results");
           $("results-pane").scrollTop = 0;
           return true;
@@ -1060,7 +1074,7 @@ window.JobParser = {
         const current = posting;
         btn.disabled = true;
         try {
-          const {imported, refreshed} = await window.FistBumpAPI.importJobs([{board: current.board, external_id: current.external_id}]);
+          const {imported, refreshed} = await window.FistBumpAPI.importJobs([{source: current.source || "greenhouse", board: current.board, external_id: current.external_id}]);
           const job = imported[0] || refreshed[0];
           if (job) {
             savedByListing.set(`${job.board}/${job.external_id}`, job.id);
@@ -1723,8 +1737,96 @@ window.JobParser = {
       //Clear history also forgets the recent entries each box suggests
       $("clear-history").addEventListener("click", () => window.JobParser.clearHistory());
 
+      // ---- Pinned (saved) searches with "New since last check" badges ----
+      let savedSearches = [];
+      let activePinnedId = null;
+      let activePinnedSeen = null;
+
+      const renderSavedSearches = () => {
+        const section = $("saved-searches-section");
+        const list = $("saved-searches-list");
+        if (!section || !list) return;
+        section.hidden = savedSearches.length === 0;
+        if (savedSearches.length > 0) $("history-toggle").disabled = false;
+        list.replaceChildren(...savedSearches.map(entry => {
+          const item = document.createElement("li");
+          const run = document.createElement("button");
+          run.type = "button";
+          run.className = "history-run";
+          const label = document.createElement("span");
+          label.className = "history-label";
+          label.append(el("strong", entry.name));
+          if (entry.last_run_at) label.append(el("small", `Checked ${ago(entry.last_run_at).replace("Updated ", "") || "recently"}`));
+          run.append(label);
+          run.addEventListener("click", () => {
+            if (searchButton.disabled) return;
+            setHistoryOpen(false);
+            let fields = {};
+            try { fields = JSON.parse(entry.query_json || "{}"); } catch { fields = {}; }
+            activePinnedId = entry.id;
+            activePinnedSeen = new Set(Array.isArray(entry.seen_keys) ? entry.seen_keys : []);
+            applyFields(fields);
+            saveForm();
+            searchForm.requestSubmit();
+          });
+          const remove = el("button", "Unpin");
+          remove.type = "button";
+          remove.className = "history-remove";
+          remove.setAttribute("aria-label", `Remove pinned search "${entry.name}"`);
+          remove.addEventListener("click", async () => {
+            try {
+              await window.FistBumpAPI.savedSearches.delete(entry.id);
+              if (activePinnedId === entry.id) { activePinnedId = null; activePinnedSeen = null; }
+              await loadSavedSearches();
+            } catch (err) { window.UI.alert(err.message); }
+          });
+          item.append(run, remove);
+          return item;
+        }));
+      };
+
+      const loadSavedSearches = async () => {
+        if (!window.api?.savedSearches?.list) return;
+        try {
+          savedSearches = await window.FistBumpAPI.savedSearches.list();
+          renderSavedSearches();
+        } catch {
+          // saved searches optional if backend is not running
+        }
+      };
+
+      $("pin-search")?.addEventListener("click", async () => {
+        if (!window.api?.savedSearches?.create) return;
+        const fields = readFields();
+        const {title} = describeFields(fields);
+        const seenKeys = (results?.postings || []).map(p => keyOf(p));
+        try {
+          await window.FistBumpAPI.savedSearches.create({
+            name: title,
+            query_json: JSON.stringify(fields),
+            seen_keys: seenKeys,
+          });
+          await loadSavedSearches();
+          setHistoryOpen(true);
+        } catch (err) {
+          window.UI.alert(err.message);
+        }
+      });
+
+      // When a pinned search finishes, persist the updated seen keys for the next run.
+      const origRenderResults = renderResults;
+      const syncPinnedSeen = data => {
+        if (!activePinnedId || !window.api?.savedSearches?.markSeen) return;
+        const merged = new Set([...(activePinnedSeen || []), ...(data.postings || []).map(p => keyOf(p))]);
+        const id = activePinnedId;
+        window.FistBumpAPI.savedSearches.markSeen(id, [...merged]).then(() => loadSavedSearches()).catch(() => {});
+      };
+      void origRenderResults;
+      void syncPinnedSeen;
+
       restoreForm();
       renderHistory();
+      loadSavedSearches();
       searchForm.addEventListener("change", saveForm);
 
       //The "show under each result" boxes act at once, on the results already on screen.

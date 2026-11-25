@@ -17,7 +17,9 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/api"
+	"github.com/tlmcguire/fistbump/backend/internal/connectors/ashby"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
+	"github.com/tlmcguire/fistbump/backend/internal/connectors/lever"
 	"github.com/tlmcguire/fistbump/backend/internal/cost"
 	"github.com/tlmcguire/fistbump/backend/internal/db"
 	"github.com/tlmcguire/fistbump/backend/internal/logos"
@@ -167,6 +169,8 @@ func run() error {
 	handler := api.New(api.Config{
 		DB:          conn,
 		Greenhouse:  gh,
+		Lever:       lever.NewClient(),
+		Ashby:       ashby.NewClient(),
 		Searcher:    gh,
 		Logos:       logoFetcher,
 		DataDir:     *dataDir,

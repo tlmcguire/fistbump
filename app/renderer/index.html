@@ -75,19 +75,24 @@
 
                     <form id="search-form" class="toolbar-form" autocomplete="off">
                         <div class="field grow">
-                            <input id="search-keywords" type="search" aria-label="Keywords or job link" placeholder="Job title, keywords, company, or paste a Greenhouse job link">
+                            <input id="search-keywords" type="search" aria-label="Keywords or job link" placeholder="Job title, keywords, company, or paste a Greenhouse, Lever, or Ashby job link">
                         </div>
                         <div class="field">
                             <input id="search-location" type="search" aria-label="Location" placeholder="Location">
                         </div>
                         <button type="submit" class="primary">Search</button>
+                        <button type="button" id="pin-search" title="Pin this search to track new postings">Pin</button>
                         <button type="button" id="filters-toggle" aria-expanded="false" aria-controls="filters">Filters<span id="filters-count" class="badge" hidden></span></button>
                         <div class="history-menu">
                             <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
-                            <section id="history" class="history" role="dialog" aria-label="Recent searches" hidden>
+                            <section id="history" class="history" role="dialog" aria-label="Saved and recent searches" hidden>
                                 <div class="history-head">
-                                    <h2>Recent searches</h2>
+                                    <h2>Saved &amp; recent searches</h2>
                                     <button type="button" id="history-close" class="history-close">Close</button>
+                                </div>
+                                <div id="saved-searches-section" hidden>
+                                    <p class="history-hint">Pinned searches</p>
+                                    <ul id="saved-searches-list" class="history-list"></ul>
                                 </div>
                                 <p class="history-hint">Choose a search to run it again.</p>
                                 <ul id="history-list" class="history-list"></ul>
@@ -332,9 +337,21 @@
                                 <div class="setting">
                                     <div class="setting-text">
                                         <label for="pref-show-logos">Show company logos</label>
-                                        <p>Logos are read from each company's own website. Turn this off to contact only Greenhouse.</p>
+                                        <p>Logos are read from each company's own website. Turn this off to contact only job boards.</p>
                                     </div>
                                     <input id="pref-show-logos" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting setting-stack">
+                                    <div class="setting-text">
+                                        <label for="watchlist-input">Company watchlist (custom boards)</label>
+                                        <p>Add a Greenhouse, Lever, or Ashby board token (e.g. <code>stripe</code>, <code>lever:netflix</code>, <code>ashby:linear</code>) or paste a board URL.</p>
+                                    </div>
+                                    <div class="setting-actions">
+                                        <input id="watchlist-input" type="text" placeholder="e.g. stripe or lever:netflix" autocomplete="off">
+                                        <button type="button" id="watchlist-add">Add board</button>
+                                    </div>
+                                    <ul id="watchlist-list" class="chips"></ul>
+                                    <p id="watchlist-status" class="setting-status" role="status"></p>
                                 </div>
                             </div>
                         </section>

@@ -8,6 +8,7 @@ import (
 
 // Posting is a normalized job posting from any connector.
 type Posting struct {
+	Source        string    `json:"source,omitempty"`
 	ExternalID    string    `json:"external_id"`
 	Board         string    `json:"board"`
 	CompanyName   string    `json:"company_name"`

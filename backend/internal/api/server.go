@@ -40,6 +40,8 @@ type logoFinder interface {
 type Config struct {
 	DB         *sql.DB
 	Greenhouse jobFetcher
+	Lever      jobFetcher
+	Ashby      jobFetcher
 	Searcher   jobSearcher
 	Logos      logoFinder
 	DataDir    string         // where the database and other app data live, for the storage report
@@ -71,6 +73,8 @@ type Server struct {
 	db      *sql.DB
 	store   *store.Store
 	gh      jobFetcher
+	lever   jobFetcher
+	ashby   jobFetcher
 	search  jobSearcher
 	logos   logoFinder
 	dataDir string
@@ -107,6 +111,11 @@ func (s *Server) routes() []route {
 		{"GET /v1/storage", s.storage},
 		{"POST /v1/storage/cleanup", s.storageCleanup},
 		{"GET /v1/connectors/greenhouse/link", s.greenhouseLink},
+		{"GET /v1/connectors/link", s.greenhouseLink},
+		{"GET /v1/saved-searches", s.savedSearchList},
+		{"POST /v1/saved-searches", s.savedSearchCreate},
+		{"POST /v1/saved-searches/{id}/mark-seen", s.savedSearchMarkSeen},
+		{"DELETE /v1/saved-searches/{id}", s.savedSearchDelete},
 		{"GET /v1/resume", s.resumeGet},
 		{"PUT /v1/resume/profile", s.profilePut},
 		{"GET /v1/resume/experiences", s.experienceList},
@@ -288,6 +297,8 @@ func New(cfg Config) *Server {
 		db:      cfg.DB,
 		store:   store.New(cfg.DB),
 		gh:      cfg.Greenhouse,
+		lever:   cfg.Lever,
+		ashby:   cfg.Ashby,
 		search:  cfg.Searcher,
 		logos:   cfg.Logos,
 		dataDir: cfg.DataDir,

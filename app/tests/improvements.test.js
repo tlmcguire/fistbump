@@ -83,11 +83,14 @@ test('Open a link page is removed and combined with the search bar', () => {
   assert.ok(!html.includes('id="tab-link"'), 'tab-link button should be removed from index.html');
   assert.ok(!html.includes('id="job-form"'), 'job-form should be removed from index.html');
   assert.ok(!html.includes('id="job-url"'), 'job-url should be removed from index.html');
-  assert.ok(html.includes('paste a Greenhouse job link'), 'search bar placeholder should mention pasting a job link');
+  assert.ok(html.includes('paste a Greenhouse, Lever, or Ashby job link'), 'search bar placeholder should mention pasting a job link');
 
   const jp = read('views/job-parser/job-parser.js');
   assert.ok(!jp.includes('tab-link'), 'job-parser.js should not reference tab-link');
   assert.ok(jp.includes('looksLikeJobLink'), 'job-parser.js should detect pasted job links in search');
+  assert.ok(jp.includes('lever\\.co') && jp.includes('ashbyhq\\.com'), 'job-parser.js should recognize Lever and Ashby links');
+  assert.ok(html.includes('id="pin-search"'), 'index.html should include Pin search button');
+  assert.ok(html.includes('id="watchlist-input"'), 'index.html should include Company Watchlist input');
 });
 
 test('Resume import allows PDF, DOCX, TXT, and MD in frontend and Tauri routes', () => {

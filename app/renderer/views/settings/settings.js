@@ -87,6 +87,86 @@ window.Settings = {
       line.replaceChildren(mascot, message);
     };
 
+    // ---------- Company watchlist ----------
+
+    const parseBoardEntry = raw => {
+      const s = String(raw || "").trim();
+      if (!s) return null;
+      const gh = s.match(/(?:job-)?boards\.greenhouse\.io\/([a-z0-9_-]+)/i);
+      if (gh) return `greenhouse:${gh[1].toLowerCase()}`;
+      const lv = s.match(/jobs\.(?:eu\.)?lever\.co\/([a-z0-9_.-]+)/i);
+      if (lv) return `lever:${lv[1].toLowerCase()}`;
+      const ash = s.match(/jobs\.ashbyhq\.com\/([a-z0-9_.-]+)/i);
+      if (ash) return `ashby:${ash[1].toLowerCase()}`;
+      const prefixed = s.match(/^(greenhouse|lever|ashby):([a-z0-9_.-]{1,64})$/i);
+      if (prefixed) return `${prefixed[1].toLowerCase()}:${prefixed[2].toLowerCase()}`;
+      if (/^[a-z0-9_-]{1,64}$/i.test(s)) return `greenhouse:${s.toLowerCase()}`;
+      return null;
+    };
+
+    let customBoards = [];
+    const renderWatchlist = () => {
+      const list = $("watchlist-list");
+      if (!list) return;
+      list.replaceChildren(...customBoards.map(entry => {
+        const li = document.createElement("li");
+        li.className = "chip";
+        li.append(entry + " ");
+        const rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "filter-chip-x";
+        rm.textContent = "×";
+        rm.setAttribute("aria-label", `Remove ${entry}`);
+        rm.addEventListener("click", async () => {
+          const next = customBoards.filter(x => x !== entry);
+          try {
+            const res = await api?.settings?.put?.({"connectors.custom_boards": next});
+            if (res?.error) throw new Error(res.error.message);
+            customBoards = next;
+            renderWatchlist();
+            setStatus("watchlist-status", `Removed ${entry}.`);
+          } catch (err) {
+            setStatus("watchlist-status", err.message);
+          }
+        });
+        li.append(rm);
+        return li;
+      }));
+    };
+    const showWatchlist = async () => {
+      if (!api?.settings?.get) return;
+      try {
+        const vals = await api.settings.get();
+        customBoards = Array.isArray(vals?.["connectors.custom_boards"]) ? vals["connectors.custom_boards"] : [];
+        renderWatchlist();
+      } catch {
+        // settings unavailable
+      }
+    };
+    $("watchlist-add")?.addEventListener("click", async () => {
+      const input = $("watchlist-input");
+      const parsed = parseBoardEntry(input?.value);
+      if (!parsed) {
+        setStatus("watchlist-status", "Enter a valid Greenhouse, Lever, or Ashby board token or URL.");
+        return;
+      }
+      if (customBoards.includes(parsed)) {
+        setStatus("watchlist-status", `${parsed} is already on your watchlist.`);
+        return;
+      }
+      const next = [...customBoards, parsed];
+      try {
+        const res = await api?.settings?.put?.({"connectors.custom_boards": next});
+        if (res?.error) throw new Error(res.error.message);
+        customBoards = next;
+        if (input) input.value = "";
+        renderWatchlist();
+        setStatus("watchlist-status", `Added ${parsed} to your watchlist.`);
+      } catch (err) {
+        setStatus("watchlist-status", err.message);
+      }
+    });
+
     // ---------- History ----------
 
     const showHistory = () => {
@@ -568,6 +648,7 @@ window.Settings = {
 
     //Shown every time the view opens, so sizes and counts are current.
     window.Settings.refresh = () => {
+      showWatchlist();
       showHistory();
       showStorage();
       showAi();
