@@ -526,11 +526,56 @@
         });
 
         const customPrompt = el("input", {type: "text", placeholder: "Add a custom question, e.g. Why do you want to work here?"});
+        const buildFallbackInterviewPrep = async () => {
+          const [jobRes, analysisRes, masterRes] = await Promise.all([
+            attempt(() => api.jobs.get(jobId)),
+            attempt(() => api.jobs.analyze(jobId)),
+            attempt(() => api.resume.get()),
+          ]);
+          const job = jobRes?.value || activeJob || {};
+          const a = analysisRes?.value;
+          const master = masterRes?.value || {};
+          const company = job.company_name || "this company";
+          const role = job.position_title || "this role";
+          const matched = (a?.required?.tech?.matched || []).map(m => m.skill);
+          const missing = a?.required?.tech?.missing || [];
+          const exps = (master.experiences || []).slice(0, 2);
+          const pitch = master.profile?.summary?.trim() ||
+            (exps[0] ? `Most recently as ${exps[0].job_title} at ${exps[0].company_name}${exps[0].impact ? `, ${exps[0].impact}` : "."}` : `Applying for ${role} at ${company}.`);
+          return [
+            `# Interview Prep: ${role} at ${company}`,
+            `\n## 60-Second Pitch\n${pitch}`,
+            matched.length ? `\n## Core Strengths to Highlight\n- Direct overlap with required skills: ${matched.slice(0, 6).join(", ")}.` : "",
+            exps.length ? exps.map(e => `- ${e.job_title} at ${e.company_name}${e.impact ? ` — ${e.impact}` : ""}`).join("\n") : "",
+            missing.length ? `\n## Gaps to Address Honestly\n- Skills not yet on your resume: ${missing.slice(0, 4).join(", ")}.\n- Framing: Be upfront about ramping up, connect adjacent fundamentals, and share how you're practicing.` : "",
+            `\n## Practice Questions (STAR)\n1. Why ${company} and why this ${role} role right now?\n2. Walk through a tough problem you solved${matched.length ? ` using ${matched.slice(0, 2).join(" and ")}` : ""} and how you measured the outcome.\n3. ${missing.length ? `How do you plan to ramp up on ${missing[0]} in your first 30–60 days?` : "Tell me about a tough trade-off you had to make under tight constraints."}\n4. Describe a time you collaborated across teams or resolved a technical disagreement.`,
+            `\n## Questions to Ask the Interviewer\n- What would success look like in the first 90 days for this ${role} role?\n- What are the biggest technical or product challenges the team at ${company} is tackling this quarter?\n- How does the team collaborate on code reviews, design decisions, and feedback?`,
+          ].filter(Boolean).join("\n");
+        };
+
         const gen = async (kind, prompt, {blank = false} = {}) => {
           const payload = blank
             ? {kind, prompt, content: "Write your answer here…", generate: false}
             : {kind, prompt, generate: true};
-          const created = await attempt(() => api.drafts.create(jobId, payload));
+          let created = null;
+          try {
+            created = {value: await api.drafts.create(jobId, payload)};
+            say("");
+          } catch (err) {
+            // If an older fistbump-core binary is still running before `npm run build:go`,
+            // fall back cleanly to saving interview prep under kind: "qa" with generated content.
+            if (kind === "interview_prep" && /kind must be cover_letter or qa/i.test(err?.message || "")) {
+              const content = await buildFallbackInterviewPrep();
+              created = await attempt(() => api.drafts.create(jobId, {kind: "qa", prompt, content, generate: false}));
+              if (created?.value) {
+                selectedDraftByGroup.set(`qa::${prompt.trim().toLowerCase()}`, created.value.id);
+                drawDrafts();
+              }
+              return;
+            }
+            say(err?.message || "Could not create draft", true);
+            return;
+          }
           if (created?.value) {
             selectedDraftByGroup.set(`${kind}::${prompt.trim().toLowerCase()}`, created.value.id);
             drawDrafts();
