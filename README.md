@@ -2,7 +2,7 @@
 
 ![Fistbump, with Pico giving a fistbump](docs/images/github-banner.png)
 
-A local-first job application assistant. Stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
+A local-first job application assistant. Stores a master resume (`.pdf`, `.docx`, `.odt`, `.md`, `.txt` import), searches Greenhouse, Lever, and Ashby job boards, shows skill gaps and pay/cost-of-living analysis, generates reviewable resume revisions, exports PDF/DOCX, tracks applications, and includes 23 customizable style and seasonal themes. Data stays on the user's machine unless a remote AI provider is configured.
 
 Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
@@ -13,9 +13,18 @@ Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 | ![Home: what needs you today](docs/images/home.png) | ![Master resume](docs/images/resume.png) |
 | **Home.** Follow-ups that are due, suggestions to decide, and jobs to tailor. | **Master resume.** Your one source of truth, with a live PDF preview. |
 | ![Saved jobs with the full posting](docs/images/jobs.png) | ![Tailoring a resume: suggestions with the skill gap beside them](docs/images/tailor.png) |
-| **Saved jobs.** Search a board, open a link or paste a posting. | **Tailor.** Every change is a suggestion you accept, reject or edit; the skill gap sits beside it. |
+| **Saved jobs.** Search Greenhouse, Lever, and Ashby boards, open a link, or paste a posting. | **Tailor.** Every change is a suggestion you accept, reject, or edit; the skill gap sits beside it. |
 | ![Tracker](docs/images/tracker.png) | ![Settings, with the AI engine and storage](docs/images/settings.png) |
-| **Tracker.** Each application, its stage and its next step. | **Settings.** Rules only, a local model or a remote provider, and what is stored where. |
+| **Tracker.** Each application, its stage, bulk actions, offer comparison, and next step. | **Settings.** 23 themes, accessibility controls, AI engine, company watchlist, backup/restore, and storage. |
+
+### Themes
+
+Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto — Current Month**). See all 22 new theme screenshots in the [v0.5.0 release notes](docs/release-notes.md).
+
+| | |
+|---|---|
+| ![Bubblegum theme](docs/images/themes/bubblegum.png) | ![Cyber theme](docs/images/themes/cyber.png) |
+| ![Retro theme](docs/images/themes/retro.png) | ![December — Holiday Evergreen](docs/images/themes/december.png) |
 
 ## Install
 
@@ -33,7 +42,8 @@ The builds are unsigned, so the first launch asks you to open the app yourself. 
 
 | Doc | Contents |
 |-----|----------|
-| [docs/user-guide.md](docs/user-guide.md) | How to install, set up the resume, tailor it to a job and track applications |
+| [docs/user-guide.md](docs/user-guide.md) | How to install, set up the resume, tailor it to a job, customize themes, and track applications |
+| [docs/release-notes.md](docs/release-notes.md) | Release highlights and full theme gallery for the latest version |
 | [docs/release-checklist.md](docs/release-checklist.md) | The manual check to run on every platform before publishing a release |
 | [docs/architecture.md](docs/architecture.md) | System design, app lifecycle, Greenhouse search strategy, API key handling, file structure, Q&A |
 | [docs/api.md](docs/api.md) | Backend routes, request and response shapes, error format, DB interactions |
@@ -50,7 +60,7 @@ npm run build:go     # build the Go backend into bin/<platform>-<arch>/
 npm run dev          # start the Tauri app
 ```
 
-The pictures above come from `node scripts/screenshots.js`, which fills a throwaway data folder with the sample resume and a few jobs and photographs each view into `docs/images/`.
+The pictures above come from `node scripts/screenshots.js` (main views into `docs/images/`) and `node scripts/theme-screenshots.js` (all 22 new themes into `docs/images/themes/`).
 
 `npm run build:go` builds the backend for this computer. To build for another platform or architecture, name it: `node scripts/build-go.js --platform darwin --arch x64`.
 

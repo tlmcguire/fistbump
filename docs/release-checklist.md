@@ -6,9 +6,9 @@ Fill in the numbers on the size line and put the checklist in the release notes.
 
 ## Before you start
 
-- [ ] The version in `package.json` is bumped to `0.1.0`.
-- [ ] The backend reports the same version. The build passes it with `-ldflags "-X main.version=<version>"`, so `GET /v1/health` answers `"version": "0.1.0"` and not `"dev"`. The default in `backend/cmd/fistbump-core/main.go` stays `"dev"`; only the build sets it.
-- [ ] The tag `v0.1.0` is pushed.
+- [ ] The version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` is bumped to the release version (for example `0.5.0`).
+- [ ] The backend reports the same version. The build passes it with `-ldflags "-X main.version=<version>"`, so `GET /v1/health` answers `"version": "0.5.0"` and not `"dev"`. The default in `backend/cmd/fistbump-core/main.go` stays `"dev"`; only the build sets it.
+- [ ] The tag `v0.5.0` is pushed.
 - [ ] CI has finished and the draft release exists on the [releases page](https://github.com/tlmcguire/fistbump/releases), with a Windows `.exe`, a macOS `.dmg` for Apple silicon, a macOS `.dmg` for Intel and a Linux `.AppImage`.
 
 ## On each platform

@@ -6,12 +6,13 @@ Everything stays on your computer. Nothing is uploaded unless you turn on a remo
 
 ## What Fistbump does
 
-- **One master resume.** Fill in the form, or import a PDF you already have.
-- **Find a job.** Search the job boards Fistbump covers, or paste a posting from any site.
-- **See the skill gap.** For every posting, a percentage of the required skills your resume covers, and the ones you are missing.
-- **Tailor the resume.** Fistbump writes suggested changes for that job. You accept, reject or edit each one before anything changes.
-- **Export a PDF.** Save the tailored resume as a PDF file and use it anywhere.
-- **Track the application.** Keep every application in one list, from Saved through Applied, Interviewing and Offered to Rejected.
+- **One master resume.** Fill in the form, or import a `.pdf`, `.docx`, `.odt`, `.md`, or `.txt` resume you already have.
+- **Find a job.** Search Greenhouse, Lever, and Ashby boards (plus custom watchlist boards), paste a job link into the search bar, or paste a posting from any site.
+- **See the skill gap.** For every posting, a percentage of the required skills your resume covers, the ones you are missing, and pay/cost-of-living analysis.
+- **Tailor the resume.** Fistbump writes suggested changes for that job. You accept, reject, or edit each one before anything changes.
+- **Export PDF or DOCX.** Save the tailored resume in 5 PDF styles or as a `.docx` file.
+- **Track the application.** Keep every application in one list, compare offers side by side, export CSV or `.ics` reminders, and bulk-manage entries.
+- **Make it yours.** Pick from 23 style and seasonal themes (including automatic monthly themes) with full accessibility support.
 
 ## Install
 
@@ -54,14 +55,13 @@ Fistbump opens on the Home page. Start with your resume.
 2. Fill in your details: name, email, phone, where you live, the kind of work you are looking for.
 3. Add each job you have had, with what you did and what came of it.
 4. Add your education.
-5. Click **Save as version** if you want a copy to come back to. You can also start from a resume you already have: click **Import file** and choose a PDF, or click **Paste text** and paste the text of a resume.
+5. Click **Save as version** if you want a copy to come back to. You can also start from a resume you already have: click **Import file** and choose a `.pdf`, `.docx`, `.odt`, `.md`, or `.txt` file, or click **Paste text** and paste the text of a resume.
 
 Your master resume is the starting point for every tailored version.
 
 ### 2. Find a job, or paste one
 
-- **Find jobs** searches the job boards Fistbump covers. Type a job title, add a location, press **Search**. The **Filters** button opens company, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume: the fit filters are greyed out, the postings are not rated or ranked by fit, and no fit badge is shown.
-- **Open a link** opens a Greenhouse posting from its URL.
+- **Find jobs** searches Greenhouse, Lever, and Ashby job boards (plus any company boards on your watchlist in **Settings**). Type a job title, add a location, and press **Search**, or paste a Greenhouse, Lever, or Ashby job URL straight into the search bar to open and analyze it. The **Filters** button opens company, ATS source, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume.
 - **Paste a job** takes the text of a posting from any site.
 
 ### 3. Read the skill gap
@@ -148,8 +148,12 @@ Copying the folder back into the same place restores everything: your resume, yo
    - Linux: delete the `.AppImage` file.
 2. Delete the data folder listed above, if you want the computer to keep nothing of Fistbump.
 
+## Themes & accessibility
+
+In **Settings**, under **Appearance & accessibility**, you can choose from 11 style themes, 12 monthly seasonal themes with custom offline SVG artwork, or **Auto — Current Month** so the app automatically matches the current month. All accessibility options (**Text size**, **Reduce motion**, **Increase contrast**, and **Underline links**) apply across every theme.
+
 ## Known limits
 
-- **Job search covers Greenhouse only.** Fistbump searches the boards of the companies that use Greenhouse. Most large employers use their own applicant tracking system, so their postings are not in the search results. You can still use those postings: open the site and use **Paste a job** or **Open a link**.
+- **Built-in job search covers Greenhouse, Lever, and Ashby.** You can also add custom Greenhouse, Lever, or Ashby boards in **Settings → Company watchlist**. For employers using a different applicant tracking system, copy the posting text and use **Paste a job**.
 - **Skill matching is strongest for technical roles.** The matching looks for skills and keywords in the posting's requirements. For roles that are described mostly in prose, the percentage and the missing list are less precise.
 - **The builds are unsigned.** macOS and Windows both warn you the first time you open the app. Updates install themselves: when Fistbump opens it looks for a newer version and, if there is one, asks whether to **Update and restart**. Fistbump then downloads the installer for your computer, closes, puts the new version in place of the old one and opens again; your data is kept. **Not now** asks again next time, and **Don't remind me about this version** skips that version until a newer one comes out. **Settings**, then **Updates**, has the same **Update and restart** button and a switch to stop the question at startup. On a Mac the app must be in Applications (not run from the disk image) to replace itself; otherwise **Open installer** opens the downloaded disk image.

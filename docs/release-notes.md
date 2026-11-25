@@ -1,34 +1,62 @@
-![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
+![Fistbump v0.5.0 — The Themes Update](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/release-v0.5.0-header.png)
 
-# Fistbump v0.4.0
+# Fistbump v0.5.0 — The Themes Update
 
 Fistbump is a local-first job application assistant. Your data stays on your computer unless you choose a remote AI provider.
 
 ## What's new
 
-- **Five PDF styles.** Classic, Modern, Minimal, Compact and Executive, with live previews in Master resume and Tailor.
-- **Import DOCX and Markdown.** Resumes can come in as `.docx`, `.md`, `.pdf` or `.txt`. Hidden text in DOCX files is stripped and reported.
-- **Better resume parsing.** Improved section headings, bullets, degrees, multi-line titles and date ranges.
-- **Undated entries.** Mark projects, volunteer work or undated experience as "Date range not applicable".
-- **Sharper tailoring suggestions.** Suggestions cite specific job requirements and skip no-op rewrites.
-- **Sourced pay and cost data.** Every estimate cites its source, and the dataset refreshes in the app every 30 days.
-- **Paste a link in Search.** Paste a Greenhouse job URL into the search bar to open and analyze it.
+- **23 full-overhaul themes & seasonal art.** Switch between 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, and **8-Bit Arcade**) and 12 distinct monthly seasonal themes with custom offline SVG artwork (snowflakes, hearts, shamrocks, spring rain, blossoms, beach waves, fireworks, sunflowers, autumn leaves, Halloween bats, maple leaves, and holiday lights), plus **Auto — Current Month** mode.
+- **Universal accessibility across all themes.** High contrast, underlined links, reduced motion, and text zoom work consistently across every theme, with decorative artwork hidden automatically in high-contrast mode.
+- **Multi-ATS job search (Greenhouse, Lever & Ashby).** Expanded built-in catalogs (~145 Lever boards, ~190 Ashby boards, 46 industries), concurrent board fetching with 6-hour caching, ATS source badges and filters, custom company watchlists, pinned searches, and direct Greenhouse/Lever/Ashby link opening right from the search bar.
+- **LibreOffice `.odt` resume import & DOCX export.** Import resumes from `.pdf`, `.docx`, `.odt`, `.md`, or `.txt`, export polished PDFs (5 styles) or `.docx` files, run a 1-page fit audit, customize section order and custom sections, and draft cover letters & Q&A responses.
+- **Bulk actions, offer comparison & live Home sync.** Multi-select bulk trash/delete in Saved jobs and Tracker, a refined side-by-side Offer Comparison modal, printable interview prep sheets, CSV & `.ics` calendar exports, local JSON backup/restore, and instant Home page updates whenever you delete history, saved jobs, or tracked applications.
 
-![Tailoring a resume](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/tailor.png)
+## Style themes
+
+| | |
+|---|---|
+| ![Bubblegum](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/bubblegum.png) | ![Cyber](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/cyber.png) |
+| **Bubblegum** | **Cyber** |
+| ![Techno](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/techno.png) | ![Retro](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/retro.png) |
+| **Techno** | **Retro** |
+| ![Vaporwave](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/vaporwave.png) | ![Midnight Violet](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/dracula.png) |
+| **Vaporwave** | **Midnight Violet** |
+| ![Matcha Latte](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/matcha.png) | ![Art Deco Gold](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/midnight-gold.png) |
+| **Matcha Latte** | **Art Deco Gold** |
+| ![Ocean Abyss](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/ocean-abyss.png) | ![8-Bit Arcade](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/arcade.png) |
+| **Ocean Abyss** | **8-Bit Arcade** |
+
+## Seasonal themes
+
+| | |
+|---|---|
+| ![January — Winter Frost](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/january.png) | ![February — Rose Quartz](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/february.png) |
+| **January — Winter Frost** | **February — Rose Quartz** |
+| ![March — Shamrock Clover](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/march.png) | ![April — Spring Rain](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/april.png) |
+| **March — Shamrock Clover** | **April — Spring Rain** |
+| ![May — Blossom Meadow](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/may.png) | ![June — Beach Breeze](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/june.png) |
+| **May — Blossom Meadow** | **June — Beach Breeze** |
+| ![July — Summer Fireworks](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/july.png) | ![August — Golden Sunflowers](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/august.png) |
+| **July — Summer Fireworks** | **August — Golden Sunflowers** |
+| ![September — Crisp Orchard](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/september.png) | ![October — Spooky Harvest](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/october.png) |
+| **September — Crisp Orchard** | **October — Spooky Harvest** |
+| ![November — Maple Hearth](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/november.png) | ![December — Holiday Evergreen](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/december.png) |
+| **November — Maple Hearth** | **December — Holiday Evergreen** |
 
 ## Installers
 
 | Platform | File |
 |----------|------|
-| Windows 10 and 11 | `FistBump-0.4.0-Windows-x64.exe` |
-| macOS 12 and later, Apple silicon | `FistBump-0.4.0-macOS-arm64.dmg` |
-| macOS 12 and later, Intel | `FistBump-0.4.0-macOS-x64.dmg` |
-| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump-0.4.0-Linux-x86_64.AppImage` |
+| Windows 10 and 11 | `FistBump-0.5.0-Windows-x64.exe` |
+| macOS 12 and later, Apple silicon | `FistBump-0.5.0-macOS-arm64.dmg` |
+| macOS 12 and later, Intel | `FistBump-0.5.0-macOS-x64.dmg` |
+| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump-0.5.0-Linux-x86_64.AppImage` |
 
 The builds are unsigned. On macOS, right-click the app and choose Open. On Windows, choose "More info", then "Run anyway". The [user guide](https://github.com/tlmcguire/fistbump/blob/main/docs/user-guide.md) has the details.
 
 ## Known limits
 
-- Greenhouse boards only.
+- Built-in job search covers Greenhouse, Lever, and Ashby boards (plus custom watchlist boards in Settings); postings on other ATS platforms can still be added via **Paste a job**.
 - Skill matching is strongest for technical roles.
 - The local model needs about 4 GB of free memory. Its file is about 1 GB on disk, outside the install size.
