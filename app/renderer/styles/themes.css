@@ -1,7 +1,7 @@
 /*
  * Color, Style & Seasonal Art Themes for Fistbump:
- * - 11 style overhauls: Classic, Bubblegum (Hot Pink Barbie), Techno, Cyber (Green Matrix),
- *   Retro (Windows XP Luna), Vaporwave, Dracula, Matcha, Art Deco Gold, Ocean Abyss, 8-Bit Arcade
+ * - 11 style overhauls: Classic, Bubblegum, Techno, Cyber, Retro, Vaporwave,
+ *   Midnight Violet, Matcha Latte, Art Deco Gold, Ocean Abyss, 8-Bit Arcade
  * - 12 seasonal themes (January through December) with distinct non-repetitive palettes + custom SVG art
  *
  * All SVG artwork is embedded as self-contained data URIs (works offline under strict CSP) with
@@ -248,7 +248,7 @@
   --lit: inset 0 1px 0 rgba(0, 229, 255, 0.18);
   --lift-1: 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 229, 255, 0.10);
   --lift-2: 0 0 16px rgba(0, 229, 255, 0.14), 0 18px 36px -10px rgba(0, 0, 0, 0.65);
-  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M0 60h42l12-12h66M60 0v32l14 14v74' fill='none' stroke='%2300e5ff' stroke-opacity='0.07' stroke-width='1.2'/%3E%3Ccircle cx='42' cy='60' r='2.5' fill='%2300e5ff' fill-opacity='0.14'/%3E%3Ccircle cx='74' cy='46' r='2.5' fill='%238b5cf6' fill-opacity='0.18'/%3E%3C/svg%3E");
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M0 60h36l12-12h24l12 12h36M60 0v32l12 12v32l-12 12v32' fill='none' stroke='%2300e5ff' stroke-opacity='0.07' stroke-width='1.2'/%3E%3Ccircle cx='36' cy='60' r='2.5' fill='%2300e5ff' fill-opacity='0.14'/%3E%3Ccircle cx='72' cy='44' r='2.5' fill='%238b5cf6' fill-opacity='0.18'/%3E%3C/svg%3E");
   --theme-hero-art: var(--theme-bg-art);
   --theme-hero-opacity: 0.7;
 }
@@ -288,10 +288,10 @@
   --lit: inset 0 1px 0 rgba(255, 255, 255, 0.32);
   --lift-1: 0 2px 4px rgba(6, 20, 62, 0.45);
   --lift-2: 0 4px 14px rgba(6, 20, 62, 0.55);
-  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='220' viewBox='0 0 600 220'%3E%3Cpath d='M0 190 Q150 115 320 165 T600 140 L600 220 L0 220 Z' fill='%234cc24c' fill-opacity='0.14'/%3E%3Cpath d='M0 205 Q200 145 410 185 T600 170 L600 220 L0 220 Z' fill='%2386efac' fill-opacity='0.10'/%3E%3C/svg%3E");
-  --theme-bg-repeat: repeat-x;
-  --theme-bg-size: 600px 220px;
-  --theme-bg-pos: bottom left;
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 220' preserveAspectRatio='none'%3E%3Cpath d='M0 175 Q300 95 620 155 T1200 145 L1200 220 L0 220 Z' fill='%234cc24c' fill-opacity='0.15'/%3E%3Cpath d='M0 195 Q380 135 780 180 T1200 168 L1200 220 L0 220 Z' fill='%2386efac' fill-opacity='0.11'/%3E%3C/svg%3E");
+  --theme-bg-repeat: no-repeat;
+  --theme-bg-size: 100% 220px;
+  --theme-bg-pos: bottom center;
 }
 :root[data-theme="retro"] .toolbar {
   background: linear-gradient(180deg, #3d7ef2 0%, #245edb 58%, #1c4dc2 100%);
@@ -338,9 +338,14 @@
   --radius: 8px;
   --radius-card: 14px;
   --radius-pill: 999px;
-  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Ccircle cx='148' cy='52' r='26' fill='%23ff4fd8' fill-opacity='0.12'/%3E%3Cpath d='M122 56h52M124 64h48M128 72h40' stroke='%231c0c36' stroke-width='3'/%3E%3Cpath d='M0 140h200M0 165h200M0 190h200M40 120l-20 80M100 120v80M160 120l20 80' stroke='%232ef2e8' stroke-opacity='0.10' stroke-width='1.2'/%3E%3C/svg%3E");
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Ccircle cx='960' cy='86' r='54' fill='%23ff4fd8' fill-opacity='0.14'/%3E%3Cpath d='M906 94h108M910 108h100M918 122h84' stroke='%231c0c36' stroke-width='5'/%3E%3Cpath d='M0 145h1200M0 175h1200M0 210h1200M150 130l-90 110M350 130l-50 110M600 130v110M850 130l50 110M1050 130l90 110' stroke='%232ef2e8' stroke-opacity='0.11' stroke-width='1.5'/%3E%3C/svg%3E");
+  --theme-bg-repeat: no-repeat;
+  --theme-bg-size: 100% 240px;
+  --theme-bg-pos: bottom center;
   --theme-hero-art: var(--theme-bg-art);
-  --theme-hero-opacity: 0.6;
+  --theme-hero-repeat: no-repeat;
+  --theme-hero-size: 100% 100%;
+  --theme-hero-opacity: 0.55;
 }
 
 /* 6. Dracula: Classic Developer Dark — slate charcoal, soft purple, pink & mint */
@@ -628,7 +633,7 @@
   --radius: 10px;
   --radius-card: 16px;
   --radius-pill: 999px;
-  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='200' viewBox='0 0 220 200'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Ccircle cx='50' cy='46' r='12' fill='%23fde047' fill-opacity='0.18'/%3E%3Cpath d='M50 26v5M50 61v5M30 46h5M65 46h5M36 32l3.5 3.5M60.5 56.5L64 60M64 32l-3.5 3.5M39.5 56.5L36 60' stroke='%23fde047' stroke-opacity='0.18' stroke-width='2'/%3E%3Cpath d='M132 126a22 22 0 0 1 44 0z' fill='%23fb7185' fill-opacity='0.18'/%3E%3Cpath d='M154 126l-6 26' stroke='%23fde68a' stroke-opacity='0.20' stroke-width='2.2'/%3E%3Cpath d='M14 166q22-10 44 0t44 0 44 0 44 0' stroke='%2367e8f9' stroke-opacity='0.14' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  --theme-bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='200' viewBox='0 0 220 200'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Ccircle cx='50' cy='46' r='12' fill='%23fde047' fill-opacity='0.18'/%3E%3Cpath d='M50 26v5M50 61v5M30 46h5M65 46h5M36 32l3.5 3.5M60.5 56.5L64 60M64 32l-3.5 3.5M39.5 56.5L36 60' stroke='%23fde047' stroke-opacity='0.18' stroke-width='2'/%3E%3Cpath d='M132 126a22 22 0 0 1 44 0z' fill='%23fb7185' fill-opacity='0.18'/%3E%3Cpath d='M154 126l-6 26' stroke='%23fde68a' stroke-opacity='0.20' stroke-width='2.2'/%3E%3Cpath d='M0 166q27.5-10 55 0t55 0 55 0 55 0' stroke='%2367e8f9' stroke-opacity='0.14' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
   --theme-hero-art: var(--theme-bg-art);
   --theme-hero-opacity: 0.75;
 }
@@ -777,4 +782,41 @@
   background-repeat: repeat-x;
   background-size: 160px 16px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='16' viewBox='0 0 160 16'%3E%3Cpath d='M0 2 Q40 9 80 2 T160 2' fill='none' stroke='%2304120c' stroke-width='1.5'/%3E%3Ccircle cx='20' cy='7' r='3.5' fill='%23ef4444'/%3E%3Ccircle cx='60' cy='7' r='3.5' fill='%23facc15'/%3E%3Ccircle cx='100' cy='7' r='3.5' fill='%2338bdf8'/%3E%3Ccircle cx='140' cy='7' r='3.5' fill='%234ade80'/%3E%3C/svg%3E");
+}
+
+/* ==================== Accessibility Across All Themes ==================== */
+
+/* High contrast always wins over theme tokens, removes decorative background art, and sharpens borders/text. */
+:root[data-theme].high-contrast {
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.92);
+  --faint: rgba(255, 255, 255, 0.80);
+  --dim: rgba(255, 255, 255, 0.86);
+  --line: rgba(255, 255, 255, 0.34);
+  --line-strong: rgba(255, 255, 255, 0.56);
+  --panel-line: rgba(255, 255, 255, 0.48);
+  --control: rgba(255, 255, 255, 0.22);
+  --control-hover: rgba(255, 255, 255, 0.34);
+  --theme-bg-art: none;
+  --theme-hero-art: none;
+}
+:root[data-theme].high-contrast .toolbar::after {
+  display: none;
+}
+:root[data-theme].high-contrast button,
+:root[data-theme].high-contrast .button {
+  border-color: var(--line-strong);
+}
+:root[data-theme].high-contrast :focus-visible {
+  outline: 3px solid var(--accent-hover) !important;
+  outline-offset: 1px;
+}
+
+/* Underline links clearly across every theme palette. */
+:root[data-theme].underline-links a:not(.button),
+:root[data-theme].underline-links .link-button,
+:root[data-theme].underline-links .result-link {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 2px;
 }
