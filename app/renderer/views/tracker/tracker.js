@@ -507,7 +507,43 @@
             due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
           el("td", {}, el("span", {text: resumeLabel(a)}), pdf,
             el("button", {type: "button", class: "link-button", title: "Open printable interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep sheet")),
-          el("td", {}, notes));
+          el("td", {}, notes,
+            el("div", {class: "tracker-row-actions"},
+              el("button", {
+                type: "button",
+                class: "link-button",
+                title: a.archived_at ? "Restore this application to Active" : "Archive this application",
+                onclick: async () => {
+                  try {
+                    await api.applications.bulkArchive([a.id], !a.archived_at);
+                    say(a.archived_at ? "Restored application." : "Archived application.");
+                    notifyAppsChanged();
+                    load();
+                  } catch (err) {
+                    say(err.message, true);
+                  }
+                },
+              }, a.archived_at ? "Unarchive" : "Archive"),
+              el("button", {
+                type: "button",
+                class: "link-button danger-link",
+                title: "Delete this tracked application",
+                onclick: async () => {
+                  const ok = await window.UI.ask(
+                    `Delete "${a.company_name || "Unknown"} — ${a.position_title || "Role"}" from your Tracker?`,
+                    {confirm: "Delete", danger: true, title: "Delete tracked application"}
+                  );
+                  if (!ok) return;
+                  try {
+                    await api.applications.delete(a.id);
+                    say("Deleted application.");
+                    notifyAppsChanged();
+                    load();
+                  } catch (err) {
+                    say(err.message, true);
+                  }
+                },
+              }, "Delete"))));
       };
 
       const drawBulk = () => {

@@ -807,12 +807,30 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   flex-wrap: wrap;
   gap: 8px;
 }
-.draft-mode-select {
-  height: 30px;
-  padding: 0 26px 0 10px;
+.draft-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
+  overflow: hidden;
+  background: var(--control);
+}
+.draft-mode-btn {
+  height: 28px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
   font-size: 12.5px;
-  max-width: 190px;
+  font-weight: 600;
+}
+.draft-mode-btn[aria-pressed="true"] {
+  background: var(--select);
+  color: var(--text);
+}
+.draft-mode-btn + .draft-mode-btn {
+  border-left: 1px solid var(--line);
 }
 .draft-export-group {
   display: inline-flex;
@@ -855,11 +873,9 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
 .draft-iterate {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+  gap: 6px;
+  padding: 6px 0 2px;
+  border-top: 1px solid var(--line);
 }
 .draft-iterate-chips {
   display: flex;
@@ -932,4 +948,35 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid transparent;
+  padding: 3px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+}
+.draft-prompt-input:hover {
+  border-color: var(--line);
+}
+.draft-prompt-input:focus {
+  background: var(--field);
+  color: var(--field-text, #111827);
+  border-color: var(--accent);
+}
+.tailor-stall-warn {
+  margin-top: 4px;
+}
+.tracker-row-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.72;
+}
+tr:hover .tracker-row-actions,
+.tracker-row-actions:focus-within {
+  opacity: 1;
+}
+.danger-link {
+  color: var(--danger, #ff786e);
 }

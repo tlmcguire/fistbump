@@ -441,12 +441,29 @@ window.Settings = {
       }
     });
     const runTest = async engine => {
-      aiStatus("Testing...");
+      const started = Date.now();
+      aiStatus(`Testing ${engine} engine… 0 s`);
+      const timer = setInterval(() => {
+        const sec = Math.round((Date.now() - started) / 1000);
+        aiStatus(sec >= 15
+          ? `Testing ${engine} engine… ${sec} s (taking longer than usual — model may be loading or stalled)`
+          : `Testing ${engine} engine… ${sec} s`);
+      }, 1000);
+      let timeoutId = null;
       try {
-        const r = await ai.test(engine);
-        aiStatus(r.ok ? `The ${engine} engine answered in ${(r.latency_ms / 1000).toFixed(1)} seconds.` : `The ${engine} engine did not answer: ${r.problem}`, !r.ok);
+        const r = await Promise.race([
+          ai.test(engine),
+          new Promise((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error(`The ${engine} engine stalled after 45 s without responding.`)), 45000);
+          }),
+        ]);
+        const sec = r.latency_ms ? (r.latency_ms / 1000).toFixed(1) : ((Date.now() - started) / 1000).toFixed(1);
+        aiStatus(r.ok ? `The ${engine} engine answered in ${sec} s.` : `The ${engine} engine did not answer (${sec} s): ${r.problem}`, !r.ok);
       } catch (error) {
         aiStatus(error.message, true);
+      } finally {
+        clearInterval(timer);
+        clearTimeout(timeoutId);
       }
     };
     $("ai-test-local").addEventListener("click", () => runTest("local"));
