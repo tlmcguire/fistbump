@@ -591,9 +591,36 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
   border-radius: 3px;
 }
 
-/* PDF style picker */
-.pdf-controls { display: inline-flex; align-items: center; gap: 8px; }
-.pdf-style-select { height: 28px; min-width: 110px; font-size: 12.5px; }
+/* PDF style picker & 1-page fit badge */
+.preview-head { flex-wrap: wrap; gap: 8px 12px; }
+.pdf-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pdf-style-select { height: 28px; min-width: 108px; font-size: 12.5px; }
+.preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.preview-bar .tabs { margin-bottom: 0; }
+.fit-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fit-pill[data-state="good"] { color: var(--good); border-color: rgba(143, 227, 176, 0.45); background: rgba(143, 227, 176, 0.1); }
+.fit-pill[data-state="warn"] { color: var(--accent-hover); border-color: rgba(206, 166, 21, 0.5); background: rgba(206, 166, 21, 0.12); }
+.fit-pill[hidden] { display: none; }
 
 /* Cost of living & pay source citations */
 .cost-sources {

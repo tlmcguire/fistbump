@@ -395,7 +395,7 @@
     const styleSelect = el("select", {id: "resume-pdf-style", class: "pdf-style-select", "aria-label": "PDF style", title: "Choose PDF layout style"},
       PDF_STYLES.map(([v, label]) => el("option", {value: v, text: label})));
     styleSelect.value = window.Prefs?.get("pdfStyle") || "classic";
-    const fitBadge = el("span", {class: "hint", role: "status"});
+    const fitBadge = el("span", {class: "fit-pill", role: "status", hidden: true});
     const exportButton = el("button", {type: "button"}, "Export PDF");
     const exportDocxButton = el("button", {type: "button"}, "Export DOCX");
     const versionsList = el("ul", {class: "versions"});
@@ -404,10 +404,13 @@
     const refreshAudit = () => {
       if (!window.api?.resume?.audit) return;
       api().resume.audit(styleSelect.value).then(a => {
-        if (disposed || !a || !a.word_count) { fitBadge.textContent = ""; return; }
+        if (disposed || !a || !a.word_count) { fitBadge.textContent = ""; fitBadge.hidden = true; return; }
         const pages = a.page_count === 1 ? "1 page" : `${a.page_count} pages`;
-        fitBadge.textContent = a.warnings?.length ? `${pages} · ${a.warnings.length} tip${a.warnings.length === 1 ? "" : "s"}` : `${pages} · Ready`;
-        fitBadge.title = a.warnings?.length ? a.warnings.join("\n") : `${a.word_count} words, ${a.quantified_count}/${a.bullet_count} quantified bullets`;
+        const hasWarnings = Boolean(a.warnings?.length);
+        fitBadge.textContent = hasWarnings ? `${pages} · ${a.warnings.length} tip${a.warnings.length === 1 ? "" : "s"}` : `${pages} · Ready`;
+        fitBadge.dataset.state = hasWarnings ? "warn" : "good";
+        fitBadge.title = hasWarnings ? a.warnings.join("\n") : `${a.word_count} words, ${a.quantified_count}/${a.bullet_count} quantified bullets`;
+        fitBadge.hidden = false;
       }).catch(() => {});
     };
 
@@ -450,8 +453,10 @@
 
     const side = el("div", {class: "pane resume-side"},
       el("section", {class: "resume-section"},
-        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, fitBadge, styleSelect, exportButton, exportDocxButton)),
-        el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
+        el("div", {class: "section-head preview-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, styleSelect, exportButton, exportDocxButton)),
+        el("div", {class: "preview-bar"},
+          el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
+          fitBadge),
         exportNote,
         previewPanels.text,
         previewPanels.pdf),
