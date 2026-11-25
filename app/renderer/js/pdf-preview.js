@@ -62,6 +62,7 @@ window.PdfPreview = {
     let lastBytes = null;
 
     const renderCanvasPages = async (bytes, mine) => {
+      try {
       const pdfjs = await loadPdfJs();
       if (!pdfjs?.getDocument || mine !== token) return false;
       const loadingTask = pdfjs.getDocument({data: bytes.slice()});
@@ -91,7 +92,6 @@ window.PdfPreview = {
         canvas.width = Math.floor(renderViewport.width);
         canvas.height = Math.floor(renderViewport.height);
         canvas.style.width = `${Math.floor(cssViewport.width)}px`;
-        canvas.style.height = `${Math.floor(cssViewport.height)}px`;
         const ctx = canvas.getContext("2d");
         await page.render({canvasContext: ctx, viewport: renderViewport}).promise;
         frag.appendChild(canvas);
@@ -106,6 +106,9 @@ window.PdfPreview = {
       }
       pdf.destroy?.();
       return true;
+      } catch {
+        return false;
+      }
     };
 
     // Larger: the preview fills the window over a dimmed page. Esc or the button puts it back.

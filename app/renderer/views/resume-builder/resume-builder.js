@@ -45,6 +45,56 @@
  
   //A month input holds "2024-06". Stored dates are "2024-06-01"; the API accepts either.
   const toMonth = date => (/^\d{4}-\d{2}/.exec(date || "") || [""])[0];
+
+  // Safari / macOS WKWebView and WebKitGTK do not support <input type="month"> (they degrade to a bare text box).
+  const supportsMonthInput = (() => {
+    try {
+      const probe = document.createElement("input");
+      probe.type = "month";
+      return probe.type === "month";
+    } catch {
+      return false;
+    }
+  })();
+
+  function makeMonthPicker(id, initial) {
+    const mSelect = el("select", {id, "aria-label": "Month"},
+      el("option", {value: "", text: "Month"}), ...MONTHS.map((name, i) => el("option", {value: String(i + 1).padStart(2, "0"), text: name})));
+    const yInput = el("input", {type: "number", min: "1950", max: "2100", step: "1", placeholder: "YYYY", "aria-label": "Year"});
+    const wrap = el("div", {class: "month-picker"}, mSelect, yInput);
+    const setParts = val => {
+      const match = /^(\d{4})-(\d{2})/.exec(val || "");
+      yInput.value = match ? match[1] : "";
+      mSelect.value = match ? match[2] : "";
+    };
+    setParts(initial);
+    Object.defineProperty(wrap, "value", {
+      get() {
+        const y = yInput.value.trim();
+        const m = mSelect.value;
+        if (!y && !m) return "";
+        if (/^\d{4}$/.test(y) && /^\d{2}$/.test(m)) return `${y}-${m}`;
+        return `${y}-${m}`;
+      },
+      set(val) { setParts(val); },
+    });
+    Object.defineProperty(wrap, "disabled", {
+      get() { return mSelect.disabled; },
+      set(on) { mSelect.disabled = yInput.disabled = Boolean(on); },
+    });
+    wrap.focus = () => mSelect.focus();
+    const origSetAttr = wrap.setAttribute.bind(wrap);
+    const origRemAttr = wrap.removeAttribute.bind(wrap);
+    wrap.setAttribute = (k, v) => {
+      if (k === "aria-invalid" || k === "aria-describedby") { mSelect.setAttribute(k, v); yInput.setAttribute(k, v); }
+      else origSetAttr(k, v);
+    };
+    wrap.removeAttribute = (k) => {
+      if (k === "aria-invalid" || k === "aria-describedby") { mSelect.removeAttribute(k); yInput.removeAttribute(k); }
+      else origRemAttr(k);
+    };
+    return wrap;
+  }
  
   //Lists are typed as comma-separated text: "sql, excel" <-> ["sql", "excel"]
   const listToText = list => (list || []).join(", ");
@@ -89,7 +139,9 @@
         update();
         extra = preview;
       } else if (field.type === "month") {
-        input = el("input", {id, type: "month", value: toMonth(values[field.name])});
+        input = supportsMonthInput
+          ? el("input", {id, type: "month", value: toMonth(values[field.name])})
+          : makeMonthPicker(id, toMonth(values[field.name]));
         if (field.current) {
           const box = el("input", {type: "checkbox", checked: Boolean(values[field.current.when]) && !values[field.name]});
           const sync = () => {
@@ -914,6 +966,7 @@
     return () => {
       disposed = true;
       clearTimeout(statusTimer);
+      pdf.dispose();
       container.replaceChildren();
     };
   }

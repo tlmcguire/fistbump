@@ -1744,3 +1744,11 @@ input.switch:checked::after { transform: translateX(16px); }
   font-weight: 500;
 }
 .tauri-context-menu button:hover:not(:disabled) { background: var(--select); }
+
+/* Month + year composite control used on WebViews without native <input type="month"> (macOS WKWebView, WebKitGTK). */
+.month-picker {
+  display: flex;
+  gap: 6px;
+}
+.month-picker select { flex: 1 1 0; }
+.month-picker input { flex: 0 0 88px; }
