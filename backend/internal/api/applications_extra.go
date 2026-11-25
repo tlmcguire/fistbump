@@ -129,7 +129,11 @@ func escapeICS(s string) string {
 // appStats handles GET /v1/applications/stats: stage funnel counts and recurring missing skills.
 func (s *Server) appStats(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	apps, err := s.store.ListApplications(ctx, store.ApplicationFilter{Archived: "include"})
+	archived := strings.TrimSpace(r.URL.Query().Get("archived"))
+	if archived != "" && archived != "include" && archived != "only" {
+		return validationError("archived", "archived must be empty, include, or only")
+	}
+	apps, err := s.store.ListApplications(ctx, store.ApplicationFilter{Archived: archived})
 	if err != nil {
 		return storeError(err, "Application")
 	}
@@ -140,8 +144,10 @@ func (s *Server) appStats(w http.ResponseWriter, r *http.Request) error {
 		"Offered":      0,
 		"Rejected":     0,
 	}
+	trackedJobs := make(map[int64]bool, len(apps))
 	for _, a := range apps {
 		counts[a.Status]++
+		trackedJobs[a.JobID] = true
 	}
 
 	type skillGap struct {
@@ -149,10 +155,14 @@ func (s *Server) appStats(w http.ResponseWriter, r *http.Request) error {
 		Count int    `json:"count"`
 	}
 	gaps := []skillGap{}
-	if master, err := s.store.GetMaster(ctx); err == nil && master.Profile != nil {
-		if jobs, err := s.store.ListJobs(ctx, store.JobFilter{}); err == nil {
+	if len(trackedJobs) > 0 {
+		if master, err := s.store.GetMaster(ctx); err == nil && master.Profile != nil {
 			freq := map[string]int{}
-			for _, j := range jobs {
+			for jobID := range trackedJobs {
+				j, err := s.store.GetJob(ctx, jobID)
+				if err != nil {
+					continue
+				}
 				res := s.analyze(j, master)
 				for _, m := range res.Required.Tech.Missing {
 					freq[m]++

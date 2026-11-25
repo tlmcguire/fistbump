@@ -377,6 +377,7 @@ window.Settings = {
           }
         }
         showWatchlist();
+        window.dispatchEvent(new CustomEvent("fistbump:storage-cleaned", {detail: {clearListing: false, invalidateMatches: true}}));
         storageStatus("Backup restored (resume profile, custom sections, watchlist, and saved searches).");
       } catch (err) {
         storageStatus(err.message || "Could not restore backup.");

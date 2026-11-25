@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 // Engines holds one provider per engine. Local and Remote are nil when not built in (tests).
@@ -39,6 +40,49 @@ func (e Engines) Order(mode string) []string {
 		}
 	}
 	return out
+}
+
+// Chatter is implemented by AI providers (Local and Remote) that support open-ended chat completions.
+type Chatter interface {
+	Chat(ctx context.Context, msgs []Message, maxTokens int, jsonMode bool) (string, error)
+}
+
+// Chat sends a chat completion to the first ready AI model (Local or Remote) allowed by mode.
+// Unlike Run, it never falls back to the rules provider; callers handle deterministic fallback explicitly.
+func (e Engines) Chat(ctx context.Context, mode string, msgs []Message, maxTokens int, jsonMode bool) (string, string, error) {
+	if mode == "" || mode == EngineRules {
+		mode = "auto"
+	}
+	order := e.Order(mode)
+	var lastErr error
+	tried := 0
+	for _, name := range order {
+		if name == EngineRules {
+			continue
+		}
+		chatter, ok := e.get(name).(Chatter)
+		if !ok {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return "", "", err
+		}
+		tried++
+		reply, err := chatter.Chat(ctx, msgs, maxTokens, jsonMode)
+		if err != nil {
+			lastErr = err
+			slog.Warn("ai chat failed", "engine", name, "error", err)
+			if mode != "auto" {
+				return "", "", err
+			}
+			continue
+		}
+		return strings.TrimSpace(reply), name, nil
+	}
+	if tried == 0 {
+		return "", "", ErrUnavailable
+	}
+	return "", "", fmt.Errorf("all AI engines failed: %w", lastErr)
 }
 
 // Run asks the engines for a mode in order and returns the drafts with the label of the engine

@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/models"
+	"github.com/tlmcguire/fistbump/backend/internal/render"
 )
 
 func (s *Server) draftList(w http.ResponseWriter, r *http.Request) error {
@@ -33,6 +37,7 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		Content     string `json:"content"`
 		BaseContent string `json:"base_content"`
 		Instruction string `json:"instruction"`
+		Mode        string `json:"mode"`
 		Generate    bool   `json:"generate"`
 	}
 	if err := decodeJSONLimit(w, r, &body, maxFetchBody); err != nil {
@@ -42,8 +47,42 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 	if kind == "" {
 		kind = "qa"
 	}
+	mode := strings.ToLower(strings.TrimSpace(body.Mode))
+	if mode == "" {
+		mode = "deterministic"
+	}
+	if mode != "deterministic" && mode != "rules" && mode != "ai" {
+		return validationError("mode", "mode must be deterministic or ai")
+	}
+	if kind == "questions" {
+		job, err := s.store.GetJob(r.Context(), jobID)
+		if err != nil {
+			return storeError(err, "Job")
+		}
+		master, err := s.store.GetMaster(r.Context())
+		if err != nil {
+			return storeError(err, "Resume")
+		}
+		if mode == "ai" {
+			qs, engine, err := s.generateQuestionsAI(r.Context(), job, master)
+			if err != nil {
+				if errors.Is(err, ai.ErrUnavailable) {
+					return apiError{status: http.StatusServiceUnavailable, code: "ai_unavailable",
+						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Deterministic mode."}
+				}
+				return apiError{status: http.StatusBadGateway, code: "ai_failed", message: err.Error()}
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"questions": qs, "engine": engine})
+			return nil
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"questions": s.generateQuestionsDeterministic(job, master),
+			"engine":    ai.EngineRules,
+		})
+		return nil
+	}
 	if kind != "cover_letter" && kind != "qa" && kind != "interview_prep" {
-		return validationError("kind", "kind must be cover_letter, qa, or interview_prep")
+		return validationError("kind", "kind must be cover_letter, qa, interview_prep, or questions")
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
@@ -68,7 +107,24 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return storeError(err, "Resume")
 		}
-		if instruction != "" {
+		if mode == "ai" {
+			var aiErr error
+			if instruction != "" {
+				if baseContent == "" {
+					baseContent = content
+				}
+				content, aiErr = s.iterateDraftTextAI(r.Context(), job, master, kind, prompt, baseContent, instruction)
+			} else {
+				content, aiErr = s.generateDraftTextAI(r.Context(), job, master, kind, prompt)
+			}
+			if aiErr != nil {
+				if errors.Is(aiErr, ai.ErrUnavailable) {
+					return apiError{status: http.StatusServiceUnavailable, code: "ai_unavailable",
+						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Deterministic mode."}
+				}
+				return apiError{status: http.StatusBadGateway, code: "ai_failed", message: aiErr.Error()}
+			}
+		} else if instruction != "" {
 			if baseContent == "" {
 				baseContent = content
 			}
@@ -444,4 +500,163 @@ func insertBeforeSignOff(base, addition string) string {
 		}
 	}
 	return base + "\n\n" + addition
+}
+
+func (s *Server) draftContextBlock(job models.Job, master models.Master) string {
+	analysis := s.analyze(job, master)
+	var matched []string
+	for _, m := range analysis.Required.Tech.Matched {
+		matched = append(matched, m.Skill)
+	}
+	var missing []string
+	missing = append(missing, analysis.Required.Tech.Missing...)
+	resumeText := strings.TrimSpace(render.Master(master))
+	if len(resumeText) > 4000 {
+		resumeText = resumeText[:4000]
+	}
+	jobText := ""
+	if job.RawText != nil {
+		jobText = strings.TrimSpace(*job.RawText)
+	}
+	if len(jobText) > 2500 {
+		jobText = jobText[:2500]
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Company: %s\nRole: %s\n", strings.TrimSpace(job.CompanyName), strings.TrimSpace(job.PositionTitle))
+	if job.WorkMode != nil && strings.TrimSpace(*job.WorkMode) != "" {
+		fmt.Fprintf(&b, "Work mode: %s\n", strings.TrimSpace(*job.WorkMode))
+	}
+	if len(matched) > 0 {
+		fmt.Fprintf(&b, "Matched skills: %s\n", strings.Join(matched[:min(8, len(matched))], ", "))
+	}
+	if len(missing) > 0 {
+		fmt.Fprintf(&b, "Missing required skills (candidate does NOT have production experience yet): %s\n", strings.Join(missing[:min(6, len(missing))], ", "))
+	}
+	if jobText != "" {
+		fmt.Fprintf(&b, "\nJob description:\n%s\n", jobText)
+	}
+	if resumeText != "" {
+		fmt.Fprintf(&b, "\nCandidate master resume (ONLY cite facts present here):\n%s\n", resumeText)
+	}
+	return b.String()
+}
+
+func (s *Server) generateQuestionsDeterministic(job models.Job, master models.Master) []string {
+	company := strings.TrimSpace(job.CompanyName)
+	if company == "" {
+		company = "this company"
+	}
+	role := strings.TrimSpace(job.PositionTitle)
+	if role == "" {
+		role = "this role"
+	}
+	analysis := s.analyze(job, master)
+	var matched []string
+	for _, m := range analysis.Required.Tech.Matched {
+		matched = append(matched, m.Skill)
+	}
+	missing := analysis.Required.Tech.Missing
+	q2 := "Describe a project you're most proud of and how you measured its impact."
+	if len(matched) >= 2 {
+		q2 = fmt.Sprintf("Tell us about a time you used %s and %s in production.", matched[0], matched[1])
+	} else if len(matched) == 1 {
+		q2 = fmt.Sprintf("Walk through a concrete project where you used %s and how you measured the impact.", matched[0])
+	}
+	q3 := "Tell us about a tough technical trade-off you had to make under constraints."
+	if len(missing) > 0 {
+		q3 = fmt.Sprintf("This role mentions %s — how would you ramp up quickly?", strings.Join(missing[:min(2, len(missing))], " and "))
+	}
+	q4 := "Describe a time you collaborated across teams or resolved a disagreement."
+	if job.WorkMode != nil && strings.TrimSpace(*job.WorkMode) != "" && !strings.EqualFold(*job.WorkMode, "Any") {
+		q4 = fmt.Sprintf("How do you collaborate effectively and stay aligned in a %s team?", strings.ToLower(strings.TrimSpace(*job.WorkMode)))
+	}
+	return []string{
+		fmt.Sprintf("Why are you interested in the %s role at %s?", role, company),
+		q2,
+		q3,
+		q4,
+		fmt.Sprintf("What excites you most about what %s is building right now?", company),
+	}
+}
+
+func (s *Server) generateQuestionsAI(ctx context.Context, job models.Job, master models.Master) ([]string, string, error) {
+	mode, _ := s.aiMode(ctx)
+	msgs := []ai.Message{
+		{
+			Role: "system",
+			Content: "You generate realistic job application and interview questions tailored to a specific role and candidate resume. " +
+				"Return ONLY 5 concise, distinct questions, one per line, with no preamble or numbering.",
+		},
+		{
+			Role:    "user",
+			Content: "Generate 5 likely application or interview questions for this role:\n\n" + s.draftContextBlock(job, master),
+		},
+	}
+	reply, engine, err := s.rounds.engines.Chat(ctx, mode, msgs, 400, false)
+	if err != nil {
+		return nil, "", err
+	}
+	var out []string
+	for _, raw := range strings.Split(strings.ReplaceAll(reply, "\r\n", "\n"), "\n") {
+		line := strings.TrimSpace(raw)
+		line = strings.TrimLeft(line, "-*•0123456789.) ")
+		line = strings.TrimSpace(line)
+		if len(line) < 10 {
+			continue
+		}
+		out = append(out, line)
+		if len(out) >= 6 {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return s.generateQuestionsDeterministic(job, master), engine, nil
+	}
+	return out, engine, nil
+}
+
+func (s *Server) generateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt string) (string, error) {
+	mode, _ := s.aiMode(ctx)
+	var task string
+	switch kind {
+	case "cover_letter":
+		task = "Write a concise, genuine, well-structured cover letter (3–4 short paragraphs) tailored to this role."
+	case "interview_prep":
+		task = "Write a practical Markdown interview prep sheet with these sections: # Interview Prep, ## 60-Second Pitch, ## Core Strengths to Highlight, ## Gaps to Address Honestly, ## Practice Questions (STAR), and ## Questions to Ask the Interviewer."
+	default:
+		task = fmt.Sprintf("Write a clear, natural first-person answer to this application question: %q", prompt)
+	}
+	msgs := []ai.Message{
+		{
+			Role: "system",
+			Content: "You help a job candidate draft honest, resume-grounded application materials. " +
+				"NEVER invent employers, degrees, metrics, or skills that are not in the candidate's master resume. " +
+				"If mentioning a missing required skill, frame it honestly as something they are learning or eager to ramp up on. " +
+				"Output only the draft text itself with no extra commentary.",
+		},
+		{
+			Role:    "user",
+			Content: task + "\n\n" + s.draftContextBlock(job, master),
+		},
+	}
+	reply, _, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
+	return reply, err
+}
+
+func (s *Server) iterateDraftTextAI(ctx context.Context, job models.Job, master models.Master, kind, prompt, baseContent, instruction string) (string, error) {
+	mode, _ := s.aiMode(ctx)
+	msgs := []ai.Message{
+		{
+			Role: "system",
+			Content: "You revise a job candidate's draft according to their instruction while staying 100% grounded in their master resume. " +
+				"NEVER invent facts, metrics, or skills not present in the resume. Output only the revised draft text with no commentary.",
+		},
+		{
+			Role: "user",
+			Content: fmt.Sprintf("Draft type: %s\nPrompt: %s\nInstruction: %s\n\nCurrent draft:\n%s\n\n%s",
+				kind, prompt, instruction, baseContent, s.draftContextBlock(job, master)),
+		},
+	}
+	reply, _, err := s.rounds.engines.Chat(ctx, mode, msgs, 1200, false)
+	return reply, err
 }
