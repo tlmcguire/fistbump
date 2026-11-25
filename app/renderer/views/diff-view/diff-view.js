@@ -53,6 +53,7 @@
         try { localStorage.setItem(DRAFT_MODE_KEY, draftGenMode); } catch {}
       };
       let lastBridgeSnapshot = null; // {jobId, targetId, previousContent, createdNew}
+      let syncBridgeUndo = null;     // refreshes the sidebar keyword-bridge Undo/Remove button
       let problem = null;     //what went wrong, when a round could not be written
       let poll = null;
       let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
@@ -112,6 +113,7 @@
         window.Tailor.jobId = jobId;
         revId = null;
         tailoredId = null;
+        lastBridgeSnapshot = null;
         problem = null;
         say("");
         jobSelect.value = jobId ? String(jobId) : "";
@@ -397,6 +399,7 @@
           undoBtn.textContent = "Remove note";
           undoBtn.hidden = !hasLine;
         };
+        syncBridgeUndo = syncUndoBtn;
         syncUndoBtn();
         const addBtn = el("button", {type: "button", class: "primary", onclick: async () => {
           const line = preview.value.trim();
@@ -776,7 +779,7 @@
         modeSelect.value = draftGenMode;
         modeSelect.addEventListener("change", () => setDraftGenMode(modeSelect.value));
 
-        const quickBar = el("div", {class: "round-actions"},
+        const quickBar = el("div", {class: "round-actions drafts-quickbar"},
           modeSelect,
           el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
           el("button", {type: "button", onclick: () => gen("interview_prep", "Interview prep")}, "Generate interview prep"),
@@ -807,6 +810,9 @@
 
           const area = el("textarea", {rows: group.kind === "interview_prep" ? 12 : 8, value: active.content});
           area.value = active.content;
+          area.addEventListener("focus", () => {
+            if (area.value.trim() === "Write your answer here…") area.select();
+          });
           const wc = el("span", {class: "hint"});
           const syncWC = () => {
             const n = area.value.trim() ? area.value.trim().split(/\s+/).length : 0;
@@ -829,6 +835,13 @@
               },
             }, `v${i + 1}`)));
 
+          const promptInput = group.kind === "qa" ? (() => {
+            const inp = el("input", {type: "text", class: "draft-prompt-input", value: group.prompt, "aria-label": "Edit question"});
+            inp.value = group.prompt;
+            return inp;
+          })() : null;
+          const currentPrompt = () => (promptInput ? promptInput.value.trim() : group.prompt) || group.prompt;
+
           const iterateInput = el("input", {
             type: "text",
             class: "draft-iterate-input",
@@ -837,20 +850,24 @@
           const runIterate = async instruction => {
             const clean = String(instruction || "").trim();
             if (!clean) return;
+            const nextPrompt = currentPrompt();
             copyStatus.textContent = draftGenMode === "ai" ? "Creating new version with AI…" : "Creating new version…";
             const created = await attempt(() => api.drafts.create(jobId, {
               kind: group.kind,
-              prompt: group.prompt,
+              prompt: nextPrompt,
               base_content: area.value,
               instruction: clean,
               mode: draftGenMode,
               generate: true,
             }));
             if (created?.value) {
-              selectedDraftByGroup.set(key, created.value.id);
+              selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, created.value.id);
               drawDrafts();
             }
           };
+          iterateInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") { event.preventDefault(); runIterate(iterateInput.value); }
+          });
 
           const iterateRow = el("div", {class: "draft-iterate"},
             el("div", {class: "draft-iterate-chips"},
@@ -862,13 +879,6 @@
             el("div", {class: "draft-iterate-bar"},
               iterateInput,
               el("button", {type: "button", onclick: () => runIterate(iterateInput.value)}, "Iterate as new version")));
-
-          const promptInput = group.kind === "qa" ? (() => {
-            const inp = el("input", {type: "text", class: "draft-prompt-input", value: group.prompt, "aria-label": "Edit question"});
-            inp.value = group.prompt;
-            return inp;
-          })() : null;
-          const currentPrompt = () => (promptInput ? promptInput.value.trim() : group.prompt) || group.prompt;
 
           return el("section", {class: "tailor-card draft-card"},
             el("div", {class: "card-head"},
@@ -898,26 +908,35 @@
                 const nextPrompt = currentPrompt();
                 const created = await attempt(() => api.drafts.create(jobId, {kind: group.kind, prompt: nextPrompt, content: area.value, generate: false}));
                 if (created?.value) {
-                  selectedDraftByGroup.set(key, created.value.id);
+                  selectedDraftByGroup.set(`${group.kind}::${nextPrompt.toLowerCase()}`, created.value.id);
                   drawDrafts();
                 }
               }}, "Save as new version"),
               el("button", {type: "button", onclick: async () => {
                 try { await navigator.clipboard.writeText(area.value); copyStatus.textContent = "Copied."; } catch {}
               }}, "Copy"),
-              el("button", {type: "button", onclick: () => {
-                downloadDraftFile(`${fileBase}.txt`, area.value.trim() + "\n", "text/plain;charset=utf-8");
-                copyStatus.textContent = "Exported .txt.";
-              }}, "Export .txt"),
-              el("button", {type: "button", onclick: () => {
-                downloadDraftFile(`${fileBase}.md`, `# ${group.prompt}\n\n${area.value.trim()}\n`, "text/markdown;charset=utf-8");
-                copyStatus.textContent = "Exported .md.";
-              }}, "Export .md"),
-              el("button", {type: "button", onclick: () => {
-                downloadDraftFile(`${fileBase}.doc`, draftWordHtml(group.prompt, area.value), "application/msword;charset=utf-8");
-                copyStatus.textContent = "Exported .doc.";
-              }}, "Export .doc"),
+              el("div", {class: "draft-export-group", role: "group", "aria-label": "Export format"},
+                el("button", {type: "button", onclick: () => {
+                  const title = currentPrompt();
+                  const base = `${jobSlug}-${safeFileSlug(title)}-v${activeIdx + 1}`;
+                  downloadDraftFile(`${base}.txt`, area.value.trim() + "\n", "text/plain;charset=utf-8");
+                  copyStatus.textContent = "Exported .txt.";
+                }}, ".txt"),
+                el("button", {type: "button", onclick: () => {
+                  const title = currentPrompt();
+                  const base = `${jobSlug}-${safeFileSlug(title)}-v${activeIdx + 1}`;
+                  downloadDraftFile(`${base}.md`, `# ${title}\n\n${area.value.trim()}\n`, "text/markdown;charset=utf-8");
+                  copyStatus.textContent = "Exported .md.";
+                }}, ".md"),
+                el("button", {type: "button", onclick: () => {
+                  const title = currentPrompt();
+                  const base = `${jobSlug}-${safeFileSlug(title)}-v${activeIdx + 1}`;
+                  downloadDraftFile(`${base}.doc`, draftWordHtml(title, area.value), "application/msword;charset=utf-8");
+                  copyStatus.textContent = "Exported .doc.";
+                }}, ".doc")),
               el("button", {type: "button", class: "quiet", onclick: async () => {
+                const label = group.versions.length > 1 ? `version v${activeIdx + 1} of "${currentPrompt()}"` : `"${currentPrompt()}"`;
+                if (!await ask(`Delete ${label}? This cannot be undone.`, {confirm: "Delete", danger: true, title: "Delete draft?"})) return;
                 if (await attempt(() => api.drafts.delete(jobId, active.id))) {
                   selectedDraftByGroup.delete(key);
                   drawDrafts();
@@ -927,7 +946,7 @@
         }) : [el("p", {class: "hint", text: "No drafts yet. Generate a cover letter, interview prep sheet, or likely questions above—or add your own custom question."})];
 
         fill(stage,
-          el("div", {class: "round-head"}, el("h2", {text: "Cover letter, Q&A & interview prep"}), quickBar),
+          el("div", {class: "round-head drafts-head"}, el("h2", {text: "Cover letter, Q&A & interview prep"}), quickBar),
           customForm,
           likelyTray,
           el("div", {class: "cards"}, cardsEl));
@@ -937,6 +956,9 @@
         stopPolling();
         releasePdf();
         cards = [];
+        draftsBtn.disabled = !jobId;
+        draftsBtn.setAttribute("aria-pressed", String(Boolean(showDrafts && jobId)));
+        syncBridgeUndo?.();
         if (showDrafts && jobId) {
           return drawDrafts();
         }
@@ -1265,8 +1287,11 @@
             if (!await ask("This job is already tracked. Use this tailored resume for its application?", {confirm: "Use this resume", title: "Already tracked"})) return;
             done = await attempt(() => api.applications.update(existing.id, {tailored_resume_id: tailoredResumeId}));
           }
-          if (done) say("Tracked with this resume.");
-          if (done) trackButton.replaceWith(el("button", {type: "button", onclick: () => window.Tracker.open(done.value.id)}, "Open in tracker"));
+          if (done) {
+            window.dispatchEvent(new CustomEvent("fistbump:applications", {detail: {invalidateMatches: false}}));
+            say("Tracked with this resume.");
+            trackButton.replaceWith(el("button", {type: "button", onclick: () => window.Tracker.open(done.value.id)}, "Open in tracker"));
+          }
         });
 
         //Changes or PDF, as tabs
