@@ -200,7 +200,7 @@ pub async fn ipc_call(
                     )
                     .await
             }
-            None => bad("Enter a Greenhouse job link."),
+            None => bad("Enter a Greenhouse, Lever, or Ashby job link."),
         },
 
         "connectors:posting" => match (

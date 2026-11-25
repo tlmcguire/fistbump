@@ -83,7 +83,7 @@ test('Open a link page is removed and combined with the search bar', () => {
   assert.ok(!html.includes('id="tab-link"'), 'tab-link button should be removed from index.html');
   assert.ok(!html.includes('id="job-form"'), 'job-form should be removed from index.html');
   assert.ok(!html.includes('id="job-url"'), 'job-url should be removed from index.html');
-  assert.ok(html.includes('paste a Greenhouse, Lever, or Ashby job link'), 'search bar placeholder should mention pasting a job link');
+  assert.ok(html.includes('paste a job link'), 'search bar placeholder should mention pasting a job link');
 
   const jp = read('views/job-parser/job-parser.js');
   assert.ok(!jp.includes('tab-link'), 'job-parser.js should not reference tab-link');

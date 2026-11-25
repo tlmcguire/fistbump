@@ -73,7 +73,7 @@ window.JobParser = {
 
       //the placeholder in the detail pane, worded for the view it is in
       const showDetailEmpty = () => {
-        $("detail-empty-message").textContent = "Choose a job from the list, or paste a Greenhouse job link into the search bar.";
+        $("detail-empty-message").textContent = "Choose a job from the list, or paste a Greenhouse, Lever, or Ashby job link into the search bar.";
         detailSeq++;
         posting = null;
         selectedKey = "";
@@ -139,7 +139,7 @@ window.JobParser = {
         if (name === "saved") loadSaved();
 
         if (name === "find" && !results && $("state-results").hidden && $("state-loading").hidden) {
-          showInitial("Search by job title, location, company or industry — or paste a Greenhouse job link directly into the search bar.");
+          showInitial("Search by job title, location, company or industry — or paste a Greenhouse, Lever, or Ashby job link directly into the search bar.");
         }
         ({find: $("search-keywords"), paste: $("paste-text"), saved: $("saved-q")})[name]?.focus();
       };
@@ -707,7 +707,7 @@ window.JobParser = {
           //nothing to search: say so plainly instead of showing an empty list
           return {
             note: "",
-            empty: `No listings for "${company}". Fistbump searches a fixed list of companies that use Greenhouse, and this one is not on it or does not post there. Check the spelling, or search by keywords or industry instead.`
+            empty: `No listings for "${company}". Fistbump searches Greenhouse, Lever, and Ashby boards (plus any boards on your watchlist in Settings), and this company was not found. Check the spelling, add its board in Settings, or search by keywords or industry instead.`
           };
         }
         if (company) {
@@ -761,16 +761,15 @@ window.JobParser = {
           notes.push("Filtering or sorting by pay, fit or ratings needs each description, so only the top matches by relevance were read. Narrow the search to see more.");
         }
         if (data.rate_limited && data.postings.length > 0) {
-          notes.push("Greenhouse is limiting how many requests it answers right now, so some boards or descriptions were skipped. Try again in a minute or two for the full list.");
+          notes.push("Job boards are limiting how many requests they answer right now, so some boards or descriptions were skipped. Try again in a minute or two for the full list.");
         }
         if (data.boards_searched < data.boards_total) {
           const missed = data.boards_total - data.boards_searched;
           notes.push(`${missed.toLocaleString()} of ${data.boards_total.toLocaleString()} boards could not be searched, so some postings may be missing.`);
         }
         if (data.postings.length === 0 && data.matched > 0) {
-          //Greenhouse answers "too many requests" when many boards are read in a short time; say so, not a vague failure
-          empty = data.rate_limited || data.errors.some(failed => failed.message === "Greenhouse is limiting requests")
-            ? "Matches were found, but Greenhouse is limiting how many requests it answers right now, so their descriptions could not be loaded. Wait a minute, then try again."
+          empty = data.rate_limited || data.errors.some(failed => /limiting requests/i.test(failed.message || ""))
+            ? "Matches were found, but the job boards are limiting how many requests they answer right now, so their descriptions could not be loaded. Wait a minute, then try again."
             : "Matches were found, but their descriptions could not be loaded. Try again.";
         }
         return {note: notes.join(" "), empty};
@@ -884,8 +883,8 @@ window.JobParser = {
         setSearchBusy(true);
         const wide = !query.company && !query.categories.length && boardTotal;
         showLoading(wide
-          ? `Searching ${boardTotal.toLocaleString()} boards\u2026 Boards read in the last 6 hours load from this computer; the rest are asked from Greenhouse, which takes longer.`
-          : "Searching Greenhouse\u2026 Boards read in the last 6 hours load from this computer.", true);
+          ? `Searching ${boardTotal.toLocaleString()} boards\u2026 Boards read in the last 6 hours load from this computer; the rest are fetched from Greenhouse, Lever, and Ashby, which takes longer.`
+          : "Searching Greenhouse, Lever, and Ashby boards\u2026 Boards read in the last 6 hours load from this computer.", true);
 
         try {
           const data = await window.FistBumpAPI.search({...query, offset: 0});
@@ -1046,7 +1045,7 @@ window.JobParser = {
           }
         }
         if (!query.keywords.length && !query.location && !query.categories.length && !query.company) {
-          showInitial("Enter keywords, a location, a company, an industry, or paste a Greenhouse job link.");
+          showInitial("Enter keywords, a location, a company, an industry, or paste a Greenhouse, Lever, or Ashby job link.");
           $("search-keywords").focus();
           return;
         }

@@ -349,7 +349,7 @@
           : items.nothingCached
             ? "Run a search in Find jobs and matches will show up here. Home reuses what that search loaded, so it never adds load on the job boards."
             : items.rateLimited
-            ? "Greenhouse is limiting how many requests it answers right now, so matches could not be loaded. Try again in a minute or two."
+            ? "Job boards are limiting how many requests they answer right now, so matches could not be loaded. Try again in a minute or two."
             : `No strong matches for ${matchScope(p)} right now. Widen your target positions or check back later.`),
         items.length ? matchRows(items) : null,
         retry(items.rateLimited && !items.length ? RATE_WAIT : 0));
@@ -376,7 +376,7 @@
         if (mine !== matchSeq) return;
         const limited = /limiting/i.test(error?.message || "");
         fill(matchSection, ...head(limited
-          ? "Greenhouse is limiting how many requests it answers right now, so matches could not be loaded. Search again when the countdown ends."
+          ? "Job boards are limiting how many requests they answer right now, so matches could not be loaded. Search again when the countdown ends."
           : `Couldn't look for matches just now. ${error?.message || ""}`.trim()), retry(limited ? RATE_WAIT : 0));
         window.UI?.play(matchSection.querySelector("p"), "enter", 260);
       });
@@ -425,7 +425,7 @@
                 openJobs();
                 window.JobParser.openListing(listing);
               },
-            }) : row({title: "Find jobs", detail: "Search Greenhouse boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
+            }) : row({title: "Find jobs", detail: "Search Greenhouse, Lever, and Ashby boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
           pico(greetingPose()));
       }
 
