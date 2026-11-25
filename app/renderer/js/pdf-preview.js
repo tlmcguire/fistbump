@@ -60,6 +60,8 @@ window.PdfPreview = {
     let url = null;
     let token = 0;
     let lastBytes = null;
+    let lastBase64 = null;
+    let lastRenderedWidth = 0;
 
     const renderCanvasPages = async (bytes, mine) => {
       try {
@@ -97,6 +99,7 @@ window.PdfPreview = {
         frag.appendChild(canvas);
       }
       if (mine === token) {
+        lastRenderedWidth = containerWidth;
         pages.replaceChildren(frag);
         if (motion()) {
           pages.classList.remove("reveal");
@@ -146,6 +149,8 @@ window.PdfPreview = {
     const dispose = () => {
       token++;
       lastBytes = null;
+      lastBase64 = null;
+      lastRenderedWidth = 0;
       setExpanded(false);
       if (url) URL.revokeObjectURL(url);
       url = null;
@@ -164,13 +169,19 @@ window.PdfPreview = {
         make("p", {text}));
     };
 
-    // Makes the PDF again. Call it each time the preview is shown, so it matches the text next to it.
+    // Makes the PDF again. Skips re-rendering canvases when the PDF bytes and container width are unchanged.
     const load = async () => {
       const mine = ++token;
-      message("Making the PDF...", {busy: true});
+      if (!lastBase64) message("Making the PDF...", {busy: true});
       try {
         const base64 = await getBase64();
         if (mine !== token) return;
+        const containerWidth = Math.max(240, (pages.clientWidth || body.clientWidth || 480) - 24);
+        if (base64 === lastBase64 && !pages.hidden && pages.childElementCount > 0 && Math.abs(containerWidth - lastRenderedWidth) < 4) {
+          state.hidden = true;
+          return;
+        }
+        lastBase64 = base64;
         const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
         lastBytes = bytes;
         const renderedWithPdfJs = await renderCanvasPages(bytes, mine);

@@ -89,17 +89,20 @@ test("a tar archive is read and the server with its libraries is picked", () => 
   const folder = "llama-" + TAG + "-bin-macos-arm64/build/bin/";
   const tar = Buffer.concat([
     tarEntry(folder + "llama-server", Buffer.from("server")),
+    tarEntry(folder + "libllama-server-impl.dylib", Buffer.from("server-lib")),
+    tarEntry(folder + "libllama-bench-impl.dylib", Buffer.from("unused-bench")),
+    tarEntry(folder + "libllama-cli-impl.dylib", Buffer.from("unused-cli")),
     tarEntry(folder + "libllama.dylib", Buffer.from("library")),
     tarEntry(folder + "libggml.dylib", Buffer.from("library")),
     tarEntry(folder + "README.md", Buffer.from("text")),
     Buffer.alloc(1024),
   ]);
   const files = untar(tar);
-  assert.equal(files.size, 4);
+  assert.equal(files.size, 7);
   assert.equal(files.get(folder + "llama-server").toString(), "server");
 
   const picked = pickServerFiles(files);
-  assert.deepEqual([...picked.keys()].sort(), ["libggml.dylib", "libllama.dylib", "llama-server"]);
+  assert.deepEqual([...picked.keys()].sort(), ["libggml.dylib", "libllama-server-impl.dylib", "libllama.dylib", "llama-server"]);
 });
 
 //one symbolic link entry in a tar archive

@@ -76,10 +76,16 @@ pub struct RawResponse {
 
 impl BackendManager {
     pub fn new(bin_dir: PathBuf, data_dir: PathBuf) -> Arc<Self> {
+        let http = reqwest::Client::builder()
+            .no_proxy()
+            .tcp_nodelay(true)
+            .pool_max_idle_per_host(8)
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
         Arc::new(Self {
             bin_dir,
             data_dir,
-            http: reqwest::Client::new(),
+            http,
             inner: Mutex::new(Inner {
                 state: BackendState::Stopped,
                 port: None,

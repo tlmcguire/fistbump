@@ -151,8 +151,10 @@ const unzip = buffer => {
   return files;
 };
 
-//the shared libraries llama-server loads at runtime, next to the binary it was built with
+//the shared libraries llama-server loads at runtime, next to the binary it was built with.
+//Skip unused CLI tool libraries (bench, cli, completion, perplexity, quantize, etc.) to keep bundles small.
 const LIBRARY = /\.(so(\.[0-9]+)*|dylib|dll)$/i;
+const UNUSED_TOOL_LIB = /^libllama-(bench|batched-bench|cli|completion|fit-params|perplexity|quantize)-impl\./i;
 const SERVER = /(^|\/)llama-server(\.exe)?$/;
 
 //picks the server and the libraries beside it out of the archive
@@ -163,18 +165,39 @@ const pickServerFiles = files => {
   const picked = new Map();
   for (const [name, data] of files) {
     if (!name.startsWith(folder)) continue;
-    if (name === server || LIBRARY.test(name)) picked.set(name.slice(folder.length), data);
+    const base = name.slice(folder.length);
+    if (name === server || (LIBRARY.test(base) && !UNUSED_TOOL_LIB.test(base))) picked.set(base, data);
   }
   return picked;
 };
 
-//writes the server and its libraries into the folder the backend for that platform lives in
+//writes the server and its libraries into the folder the backend for that platform lives in.
+//Removes stale llama libraries from earlier releases and deduplicates identical shared libraries
+//on Unix using relative symlinks instead of writing multiple full copies of the same dylib/so.
 const install = (target, files) => {
   const dir = path.join(root, 'bin', target);
   fs.mkdirSync(dir, {recursive: true});
+  for (const existing of fs.readdirSync(dir)) {
+    if (existing === 'llama-server' || existing === 'llama-server.exe' || LIBRARY.test(existing)) {
+      fs.rmSync(path.join(dir, existing), {force: true});
+    }
+  }
+  const isWindows = target.startsWith('win32-');
+  const canonicalByHash = new Map();
+  const entries = [...files.entries()].sort(([a], [b]) => b.length - a.length);
   const names = [];
-  for (const [name, data] of files) {
+  for (const [name, data] of entries) {
     const out = path.join(dir, name);
+    if (!isWindows && LIBRARY.test(name)) {
+      const hash = sha256(data);
+      const canonical = canonicalByHash.get(hash);
+      if (canonical) {
+        fs.symlinkSync(canonical, out);
+        names.push(name);
+        continue;
+      }
+      canonicalByHash.set(hash, name);
+    }
     fs.writeFileSync(out, data);
     fs.chmodSync(out, 0o755);
     names.push(name);

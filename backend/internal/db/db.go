@@ -115,6 +115,9 @@ func dsn(file string) string {
 	q.Add("_pragma", "foreign_keys(1)")
 	q.Add("_pragma", "busy_timeout(5000)")
 	q.Add("_pragma", "journal_mode(WAL)")
+	q.Add("_pragma", "synchronous(NORMAL)")
+	q.Add("_pragma", "temp_store(MEMORY)")
+	q.Add("_pragma", "cache_size(-16000)")
 	return "file:" + file + "?" + q.Encode()
 }
 
