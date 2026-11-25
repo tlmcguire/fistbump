@@ -343,22 +343,25 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 	oldest := time.Now().UTC().AddDate(0, 0, -q.PostedWithin)
 	locNeedle := strings.ToLower(strings.TrimSpace(q.Location))
 	var matched []connectors.Posting
+	type boardLister interface {
+		ListBoard(ctx context.Context, board string) ([]connectors.Posting, error)
+	}
 	for _, board := range boards {
-		var list []connectors.Posting
-		var err error
+		var lister boardLister
 		if source == "lever" {
-			client := s.lever
-			if client == nil {
-				client = lever.NewClient()
+			if l, ok := s.lever.(boardLister); ok && l != nil {
+				lister = l
+			} else {
+				lister = lever.NewClient()
 			}
-			list, err = client.ListBoard(ctx, board)
 		} else {
-			client := s.ashby
-			if client == nil {
-				client = ashby.NewClient()
+			if l, ok := s.ashby.(boardLister); ok && l != nil {
+				lister = l
+			} else {
+				lister = ashby.NewClient()
 			}
-			list, err = client.ListBoard(ctx, board)
 		}
+		list, err := lister.ListBoard(ctx, board)
 		if err != nil {
 			result.Errors = append(result.Errors, connectors.SearchError{Board: source + ":" + board, Message: err.Error()})
 			continue
