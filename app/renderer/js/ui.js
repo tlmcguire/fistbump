@@ -53,10 +53,11 @@ window.UI = (() => {
     };
     const yes = make("button", {type: "button", class: danger ? "danger-solid" : "primary", text: confirm, onclick: () => finish(true)});
     const no = cancel === null ? null : make("button", {type: "button", text: cancel, onclick: () => finish(false)});
-    dialog.append(
+    dialog.append(...[
       title ? make("h2", {text: title}) : null,
       make("p", {text: message}),
-      make("div", {class: "ask-actions"}, no, yes));
+      make("div", {class: "ask-actions"}, no, yes),
+    ].filter(Boolean));
     dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
     document.body.append(dialog);
     dialog.showModal();

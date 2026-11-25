@@ -156,6 +156,7 @@ func (c *Client) cache() *Cache {
 func listingPosting(board string, l Listing) connectors.Posting {
 	id := fmt.Sprint(l.ID)
 	return connectors.Posting{
+		Source:        "greenhouse",
 		ExternalID:    id,
 		Board:         board,
 		CompanyName:   companyName(board, ""),

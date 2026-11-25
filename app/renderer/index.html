@@ -81,7 +81,7 @@
                             <input id="search-location" type="search" aria-label="Location" placeholder="Location">
                         </div>
                         <button type="submit" class="primary">Search</button>
-                        <button type="button" id="pin-search" title="Pin this search to track new postings">Pin</button>
+                        <button type="button" id="pin-search" title="Save this search in History and highlight new postings next time you run it">Save search</button>
                         <button type="button" id="filters-toggle" aria-expanded="false" aria-controls="filters">Filters<span id="filters-count" class="badge" hidden></span></button>
                         <div class="history-menu">
                             <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
@@ -109,6 +109,14 @@
                                 <div class="filter-grid">
                                     <label>Company
                                         <span class="field"><input id="search-company" type="text" placeholder="e.g. Stripe"></span>
+                                    </label>
+                                    <label>ATS source
+                                        <select id="search-source">
+                                            <option value="">Any ATS</option>
+                                            <option value="greenhouse">Greenhouse</option>
+                                            <option value="lever">Lever</option>
+                                            <option value="ashby">Ashby</option>
+                                        </select>
                                     </label>
                                     <label>Industry
                                         <select id="search-industry">
@@ -155,7 +163,7 @@
                                 <legend>Your resume</legend>
                                 <div class="filter-grid">
                                     <label class="check"><input id="search-use-resume" type="checkbox" checked> Match with my resume</label>
-                                    <label>Fit with my resume
+                                    <label>Minimum resume fit
                                         <select id="search-min-fit">
                                             <option value="0">Any fit</option>
                                             <option value="50">At least 50%</option>
@@ -163,7 +171,7 @@
                                             <option value="90">At least 90%</option>
                                         </select>
                                     </label>
-                                    <label>Skills I am missing
+                                    <label>Max missing skills
                                         <select id="search-max-missing">
                                             <option value="">Any number</option>
                                             <option value="0">None</option>
@@ -180,21 +188,21 @@
                                 <legend>Pay, benefits and cost of living</legend>
                                 <div class="filter-grid three">
                                     <label class="check"><input id="search-use-ratings" type="checkbox" checked> Rate each posting</label>
-                                    <label>Pay for the role
+                                    <label>Minimum pay rating
                                         <select id="search-min-pay-rating">
                                         <option value="">Any</option>
                                         <option value="fair">Fair or better</option>
                                         <option value="good">Good only</option>
                                         </select>
                                     </label>
-                                    <label>Benefits
+                                    <label>Minimum benefits
                                         <select id="search-min-benefits">
                                         <option value="">Any</option>
                                         <option value="fair">Fair or better</option>
                                         <option value="good">Good only</option>
                                         </select>
                                     </label>
-                                    <label>Cost of living
+                                    <label>Minimum cost of living
                                         <select id="search-min-living">
                                         <option value="">Any</option>
                                         <option value="fair">Fair or better</option>
@@ -205,19 +213,17 @@
                             </fieldset>
 
                             <details class="filter-group show-group">
-                                <summary>Show under each result</summary>
+                                <summary>Show on each result card</summary>
                                 <div class="show-grid">
-                                    <label class="check"><input type="checkbox" data-show="fit"> Fit with my resume</label>
-                                    <label class="check"><input type="checkbox" data-show="missing"> Missing skills</label>
-                                    <label class="check"><input type="checkbox" data-show="pay_range"> Pay range</label>
-                                    <label class="check"><input type="checkbox" data-show="pay_rating"> Pay rating</label>
-                                    <label class="check"><input type="checkbox" data-show="benefits_rating"> Benefits rating</label>
-                                    <label class="check"><input type="checkbox" data-show="living_rating"> Cost of living rating</label>
-                                    <label class="check"><input type="checkbox" data-show="benefits_list"> Benefits included</label>
-                                    <label class="check"><input type="checkbox" data-show="left_over"> Money left each month</label>
-                                    <label class="check"><input type="checkbox" data-show="preview"> Description preview</label>
-                                    <label class="check"><input type="checkbox" data-show="posted"> Date posted</label>
-                                    <label class="check"><input type="checkbox" data-show="locations"> Other locations</label>
+                                    <label class="check"><input type="checkbox" data-show="fit"> Resume fit badge</label>
+                                    <label class="check"><input type="checkbox" data-show="missing"> Missing skills line</label>
+                                    <label class="check"><input type="checkbox" data-show="pay_range"> Salary range</label>
+                                    <label class="check"><input type="checkbox" data-show="ratings"> Pay, benefits &amp; living badges</label>
+                                    <label class="check"><input type="checkbox" data-show="benefits_list"> Benefits breakdown</label>
+                                    <label class="check"><input type="checkbox" data-show="left_over"> Monthly budget leftover</label>
+                                    <label class="check"><input type="checkbox" data-show="preview"> Description snippet</label>
+                                    <label class="check"><input type="checkbox" data-show="posted"> Posted date</label>
+                                    <label class="check"><input type="checkbox" data-show="locations"> Other locations count</label>
                                     <label class="check"><input type="checkbox" data-show="company_site"> Company website link</label>
                                 </div>
                             </details>
@@ -634,7 +640,7 @@
                                     <p id="job-company"></p>
                                 </div>
                             </div>
-                            <p class="job-meta"><span id="job-location"></span><span id="job-updated"></span></p>
+                            <p class="job-meta"><span id="job-source"></span><span id="job-location"></span><span id="job-updated"></span></p>
                             <p id="job-state" class="job-state" hidden></p>
                             <div class="job-actions">
                                 <!--One gold action per state: Save job, Tailor resume or Restore. The rest are quiet, and what

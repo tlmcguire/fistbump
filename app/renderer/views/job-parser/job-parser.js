@@ -229,6 +229,17 @@ window.JobParser = {
         }
       };
   
+      const SOURCE_NAMES = {greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", pasted: "Pasted", manual: "Manual"};
+      const sourceLabel = data => {
+        const key = String(data?.source || "").toLowerCase();
+        if (SOURCE_NAMES[key]) return SOURCE_NAMES[key];
+        const url = String(data?.listing_url || "").toLowerCase();
+        if (url.includes("greenhouse.io") || url.includes("grnh.se")) return "Greenhouse";
+        if (url.includes("lever.co")) return "Lever";
+        if (url.includes("ashbyhq.com")) return "Ashby";
+        return data?.board ? "Greenhouse" : "";
+      };
+
       //fills the detail pane with a listing
       const displayPosting = (data, opened = false) => {
         window.UI.play(detailPane, "enter", 360);
@@ -243,6 +254,11 @@ window.JobParser = {
 
         $("job-title").textContent = data.position_title || "Unknown position";
         $("job-company").textContent = data.company_name || "Unknown company";
+        const src = sourceLabel(data);
+        if ($("job-source")) {
+          $("job-source").textContent = src ? `Source: ${src}` : "";
+          $("job-source").hidden = !src;
+        }
         $("job-location").textContent = data.location || "Location not listed";
         $("job-updated").textContent = data.updated_at ? `Updated ${new Date(data.updated_at).toLocaleDateString()}` : "";
         $("job-description").textContent = data.raw_text || "No description was given.";
@@ -282,8 +298,8 @@ window.JobParser = {
       function rememberListing(data) {
         if (!data.board || !data.external_id) return;
         try {
-          const {id, board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
-          localStorage.setItem(LISTING_KEY, JSON.stringify({id, board, external_id, position_title, company_name, location, work_mode,
+          const {id, source, board, external_id, position_title, company_name, location, work_mode, updated_at, raw_text, company_url, listing_url} = data;
+          localStorage.setItem(LISTING_KEY, JSON.stringify({id, source, board, external_id, position_title, company_name, location, work_mode,
             updated_at, raw_text, company_url, listing_url, at: new Date().toISOString()}));
         } catch {
           //Home just won't offer it
@@ -466,7 +482,7 @@ window.JobParser = {
       //What shows under each result is the user's choice: boxes in the filters panel, kept on this computer, and
       //applied at once to the results already on screen. The defaults are the quiet set; the rest are opt-in.
       const SHOW_KEY = "fistbump.result-show";
-      const SHOW_DEFAULTS = {fit: true, missing: true, pay_range: true, pay_rating: true, benefits_rating: true, living_rating: true,
+      const SHOW_DEFAULTS = {fit: true, missing: true, pay_range: true, ratings: true,
         benefits_list: false, left_over: false, preview: false, posted: true, locations: true, company_site: true};
       const readShow = () => {
         try {
@@ -524,10 +540,9 @@ window.JobParser = {
         badge.append(value);
         return badge;
       };
-      const SHOW_RATING = {pay: "pay_rating", benefits: "benefits_rating", living: "living_rating"};
-      const ratingPills = (ratings, tips = {}) => ["pay", "benefits", "living"]
-        .filter(kind => ratings[kind] && show[SHOW_RATING[kind]])
-        .map(kind => pill(kind, ratings[kind], RATING_LABEL[kind], RATING_WORD[ratings[kind]], `${RATING_TITLE[kind]}: ${tips[kind] || RATING_WORD[ratings[kind]]}`));
+      const ratingPills = (ratings, tips = {}) => show.ratings ? ["pay", "benefits", "living"]
+        .filter(kind => ratings[kind])
+        .map(kind => pill(kind, ratings[kind], RATING_LABEL[kind], RATING_WORD[ratings[kind]], `${RATING_TITLE[kind]}: ${tips[kind] || RATING_WORD[ratings[kind]]}`)) : [];
 
       //Fit with the resume, as one pill. A posting that lists no required skills gets a plain "No skill list", so a
       //missing fit reads as a fact about the posting and not as something that failed to load.
@@ -631,9 +646,9 @@ window.JobParser = {
           open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
-          // Subtle ATS source badge and "New" pill for pinned searches.
-          if (result.source && ["greenhouse", "lever", "ashby"].includes(String(result.source).toLowerCase())) {
-            const srcLabel = ({greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby"})[String(result.source).toLowerCase()];
+          // Subtle ATS source badge and "New" pill for saved searches.
+          const srcLabel = sourceLabel(result);
+          if (srcLabel) {
             const badge = el("small", srcLabel);
             badge.className = "result-state result-source";
             body.append(badge);
@@ -702,6 +717,13 @@ window.JobParser = {
         const notes = [];
         let empty = "No postings matched. Check the keywords and try again.";
 
+        if ((query.source === "lever" || query.source === "ashby") && data.boards_total === 0) {
+          const label = SOURCE_NAMES[query.source] || query.source;
+          return {
+            note: "",
+            empty: `No ${label} boards on your watchlist yet. Add a ${label} board (for example ${query.source}:company) in Settings, or enter a company name to search it directly.`
+          };
+        }
         const company = query.company;
         if (company && !(data.companies || []).length) {
           //nothing to search: say so plainly instead of showing an empty list
@@ -784,6 +806,7 @@ window.JobParser = {
         const optionName = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(String(value))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim();
         if (q.location) add(`In ${q.location}`, ["search-location"]);
         if (q.company) add(`At ${q.company}`, ["search-company"]);
+        if (q.source) add(`ATS: ${SOURCE_NAMES[q.source] || q.source}`, ["search-source"]);
         if (q.categories?.length) add(optionName("search-industry", q.categories[0]) || q.categories[0], ["search-industry"]);
         if (q.work_mode && q.work_mode !== "Any") add(`${q.work_mode} only`, ["search-work-mode"]);
         if (q.posted_within) add(optionName("search-posted", q.posted_within).replace(/^Last/, "Posted in the last") || `Posted within ${q.posted_within} days`, ["search-posted"]);
@@ -1016,6 +1039,7 @@ window.JobParser = {
         //"data analyst, " is "data analyst": stray commas and spaces are tidied in the box as well
         $("search-keywords").value = words("search-keywords").join(", ");
         const query = {
+          source: $("search-source")?.value || "",
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value,
@@ -1044,7 +1068,7 @@ window.JobParser = {
             return;
           }
         }
-        if (!query.keywords.length && !query.location && !query.categories.length && !query.company) {
+        if (!query.keywords.length && !query.location && !query.categories.length && !query.company && !query.source) {
           showInitial("Enter keywords, a location, a company, an industry, or paste a Greenhouse, Lever, or Ashby job link.");
           $("search-keywords").focus();
           return;
@@ -1464,7 +1488,7 @@ window.JobParser = {
       });
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
-      const FILTER_IDS = ["search-company", "search-industry", "search-work-mode", "search-posted",
+      const FILTER_IDS = ["search-company", "search-source", "search-industry", "search-work-mode", "search-posted",
         "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing",
         "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const filterInUse = id => {
@@ -1521,7 +1545,7 @@ window.JobParser = {
       }).catch(() => {});
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
-      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-work-mode", "search-industry",
+      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-source", "search-work-mode", "search-industry",
         "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-use-resume",
         "search-min-fit", "search-max-missing", "search-use-ratings", "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const FORM_KEY = "fistbump.search-form";
@@ -1629,11 +1653,14 @@ window.JobParser = {
         const place = text("search-location");
         const company = text("search-company");
 
-        const title = text("search-keywords") || (company && `Jobs at ${company}`) || industry || (place && `Jobs in ${place}`) || "All jobs";
+        const src = text("search-source");
+        const srcName = src ? (SOURCE_NAMES[src] || src) : "";
+        const title = text("search-keywords") || (company && `Jobs at ${company}`) || industry || (place && `Jobs in ${place}`) || (srcName && `${srcName} jobs`) || "All jobs";
         const details = [];
         if (text("search-keywords") && place) details.push(`in ${place}`);
         else if (!text("search-keywords") && (company || industry) && place) details.push(`in ${place}`);
         if (text("search-keywords") && company) details.push(`at ${company}`);
+        if (srcName && title !== `${srcName} jobs`) details.push(`on ${srcName}`);
         if (industry && title !== industry) details.push(industry);
         if (text("search-work-mode") && text("search-work-mode") !== "Any") details.push(`${text("search-work-mode")} only`);
         if (text("search-posted") && text("search-posted") !== "0") {
@@ -1797,6 +1824,17 @@ window.JobParser = {
       $("pin-search")?.addEventListener("click", async () => {
         if (!window.api?.savedSearches?.create) return;
         const fields = readFields();
+        const hasCriteria = Boolean(
+          String(fields["search-keywords"] || "").trim() ||
+          String(fields["search-location"] || "").trim() ||
+          String(fields["search-company"] || "").trim() ||
+          String(fields["search-industry"] || "").trim() ||
+          String(fields["search-source"] || "").trim()
+        );
+        if (!hasCriteria) {
+          window.UI.alert("Enter keywords, a location, a company, or a filter first before saving a search.", "Nothing to save");
+          return;
+        }
         const {title} = describeFields(fields);
         const seenKeys = (results?.postings || []).map(p => keyOf(p));
         try {
@@ -1808,7 +1846,7 @@ window.JobParser = {
           await loadSavedSearches();
           setHistoryOpen(true);
         } catch (err) {
-          window.UI.alert(err.message);
+          window.UI.alert(err.message, "Could not save search");
         }
       });
 

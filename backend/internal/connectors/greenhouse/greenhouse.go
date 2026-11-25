@@ -516,6 +516,7 @@ func toPosting(board, jobID string, raw rawJob) (connectors.Posting, error) {
 	company := companyName(board, clean(raw.CompanyName))
 
 	return connectors.Posting{
+		Source:        "greenhouse",
 		ExternalID:    jobID,
 		Board:         board,
 		CompanyName:   company,

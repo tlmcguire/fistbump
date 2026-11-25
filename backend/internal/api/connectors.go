@@ -7,8 +7,10 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/ashby"
@@ -146,6 +148,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	q := body.Query
+	q.Source = strings.ToLower(strings.TrimSpace(q.Source))
 	keywords := q.Keywords[:0]
 	for _, keyword := range q.Keywords {
 		if keyword = strings.TrimSpace(keyword); keyword != "" {
@@ -154,7 +157,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 	q.Keywords = keywords
 	// With nothing to search by, fall back to the user's target positions, then their latest job title.
-	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" {
+	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
 		q.Keywords = s.defaultKeywords(r.Context())
 	}
 	exclude := make([]string, 0, len(q.Exclude))
@@ -174,8 +177,8 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if err := q.Validate(); err != nil {
 		return validationFailed(err.Error())
 	}
-	// Keywords are optional when the search is narrowed some other way: a place, an industry or boards.
-	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" {
+	// Keywords are optional when the search is narrowed some other way: a place, an industry, ATS source or boards.
+	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
 		return validationFailed("Enter keywords, a location or an industry to search")
 	}
 	if len(q.Keywords) > maxKeywords {
@@ -250,6 +253,11 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if q.HasFit() && q.FitOf == nil {
 		return conflict("Add your resume first, so jobs can be filtered by how well you fit")
 	}
+	if q.Source == "lever" || q.Source == "ashby" {
+		result := s.searchCustomATS(r.Context(), q, q.Source)
+		writeJSON(w, http.StatusOK, result)
+		return nil
+	}
 	result, err := s.search.Search(r.Context(), q, boards)
 	if guessed && (err != nil || result.BoardsSearched == 0) {
 		return writeNoCompany(w, q) // not a Greenhouse board we can find
@@ -267,8 +275,168 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if result.Errors == nil {
 		result.Errors = []connectors.SearchError{}
 	}
+	// When searching all ATS sources on the first page, also merge matching postings from watchlisted Lever/Ashby boards.
+	if q.Source == "" && q.Offset == 0 && len(q.Categories) == 0 && len(q.Boards) == 0 {
+		for _, extraSrc := range []string{"lever", "ashby"} {
+			extra := s.searchCustomATS(r.Context(), q, extraSrc)
+			if extra.BoardsTotal > 0 {
+				result.BoardsTotal += extra.BoardsTotal
+				result.BoardsSearched += extra.BoardsSearched
+				result.PostingsScanned += extra.PostingsScanned
+				result.Matched += extra.Matched
+				result.Errors = append(result.Errors, extra.Errors...)
+				for _, p := range extra.Postings {
+					if len(result.Postings) < q.Limit {
+						result.Postings = append(result.Postings, p)
+					}
+				}
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, result)
 	return nil
+}
+
+// searchCustomATS searches watchlisted (or company-named) Lever or Ashby boards.
+func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source string) connectors.SearchResult {
+	result := connectors.SearchResult{
+		Postings:     []connectors.Posting{},
+		Errors:       []connectors.SearchError{},
+		Companies:    []string{},
+		KeywordsUsed: q.Keywords,
+		WorkModeUsed: q.WorkMode,
+	}
+	var boards []string
+	seen := map[string]bool{}
+	wantCompany := strings.ToLower(strings.TrimSpace(q.Company))
+	if vals, err := s.store.GetSettings(ctx); err == nil {
+		if custom, ok := vals["connectors.custom_boards"].([]string); ok {
+			for _, entry := range custom {
+				src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
+				if !ok || strings.TrimSpace(src) != source {
+					continue
+				}
+				token = strings.TrimSpace(token)
+				if token == "" || seen[token] {
+					continue
+				}
+				if wantCompany != "" && !strings.Contains(token, wantCompany) {
+					continue
+				}
+				seen[token] = true
+				boards = append(boards, token)
+			}
+		}
+	}
+	if len(boards) == 0 && wantCompany != "" && q.Source == source {
+		for _, g := range guessBoards(q.Company) {
+			if !seen[g] {
+				seen[g] = true
+				boards = append(boards, g)
+			}
+		}
+	}
+	result.BoardsTotal = len(boards)
+	if len(boards) == 0 {
+		return result
+	}
+	oldest := time.Now().UTC().AddDate(0, 0, -q.PostedWithin)
+	locNeedle := strings.ToLower(strings.TrimSpace(q.Location))
+	var matched []connectors.Posting
+	for _, board := range boards {
+		var list []connectors.Posting
+		var err error
+		if source == "lever" {
+			client := s.lever
+			if client == nil {
+				client = lever.NewClient()
+			}
+			list, err = client.ListBoard(ctx, board)
+		} else {
+			client := s.ashby
+			if client == nil {
+				client = ashby.NewClient()
+			}
+			list, err = client.ListBoard(ctx, board)
+		}
+		if err != nil {
+			result.Errors = append(result.Errors, connectors.SearchError{Board: source + ":" + board, Message: err.Error()})
+			continue
+		}
+		result.BoardsSearched++
+		result.PostingsScanned += len(list)
+		if wantCompany != "" {
+			result.Companies = append(result.Companies, board)
+		}
+		for _, p := range list {
+			if !customPostingMatches(p, q, locNeedle, oldest) {
+				continue
+			}
+			if q.FitOf != nil && p.RawText != "" {
+				p.Fit = q.FitOf(p.RawText)
+			}
+			if !q.FitOK(p.Fit) {
+				continue
+			}
+			if q.RateOf != nil && q.MatchesRatings() && p.RawText != "" {
+				p.Ratings = q.RateOf(p)
+			}
+			if !q.RatingsOK(p.Ratings) {
+				continue
+			}
+			matched = append(matched, p)
+		}
+	}
+	sort.SliceStable(matched, func(i, j int) bool {
+		return matched[i].UpdatedAt.After(matched[j].UpdatedAt)
+	})
+	result.Matched = len(matched)
+	start := min(q.Offset, len(matched))
+	end := min(start+q.Limit, len(matched))
+	result.Postings = append(result.Postings, matched[start:end]...)
+	result.HasMore = end < len(matched)
+	result.NextOffset = end
+	return result
+}
+
+func customPostingMatches(p connectors.Posting, q connectors.Query, locNeedle string, oldest time.Time) bool {
+	titleLower := strings.ToLower(p.PositionTitle)
+	if q.WorkMode != "" && q.WorkMode != connectors.WorkModeAny && !strings.EqualFold(p.WorkMode, q.WorkMode) {
+		return false
+	}
+	if locNeedle != "" && !strings.Contains(strings.ToLower(p.Location), locNeedle) && !strings.EqualFold(p.WorkMode, connectors.WorkModeRemote) {
+		return false
+	}
+	if q.PostedWithin > 0 && !p.UpdatedAt.IsZero() && p.UpdatedAt.Before(oldest) {
+		return false
+	}
+	for _, ex := range q.Exclude {
+		if ex != "" && strings.Contains(titleLower, strings.ToLower(ex)) {
+			return false
+		}
+	}
+	if len(q.Keywords) > 0 {
+		matchedKW := false
+		for _, kw := range q.Keywords {
+			if strings.Contains(titleLower, strings.ToLower(kw)) || strings.Contains(strings.ToLower(p.RawText), strings.ToLower(kw)) {
+				matchedKW = true
+				break
+			}
+		}
+		if !matchedKW {
+			return false
+		}
+	}
+	if q.RequirePay && p.PayMax == 0 {
+		return false
+	}
+	if q.PayMin > 0 && p.PayMax > 0 && p.PayMax < q.PayMin {
+		return false
+	}
+	if q.PayMax > 0 && p.PayMin > 0 && p.PayMin > q.PayMax {
+		return false
+	}
+	return true
 }
 
 // companyLogo handles GET /v1/connectors/greenhouse/logo?url=&board=: the company's logo as a data URL,

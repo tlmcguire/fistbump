@@ -119,3 +119,14 @@ test('Phase C & D: Tracker CSV export, .ics calendar export, stats, and offer co
   assert.ok(routes.includes('"applications:stats"'), 'routes.rs should map applications:stats');
   assert.ok(routes.includes('"cost:compare"'), 'routes.rs should map cost:compare');
 });
+
+test('Listing shows ATS source, ATS source filter is wired, filters are deduplicated, and UI.alert omits null titles', () => {
+  const html = read('index.html');
+  assert.ok(html.includes('id="job-source"'), 'index.html detail pane should include #job-source');
+  assert.ok(html.includes('id="search-source"'), 'index.html filters should include #search-source');
+  assert.ok(html.includes('data-show="ratings"'), 'card display options should combine rating badges into one toggle');
+  assert.ok(!html.includes('data-show="pay_rating"'), 'redundant pay_rating toggle should be removed');
+
+  const ui = read('js/ui.js');
+  assert.ok(ui.includes('.filter(Boolean)'), 'UI.ask should filter out null titles before dialog.append');
+});

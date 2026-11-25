@@ -3,6 +3,7 @@ package connectors
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -167,6 +168,7 @@ const (
 
 // Query is a job search request. The API layer fills the defaults before calling Validate.
 type Query struct {
+	Source     string   `json:"source,omitempty"` // "greenhouse", "lever", "ashby", or empty for any
 	Keywords   []string `json:"keywords"`
 	Location   string   `json:"location"`
 	WorkMode   string   `json:"work_mode"`
@@ -299,6 +301,11 @@ func (q Query) Validate() error {
 	case WorkModeAny, WorkModeRemote, WorkModeHybrid, WorkModeOnSite:
 	default:
 		return errors.New("Work mode must be Remote, Hybrid, On-site or Any")
+	}
+	switch strings.ToLower(strings.TrimSpace(q.Source)) {
+	case "", "greenhouse", "lever", "ashby":
+	default:
+		return errors.New("ATS source must be greenhouse, lever, ashby, or empty")
 	}
 	return nil
 }
