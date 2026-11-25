@@ -72,10 +72,43 @@ jobs:
       - name: Build the Go backend
         run: npm run build:go
 
+  # Create the draft release once, before the matrix starts. Four parallel
+  # tauri-action jobs each trying to create the same release is racy, and
+  # tauri-action fails when it cannot create it. With the draft in place it
+  # only attaches assets, which is the path that already works.
+  draft-release:
+    name: Create draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the app version
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          actual=$(node -p "require('./package.json').version")
+          if [ "$expected" != "$actual" ]; then
+            echo "Tag $GITHUB_REF_NAME points at a commit whose package.json version is $actual."
+            echo "Move the tag to the commit that sets version $expected."
+            exit 1
+          fi
+      - name: Create the draft release if it does not exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release list --limit 200 --json tagName --jq '.[].tagName' | grep -qx "$GITHUB_REF_NAME"; then
+            echo "Draft release $GITHUB_REF_NAME already exists."
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+              --title "$GITHUB_REF_NAME" --notes-file docs/release-notes.md
+          fi
+
   release:
     name: Release (${{ matrix.os }} ${{ matrix.arch }})
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
+    needs: [test, draft-release]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
