@@ -32,6 +32,17 @@
       let rounds = [];        //newest first, each with its number n
       let tailored = [];
       let savedJobs = [];     //the saved jobs, so the empty page can offer one to start from
+      const DISMISSED_KEY = "fistbump.tailor-dismissed-jobs";
+      const loadDismissed = () => {
+        try {
+          const raw = JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+          return new Set(Array.isArray(raw) ? raw.map(Number).filter(Number.isFinite) : []);
+        } catch { return new Set(); }
+      };
+      const dismissedJobs = loadDismissed();
+      const saveDismissed = () => {
+        try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissedJobs])); } catch {}
+      };
       let problem = null;     //what went wrong, when a round could not be written
       let poll = null;
       let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
@@ -339,16 +350,46 @@
       const releasePdf = () => { pdf?.dispose(); pdf = null; };
 
       //The saved jobs on the empty page: a way in without the dropdown.
-      const suggestedJobs = () => el("div", {class: "stage-jobs"},
-        el("p", {class: "hint", text: "Or start with one of your saved jobs:"}),
-        el("div", {class: "stage-job-list"}, savedJobs.slice(0, 6).map(j => {
-          const title = j.position_title || j.company_name || "";
-          const company = j.position_title ? j.company_name : "";
-          return el("button", {type: "button", class: "stage-job", translate: "no", onclick: () => chooseJob(j.id)},
-            el("strong", {text: title}),
-            company ? el("span", {text: company}) : null,
-            j.location ? el("small", {text: j.location}) : null);
-        })));
+      const suggestedJobs = () => {
+        const visible = savedJobs.filter(j => !dismissedJobs.has(Number(j.id)));
+        const hasDismissed = savedJobs.some(j => dismissedJobs.has(Number(j.id)));
+        if (!visible.length) {
+          return el("div", {class: "stage-jobs"},
+            el("button", {type: "button", class: "quiet", onclick: () => {
+              dismissedJobs.clear();
+              saveDismissed();
+              drawBody();
+            }}, "Show dismissed job suggestions"));
+        }
+        return el("div", {class: "stage-jobs"},
+          el("p", {class: "hint", text: "Or start with one of your saved jobs:"}),
+          el("div", {class: "stage-job-list"}, visible.slice(0, 6).map(j => {
+            const title = j.position_title || j.company_name || "";
+            const company = j.position_title ? j.company_name : "";
+            const dismiss = el("button", {
+              type: "button",
+              class: "round-delete stage-job-dismiss",
+              title: "Dismiss suggestion",
+              "aria-label": `Dismiss ${title}`,
+            }, icon("x"));
+            dismiss.addEventListener("click", event => {
+              event.stopPropagation();
+              dismissedJobs.add(Number(j.id));
+              saveDismissed();
+              drawBody();
+            });
+            const cardBtn = el("button", {type: "button", class: "stage-job", translate: "no", onclick: () => chooseJob(j.id)},
+              el("strong", {text: title}),
+              company ? el("span", {text: company}) : null,
+              j.location ? el("small", {text: j.location}) : null);
+            return el("div", {class: "stage-job-item"}, cardBtn, dismiss);
+          })),
+          hasDismissed ? el("button", {type: "button", class: "quiet", onclick: () => {
+            dismissedJobs.clear();
+            saveDismissed();
+            drawBody();
+          }}, "Show dismissed suggestions") : null);
+      };
 
       //No saved jobs yet: point at the place where they come from.
       const noJobsYet = () => el("div", {},

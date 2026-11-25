@@ -130,3 +130,12 @@ test('Listing shows ATS source, ATS source filter is wired, filters are deduplic
   const ui = read('js/ui.js');
   assert.ok(ui.includes('.filter(Boolean)'), 'UI.ask should filter out null titles before dialog.append');
 });
+
+test('Tailor suggested jobs support hover dismiss with localStorage persistence', () => {
+  const dv = read('views/diff-view/diff-view.js');
+  assert.ok(dv.includes('stage-job-dismiss'), 'diff-view.js should render .stage-job-dismiss buttons');
+  assert.ok(dv.includes('fistbump.tailor-dismissed-jobs'), 'diff-view.js should persist dismissed job IDs');
+
+  const css = read('styles/views.css');
+  assert.ok(css.includes('.stage-job-item:hover .stage-job-dismiss'), 'views.css should reveal dismiss button on hover');
+});
