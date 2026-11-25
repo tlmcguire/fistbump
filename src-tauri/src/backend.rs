@@ -18,6 +18,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{ChildStdin, Command};
 use tokio::sync::{oneshot, Mutex, Notify};
 use tokio::time::timeout;
+use tokio_util::sync::CancellationToken;
 
 pub const STARTUP_TIMEOUT: Duration = Duration::from_secs(10);
 pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -377,6 +378,17 @@ impl BackendManager {
         url_path: &str,
         body: Option<Value>,
     ) -> Result<RawResponse, String> {
+        self.request_raw_cancellable(method, url_path, body, None)
+            .await
+    }
+
+    pub async fn request_raw_cancellable(
+        &self,
+        method: Method,
+        url_path: &str,
+        body: Option<Value>,
+        cancel: Option<CancellationToken>,
+    ) -> Result<RawResponse, String> {
         let (port, token) = {
             let inner = self.inner.lock().await;
             match (inner.port, inner.token.clone(), &inner.state) {
@@ -399,26 +411,49 @@ impl BackendManager {
                 .json(&json_body);
         }
 
-        let res = req.send().await.map_err(|_| {
-            "Could not reach the Fistbump backend. Restart the app and try again.".to_string()
-        })?;
-        let status = res.status().as_u16();
-        let headers = res.headers().clone();
-        let bytes = res
-            .bytes()
-            .await
-            .map_err(|e| format!("Failed to read backend response: {e}"))?
-            .to_vec();
+        let send_fut = async {
+            let res = req.send().await.map_err(|_| {
+                "Could not reach the Fistbump backend. Restart the app and try again.".to_string()
+            })?;
+            let status = res.status().as_u16();
+            let headers = res.headers().clone();
+            let bytes = res
+                .bytes()
+                .await
+                .map_err(|e| format!("Failed to read backend response: {e}"))?
+                .to_vec();
+            Ok(RawResponse {
+                status,
+                headers,
+                bytes,
+            })
+        };
 
-        Ok(RawResponse {
-            status,
-            headers,
-            bytes,
-        })
+        match cancel {
+            Some(token) => tokio::select! {
+                _ = token.cancelled() => Err("canceled".to_string()),
+                result = send_fut => result,
+            },
+            None => send_fut.await,
+        }
     }
 
     pub async fn call(&self, method: Method, url_path: &str, body: Option<Value>) -> Value {
-        match self.request_raw(method, url_path, body).await {
+        self.call_cancellable(method, url_path, body, None).await
+    }
+
+    pub async fn call_cancellable(
+        &self,
+        method: Method,
+        url_path: &str,
+        body: Option<Value>,
+        cancel: Option<CancellationToken>,
+    ) -> Value {
+        let was_canceled = cancel.as_ref().map(|c| c.is_cancelled()).unwrap_or(false);
+        match self
+            .request_raw_cancellable(method, url_path, body, cancel)
+            .await
+        {
             Ok(res) => {
                 if res.status == 204 {
                     return json!({ "ok": true });
@@ -442,6 +477,13 @@ impl BackendManager {
                     }
                 })
             }
+            Err(msg) if was_canceled || msg == "canceled" => json!({
+                "error": {
+                    "code": "canceled",
+                    "message": "Search canceled",
+                    "details": Value::Null
+                }
+            }),
             Err(msg) => json!({
                 "error": {
                     "code": "unreachable",

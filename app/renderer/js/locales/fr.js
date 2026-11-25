@@ -295,6 +295,7 @@ window.I18n.add("fr", {
   "Select {0}": "Sélectionner {0}",
   "No recent searches.": "Aucune recherche récente.",
   "Version {0} for {1} ({2}). Electron {3}, Chromium {4}.": "Version {0} pour {1} ({2}). Electron {3}, Chromium {4}.",
+  "Version {0} for {1} ({2}). Tauri {3}.": "Version {0} pour {1} ({2}). Tauri {3}.",
   "Changed": "Modifié",
   "Added": "Ajouté",
   "Removed": "Retiré",

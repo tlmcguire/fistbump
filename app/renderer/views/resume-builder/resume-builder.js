@@ -289,7 +289,7 @@
     const importButton = el("button", {type: "button"}, "Import file");
     const pasteButton = el("button", {type: "button"}, "Paste text");
     const saveVersionButton = el("button", {type: "button", class: "primary"}, "Save as version");
-    const toolbar = el("header", {class: "toolbar drag"},
+    const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
       el("div", {class: "toolbar-form resume-toolbar"},
         el("h1", {class: "view-title", text: "Master resume"}),
         status,

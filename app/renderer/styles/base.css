@@ -3,6 +3,7 @@
  * filters stay put, and the results and the open listing scroll in their own panes.
  */
 :root {
+  color-scheme: dark;
   --bg: #0b2457;
   --sidebar: #081b44;
   --surface: #0f2c66;      /* toolbar, filters */
@@ -124,6 +125,7 @@ input, select {
   min-width: 0;
 }
 
+input[type="search"] { -webkit-appearance: none; appearance: none; }
 input[type="search"]::-webkit-search-cancel-button { cursor: default; }
 input::placeholder, textarea::placeholder { color: var(--field-placeholder); }
 input:focus-visible, select:focus-visible {

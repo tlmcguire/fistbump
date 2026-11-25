@@ -303,6 +303,7 @@ window.I18n.add("es", {
   "Select {0}": "Seleccionar {0}",
   "No recent searches.": "No hay búsquedas recientes.",
   "Version {0} for {1} ({2}). Electron {3}, Chromium {4}.": "Versión {0} para {1} ({2}). Electron {3}, Chromium {4}.",
+  "Version {0} for {1} ({2}). Tauri {3}.": "Versión {0} para {1} ({2}). Tauri {3}.",
   "Changed": "Cambiado",
   "Added": "Añadido",
   "Removed": "Quitado",

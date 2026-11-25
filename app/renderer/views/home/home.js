@@ -292,7 +292,7 @@
       el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
 
     container.replaceChildren(
-      el("header", {class: "toolbar drag"}, el("div", {class: "toolbar-form"}, el("h1", {class: "view-title", text: "Home"}))),
+      el("header", {class: "toolbar drag", "data-tauri-drag-region": ""}, el("div", {class: "toolbar-form"}, el("h1", {class: "view-title", text: "Home"}))),
       el("div", {class: "pane home-pane"}, home));
 
     let seq = 0;

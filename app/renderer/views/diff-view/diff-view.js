@@ -65,7 +65,7 @@
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
       const field = (id, label, select) => el("div", {class: "picker"}, el("label", {for: id, text: label}), select);
 
-      const toolbar = el("header", {class: "toolbar drag"},
+      const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
         el("div", {class: "toolbar-form tailor-toolbar"},
           el("h1", {class: "view-title", text: "Tailor"}),
           engineChip,

@@ -9,3 +9,4 @@ build/icon.iconset/
 dist/
 src-tauri/target/
 src-tauri/gen/
+app/renderer/vendor/pdfjs/

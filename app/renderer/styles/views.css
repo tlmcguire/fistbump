@@ -237,11 +237,13 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
 .pdf-expand { height: 26px; padding: 0 10px; }
 .pdf-expand .icon { width: 14px; height: 14px; }
 .pdf-body { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.pdf-pages { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 520px; height: 68vh; padding: 12px; overflow-y: auto; background: #2b2f39; }
+.pdf-page-canvas { display: block; max-width: 100%; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); border-radius: 2px; }
 .pdf-frame { flex: 1; width: 100%; min-height: 520px; height: 68vh; border: 0; background: #2b2f39; }
 .pdf-state { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; color: var(--muted); text-align: center; }
 .pdf-state.error { color: var(--bad); }
 .pdf-state .mascot { width: 84px; height: 84px; margin: 0; }
-.resume-side .pdf-frame { min-height: 420px; height: 60vh; }
+.resume-side .pdf-frame, .resume-side .pdf-pages { min-height: 420px; height: 60vh; }
 
 /* Expanded: over the whole window, the page as wide as it can be read */
 .pdf-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(4, 12, 32, 0.7); }
@@ -251,7 +253,7 @@ dialog.ask p { color: var(--muted); font-size: 13px; line-height: 1.5; user-sele
   min-height: 0;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 }
-.pdf-preview.expanded .pdf-frame { height: auto; min-height: 0; }
+.pdf-preview.expanded .pdf-frame, .pdf-preview.expanded .pdf-pages { height: auto; min-height: 0; }
 .pdf-preview.expanded .pdf-bar { padding-block: 8px; }
 /* The window's drag regions (toolbar, sidebar top) take clicks even under a fixed element. While the preview is
    expanded its Close button overlaps them, so they stop dragging until it closes. */

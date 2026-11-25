@@ -3,18 +3,18 @@
     <head>
         <meta charset="UTF-8"/>
         <title>Fistbump</title>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; frame-src blob:; object-src blob:">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; worker-src 'self' blob:; frame-src blob:; object-src blob:">
         <link rel="stylesheet" href="styles/base.css" />
         <link rel="stylesheet" href="styles/views.css" />
         <link rel="stylesheet" href="styles/finish.css" />
         <link rel="stylesheet" href="styles/motion.css" />
     </head>
-    <body>
+    <body spellcheck="false">
         <div class="app">
             <!--Sidebar: app navigation as a tree, in the manner of a notes app. Its top is a drag region that leaves
                 room for the macOS window buttons; Fistbump's name and Settings sit at the foot.-->
             <aside class="sidebar">
-                <div class="sidebar-top drag"></div>
+                <div class="sidebar-top drag" data-tauri-drag-region></div>
                 <nav class="tree" aria-label="App">
                     <button type="button" id="nav-home" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Home</button>
                     <button type="button" id="nav-tracker" class="nav-item" data-route="tracker"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Tracker</button>
@@ -72,7 +72,7 @@
 
             <main id="main" class="main view-find">
                 <!--Toolbar: the search bar for Find jobs, or the link box for Open a link. It doubles as a drag region.-->
-                <header class="toolbar drag">
+                <header class="toolbar drag" data-tauri-drag-region>
                     <div id="settings-title" class="toolbar-title" hidden><h1>Settings</h1></div>
 
                     <form id="search-form" class="toolbar-form" autocomplete="off">
@@ -668,6 +668,7 @@
                         <main id="view-tracker" class="main" hidden></main>
         </div>
 
+        <script src="js/tauri-bridge.js" defer></script>
         <script src="js/prefs.js" defer></script>
         <script src="js/i18n.js" defer></script>
         <script src="js/locales/es.js" defer></script>
