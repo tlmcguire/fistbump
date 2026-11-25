@@ -890,4 +890,15 @@ dialog.compare-dialog { width: min(860px, calc(100vw - 48px)); max-height: 88vh;
   background: rgba(255, 255, 255, 0.025);
 }
 .likely-q-item span { flex: 1 1 260px; font-size: 13px; color: var(--text); }
+.likely-q-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  font-size: 13px;
+}
 .likely-q-actions { display: inline-flex; gap: 6px; flex: none; }
+.draft-prompt-input {
+  flex: 1 1 280px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
