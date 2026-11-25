@@ -1,5 +1,5 @@
 node_modules/
-bin/
+/bin/
 *.gguf
 *.db
 .env
@@ -9,4 +9,6 @@ build/icon.iconset/
 dist/
 src-tauri/target/
 src-tauri/gen/
+src-tauri/resources/bin/*
+!src-tauri/resources/bin/.gitkeep
 app/renderer/vendor/pdfjs/

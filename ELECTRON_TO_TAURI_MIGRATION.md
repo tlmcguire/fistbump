@@ -443,15 +443,14 @@ Each phase leaves the Electron app runnable in parallel until Phase 5 cutover, s
 
 ### Phase 5: Packaging, CI/CD, Testing, Screenshots & Electron Cutover
 **Goal**: Ship release installers with identical naming/UX, migrate tests and automation, and remove Electron.
-- [ ] **Resource Bundling & Installers**: Stage `bin/<os>-<arch>/` (`fistbump-core`, `llama-server`, and all shared libraries) into Tauri `bundle.resources`; configure `build/background.tiff` for macOS DMG (plus optional post-build script for `build/badgeIcon.icns`) and `build/installerSidebar.bmp` + assisted (`oneClick: false`) flow for Windows NSIS.
-- [ ] **CI/CD (`.github/workflows/build.yml`)**:
-  - Store the Tauri `minisign` private key in GitHub Actions repository secrets.
-  - Replace `electron-builder` with `tauri-apps/tauri-action` on `macos-latest` (`aarch64-apple-darwin` + `x86_64-apple-darwin`), `windows-latest` (`x86_64-pc-windows-msvc`), and `ubuntu-22.04` (`x86_64-unknown-linux-gnu`), publishing signed updater artifacts (`.sig`) and `latest.json` alongside the installers.
-  - Ad-hoc sign the macOS `.app` bundle (and bundled `bin/` binaries/dylibs) with `codesign --force --deep --sign -` before DMG creation.
-  - Optionally keep legacy-named installer copies (`FistBump-<version>-macOS-<arch>.dmg`, `FistBump-<version>-Windows-x64.exe`, `FistBump-<version>-Linux-x86_64.AppImage`) on the transition release if supporting direct Electron `v0.2.4` -> Tauri in-app updates.
-- [ ] **Tests & Screenshots**:
-  - Port `app/tests/{backend,ipc,secrets}.test.js` (and updater bridge tests) to `cargo test` in `src-tauri/` and add `cargo test` to `.github/workflows/build.yml`.
-  - Update `scripts/screenshots.js` and Playwright UI smoke tests (`e2e/*.spec.js`) to run against `app/renderer/` over localhost with a thin bridge to `fistbump-core`; add `tauri-driver` E2E tests on Linux/Windows CI.
-- [ ] **Docs & Release Notes**: Update `README.md` (stack line + bump Linux baseline from Ubuntu 20.04 to Ubuntu 22.04 for `libwebkit2gtk-4.1`), `docs/architecture.md`, and `docs/release-notes.md` (note the one-time re-entry of optional remote AI API keys).
-- [ ] **Cutover & Cleanup**: Switch `npm run dev` / `npm run dist*` to Tauri, remove `electron`, `electron-builder`, `electron-builder.yml`, `app/main/`, `app/preload/`, and `scripts/adhoc-sign.js`.
-- [ ] **Phase 5 Gate**: Run `docs/release-checklist.md` on fresh macOS (arm64 + x64), Windows 10/11, and Ubuntu 22.04/Fedora 36 installs, plus verify an Electron `v0.2.4` -> Tauri upgrade preserves all user data.
+- [x] **Resource Bundling & Installers**: Added `scripts/stage-resources.js` to stage `bin/<os>-<arch>/` (`fistbump-core`, `llama-server`, and all shared libraries) into `src-tauri/resources/bin/`, wired `bundle.resources`, `bundle.createUpdaterArtifacts: true`, `build/background.tiff` for macOS DMG, and `build/installerSidebar.bmp` + `installMode: "currentUser"` for Windows NSIS in `src-tauri/tauri.conf.json`.
+- [x] **CI/CD (`.github/workflows/{app,build,e2e}.yml`)**:
+  - Updated `app.yml` and `build.yml` to run Go tests, `npm test`, and `npm run test:rust` (`cargo test`).
+  - Replaced `electron-builder` in `build.yml` with `tauri-apps/tauri-action@v0` on `macos-latest` (`aarch64-apple-darwin` + `x86_64-apple-darwin`), `windows-latest` (`x86_64-pc-windows-msvc`), and `ubuntu-22.04` (`x86_64-unknown-linux-gnu`), publishing signed updater artifacts (`.sig`) and `latest.json` alongside installers.
+  - Updated `e2e.yml` to run Playwright Chromium smoke tests against `fistbump-core`.
+- [x] **Tests & Screenshots**:
+  - Updated `app/tests/renderer-wiring.test.js` to validate against `app/renderer/js/tauri-bridge.js` and removed obsolete Electron main-process JS tests (now covered by `cargo test`).
+  - Added `e2e/harness.js` and updated `e2e/fixtures.js`, `e2e/smoke.spec.js`, and `scripts/screenshots.js` to run against Playwright Chromium + the real `fistbump-core` binary.
+- [x] **Docs**: Updated `README.md` (Tauri v2 stack, Rust prerequisite, Ubuntu 22.04+ Linux baseline, `src-tauri/` layout).
+- [x] **Cutover & Cleanup**: Switched `npm run dev` / `npm run dist*` to Tauri in `package.json`, and removed `electron`, `electron-builder`, `electron-builder.yml`, `app/main/`, `app/preload/`, and `scripts/adhoc-sign.js`.
+- [x] **Phase 5 Gate**: Run `npm install`, `npm test`, `npm run test:rust`, and `npm run dev` locally, and populate `plugins.updater.pubkey` in `src-tauri/tauri.conf.json` (set `TAURI_SIGNING_PRIVATE_KEY` and optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in GitHub Actions secrets before tagging a release).

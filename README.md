@@ -4,7 +4,7 @@
 
 A local-first job application assistant. Stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
 
-Stack: Electron (vanilla JS) frontend, Go backend, SQLite storage.
+Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
 ## What it looks like
 
@@ -25,7 +25,7 @@ The installers are on the releases page: [github.com/tlmcguire/fistbump/releases
 |----------|-----------|---------------|
 | Windows 10 and 11 | NSIS `.exe` | x64 |
 | macOS 12 and later | `.dmg` | arm64 and x64, as two files |
-| Linux (Ubuntu 20.04 and later, Fedora 36 and later) | `.AppImage` | x64 |
+| Linux (Ubuntu 22.04 and later, Fedora 36 and later) | `.AppImage` | x64 |
 
 The builds are unsigned, so the first launch asks you to open the app yourself. The [user guide](docs/user-guide.md) has the steps for each platform.
 
@@ -42,12 +42,12 @@ The builds are unsigned, so the first launch asks you to open the app yourself. 
 
 ## Developer setup
 
-You need Go 1.26 and Node 22.
+You need Rust (stable), Go 1.26, and Node 22.
 
 ```bash
-npm install          # install the app's dependencies
+npm install          # install dependencies and sync PDF.js assets
 npm run build:go     # build the Go backend into bin/<platform>-<arch>/
-npm run dev          # start the app
+npm run dev          # start the Tauri app
 ```
 
 The pictures above come from `node scripts/screenshots.js`, which fills a throwaway data folder with the sample resume and a few jobs and photographs each view into `docs/images/`.
@@ -58,7 +58,8 @@ The pictures above come from `node scripts/screenshots.js`, which fills a throwa
 
 | Path | Contents |
 |------|----------|
-| `app/` | Electron main process, preload bridge, renderer views |
+| `src-tauri/` | Tauri v2 Rust host: Go backend supervisor, IPC commands, OS keychain, menus, updater |
+| `app/` | Vanilla JS/HTML/CSS renderer views, Tauri bridge, and renderer tests |
 | `backend/` | Go module (`fistbump-core`): API, SQLite store, parser, analysis, AI providers, connectors |
 | `scripts/` | Build and maintenance scripts |
 | `docs/` | Design documentation |

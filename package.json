@@ -4,28 +4,25 @@
   "version": "0.2.4",
   "description": "A local-first job application assistant",
   "author": "tlmcguire",
-  "main": "app/main/main.js",
   "private": true,
   "scripts": {
-    "dev": "electron .",
-    "dev:tauri": "tauri dev",
+    "dev": "tauri dev",
     "build:go": "node scripts/build-go.js",
     "fetch:llama": "node scripts/fetch-llama-server.js",
+    "stage:resources": "node scripts/stage-resources.js",
     "sync:pdfjs": "node scripts/sync-pdfjs.js",
     "postinstall": "node scripts/sync-pdfjs.js",
     "test": "node --test app/tests/*.test.js",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test:e2e": "playwright test",
-    "build:tauri": "tauri build",
-    "dist": "npm run build:go && npm run fetch:llama && electron-builder",
-    "dist:mac": "npm run build:go -- --platform darwin && npm run fetch:llama -- --platform darwin && electron-builder --mac",
-    "dist:win": "npm run build:go -- --platform win32 && npm run fetch:llama -- --platform win32 && electron-builder --win",
-    "dist:linux": "npm run build:go -- --platform linux && npm run fetch:llama -- --platform linux && electron-builder --linux"
+    "dist": "npm run build:go && npm run fetch:llama && npm run stage:resources && tauri build",
+    "dist:mac": "npm run build:go -- --platform darwin && npm run fetch:llama -- --platform darwin && npm run stage:resources -- --platform darwin && tauri build",
+    "dist:win": "npm run build:go -- --platform win32 && npm run fetch:llama -- --platform win32 && npm run stage:resources -- --platform win32 && tauri build",
+    "dist:linux": "npm run build:go -- --platform linux && npm run fetch:llama -- --platform linux && npm run stage:resources -- --platform linux && tauri build"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",
     "@tauri-apps/cli": "^2.5.0",
-    "electron": "44.9.2",
-    "electron-builder": "26.15.3",
     "pdfjs-dist": "^4.10.38"
   }
 }
