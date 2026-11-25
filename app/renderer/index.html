@@ -242,11 +242,16 @@
                         <div class="field grow">
                             <input id="saved-q" type="search" aria-label="Search saved jobs" placeholder="Search saved jobs by company or title">
                         </div>
-                        <select id="saved-scope" aria-label="Show">
+                        <select id="saved-scope" aria-label="Show" hidden>
                             <option value="">Active</option>
                             <option value="archived">Archived — kept, hidden</option>
                             <option value="trash">Trash — deleted in 7 days</option>
                         </select>
+                        <div id="saved-scope-toggle" class="segmented" role="group" aria-label="Show">
+                            <button type="button" data-scope="" aria-pressed="true" title="Active saved jobs">Active</button>
+                            <button type="button" data-scope="archived" aria-pressed="false" title="Archived jobs — kept, hidden from Active">Archived</button>
+                            <button type="button" data-scope="trash" aria-pressed="false" title="Trash — deleted in 7 days">Trash</button>
+                        </div>
                     </form>
                 </header>
 

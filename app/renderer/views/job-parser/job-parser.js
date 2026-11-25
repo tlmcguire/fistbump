@@ -1147,6 +1147,8 @@ window.JobParser = {
       const applyTrashDays = () => {
         const option = [...$("saved-scope").options].find(o => o.value === "trash");
         if (option) option.textContent = `Trash — deleted in ${trashDays} days`;
+        const trashScopeBtn = document.querySelector('#saved-scope-toggle button[data-scope="trash"]');
+        if (trashScopeBtn) trashScopeBtn.title = `Trash — deleted in ${trashDays} days`;
         $("trash-job").title = `Take this job out of Saved jobs. It is deleted for good after ${trashDays} days unless you restore it first.`;
       };
       const loadTrashDays = async () => {
@@ -1283,7 +1285,22 @@ window.JobParser = {
       $("saved-bulk-delete")?.addEventListener("click", () => runSavedBulk("delete"));
 
       $("saved-q").addEventListener("input", loadSaved);
-      $("saved-scope").addEventListener("change", () => { selectedSaved.clear(); loadSaved(); });
+      const syncSavedScopeToggle = () => {
+        const cur = $("saved-scope").value;
+        document.querySelectorAll("#saved-scope-toggle button[data-scope]").forEach(btn => {
+          btn.setAttribute("aria-pressed", String(btn.dataset.scope === cur));
+        });
+      };
+      document.querySelectorAll("#saved-scope-toggle button[data-scope]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if ($("saved-scope").value === btn.dataset.scope) return;
+          $("saved-scope").value = btn.dataset.scope;
+          syncSavedScopeToggle();
+          selectedSaved.clear();
+          loadSaved();
+        });
+      });
+      $("saved-scope").addEventListener("change", () => { syncSavedScopeToggle(); selectedSaved.clear(); loadSaved(); });
       $("saved-form").addEventListener("submit", event => event.preventDefault());
 
       // Same shape as loadPosting

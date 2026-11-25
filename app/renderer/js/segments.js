@@ -1,7 +1,8 @@
-// Segmented controls (the Text/PDF and Changes/PDF tabs, Active/Archived/All) get a pill that slides to the chosen
+// Segmented controls (Text/PDF, Changes/Edit/PDF, Active/Archived/All, Active/Archived/Trash,
+// Instant/AI, and draft version tabs) share one sliding pill thumb that glides to the chosen
 // option instead of jumping. It follows aria-selected or aria-pressed, however the view changes them.
 (() => {
-  const GROUPS = ".tabs, .tracker-scopes";
+  const GROUPS = ".tabs, .tracker-scopes, .draft-mode-toggle, .draft-versions, .segmented";
   const CHOSEN = '[aria-selected="true"], [aria-pressed="true"]';
 
   const sync = group => {
@@ -18,7 +19,7 @@
 
   const sizes = new ResizeObserver(entries => entries.forEach(e => sync(e.target)));
   const watch = group => {
-    if (group.dataset.pill) return;
+    if (group.dataset.pill) { sync(group); return; }
     group.dataset.pill = "1";
     sizes.observe(group);
     sync(group);
@@ -26,8 +27,9 @@
 
   new MutationObserver(records => {
     for (const r of records) {
-      if (r.type === "attributes") {
-        const group = r.target.closest?.(GROUPS);
+      if (r.type === "attributes" || r.type === "characterData") {
+        const node = r.type === "characterData" ? r.target.parentElement : r.target;
+        const group = node?.closest?.(GROUPS);
         if (group) sync(group);
       } else {
         r.addedNodes.forEach(n => {
@@ -35,8 +37,10 @@
           if (n.matches(GROUPS)) watch(n);
           n.querySelectorAll?.(GROUPS).forEach(watch);
         });
+        const parentGroup = r.target.closest?.(GROUPS);
+        if (parentGroup) sync(parentGroup);
       }
     }
-  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected", "aria-pressed"]});
+  }).observe(document.body, {subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["aria-selected", "aria-pressed"]});
   document.querySelectorAll(GROUPS).forEach(watch);
 })();
