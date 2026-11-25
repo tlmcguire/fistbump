@@ -1632,7 +1632,7 @@ window.JobParser = {
             form.el,
             skills("Required skills", [...parsed.req_tech_skills, ...parsed.req_soft_skills]),
             skills("Preferred skills", [...parsed.pref_tech_skills, ...parsed.pref_soft_skills]),
-            save);
+            el("div", {class: "job-actions paste-save-actions"}, save));
         } catch (error) {
           const {el, fill} = window.ResumeBuilder;
           fill($("paste-result"), el("p", {class: "note", text: error.message}));
