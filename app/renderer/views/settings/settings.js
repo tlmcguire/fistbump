@@ -56,6 +56,7 @@ window.Settings = {
     const checked = [control => control.checked, (control, value) => { control.checked = value === true; }];
     //the shortcut list names this computer's modifier key
     if (api?.platform !== "darwin") document.querySelectorAll(".mod-key").forEach(k => { k.textContent = "Ctrl"; });
+    bind("pref-theme", "theme");
     bind("pref-language", "language");
     //the page changes language in place, crossfading from the old words to the new ones
     $("pref-language").addEventListener("change", () => {

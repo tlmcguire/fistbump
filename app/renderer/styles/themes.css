@@ -1,0 +1,302 @@
+/*
+ * Color themes for Fistbump: 5 style themes (Classic, Bubblegum, Techno, Cyber, Retro)
+ * and 12 seasonal themes (January through December). All themes preserve >= 4.5:1 contrast.
+ */
+
+/* Let platform-translucent sidebars and tooltips follow the active theme. */
+:root[data-theme] .platform-darwin .sidebar,
+:root[data-theme] .platform-win32 .sidebar,
+.platform-darwin:root[data-theme] .sidebar,
+.platform-win32:root[data-theme] .sidebar {
+  background: var(--sidebar-glass, var(--sidebar));
+}
+:root[data-theme] .tip,
+:root[data-theme] .tip::after {
+  background: var(--raised);
+}
+:root[data-theme] .home-welcome {
+  border-color: var(--note-line);
+  background: var(--note);
+}
+:root[data-theme] .home-welcome .home-row {
+  background: rgba(0, 0, 0, 0.24);
+}
+:root[data-theme] .home-welcome .home-row:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.38);
+}
+
+/* ==================== Style Themes ==================== */
+
+/* Bubblegum: deep berry plum with bright bubblegum pink accents */
+:root[data-theme="bubblegum"] {
+  --bg: #2a122e;
+  --sidebar: #1f0c23;
+  --sidebar-glass: rgba(31, 12, 35, 0.90);
+  --surface: #36173c;
+  --raised: #471e4f;
+  --accent: #ff6ec7;
+  --accent-hover: #ff8fd4;
+  --accent-ink: #24081d;
+  --select: rgba(255, 110, 199, 0.24);
+  --select-strong: #c93b93;
+  --note: rgba(255, 110, 199, 0.12);
+  --note-line: rgba(255, 143, 212, 0.36);
+  --text: #fdf2fa;
+  --muted: rgba(253, 242, 250, 0.76);
+  --faint: rgba(253, 242, 250, 0.62);
+  --dim: rgba(253, 242, 250, 0.68);
+}
+
+/* Techno: deep midnight indigo with electric cyan pulse */
+:root[data-theme="techno"] {
+  --bg: #0c1021;
+  --sidebar: #070a16;
+  --sidebar-glass: rgba(7, 10, 22, 0.92);
+  --surface: #121833;
+  --raised: #1a2347;
+  --accent: #00e5ff;
+  --accent-hover: #52f0ff;
+  --accent-ink: #041b24;
+  --select: rgba(0, 229, 255, 0.20);
+  --select-strong: #008ca3;
+  --note: rgba(0, 229, 255, 0.10);
+  --note-line: rgba(0, 229, 255, 0.34);
+  --text: #eef8ff;
+  --muted: rgba(238, 248, 255, 0.74);
+  --faint: rgba(238, 248, 255, 0.60);
+  --dim: rgba(238, 248, 255, 0.66);
+}
+
+/* Cyber: obsidian violet with neon cyber yellow & magenta highlights */
+:root[data-theme="cyber"] {
+  --bg: #130b24;
+  --sidebar: #0b0617;
+  --sidebar-glass: rgba(11, 6, 23, 0.92);
+  --surface: #1c1136;
+  --raised: #28194c;
+  --accent: #f7d002;
+  --accent-hover: #ffe142;
+  --accent-ink: #160c00;
+  --select: rgba(217, 70, 239, 0.26);
+  --select-strong: #a21caf;
+  --note: rgba(247, 208, 2, 0.10);
+  --note-line: rgba(247, 208, 2, 0.36);
+  --text: #f5f0ff;
+  --muted: rgba(245, 240, 255, 0.76);
+  --faint: rgba(245, 240, 255, 0.62);
+  --dim: rgba(245, 240, 255, 0.68);
+}
+
+/* Retro: warm vintage CRT espresso with amber phosphor */
+:root[data-theme="retro"] {
+  --bg: #201a16;
+  --sidebar: #16110e;
+  --sidebar-glass: rgba(22, 17, 14, 0.92);
+  --surface: #2c231d;
+  --raised: #3a2e26;
+  --accent: #f0a030;
+  --accent-hover: #ffba52;
+  --accent-ink: #1e1204;
+  --select: rgba(240, 160, 48, 0.22);
+  --select-strong: #b06c14;
+  --note: rgba(240, 160, 48, 0.11);
+  --note-line: rgba(240, 160, 48, 0.35);
+  --text: #f7eedc;
+  --muted: rgba(247, 238, 220, 0.75);
+  --faint: rgba(247, 238, 220, 0.62);
+  --dim: rgba(247, 238, 220, 0.68);
+}
+
+/* ==================== 12 Seasonal Themes ==================== */
+
+/* January — Winter Frost */
+:root[data-theme="january"] {
+  --bg: #0d2036;
+  --sidebar: #081526;
+  --sidebar-glass: rgba(8, 21, 38, 0.90);
+  --surface: #132c4a;
+  --raised: #1b3b61;
+  --accent: #7cd4ff;
+  --accent-hover: #a6e2ff;
+  --accent-ink: #062033;
+  --select: rgba(124, 212, 255, 0.22);
+  --select-strong: #2b7ea8;
+  --note: rgba(124, 212, 255, 0.10);
+  --note-line: rgba(124, 212, 255, 0.34);
+}
+
+/* February — Valentine Rose */
+:root[data-theme="february"] {
+  --bg: #2b0f1e;
+  --sidebar: #1e0914;
+  --sidebar-glass: rgba(30, 9, 20, 0.90);
+  --surface: #3a1529;
+  --raised: #4d1d37;
+  --accent: #ff6b9d;
+  --accent-hover: #ff8fb5;
+  --accent-ink: #290613;
+  --select: rgba(255, 107, 157, 0.24);
+  --select-strong: #b83766;
+  --note: rgba(255, 107, 157, 0.11);
+  --note-line: rgba(255, 107, 157, 0.35);
+}
+
+/* March — Early Spring Clover */
+:root[data-theme="march"] {
+  --bg: #0d281e;
+  --sidebar: #081c14;
+  --sidebar-glass: rgba(8, 28, 20, 0.90);
+  --surface: #133629;
+  --raised: #1b4736;
+  --accent: #3ddc84;
+  --accent-hover: #65e89f;
+  --accent-ink: #052414;
+  --select: rgba(61, 220, 132, 0.22);
+  --select-strong: #1e874f;
+  --note: rgba(61, 220, 132, 0.10);
+  --note-line: rgba(61, 220, 132, 0.34);
+}
+
+/* April — Cherry Blossom (Sakura) */
+:root[data-theme="april"] {
+  --bg: #23182e;
+  --sidebar: #181021;
+  --sidebar-glass: rgba(24, 16, 33, 0.90);
+  --surface: #2f203d;
+  --raised: #3e2b50;
+  --accent: #f6a6c1;
+  --accent-hover: #ffc2d6;
+  --accent-ink: #290e1c;
+  --select: rgba(246, 166, 193, 0.24);
+  --select-strong: #a85474;
+  --note: rgba(246, 166, 193, 0.11);
+  --note-line: rgba(246, 166, 193, 0.35);
+}
+
+/* May — Spring Meadow */
+:root[data-theme="may"] {
+  --bg: #15281c;
+  --sidebar: #0e1c13;
+  --sidebar-glass: rgba(14, 28, 19, 0.90);
+  --surface: #1d3626;
+  --raised: #274732;
+  --accent: #e8cc4a;
+  --accent-hover: #f5de6e;
+  --accent-ink: #221d04;
+  --select: rgba(232, 204, 74, 0.22);
+  --select-strong: #8f7b1b;
+  --note: rgba(232, 204, 74, 0.11);
+  --note-line: rgba(232, 204, 74, 0.35);
+}
+
+/* June — Summer Solstice */
+:root[data-theme="june"] {
+  --bg: #0b2a33;
+  --sidebar: #071e25;
+  --sidebar-glass: rgba(7, 30, 37, 0.90);
+  --surface: #113945;
+  --raised: #184a59;
+  --accent: #ff8a65;
+  --accent-hover: #ffa68a;
+  --accent-ink: #2b0f06;
+  --select: rgba(255, 138, 101, 0.24);
+  --select-strong: #b85334;
+  --note: rgba(255, 138, 101, 0.11);
+  --note-line: rgba(255, 138, 101, 0.35);
+}
+
+/* July — Coastal Sun */
+:root[data-theme="july"] {
+  --bg: #0e2242;
+  --sidebar: #09172e;
+  --sidebar-glass: rgba(9, 23, 46, 0.90);
+  --surface: #142f59;
+  --raised: #1c3f75;
+  --accent: #38bdf8;
+  --accent-hover: #67cefb;
+  --accent-ink: #051e30;
+  --select: rgba(56, 189, 248, 0.24);
+  --select-strong: #1c78a6;
+  --note: rgba(56, 189, 248, 0.11);
+  --note-line: rgba(56, 189, 248, 0.34);
+}
+
+/* August — Golden Harvest */
+:root[data-theme="august"] {
+  --bg: #2b1b12;
+  --sidebar: #1f130c;
+  --sidebar-glass: rgba(31, 19, 12, 0.90);
+  --surface: #3a2519;
+  --raised: #4c3121;
+  --accent: #f4b942;
+  --accent-hover: #ffcf6b;
+  --accent-ink: #261803;
+  --select: rgba(244, 185, 66, 0.24);
+  --select-strong: #a87618;
+  --note: rgba(244, 185, 66, 0.11);
+  --note-line: rgba(244, 185, 66, 0.36);
+}
+
+/* September — Autumn Cider */
+:root[data-theme="september"] {
+  --bg: #291610;
+  --sidebar: #1c0f0b;
+  --sidebar-glass: rgba(28, 15, 11, 0.90);
+  --surface: #381f17;
+  --raised: #4a2a20;
+  --accent: #e88d38;
+  --accent-hover: #f7a75c;
+  --accent-ink: #261203;
+  --select: rgba(232, 141, 56, 0.24);
+  --select-strong: #a85c18;
+  --note: rgba(232, 141, 56, 0.11);
+  --note-line: rgba(232, 141, 56, 0.35);
+}
+
+/* October — Spooky Pumpkin */
+:root[data-theme="october"] {
+  --bg: #1b1326;
+  --sidebar: #120c1a;
+  --sidebar-glass: rgba(18, 12, 26, 0.92);
+  --surface: #261b36;
+  --raised: #34254a;
+  --accent: #ff7b29;
+  --accent-hover: #ff9a57;
+  --accent-ink: #260d00;
+  --select: rgba(255, 123, 41, 0.24);
+  --select-strong: #b84d0e;
+  --note: rgba(255, 123, 41, 0.11);
+  --note-line: rgba(255, 123, 41, 0.36);
+}
+
+/* November — Cozy Spice */
+:root[data-theme="november"] {
+  --bg: #261812;
+  --sidebar: #1a100c;
+  --sidebar-glass: rgba(26, 16, 12, 0.90);
+  --surface: #34221a;
+  --raised: #452e23;
+  --accent: #d99242;
+  --accent-hover: #ebac63;
+  --accent-ink: #241304;
+  --select: rgba(217, 146, 66, 0.24);
+  --select-strong: #995f1e;
+  --note: rgba(217, 146, 66, 0.11);
+  --note-line: rgba(217, 146, 66, 0.35);
+}
+
+/* December — Holiday Evergreen */
+:root[data-theme="december"] {
+  --bg: #0c241b;
+  --sidebar: #071912;
+  --sidebar-glass: rgba(7, 25, 18, 0.90);
+  --surface: #123326;
+  --raised: #1a4534;
+  --accent: #e5b842;
+  --accent-hover: #f5cd64;
+  --accent-ink: #211803;
+  --select: rgba(220, 68, 82, 0.28);
+  --select-strong: #a62b38;
+  --note: rgba(229, 184, 66, 0.11);
+  --note-line: rgba(229, 184, 66, 0.35);
+}

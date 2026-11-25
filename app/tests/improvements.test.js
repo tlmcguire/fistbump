@@ -160,3 +160,43 @@ test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', 
   const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
   assert.ok(routes.includes('"drafts:list"') && routes.includes('"drafts:create"'), 'routes.rs should map drafts IPC channels');
 });
+
+test('Prefs supports 5 style themes, 12 seasonal themes, and auto-season', () => {
+  const storage = new Map();
+  const dataset = {};
+  const sandbox = {
+    window: { matchMedia: () => ({ matches: false }) },
+    document: { documentElement: { classList: { toggle() {} }, dataset } },
+    localStorage: {
+      getItem: k => storage.get(k) ?? null,
+      setItem: (k, v) => storage.set(k, String(v)),
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(read('js/prefs.js'), sandbox);
+  const { Prefs } = sandbox.window;
+  assert.equal(Prefs.get('theme'), 'classic');
+  assert.equal(dataset.theme, undefined);
+
+  const expected = [
+    'bubblegum', 'techno', 'cyber', 'retro',
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december',
+  ];
+  for (const t of expected) {
+    Prefs.set('theme', t);
+    assert.equal(Prefs.get('theme'), t);
+    assert.equal(dataset.theme, t);
+  }
+  Prefs.set('theme', 'auto-season');
+  assert.equal(Prefs.get('theme'), 'auto-season');
+  assert.ok(expected.slice(4).includes(dataset.theme), `auto-season should resolve to a month, got ${dataset.theme}`);
+
+  Prefs.set('theme', 'not-a-theme');
+  assert.equal(Prefs.get('theme'), 'auto-season', 'invalid theme should be ignored');
+
+  const css = read('styles/themes.css');
+  for (const t of expected) {
+    assert.ok(css.includes(`[data-theme="${t}"]`), `themes.css should define [data-theme="${t}"]`);
+  }
+});

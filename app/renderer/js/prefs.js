@@ -3,6 +3,7 @@
 window.Prefs = (() => {
   const KEY = "fistbump.prefs";
   const DEFAULTS = {
+    theme: "classic",        // classic | bubblegum | techno | cyber | retro | auto-season | january..december
     language: "system",      // system | en | es | fr | de
     textSize: "default",     // small | default | large | larger
     reduceMotion: "system",  // system | on | off
@@ -16,7 +17,13 @@ window.Prefs = (() => {
     skippedUpdate: "",       // a version the user chose not to hear about again
   };
   const ZOOM = {small: 0.9, default: 1, large: 1.15, larger: 1.3};
+  const SEASONAL_THEMES = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+  ];
+  const STYLE_THEMES = ["classic", "bubblegum", "techno", "cyber", "retro"];
   const ALLOWED = {
+    theme: [...STYLE_THEMES, "auto-season", ...SEASONAL_THEMES],
     language: ["system", "en", "es", "fr", "de"],
     textSize: Object.keys(ZOOM),
     reduceMotion: ["system", "on", "off"],
@@ -46,6 +53,13 @@ window.Prefs = (() => {
     root.classList.toggle("reduce-motion", reduce);
     root.classList.toggle("high-contrast", values.highContrast);
     root.classList.toggle("underline-links", values.underlineLinks);
+    const resolvedTheme = values.theme === "auto-season"
+      ? SEASONAL_THEMES[new Date().getMonth()]
+      : values.theme;
+    if (root.dataset) {
+      if (resolvedTheme && resolvedTheme !== "classic") root.dataset.theme = resolvedTheme;
+      else delete root.dataset.theme;
+    }
     //The desktop shell zooms the whole page, layout included; a browser preview has no such call and stays at 100%
     window.api?.setZoom?.(ZOOM[values.textSize]);
   };
@@ -55,6 +69,7 @@ window.Prefs = (() => {
     get: key => values[key],
     set(key, value) {
       if (!(key in DEFAULTS)) return;
+      if (ALLOWED[key] && !ALLOWED[key].includes(value)) return;
       values = {...values, [key]: value};
       try {
         localStorage.setItem(KEY, JSON.stringify(values));

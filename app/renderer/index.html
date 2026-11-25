@@ -7,6 +7,7 @@
         <link rel="stylesheet" href="styles/base.css" />
         <link rel="stylesheet" href="styles/views.css" />
         <link rel="stylesheet" href="styles/finish.css" />
+        <link rel="stylesheet" href="styles/themes.css" />
         <link rel="stylesheet" href="styles/motion.css" />
     </head>
     <body spellcheck="false">
@@ -254,6 +255,36 @@
                         <section class="settings-group" aria-labelledby="set-appearance">
                             <h2 id="set-appearance">Appearance and accessibility</h2>
                             <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-theme">Color theme</label>
+                                        <p>Pick a style theme or one of 12 seasonal palettes.</p>
+                                    </div>
+                                    <select id="pref-theme">
+                                        <optgroup label="Styles">
+                                            <option value="classic">Classic (Navy &amp; Gold)</option>
+                                            <option value="bubblegum">Bubblegum</option>
+                                            <option value="techno">Techno</option>
+                                            <option value="cyber">Cyber</option>
+                                            <option value="retro">Retro</option>
+                                        </optgroup>
+                                        <optgroup label="Seasonal (12 months)">
+                                            <option value="auto-season">Auto (current month)</option>
+                                            <option value="january">January — Winter Frost</option>
+                                            <option value="february">February — Valentine Rose</option>
+                                            <option value="march">March — Early Spring Clover</option>
+                                            <option value="april">April — Cherry Blossom</option>
+                                            <option value="may">May — Spring Meadow</option>
+                                            <option value="june">June — Summer Solstice</option>
+                                            <option value="july">July — Coastal Sun</option>
+                                            <option value="august">August — Golden Harvest</option>
+                                            <option value="september">September — Autumn Cider</option>
+                                            <option value="october">October — Spooky Pumpkin</option>
+                                            <option value="november">November — Cozy Spice</option>
+                                            <option value="december">December — Holiday Evergreen</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
                                 <div class="setting">
                                     <div class="setting-text">
                                         <label for="pref-language">Language</label>
