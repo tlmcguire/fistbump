@@ -5,7 +5,7 @@ use reqwest::Method;
 use serde_json::{json, Value};
 
 pub const MAX_IMPORT_BYTES: usize = 5 * 1024 * 1024;
-pub const IMPORT_EXTENSIONS: &[&str] = &["pdf", "docx", "txt", "md"];
+pub const IMPORT_EXTENSIONS: &[&str] = &["pdf", "docx", "odt", "txt", "md"];
 pub const AI_MODES: &[&str] = &["auto", "local", "remote", "rules"];
 pub const AI_ENGINES: &[&str] = &["local", "remote"];
 pub const CLEANUP_TARGETS: &[&str] = &[
@@ -89,7 +89,7 @@ pub fn check_import(name: &str, size: usize) -> Option<Value> {
     let ext = extension_of(name);
     if !IMPORT_EXTENSIONS.contains(&ext.as_str()) {
         return Some(bad(format!(
-            "{} is not a PDF, .docx, .txt or .md file.",
+            "{} is not a PDF, .docx, .odt, .txt or .md file.",
             base_name(name)
         )));
     }
@@ -646,6 +646,7 @@ mod tests {
         assert!(check_import("resume.pdf", 1024).is_none());
         assert!(check_import("resume.MD", 100).is_none());
         assert!(check_import("resume.docx", 100).is_none());
+        assert!(check_import("resume.odt", 100).is_none());
         assert!(check_import("resume.png", 100).is_some());
         assert!(check_import("resume.pdf", 0).is_some());
         assert!(check_import("resume.pdf", MAX_IMPORT_BYTES + 1).is_some());

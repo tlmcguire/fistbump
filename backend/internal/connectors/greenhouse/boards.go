@@ -36,6 +36,64 @@ func init() {
 	if err := json.Unmarshal(boardsJSON, &file); err != nil {
 		panic("greenhouse boards.json: " + err.Error())
 	}
+	tech := "technical"
+	extras := []Category{
+		{
+			ID: "cloud_devops", Name: "Cloud and DevOps", Parent: &tech,
+			Boards: []Board{
+				{Token: "cloudflare", Company: "Cloudflare", Website: "https://www.cloudflare.com"},
+				{Token: "datadog", Company: "Datadog", Website: "https://www.datadoghq.com"},
+				{Token: "digitalocean", Company: "DigitalOcean", Website: "https://www.digitalocean.com"},
+				{Token: "fastly", Company: "Fastly", Website: "https://www.fastly.com"},
+				{Token: "backblaze", Company: "Backblaze", Website: "https://www.backblaze.com"},
+			},
+		},
+		{
+			ID: "design_creative", Name: "Design and creative tools", Parent: &tech,
+			Boards: []Board{
+				{Token: "figma", Company: "Figma", Website: "https://www.figma.com"},
+				{Token: "miro", Company: "Miro", Website: "https://miro.com"},
+				{Token: "squarespace", Company: "Squarespace", Website: "https://www.squarespace.com"},
+			},
+		},
+		{
+			ID: "supply_chain", Name: "Supply chain and procurement",
+			Boards: []Board{
+				{Token: "samsara", Company: "Samsara", Website: "https://www.samsara.com"},
+				{Token: "motive", Company: "Motive", Website: "https://gomotive.com"},
+			},
+		},
+		{
+			ID: "accounting_compliance", Name: "Accounting, tax and compliance",
+			Boards: []Board{
+				{Token: "carta", Company: "Carta", Website: "https://carta.com"},
+				{Token: "gusto", Company: "Gusto", Website: "https://gusto.com"},
+			},
+		},
+		{
+			ID: "consumer_brands", Name: "Consumer goods and CPG",
+			Boards: []Board{
+				{Token: "peloton", Company: "Peloton", Website: "https://www.onepeloton.com"},
+				{Token: "yeti", Company: "YETI", Website: "https://www.yeti.com"},
+			},
+		},
+		{
+			ID: "hospitality_events", Name: "Events, dining and venues",
+			Boards: []Board{
+				{Token: "airbnb", Company: "Airbnb", Website: "https://www.airbnb.com"},
+				{Token: "toast", Company: "Toast", Website: "https://pos.toasttab.com"},
+			},
+		},
+	}
+	existing := map[string]bool{}
+	for _, c := range file.Categories {
+		existing[c.ID] = true
+	}
+	for _, c := range extras {
+		if !existing[c.ID] {
+			file.Categories = append(file.Categories, c)
+		}
+	}
 }
 
 // Categories returns the curated categories in file order.

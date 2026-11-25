@@ -46,6 +46,7 @@ func TestDetectAcceptsPDFAndText(t *testing.T) {
 		{"resume.pdf", []byte("%PDF-1.7\n..."), KindPDF},
 		{"noext", []byte("%PDF-1.4"), KindPDF}, // the content decides, not the file name
 		{"resume.docx", zipOf(t, map[string]string{"word/document.xml": "<w/>"}), KindDOCX},
+		{"resume.odt", zipOf(t, map[string]string{"mimetype": "application/vnd.oasis.opendocument.text"}), KindODT},
 		{"resume.txt", []byte("Jane Doe\nGo, SQL"), KindText},
 		{"resume.md", []byte("# Jane Doe\n\n## Skills\n"), KindText},
 		{"résumé.txt", []byte("Łukasz Ñandú"), KindText},
@@ -89,9 +90,8 @@ func TestDetectRefusesOtherFormatsWithAdvice(t *testing.T) {
 		detected string
 		advice   string
 	}{
-		{"cv.doc", append([]byte("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"), make([]byte, 20)...), "doc", "Save it as .docx or PDF"},
-		{"cv.pages", zipOf(t, map[string]string{"Index/Document.iwa": "x"}), "pages", "File > Export To > PDF"},
-		{"cv.odt", zipOf(t, map[string]string{"mimetype": "application/vnd.oasis.opendocument.text"}), "odt", "File > Export as PDF"},
+		{"cv.doc", append([]byte("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"), make([]byte, 20)...), "doc", "Save it as .docx, .odt or PDF"},
+		{"cv.pages", zipOf(t, map[string]string{"Index/Document.iwa": "x"}), "pages", "File > Export To"},
 		{"cv.zip", zipOf(t, map[string]string{"a.txt": "x"}), "zip", "Save your resume as a PDF"},
 		{"broken.zip", []byte("PK\x03\x04 not really a zip"), "zip", "Save your resume as a PDF"},
 		{"scan.png", []byte("\x89PNG\r\n\x1A\n...."), "png", "paste the text"},
@@ -116,6 +116,9 @@ func TestDetectRefusesOtherFormatsWithAdvice(t *testing.T) {
 func TestDetectIgnoresTheFileExtension(t *testing.T) {
 	if got, err := Detect("resume.pdf", zipOf(t, map[string]string{"word/document.xml": "<w/>"})); err != nil || got != KindDOCX {
 		t.Errorf("a DOCX file renamed .pdf = %v, %v; want KindDOCX", got, err)
+	}
+	if got, err := Detect("resume.pdf", zipOf(t, map[string]string{"mimetype": "application/vnd.oasis.opendocument.text"})); err != nil || got != KindODT {
+		t.Errorf("an ODT file renamed .pdf = %v, %v; want KindODT", got, err)
 	}
 	if e := refusal(t, "resume.txt", []byte("\x89PNG\r\n\x1A\n....")); e.Detected != "png" {
 		t.Errorf("an image renamed .txt: %+v", e)

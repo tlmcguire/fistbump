@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	xhtml "golang.org/x/net/html"
@@ -66,11 +67,20 @@ func ParseLink(raw string) (board, jobID string, err error) {
 	return parts[0], parts[1], nil
 }
 
+type cacheEntry struct {
+	postings []connectors.Posting
+	err      error
+	expires  time.Time
+}
+
 // Client fetches postings from Ashby's public Job Board API.
 type Client struct {
 	BaseURL string
 	HTTP    *http.Client
 	MaxBody int64
+
+	mu    sync.RWMutex
+	cache map[string]cacheEntry
 }
 
 func NewClient() *Client {
@@ -125,11 +135,19 @@ func (c *Client) limit() int64 {
 	return maxBody
 }
 
-// ListBoard retrieves all open postings for an Ashby job board.
+// ListBoard retrieves all open postings for an Ashby job board (cached in memory for 6 hours).
 func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Posting, error) {
 	if !boardRe.MatchString(board) {
 		return nil, ErrorBadLink
 	}
+	key := strings.ToLower(board)
+	c.mu.RLock()
+	if entry, ok := c.cache[key]; ok && time.Now().Before(entry.expires) {
+		c.mu.RUnlock()
+		return entry.postings, entry.err
+	}
+	c.mu.RUnlock()
+
 	endpoint := c.base() + "/posting-api/job-board/" + url.PathEscape(board) + "?includeCompensation=true"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -144,6 +162,7 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Post
 	defer res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusNotFound:
+		c.storeCache(key, nil, ErrorNotFound, 30*time.Minute)
 		return nil, ErrorNotFound
 	case http.StatusTooManyRequests:
 		return nil, fmt.Errorf("%w: %w", ErrorUpstream, ErrorRateLimited)
@@ -167,7 +186,17 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Post
 	for _, j := range parsed.Jobs {
 		out = append(out, toPosting(board, j))
 	}
+	c.storeCache(key, out, nil, 6*time.Hour)
 	return out, nil
+}
+
+func (c *Client) storeCache(key string, postings []connectors.Posting, err error, ttl time.Duration) {
+	c.mu.Lock()
+	if c.cache == nil {
+		c.cache = make(map[string]cacheEntry)
+	}
+	c.cache[key] = cacheEntry{postings: postings, err: err, expires: time.Now().Add(ttl)}
+	c.mu.Unlock()
 }
 
 // FetchJob retrieves a single Ashby posting by board and job ID.
@@ -265,6 +294,9 @@ func normalizeWorkplace(isRemote bool, workplace, loc, title string) string {
 }
 
 func prettyCompany(board string) string {
+	if name := CompanyFor(board); name != "" {
+		return name
+	}
 	words := strings.FieldsFunc(board, func(r rune) bool { return r == '-' || r == '_' || r == '.' })
 	for i, w := range words {
 		if w != "" {

@@ -17,6 +17,7 @@ const (
 	KindPDF Kind = iota + 1
 	KindText
 	KindDOCX
+	KindODT
 )
 
 // Largest file that can be imported (5MB)
@@ -60,8 +61,11 @@ func Detect(filename string, data []byte) (Kind, error) {
 		return KindPDF, nil
 	}
 	if detected, what := magic(data); detected != "" {
-		if detected == "docx" {
+		switch detected {
+		case "docx":
 			return KindDOCX, nil
+		case "odt":
+			return KindODT, nil
 		}
 		return 0, unsupported(name, detected, what)
 	}
@@ -73,7 +77,7 @@ func Detect(filename string, data []byte) (Kind, error) {
 		return KindText, nil
 	}
 	return 0, &Error{Reason: ReasonUnsupportedFormat, Detected: "unknown",
-		Message: name + " is not a supported resume file. Only PDF, .docx, .txt and .md files can be imported."}
+		Message: name + " is not a supported resume file. Only PDF, .docx, .odt, .txt and .md files can be imported."}
 }
 
 // file signatures for what was detected
@@ -109,12 +113,18 @@ func zipKind(data []byte) (detected, what string) {
 	if err != nil {
 		return "zip", "a ZIP archive"
 	}
+	hasContentXML := false
+	hasManifestXML := false
 	for _, f := range zr.File {
 		switch {
 		case strings.HasPrefix(f.Name, "word/"):
 			return "docx", "a Word document"
 		case f.Name == "Index/Document.iwa" || f.Name == "index.xml" || strings.HasSuffix(f.Name, ".iwa"):
 			return "pages", "a Pages document"
+		case f.Name == "content.xml":
+			hasContentXML = true
+		case f.Name == "META-INF/manifest.xml":
+			hasManifestXML = true
 		case f.Name == "mimetype":
 			if rc, err := f.Open(); err == nil {
 				buf := make([]byte, 64)
@@ -126,6 +136,9 @@ func zipKind(data []byte) (detected, what string) {
 			}
 		}
 	}
+	if hasContentXML && hasManifestXML {
+		return "odt", "an OpenDocument file"
+	}
 	return "zip", "a ZIP archive"
 }
 
@@ -136,13 +149,11 @@ func unsupported(name, detected, what string) *Error {
 	case what == "an image":
 		msg = fmt.Sprintf("%s is %s. Import a PDF with selectable text, or paste the text instead.", name, what)
 	case detected == "doc":
-		msg = fmt.Sprintf("%s is an older Word (.doc) file. Save it as .docx or PDF (File > Save As) and import that.", name)
+		msg = fmt.Sprintf("%s is an older Word (.doc) file. Save it as .docx, .odt or PDF (File > Save As) and import that.", name)
 	case detected == "pages":
-		msg = fmt.Sprintf("%s is %s. Export it as a PDF (File > Export To > PDF) and import that.", name, what)
-	case detected == "odt":
-		msg = fmt.Sprintf("%s is %s. Export it as a PDF (File > Export as PDF) and import that.", name, what)
+		msg = fmt.Sprintf("%s is %s. Export it as a PDF or .docx (File > Export To) and import that.", name, what)
 	default:
-		msg = fmt.Sprintf("%s is %s. Save your resume as a PDF and import that.", name, what)
+		msg = fmt.Sprintf("%s is %s. Save your resume as a PDF, .docx, .odt or .md file and import that.", name, what)
 	}
 	return &Error{Reason: ReasonUnsupportedFormat, Detected: detected, Message: msg}
 }

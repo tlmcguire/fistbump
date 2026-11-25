@@ -93,12 +93,12 @@ test('Open a link page is removed and combined with the search bar', () => {
   assert.ok(html.includes('id="watchlist-input"'), 'index.html should include Company Watchlist input');
 });
 
-test('Resume import allows PDF, DOCX, TXT, and MD in frontend and Tauri routes', () => {
+test('Resume import allows PDF, DOCX, ODT, TXT, and MD in frontend and Tauri routes', () => {
   const rb = read('views/resume-builder/resume-builder.js');
-  assert.ok(rb.includes('["pdf", "docx", "txt", "md"]'), 'resume-builder.js should allow pdf, docx, txt, and md');
+  assert.ok(rb.includes('["pdf", "docx", "odt", "txt", "md"]'), 'resume-builder.js should allow pdf, docx, odt, txt, and md');
 
   const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
-  assert.ok(routes.includes('&["pdf", "docx", "txt", "md"]'), 'routes.rs should allow pdf, docx, txt, and md');
+  assert.ok(routes.includes('&["pdf", "docx", "odt", "txt", "md"]'), 'routes.rs should allow pdf, docx, odt, txt, and md');
 });
 
 test('Phase B: consecutive resume imports, DOCX export, and 1-page fit audit are wired', () => {

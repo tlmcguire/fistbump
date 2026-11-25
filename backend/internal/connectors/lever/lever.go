@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	xhtml "golang.org/x/net/html"
@@ -66,11 +67,20 @@ func ParseLink(raw string) (board, jobID string, err error) {
 	return strings.ToLower(parts[0]), parts[1], nil
 }
 
+type cacheEntry struct {
+	postings []connectors.Posting
+	err      error
+	expires  time.Time
+}
+
 // Client fetches postings from Lever's public Postings API.
 type Client struct {
 	BaseURL string
 	HTTP    *http.Client
 	MaxBody int64
+
+	mu    sync.RWMutex
+	cache map[string]cacheEntry
 }
 
 func NewClient() *Client {
@@ -147,14 +157,25 @@ func (c *Client) FetchJob(ctx context.Context, board, jobID string) (connectors.
 	return toPosting(board, raw), nil
 }
 
-// ListBoard retrieves all open postings for a Lever board.
+// ListBoard retrieves all open postings for a Lever board (cached in memory for 6 hours).
 func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Posting, error) {
 	if !boardRe.MatchString(board) {
 		return nil, ErrorBadLink
 	}
+	key := strings.ToLower(board)
+	c.mu.RLock()
+	if entry, ok := c.cache[key]; ok && time.Now().Before(entry.expires) {
+		c.mu.RUnlock()
+		return entry.postings, entry.err
+	}
+	c.mu.RUnlock()
+
 	endpoint := c.base() + "/v0/postings/" + url.PathEscape(board) + "?mode=json"
 	body, err := c.get(ctx, endpoint)
 	if err != nil {
+		if errors.Is(err, ErrorNotFound) {
+			c.storeCache(key, nil, ErrorNotFound, 30*time.Minute)
+		}
 		return nil, err
 	}
 	var raws []rawPosting
@@ -165,7 +186,17 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Post
 	for _, raw := range raws {
 		out = append(out, toPosting(board, raw))
 	}
+	c.storeCache(key, out, nil, 6*time.Hour)
 	return out, nil
+}
+
+func (c *Client) storeCache(key string, postings []connectors.Posting, err error, ttl time.Duration) {
+	c.mu.Lock()
+	if c.cache == nil {
+		c.cache = make(map[string]cacheEntry)
+	}
+	c.cache[key] = cacheEntry{postings: postings, err: err, expires: time.Now().Add(ttl)}
+	c.mu.Unlock()
 }
 
 func (c *Client) get(ctx context.Context, endpoint string) ([]byte, error) {
@@ -286,6 +317,9 @@ func normalizeWorkplace(workplace, loc, title string) string {
 }
 
 func prettyCompany(board string) string {
+	if name := CompanyFor(board); name != "" {
+		return name
+	}
 	words := strings.FieldsFunc(board, func(r rune) bool { return r == '-' || r == '_' || r == '.' })
 	for i, w := range words {
 		if w != "" {

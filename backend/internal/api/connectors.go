@@ -100,7 +100,7 @@ func chooseBoards(q connectors.Query) []string {
 	return out
 }
 
-// categoryList handles GET /v1/connectors/greenhouse/categories: the curated industries, so the app can offer them.
+// categoryList handles GET /v1/connectors/greenhouse/categories: the curated industries across Greenhouse, Lever, and Ashby.
 func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 	type category struct {
 		ID         string  `json:"id"`
@@ -110,15 +110,28 @@ func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 	}
 	out := []category{}
 	for _, c := range greenhouse.Categories() {
-		out = append(out, category{c.ID, c.Name, c.Parent, greenhouse.BoardCount(c.ID)})
+		count := greenhouse.BoardCount(c.ID) + lever.BoardCount(c.ID) + ashby.BoardCount(c.ID)
+		out = append(out, category{c.ID, c.Name, c.Parent, count})
 	}
+	seenCo := map[string]bool{}
+	var companies []string
+	for _, list := range [][]string{greenhouse.CompanyNames(), lever.CompanyNames(), ashby.CompanyNames()} {
+		for _, name := range list {
+			if !seenCo[name] {
+				seenCo[name] = true
+				companies = append(companies, name)
+			}
+		}
+	}
+	sort.Strings(companies)
+	total := len(greenhouse.Tokens()) + len(lever.Tokens()) + len(ashby.Tokens())
 	writeJSON(w, http.StatusOK, struct {
 		Categories []category `json:"categories"`
 		Companies  []string   `json:"companies"`
 		BoardTotal int        `json:"board_total"`
 		VerifiedAt string     `json:"verified_at"`
 		Notice     string     `json:"notice"`
-	}{out, greenhouse.CompanyNames(), len(greenhouse.Tokens()), greenhouse.VerifiedAt(), "These lists are not exhaustive. Only the companies listed are searched."})
+	}{out, companies, total, greenhouse.VerifiedAt(), "These lists cover Greenhouse, Lever, and Ashby boards. Add any company board in Settings."})
 	return nil
 }
 
@@ -259,13 +272,19 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	result, err := s.search.Search(r.Context(), q, boards)
-	if guessed && (err != nil || result.BoardsSearched == 0) {
-		return writeNoCompany(w, q) // not a Greenhouse board we can find
-	}
-	if err != nil {
+	ghMissed := guessed && (err != nil || result.BoardsSearched == 0)
+	if !ghMissed && err != nil {
 		return greenhouseError(err)
 	}
-	if named {
+	if ghMissed {
+		result = connectors.SearchResult{
+			Postings:     []connectors.Posting{},
+			Errors:       []connectors.SearchError{},
+			Companies:    []string{},
+			KeywordsUsed: q.Keywords,
+			WorkModeUsed: q.WorkMode,
+		}
+	} else if named {
 		result.Companies = companyNames(boards)
 	}
 	// Nil slices would encode as null; the app expects arrays.
@@ -275,29 +294,69 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if result.Errors == nil {
 		result.Errors = []connectors.SearchError{}
 	}
-	// When searching all ATS sources on the first page, also merge matching postings from watchlisted Lever/Ashby boards.
-	if q.Source == "" && q.Offset == 0 && len(q.Categories) == 0 && len(q.Boards) == 0 {
-		for _, extraSrc := range []string{"lever", "ashby"} {
-			extra := s.searchCustomATS(r.Context(), q, extraSrc)
+	// When searching all ATS sources on the first page, also merge matching postings from Lever and Ashby
+	// (only when those clients are configured on the server, so offline tests never hit the network).
+	if q.Source == "" && q.Offset == 0 && len(q.Boards) == 0 {
+		var extras []connectors.Posting
+		for _, pair := range []struct {
+			src string
+			ok  bool
+		}{{"ashby", s.ashby != nil}, {"lever", s.lever != nil}} {
+			if !pair.ok {
+				continue
+			}
+			extra := s.searchCustomATS(r.Context(), q, pair.src)
 			if extra.BoardsTotal > 0 {
 				result.BoardsTotal += extra.BoardsTotal
 				result.BoardsSearched += extra.BoardsSearched
 				result.PostingsScanned += extra.PostingsScanned
 				result.Matched += extra.Matched
 				result.Errors = append(result.Errors, extra.Errors...)
-				for _, p := range extra.Postings {
-					if len(result.Postings) < q.Limit {
-						result.Postings = append(result.Postings, p)
-					}
+				if named && len(extra.Companies) > 0 {
+					result.Companies = append(result.Companies, extra.Companies...)
 				}
+				extras = append(extras, extra.Postings...)
 			}
 		}
+		if len(extras) > 0 {
+			result.Postings = interleavePostings(result.Postings, extras, q.Limit)
+		}
+	}
+	if ghMissed && result.BoardsSearched == 0 {
+		return writeNoCompany(w, q)
 	}
 	writeJSON(w, http.StatusOK, result)
 	return nil
 }
 
-// searchCustomATS searches watchlisted (or company-named) Lever or Ashby boards.
+// interleavePostings blends Greenhouse and Lever/Ashby postings so non-Greenhouse ATS matches
+// appear visibly on page 1 instead of being hidden whenever Greenhouse fills the page.
+func interleavePostings(primary, extra []connectors.Posting, limit int) []connectors.Posting {
+	if len(extra) == 0 {
+		return primary
+	}
+	if len(primary) == 0 {
+		if len(extra) > limit {
+			return extra[:limit]
+		}
+		return extra
+	}
+	out := make([]connectors.Posting, 0, min(limit, len(primary)+len(extra)))
+	pi, ei := 0, 0
+	for len(out) < limit && (pi < len(primary) || ei < len(extra)) {
+		for k := 0; k < 2 && pi < len(primary) && len(out) < limit; k++ {
+			out = append(out, primary[pi])
+			pi++
+		}
+		if ei < len(extra) && len(out) < limit {
+			out = append(out, extra[ei])
+			ei++
+		}
+	}
+	return out
+}
+
+// searchCustomATS searches curated + watchlisted (or company-named) Lever or Ashby boards concurrently.
 func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source string) connectors.SearchResult {
 	result := connectors.SearchResult{
 		Postings:     []connectors.Posting{},
@@ -306,9 +365,24 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 		KeywordsUsed: q.Keywords,
 		WorkModeUsed: q.WorkMode,
 	}
-	var boards []string
+	type boardTarget struct {
+		token       string
+		watchlisted bool
+	}
+	var targets []boardTarget
 	seen := map[string]bool{}
 	wantCompany := strings.ToLower(strings.TrimSpace(q.Company))
+	addTarget := func(token string, watchlisted bool) {
+		token = strings.TrimSpace(token)
+		key := strings.ToLower(token)
+		if token == "" || seen[key] {
+			return
+		}
+		seen[key] = true
+		targets = append(targets, boardTarget{token: token, watchlisted: watchlisted})
+	}
+
+	// 1. User-watchlisted boards for this ATS.
 	if vals, err := s.store.GetSettings(ctx); err == nil {
 		if custom, ok := vals["connectors.custom_boards"].([]string); ok {
 			for _, entry := range custom {
@@ -316,81 +390,171 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 				if !ok || strings.TrimSpace(src) != source {
 					continue
 				}
-				token = strings.TrimSpace(token)
-				if token == "" || seen[token] {
-					continue
-				}
 				if wantCompany != "" && !strings.Contains(token, wantCompany) {
 					continue
 				}
-				seen[token] = true
-				boards = append(boards, token)
+				addTarget(token, true)
 			}
 		}
 	}
-	if len(boards) == 0 && wantCompany != "" && q.Source == source {
+
+	// 2. Curated boards for this ATS (narrowed by q.Categories and/or q.Company).
+	if source == "lever" {
+		var curated []lever.Board
+		if len(q.Categories) > 0 {
+			curated = lever.BoardsFor(q.Categories)
+		} else {
+			for _, tok := range lever.Tokens() {
+				curated = append(curated, lever.Board{Token: tok, Company: lever.CompanyFor(tok)})
+			}
+		}
+		for _, b := range curated {
+			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+				continue
+			}
+			addTarget(b.Token, false)
+		}
+	} else if source == "ashby" {
+		var curated []ashby.Board
+		if len(q.Categories) > 0 {
+			curated = ashby.BoardsFor(q.Categories)
+		} else {
+			for _, tok := range ashby.Tokens() {
+				curated = append(curated, ashby.Board{Token: tok, Company: ashby.CompanyFor(tok)})
+			}
+		}
+		for _, b := range curated {
+			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+				continue
+			}
+			addTarget(b.Token, false)
+		}
+	}
+
+	// 3. If searching a specific company not in our curated list, try guessing the slug.
+	if len(targets) == 0 && wantCompany != "" {
 		for _, g := range guessBoards(q.Company) {
-			if !seen[g] {
-				seen[g] = true
-				boards = append(boards, g)
-			}
+			addTarget(g, false)
 		}
 	}
-	result.BoardsTotal = len(boards)
-	if len(boards) == 0 {
+
+	result.BoardsTotal = len(targets)
+	if len(targets) == 0 {
 		return result
 	}
-	oldest := time.Now().UTC().AddDate(0, 0, -q.PostedWithin)
-	locNeedle := strings.ToLower(strings.TrimSpace(q.Location))
-	var matched []connectors.Posting
+
 	type boardLister interface {
 		ListBoard(ctx context.Context, board string) ([]connectors.Posting, error)
 	}
-	for _, board := range boards {
-		var lister boardLister
-		if source == "lever" {
-			if l, ok := s.lever.(boardLister); ok && l != nil {
-				lister = l
-			} else {
-				lister = lever.NewClient()
-			}
+	var lister boardLister
+	if source == "lever" {
+		if l, ok := s.lever.(boardLister); ok && l != nil {
+			lister = l
 		} else {
-			if l, ok := s.ashby.(boardLister); ok && l != nil {
-				lister = l
-			} else {
-				lister = ashby.NewClient()
-			}
+			lister = lever.NewClient()
 		}
-		list, err := lister.ListBoard(ctx, board)
-		if err != nil {
-			result.Errors = append(result.Errors, connectors.SearchError{Board: source + ":" + board, Message: err.Error()})
-			continue
-		}
-		result.BoardsSearched++
-		result.PostingsScanned += len(list)
-		if wantCompany != "" {
-			result.Companies = append(result.Companies, board)
-		}
-		for _, p := range list {
-			if !customPostingMatches(p, q, locNeedle, oldest) {
-				continue
-			}
-			if q.FitOf != nil && p.RawText != "" {
-				p.Fit = q.FitOf(p.RawText)
-			}
-			if !q.FitOK(p.Fit) {
-				continue
-			}
-			if q.RateOf != nil && q.MatchesRatings() && p.RawText != "" {
-				p.Ratings = q.RateOf(p)
-			}
-			if !q.RatingsOK(p.Ratings) {
-				continue
-			}
-			matched = append(matched, p)
+	} else {
+		if l, ok := s.ashby.(boardLister); ok && l != nil {
+			lister = l
+		} else {
+			lister = ashby.NewClient()
 		}
 	}
+
+	oldest := time.Now().UTC().AddDate(0, 0, -q.PostedWithin)
+	locNeedle := strings.ToLower(strings.TrimSpace(q.Location))
+
+	var (
+		mu      sync.Mutex
+		matched []connectors.Posting
+		wg      sync.WaitGroup
+		sem     = make(chan struct{}, 16)
+	)
+	for _, tgt := range targets {
+		wg.Add(1)
+		go func(tgt boardTarget) {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+			bctx, cancel := context.WithTimeout(ctx, 6*time.Second)
+			list, err := lister.ListBoard(bctx, tgt.token)
+			cancel()
+			if err != nil {
+				// Silently skip 404s on curated/guessed boards so stale slugs do not clutter search errors.
+				if !tgt.watchlisted && (errors.Is(err, lever.ErrorNotFound) || errors.Is(err, ashby.ErrorNotFound)) {
+					return
+				}
+				if tgt.watchlisted || errors.Is(err, lever.ErrorRateLimited) || errors.Is(err, ashby.ErrorRateLimited) {
+					mu.Lock()
+					if errors.Is(err, lever.ErrorRateLimited) || errors.Is(err, ashby.ErrorRateLimited) {
+						result.RateLimited = true
+					}
+					result.Errors = append(result.Errors, connectors.SearchError{Board: source + ":" + tgt.token, Message: err.Error()})
+					mu.Unlock()
+				}
+				return
+			}
+			var localMatched []connectors.Posting
+			for _, p := range list {
+				if !customPostingMatches(p, q, locNeedle, oldest) {
+					continue
+				}
+				if q.FitOf != nil && p.RawText != "" {
+					p.Fit = q.FitOf(p.RawText)
+				}
+				if !q.FitOK(p.Fit) {
+					continue
+				}
+				if q.RateOf != nil && q.MatchesRatings() && p.RawText != "" {
+					p.Ratings = q.RateOf(p)
+				}
+				if !q.RatingsOK(p.Ratings) {
+					continue
+				}
+				localMatched = append(localMatched, p)
+			}
+			mu.Lock()
+			result.BoardsSearched++
+			result.PostingsScanned += len(list)
+			if wantCompany != "" && len(result.Companies) < 10 {
+				name := tgt.token
+				if source == "lever" {
+					if n := lever.CompanyFor(tgt.token); n != "" {
+						name = n
+					}
+				} else if n := ashby.CompanyFor(tgt.token); n != "" {
+					name = n
+				}
+				result.Companies = append(result.Companies, name)
+			}
+			matched = append(matched, localMatched...)
+			mu.Unlock()
+		}(tgt)
+	}
+	wg.Wait()
+
 	sort.SliceStable(matched, func(i, j int) bool {
+		switch q.Sort {
+		case connectors.SortFit:
+			fi, fj := 0, 0
+			if matched[i].Fit != nil {
+				fi = matched[i].Fit.Percent
+			}
+			if matched[j].Fit != nil {
+				fj = matched[j].Fit.Percent
+			}
+			if fi != fj {
+				return fi > fj
+			}
+		case connectors.SortPay:
+			if matched[i].PayMax != matched[j].PayMax {
+				return matched[i].PayMax > matched[j].PayMax
+			}
+		}
 		return matched[i].UpdatedAt.After(matched[j].UpdatedAt)
 	})
 	result.Matched = len(matched)
