@@ -207,7 +207,7 @@ func TestColumnRepairedWhenVersionSkippedIt(t *testing.T) {
 	conn, file := openTemp(t)
 	for _, stmt := range []string{
 		"ALTER TABLE suggestions DROP COLUMN reason",
-		"PRAGMA user_version = 6",
+		"PRAGMA user_version = 99",
 	} {
 		if _, err := conn.Exec(stmt); err != nil {
 			t.Fatal(err)
@@ -233,7 +233,7 @@ func TestColumnRepairedWhenVersionSkippedIt(t *testing.T) {
 	defer third.Close()
 	var version int
 	third.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 6 {
+	if version != 99 {
 		t.Errorf("user_version = %d; the repair must not change it", version)
 	}
 }
@@ -243,7 +243,7 @@ func TestCacheTablesRepairedWhenVersionSkippedThem(t *testing.T) {
 	conn, file := openTemp(t)
 	for _, stmt := range []string{
 		"DROP TABLE greenhouse_listing_cache", "DROP TABLE greenhouse_description_cache", "DROP TABLE logo_cache",
-		"PRAGMA user_version = 6",
+		"PRAGMA user_version = 99",
 	} {
 		if _, err := conn.Exec(stmt); err != nil {
 			t.Fatal(err)
@@ -264,7 +264,7 @@ func TestCacheTablesRepairedWhenVersionSkippedThem(t *testing.T) {
 	}
 	var version int
 	again.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 6 {
+	if version != 99 {
 		t.Errorf("user_version = %d; the repair must not change it", version)
 	}
 }
