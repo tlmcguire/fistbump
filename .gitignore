@@ -7,3 +7,5 @@ playwright-report/
 test-results/
 build/icon.iconset/
 dist/
+src-tauri/target/
+src-tauri/gen/
