@@ -140,6 +140,17 @@
       const money = n => `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n || 0)).toLocaleString()}`;
 
       // --- Side-by-side offer comparison dialog (Item 13) ---
+      const COMPARE_PILL = {
+        pay: {well_above: "Well above market", above: "Above market", in_line: "At market", below: "Below market", well_below: "Well below market", unknown: "Not compared"},
+        benefits: {strong: "Strong", decent: "Decent", basic: "Limited", unclear: "Unclear", unlisted: "Not listed"},
+        life: {comfortable: "Comfortable", okay: "Workable", tight: "Tight", short: "Short"},
+      };
+      const COMPARE_TONE = {
+        well_above: "good", above: "good", in_line: "ok", below: "warn", well_below: "bad", unknown: "ok",
+        comfortable: "good", okay: "ok", tight: "warn", short: "bad",
+        strong: "good", decent: "ok", basic: "warn", unclear: "ok", unlisted: "ok",
+      };
+
       const openCompareOffers = async () => {
         if (rows.length < 2) {
           say("Track at least 2 jobs to compare offers side by side.", true);
@@ -148,51 +159,130 @@
         const picked = rows.filter(a => selected.has(a.id));
         const initial = (picked.length >= 2 ? picked : rows).slice(0, 3);
         const dialog = el("dialog", {class: "ask compare-dialog", "aria-label": "Compare offers side by side"});
+        const inputsWrap = el("div", {class: "compare-inputs"});
         const resultBox = el("div", {class: "compare-results"});
+        let jobsCache = [];
+        let recalcTimer = null;
+
+        const makeField = (label, placeholder, onInput) => {
+          const input = el("input", {type: "number", min: "0", step: "1000", placeholder});
+          input.addEventListener("input", onInput);
+          return {
+            input,
+            node: el("label", {class: "compare-field"}, el("span", {text: label}), input),
+          };
+        };
+
+        const scheduleCompare = () => {
+          clearTimeout(recalcTimer);
+          recalcTimer = setTimeout(runCompare, 350);
+        };
+
         const inputs = initial.map(a => {
-          const bonus = el("input", {type: "number", min: "0", step: "1000", placeholder: "Bonus ($/yr)"});
-          const equity = el("input", {type: "number", min: "0", step: "1000", placeholder: "Equity ($/yr)"});
-          return {app: a, bonus, equity};
+          const base = makeField("Base ($/yr)", "From posting", scheduleCompare);
+          const bonus = makeField("Bonus ($/yr)", "0", scheduleCompare);
+          const equity = makeField("Equity ($/yr)", "0", scheduleCompare);
+          const meta = el("span", {class: "compare-card-meta", text: a.position_title || "Role"});
+          const card = el("div", {class: "compare-card"},
+            el("div", {class: "compare-card-head"},
+              el("strong", {text: a.company_name || "Company"}),
+              meta),
+            el("div", {class: "compare-fields"}, base.node, bonus.node, equity.node));
+          return {app: a, base: base.input, bonus: bonus.input, equity: equity.input, meta, card};
         });
+        inputsWrap.append(...inputs.map(x => x.card));
+
+        const verdictPill = (kind, raw) => {
+          if (!raw) return el("span", {class: "compare-muted", text: "\u2014"});
+          const label = COMPARE_PILL[kind]?.[raw] || String(raw).replace(/_/g, " ");
+          const tone = COMPARE_TONE[raw] || "ok";
+          return el("span", {class: `cost-pill ${tone}`, text: label});
+        };
+
         const runCompare = async () => {
+          clearTimeout(recalcTimer);
           resultBox.replaceChildren(el("p", {class: "hint", text: "Calculating comparison\u2026"}));
           try {
-            const jobs = await Promise.all(inputs.map(x => api.jobs.get(x.app.job_id)));
-            const offers = inputs.map((x, i) => ({
-              label: `${x.app.company_name || "Company"} \u2014 ${x.app.position_title || "Role"}`,
-              title: jobs[i]?.position_title || x.app.position_title || "",
-              location: jobs[i]?.location || "",
-              work_mode: jobs[i]?.work_mode || "",
-              pay_min: jobs[i]?.pay_min || 0,
-              pay_max: jobs[i]?.pay_max || 0,
-              bonus: Math.max(0, Number(x.bonus.value) || 0),
-              annual_equity: Math.max(0, Number(x.equity.value) || 0),
-              text: jobs[i]?.raw_text || "",
-            }));
+            if (!jobsCache.length) {
+              jobsCache = await Promise.all(inputs.map(x => api.jobs.get(x.app.job_id)));
+              inputs.forEach((x, i) => {
+                const job = jobsCache[i];
+                const parts = [job?.position_title || x.app.position_title, job?.location || job?.work_mode].filter(Boolean);
+                x.meta.textContent = parts.join(" \u00b7 ");
+                if (job?.pay_min || job?.pay_max) {
+                  const mid = job.pay_min && job.pay_max ? Math.round((job.pay_min + job.pay_max) / 2) : (job.pay_max || job.pay_min);
+                  x.base.placeholder = `Est. ${money(mid)}`;
+                } else {
+                  x.base.placeholder = "Enter base";
+                }
+              });
+            }
+            const offers = inputs.map((x, i) => {
+              const job = jobsCache[i];
+              const customBase = Math.max(0, Number(x.base.value) || 0);
+              return {
+                label: `${x.app.company_name || "Company"} \u2014 ${x.app.position_title || "Role"}`,
+                title: job?.position_title || x.app.position_title || "",
+                location: job?.location || "",
+                work_mode: job?.work_mode || "",
+                pay_min: customBase > 0 ? customBase : (job?.pay_min || 0),
+                pay_max: customBase > 0 ? customBase : (job?.pay_max || 0),
+                bonus: Math.max(0, Number(x.bonus.value) || 0),
+                annual_equity: Math.max(0, Number(x.equity.value) || 0),
+                text: job?.raw_text || "",
+              };
+            });
             const res = await api.cost.compare({offers});
             const cols = res.offers || [];
-            const tr = (label, fn) => el("tr", {}, el("th", {scope: "row", text: label}), ...cols.map(c => el("td", {text: fn(c)})));
-            resultBox.replaceChildren(el("table", {class: "cost-table"},
-              el("thead", {}, el("tr", {}, el("th", {text: "Metric"}), ...cols.map(c => el("th", {text: c.label})))),
-              el("tbody", {},
-                tr("Total comp (est. yr)", c => c.total_comp ? money(c.total_comp) : (c.analysis?.lifestyle?.gross ? money(c.analysis.lifestyle.gross) : "N/A")),
-                tr("Bonus + Equity", c => money((c.bonus || 0) + (c.annual_equity || 0))),
-                tr("Effective tax rate", c => c.analysis?.lifestyle ? `${c.analysis.lifestyle.tax_rate}%` : "N/A"),
-                tr("Monthly take-home", c => c.analysis?.lifestyle ? money(c.analysis.lifestyle.net_monthly) : "N/A"),
-                tr("Monthly leftover", c => c.analysis?.lifestyle ? money(c.analysis.lifestyle.left_monthly) : "N/A"),
-                tr("Pay verdict", c => c.analysis?.pay?.verdict || "N/A"),
-                tr("Benefits", c => c.analysis?.benefits?.rating || "N/A"),
-                tr("Cost of living", c => c.analysis?.lifestyle?.verdict || "N/A"))));
+
+            const bestIndex = (values, mode = "max") => {
+              const valid = values.map((v, i) => ({v, i})).filter(x => Number.isFinite(x.v) && x.v > 0);
+              if (valid.length < 2) return -1;
+              valid.sort((a, b) => mode === "min" ? a.v - b.v : b.v - a.v);
+              return valid[0].v === valid[1].v ? -1 : valid[0].i;
+            };
+
+            const numRow = (label, getVal, fmt, {mode = "max", emph = false} = {}) => {
+              const vals = cols.map(getVal);
+              const best = bestIndex(vals, mode);
+              return el("tr", {class: emph ? "compare-emph" : null},
+                el("th", {scope: "row", text: label}),
+                ...vals.map((v, i) => {
+                  if (!Number.isFinite(v)) return el("td", {}, el("span", {class: "compare-muted", text: "\u2014"}));
+                  return el("td", {class: i === best ? "compare-best" : null, text: fmt(v)});
+                }));
+            };
+
+            const pillRow = (label, kind, getVal) => el("tr", {},
+              el("th", {scope: "row", text: label}),
+              ...cols.map(c => el("td", {}, verdictPill(kind, getVal(c)))));
+
+            resultBox.replaceChildren(
+              el("div", {class: "compare-table-wrap"},
+                el("table", {class: "compare-table"},
+                  el("thead", {}, el("tr", {},
+                    el("th", {scope: "col", text: "Metric"}),
+                    ...inputs.map(x => el("th", {scope: "col"},
+                      el("span", {class: "compare-col-company", text: x.app.company_name || "Company"}),
+                      el("span", {class: "compare-col-role", text: x.app.position_title || "Role"}))))),
+                  el("tbody", {},
+                    numRow("Total comp (est. yr)", c => c.total_comp || c.analysis?.lifestyle?.gross || NaN, money, {emph: true}),
+                    numRow("Bonus + Equity", c => (c.bonus || 0) + (c.annual_equity || 0), money),
+                    numRow("Effective tax rate", c => c.analysis?.lifestyle ? c.analysis.lifestyle.tax_rate : NaN, v => `${v}%`, {mode: "min"}),
+                    numRow("Monthly take-home", c => c.analysis?.lifestyle ? c.analysis.lifestyle.net_monthly : NaN, money),
+                    numRow("Monthly leftover", c => c.analysis?.lifestyle ? c.analysis.lifestyle.left_monthly : NaN, money, {emph: true}),
+                    pillRow("Pay verdict", "pay", c => c.analysis?.pay?.verdict),
+                    pillRow("Benefits", "benefits", c => c.analysis?.benefits?.rating),
+                    pillRow("Cost of living", "life", c => c.analysis?.lifestyle?.verdict)))));
           } catch (err) {
             resultBox.replaceChildren(el("p", {class: "resume-status error", text: err.message}));
           }
         };
-        const close = () => { dialog.close(); dialog.remove(); };
+        const close = () => { clearTimeout(recalcTimer); dialog.close(); dialog.remove(); };
         dialog.append(
           el("h2", {text: "Side-by-side offer comparison"}),
-          el("p", {class: "hint", text: "Add optional annual bonus or equity to compare total compensation and cost of living."}),
-          el("div", {class: "compare-inputs"}, inputs.map(x => el("div", {class: "compare-row"},
-            el("strong", {text: `${x.app.company_name} \u2014 ${x.app.position_title}`}), x.bonus, x.equity))),
+          el("p", {class: "hint", text: "Enter an optional base salary (if not listed), annual bonus, or equity to compare total compensation and cost of living."}),
+          inputsWrap,
           resultBox,
           el("div", {class: "ask-actions"},
             el("button", {type: "button", onclick: close}, "Close"),
