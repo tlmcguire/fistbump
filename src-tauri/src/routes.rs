@@ -613,4 +613,31 @@ mod tests {
             "?status=Applied&q=data%20analyst"
         );
     }
+
+    #[test]
+    fn validates_resume_and_tailored_routes() {
+        assert!(matches!(
+            route_for_channel("resume:importText", &[json!("   ")]),
+            Some(Err(_))
+        ));
+        assert!(matches!(
+            route_for_channel("resume:importText", &[json!("Jane Doe\nEngineer")]),
+            Some(Ok((Method::POST, path, Some(_)))) if path == "/v1/resume/import"
+        ));
+        assert!(matches!(
+            route_for_channel("resume:importApply", &[json!({ "replace": true })]),
+            Some(Err(_))
+        ));
+        assert!(matches!(
+            route_for_channel("tailored:createBlank", &[json!(5), json!(2)]),
+            Some(Ok((Method::POST, path, Some(body))))
+                if path == "/v1/tailored-resumes"
+                    && body.get("job_id").and_then(|v| v.as_i64()) == Some(5)
+                    && body.get("base_resume_id").and_then(|v| v.as_i64()) == Some(2)
+        ));
+        assert!(matches!(
+            route_for_channel("tailored:update", &[json!(3), json!("")]),
+            Some(Err(_))
+        ));
+    }
 }

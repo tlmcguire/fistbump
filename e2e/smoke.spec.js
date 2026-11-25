@@ -59,3 +59,26 @@ test('navigates between the main views', async ({ window }) => {
   await window.locator('#tab-find').click();
   await expect(window.locator('#search-form')).toBeVisible();
 });
+
+test('master resume saves profile and renders PDF preview without stuck overlay on unmount', async ({ window }) => {
+  await window.locator('#nav-resume').click();
+  const nameInput = window.locator('input[id$="-full_name"]');
+  await nameInput.fill('Ada Lovelace');
+  await window.getByRole('button', { name: /Create profile|Save profile/ }).click();
+  await expect(window.locator('.resume-doc')).toContainText('Ada Lovelace');
+
+  await window.locator('#resume-tab-pdf').click();
+  const preview = window.locator('.pdf-preview');
+  await expect(preview).toBeVisible();
+  await preview.locator('.pdf-expand').click();
+  await expect(window.locator('.pdf-preview.expanded')).toBeVisible();
+  await window.keyboard.press('Escape');
+  await expect(window.locator('.pdf-preview.expanded')).toHaveCount(0);
+
+  // Expanding again and switching routes programmatically must dispose the overlay cleanly.
+  await preview.locator('.pdf-expand').click();
+  await expect(window.locator('.pdf-preview.expanded')).toBeVisible();
+  await window.evaluate(() => window.App.go('home'));
+  await expect(window.locator('.pdf-preview.expanded')).toHaveCount(0);
+  await expect(window.locator('.pdf-backdrop')).toHaveCount(0);
+});

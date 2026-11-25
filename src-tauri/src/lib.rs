@@ -316,3 +316,36 @@ pub fn run() {
         _ => {}
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::is_internal_url;
+    use std::net::Ipv4Addr;
+
+    #[test]
+    fn internal_url_guard_allows_app_origins_and_blocks_external_https() {
+        let loopback = format!("http://{}:8080/index.html", Ipv4Addr::LOCALHOST);
+        for allowed in [
+            "tauri://localhost/index.html",
+            "http://tauri.localhost/index.html",
+            "https://tauri.localhost/index.html",
+            "http://localhost:1420/",
+            loopback.as_str(),
+            "about:blank",
+            "blob:tauri://localhost/preview-id",
+            "data:image/png;base64,AAAA",
+        ] {
+            let url = tauri::Url::parse(allowed).expect("valid test url");
+            assert!(is_internal_url(&url), "expected internal URL to be allowed: {allowed}");
+        }
+
+        for blocked in [
+            "https://github.com/tlmcguire/fistbump",
+            "https://boards.greenhouse.io/acme",
+            "http://example.com/",
+        ] {
+            let url = tauri::Url::parse(blocked).expect("valid test url");
+            assert!(!is_internal_url(&url), "expected external URL to be blocked: {blocked}");
+        }
+    }
+}
