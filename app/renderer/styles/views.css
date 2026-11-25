@@ -593,8 +593,15 @@ button.primary kbd { color: var(--accent-ink); background: rgba(10, 37, 92, 0.12
 
 /* PDF style picker & 1-page fit badge */
 .preview-head { flex-wrap: wrap; gap: 8px 12px; }
-.pdf-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.pdf-style-select { height: 28px; min-width: 108px; font-size: 12.5px; }
+.pdf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+}
+.pdf-controls button { padding: 0 10px; white-space: nowrap; }
+.pdf-style-select { height: 28px; min-width: 90px; width: auto; font-size: 12.5px; }
 .preview-bar {
   display: flex;
   flex-wrap: wrap;
