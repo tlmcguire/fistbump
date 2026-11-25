@@ -100,3 +100,11 @@ test('Resume import allows PDF, DOCX, TXT, and MD in frontend and Tauri routes',
   const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
   assert.ok(routes.includes('&["pdf", "docx", "txt", "md"]'), 'routes.rs should allow pdf, docx, txt, and md');
 });
+
+test('Phase B: consecutive resume imports, DOCX export, and 1-page fit audit are wired', () => {
+  const rb = read('views/resume-builder/resume-builder.js');
+  assert.ok(!rb.includes('importButton.disabled = pasteButton.disabled = !shown'), 'import buttons should not stay disabled when importSection is open');
+  assert.ok(rb.includes('let importing = false;'), 'resume-builder.js should gate imports with an in-flight flag');
+  assert.ok(rb.includes('Export DOCX'), 'resume-builder.js should offer Export DOCX');
+  assert.ok(rb.includes('api().resume.audit'), 'resume-builder.js should call resume.audit for 1-page fit check');
+});

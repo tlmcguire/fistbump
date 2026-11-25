@@ -129,6 +129,7 @@ func (s *Server) routes() []route {
 		{"POST /v1/resume/import", s.resumeImport},
 		{"POST /v1/resume/import/apply", s.resumeImportApply},
 		{"GET /v1/resume/preview", s.resumePreview},
+		{"GET /v1/resume/audit", s.resumeAudit},
 		{"POST /v1/resume/export", s.resumeExport},
 		{"GET /v1/resumes", s.resumeList},
 		{"POST /v1/resumes", s.resumeCreate},

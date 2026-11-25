@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/tlmcguire/fistbump/backend/internal/docx"
 	"github.com/tlmcguire/fistbump/backend/internal/pdf"
 	"github.com/tlmcguire/fistbump/backend/internal/render"
 	"github.com/tlmcguire/fistbump/backend/internal/store"
@@ -18,8 +19,9 @@ const maxFileNameRunes = 120
 
 // exportFormats maps each accepted format to the content type and file extension it is sent with.
 var exportFormats = map[string]struct{ contentType, ext string }{
-	"pdf": {"application/pdf", "pdf"},
-	"md":  {"text/markdown; charset=utf-8", "md"},
+	"pdf":  {"application/pdf", "pdf"},
+	"docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"},
+	"md":   {"text/markdown; charset=utf-8", "md"},
 }
 
 // exportRequest is the body of both export routes.
@@ -42,6 +44,27 @@ func (s *Server) resumeExport(w http.ResponseWriter, r *http.Request) error {
 		return notFound("Create a profile before exporting a resume")
 	}
 	return s.sendExport(w, format, style, render.Master(master), fileName(master.Profile.FullName, "Resume"))
+}
+
+// resumeAudit handles GET /v1/resume/audit?style=...: deterministic 1-page PDF fit and ATS checks.
+func (s *Server) resumeAudit(w http.ResponseWriter, r *http.Request) error {
+	style := strings.TrimSpace(r.URL.Query().Get("style"))
+	if !pdf.ValidStyle(style) {
+		return validationError("style", "style must be classic, modern, minimal, compact, or executive")
+	}
+	if style == "" {
+		style = pdf.StyleClassic
+	}
+	master, err := s.store.GetMaster(r.Context())
+	if err != nil {
+		return err
+	}
+	if master.Profile == nil {
+		writeJSON(w, http.StatusOK, pdf.Audit("", style))
+		return nil
+	}
+	writeJSON(w, http.StatusOK, pdf.Audit(render.Master(master), style))
+	return nil
 }
 
 // tailoredExport handles POST /v1/tailored-resumes/{id}/export.
@@ -81,7 +104,7 @@ func readFormatAndStyle(w http.ResponseWriter, r *http.Request) (string, string,
 		return "", "", err
 	}
 	if _, ok := exportFormats[req.Format]; !ok {
-		return "", "", validationError("format", "format must be pdf or md")
+		return "", "", validationError("format", "format must be pdf, docx or md")
 	}
 	style := strings.TrimSpace(req.Style)
 	if !pdf.ValidStyle(style) {
@@ -97,13 +120,21 @@ func readFormatAndStyle(w http.ResponseWriter, r *http.Request) (string, string,
 // the Tauri host asks the user where to save them.
 func (s *Server) sendExport(w http.ResponseWriter, format, style, markdown, name string) error {
 	body := []byte(markdown)
-	if format == "pdf" {
+	switch format {
+	case "pdf":
 		pdfBytes, err := s.makePDF(markdown, name+"."+exportFormats[format].ext, style)
 		if err != nil {
 			slog.Error("pdf export failed", "error", err)
 			return pdfFailed()
 		}
 		body = pdfBytes
+	case "docx":
+		docxBytes, err := docx.RenderStyled(markdown, style)
+		if err != nil {
+			slog.Error("docx export failed", "error", err)
+			return internal()
+		}
+		body = docxBytes
 	}
 
 	kind := exportFormats[format]

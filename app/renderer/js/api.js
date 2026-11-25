@@ -112,7 +112,7 @@ window.FistBumpAPI = {
   window.FistBumpAPI.resume = wrap("resume", [
     "get", "putProfile", "preview", "createExperience", "updateExperience", "deleteExperience", 
     "createEducation", "updateEducation", "deleteEducation",
-    "importFile", "importData", "importText", "importApply", "export", "previewPdf",
+    "importFile", "importData", "importText", "importApply", "audit", "export", "previewPdf",
   ]);
 
   //handles job management in phase 4

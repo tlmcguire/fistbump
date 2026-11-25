@@ -394,14 +394,27 @@
     const styleSelect = el("select", {id: "resume-pdf-style", class: "pdf-style-select", "aria-label": "PDF style", title: "Choose PDF layout style"},
       PDF_STYLES.map(([v, label]) => el("option", {value: v, text: label})));
     styleSelect.value = window.Prefs?.get("pdfStyle") || "classic";
+    const fitBadge = el("span", {class: "hint", role: "status"});
     const exportButton = el("button", {type: "button"}, "Export PDF");
+    const exportDocxButton = el("button", {type: "button"}, "Export DOCX");
     const versionsList = el("ul", {class: "versions"});
     const versionForm = el("form", {class: "version-form", hidden: true});
+
+    const refreshAudit = () => {
+      if (!window.api?.resume?.audit) return;
+      api().resume.audit(styleSelect.value).then(a => {
+        if (disposed || !a || !a.word_count) { fitBadge.textContent = ""; return; }
+        const pages = a.page_count === 1 ? "1 page" : `${a.page_count} pages`;
+        fitBadge.textContent = a.warnings?.length ? `${pages} · ${a.warnings.length} tip${a.warnings.length === 1 ? "" : "s"}` : `${pages} · Ready`;
+        fitBadge.title = a.warnings?.length ? a.warnings.join("\n") : `${a.word_count} words, ${a.quantified_count}/${a.bullet_count} quantified bullets`;
+      }).catch(() => {});
+    };
 
     //the preview as text or as the PDF it exports
     const pdf = window.PdfPreview.create(async () => (await api().resume.previewPdf(styleSelect.value)).data_base64, {title: "Master resume as a PDF"});
     styleSelect.addEventListener("change", () => {
       window.Prefs?.set("pdfStyle", styleSelect.value);
+      refreshAudit();
       if (previewKind === "pdf") pdf.load();
     });
     window.Prefs?.onChange((key, value) => {
@@ -436,7 +449,7 @@
 
     const side = el("div", {class: "pane resume-side"},
       el("section", {class: "resume-section"},
-        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, styleSelect, exportButton)),
+        el("div", {class: "section-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, fitBadge, styleSelect, exportButton, exportDocxButton)),
         el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
         exportNote,
         previewPanels.text,
@@ -454,6 +467,7 @@
       const {markdown} = await api().resume.preview();
       if (disposed) return;
       fill(previewText, markdown.trim() ? readable(markdown) : el("p", {class: "hint", text: "Your resume appears here once you save your profile."}));
+      refreshAudit();
       if (previewKind === "pdf") pdf.load(); //the PDF follows the text
     });
  
@@ -465,6 +479,15 @@
       const result = await attempt(() => exportFile(format => api().resume.export(format, styleSelect.value)));
       if (disposed) return;
       exportButton.disabled = false;
+      if (result?.saved) exportNote.replaceChildren(savedNote(result.path));
+    });
+
+    exportDocxButton.addEventListener("click", async () => {
+      exportDocxButton.disabled = true;
+      exportNote.replaceChildren();
+      const result = await attempt(() => api().resume.export("docx", styleSelect.value));
+      if (disposed) return;
+      exportDocxButton.disabled = false;
       if (result?.saved) exportNote.replaceChildren(savedNote(result.path));
     });
 
@@ -811,10 +834,12 @@
     const IMPORT_EXTENSIONS = ["pdf", "docx", "txt", "md"];
     const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
+    let importing = false;
+
     const showEditor = shown => {
       importSection.hidden = shown;
       for (const section of [profileSection, experienceSection, educationSection]) section.hidden = !shown;
-      importButton.disabled = pasteButton.disabled = !shown;
+      importButton.disabled = pasteButton.disabled = importing;
     };
 
     const closeImport = () => {
@@ -832,10 +857,17 @@
     };
 
     const runImport = async (call, source) => {
+      if (importing) return;
+      importing = true;
       importButton.disabled = pasteButton.disabled = true;
       say("Reading your resume…");
-      const result = await attempt(call);
-      importButton.disabled = pasteButton.disabled = false;
+      let result;
+      try {
+        result = await attempt(call);
+      } finally {
+        importing = false;
+        if (!disposed) importButton.disabled = pasteButton.disabled = false;
+      }
       if (disposed || !result) return;
       say("");
       if (result.canceled) return;
@@ -952,13 +984,13 @@
     // A file dropped anywhere on the view. The extension and size are checked here for a quick
     // message; the backend checks the bytes again.
     container.addEventListener("dragover", event => {
-      if (!importSection.hidden || !event.dataTransfer?.types?.includes("Files")) return;
+      if (importing || !event.dataTransfer?.types?.includes("Files")) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
     });
     container.addEventListener("drop", async event => {
       const file = event.dataTransfer?.files?.[0];
-      if (!file || !importSection.hidden) return;
+      if (!file || importing) return;
       event.preventDefault();
       const ext = (/\.([^.]+)$/.exec(file.name) || [])[1]?.toLowerCase();
       if (!IMPORT_EXTENSIONS.includes(ext)) return say(`${file.name} is not a PDF, .docx, .txt or .md file.`, true);

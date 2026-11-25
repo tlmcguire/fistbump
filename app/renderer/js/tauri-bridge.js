@@ -91,6 +91,7 @@
       importData: (filename, bytes) => call('resume:importData', filename, bytesToBase64(bytes)),
       importText: (text) => call('resume:importText', text),
       importApply: (body) => call('resume:importApply', body),
+      audit: (style) => call('resume:audit', style),
       export: (format, style) => call('resume:export', format, style),
       previewPdf: (style) => call('resume:previewPdf', style),
     },

@@ -162,6 +162,13 @@ pub fn route_for_channel(
             None => Err(bad("Invalid profile")),
         },
         "resume:preview" => Ok((Method::GET, "/v1/resume/preview".into(), None)),
+        "resume:audit" => {
+            let qs = match a0.and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                Some(style) => format!("?style={}", seg(style)),
+                None => String::new(),
+            };
+            Ok((Method::GET, format!("/v1/resume/audit{qs}"), None))
+        }
         "ai:status" => Ok((Method::GET, "/v1/ai/status".into(), None)),
         "ai:setMode" => match a0.and_then(|v| v.as_str()).filter(|m| AI_MODES.contains(m)) {
             Some(mode) => Ok((

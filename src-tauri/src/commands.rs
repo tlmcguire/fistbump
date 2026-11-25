@@ -88,8 +88,9 @@ async fn save_export(
 ) -> Value {
     let (filter_name, ext) = match format {
         "pdf" => ("PDF", "pdf"),
+        "docx" => ("Word Document", "docx"),
         "md" => ("Markdown", "md"),
-        _ => return bad("Format must be pdf or md"),
+        _ => return bad("Format must be pdf, docx or md"),
     };
 
     let (bytes, disposition) = match request_export_bytes(state, url_path, format, style).await {
@@ -421,7 +422,7 @@ pub async fn ipc_call(
                 let style = a1.and_then(|v| v.as_str());
                 save_export(&app, &state, "/v1/resume/export", fmt, style).await
             }
-            None => bad("Format must be pdf or md"),
+            None => bad("Format must be pdf, docx or md"),
         },
 
         "tailored:export" => match (as_id(a0), a1.and_then(|v| v.as_str())) {
@@ -448,7 +449,7 @@ pub async fn ipc_call(
                 res
             }
             (None, _) => bad("Invalid id"),
-            (_, None) => bad("Format must be pdf or md"),
+            (_, None) => bad("Format must be pdf, docx or md"),
         },
 
         "resume:previewPdf" => {
