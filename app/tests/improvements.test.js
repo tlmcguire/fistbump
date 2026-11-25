@@ -89,3 +89,11 @@ test('Open a link page is removed and combined with the search bar', () => {
   assert.ok(!jp.includes('tab-link'), 'job-parser.js should not reference tab-link');
   assert.ok(jp.includes('looksLikeJobLink'), 'job-parser.js should detect pasted job links in search');
 });
+
+test('Resume import allows PDF, DOCX, TXT, and MD in frontend and Tauri routes', () => {
+  const rb = read('views/resume-builder/resume-builder.js');
+  assert.ok(rb.includes('["pdf", "docx", "txt", "md"]'), 'resume-builder.js should allow pdf, docx, txt, and md');
+
+  const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'src-tauri', 'src', 'routes.rs'), 'utf8');
+  assert.ok(routes.includes('&["pdf", "docx", "txt", "md"]'), 'routes.rs should allow pdf, docx, txt, and md');
+});

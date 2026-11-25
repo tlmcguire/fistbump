@@ -175,7 +175,7 @@ func normMonth(s string) string {
 	if m := regexp.MustCompile(`^(\d{1,2})[/.](\d{4})$`).FindStringSubmatch(s); m != nil {
 		n, _ := strconv.Atoi(m[1])
 		if n >= 1 && n <= 12 {
-			return m[2] + "-" + strconv.Itoa(100+n)[1:]
+			return m[2] + "-" + strconv.Itoa(100 + n)[1:]
 		}
 		return m[2]
 	}

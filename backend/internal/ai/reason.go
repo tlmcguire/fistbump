@@ -28,13 +28,13 @@ func NormalizeLanguage(code string) string {
 // reasons are the explanations the rules engine gives, one set per language.
 var reasons = map[string]map[string]string{
 	"en": {
-		"skills":      "Skills the job asks for are moved to the front so they are seen first. Nothing was added or removed.",
-		"skillsNamed": "Moved %s to the front of your skills list because this job asks for them. Nothing was added or removed.",
-		"lines":       "Lines that show skills this job asks for are moved up. The wording is unchanged.",
-		"linesNamed":  "Moved lines highlighting %s to the top so matching experience is seen first. Wording is unchanged.",
-		"summary":     "Highlights %s from your resume so your summary speaks directly to what this posting asks for.",
-		"newsummary":  "Your summary was empty. Built a concise summary using skills already on your resume (%s).",
-		"rewrite":     "Tightened wording to highlight experience relevant to this role. Verify against your record before accepting.",
+		"skills":       "Skills the job asks for are moved to the front so they are seen first. Nothing was added or removed.",
+		"skillsNamed":  "Moved %s to the front of your skills list because this job asks for them. Nothing was added or removed.",
+		"lines":        "Lines that show skills this job asks for are moved up. The wording is unchanged.",
+		"linesNamed":   "Moved lines highlighting %s to the top so matching experience is seen first. Wording is unchanged.",
+		"summary":      "Highlights %s from your resume so your summary speaks directly to what this posting asks for.",
+		"newsummary":   "Your summary was empty. Built a concise summary using skills already on your resume (%s).",
+		"rewrite":      "Tightened wording to highlight experience relevant to this role. Verify against your record before accepting.",
 		"rewriteNamed": "Refined wording to emphasize %s from your experience for this role.",
 	},
 	"es": {

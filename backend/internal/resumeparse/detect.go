@@ -16,6 +16,7 @@ type Kind int
 const (
 	KindPDF Kind = iota + 1
 	KindText
+	KindDOCX
 )
 
 // Largest file that can be imported (5MB)
@@ -59,6 +60,9 @@ func Detect(filename string, data []byte) (Kind, error) {
 		return KindPDF, nil
 	}
 	if detected, what := magic(data); detected != "" {
+		if detected == "docx" {
+			return KindDOCX, nil
+		}
 		return 0, unsupported(name, detected, what)
 	}
 	if bytes.HasPrefix(data, []byte{0xFF, 0xFE}) || bytes.HasPrefix(data, []byte{0xFE, 0xFF}) {
@@ -69,7 +73,7 @@ func Detect(filename string, data []byte) (Kind, error) {
 		return KindText, nil
 	}
 	return 0, &Error{Reason: ReasonUnsupportedFormat, Detected: "unknown",
-		Message: name + " is not a PDF or a text file. Only PDF, .txt and .md files can be imported."}
+		Message: name + " is not a supported resume file. Only PDF, .docx, .txt and .md files can be imported."}
 }
 
 // file signatures for what was detected
@@ -131,8 +135,8 @@ func unsupported(name, detected, what string) *Error {
 	switch {
 	case what == "an image":
 		msg = fmt.Sprintf("%s is %s. Import a PDF with selectable text, or paste the text instead.", name, what)
-	case detected == "docx" || detected == "doc":
-		msg = fmt.Sprintf("%s is %s. Save it as a PDF (File > Save As > PDF) and import that.", name, what)
+	case detected == "doc":
+		msg = fmt.Sprintf("%s is an older Word (.doc) file. Save it as .docx or PDF (File > Save As) and import that.", name)
 	case detected == "pages":
 		msg = fmt.Sprintf("%s is %s. Export it as a PDF (File > Export To > PDF) and import that.", name, what)
 	case detected == "odt":

@@ -111,17 +111,38 @@ func TestImportAllHiddenIsNoText(t *testing.T) {
 	expectReason(t, importText(t, s, tagged("python kubernetes")), resumeparse.ReasonNoText)
 }
 
-func TestImportRefusesOtherFormats(t *testing.T) {
+func TestImportDOCX(t *testing.T) {
 	s := newResumeServer(t)
 	var docx bytes.Buffer
 	zw := zip.NewWriter(&docx)
 	f, _ := zw.Create("word/document.xml")
-	f.Write([]byte("<w:document/>"))
+	f.Write([]byte(`<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>` +
+		`<w:p><w:r><w:t>Ada Lovelace</w:t></w:r></w:p>` +
+		`<w:p><w:r><w:t>ada@example.com</w:t></w:r></w:p>` +
+		`<w:p><w:r><w:t>Experience</w:t></w:r></w:p>` +
+		`<w:p><w:r><w:t>Data Analyst, Acme</w:t></w:r></w:p>` +
+		`<w:p><w:r><w:t>Jun 2022 - Present</w:t></w:r></w:p>` +
+		`<w:p><w:r><w:t>Built analytics dashboards in SQL and Python.</w:t></w:r></w:p>` +
+		`</w:body></w:document>`))
 	zw.Close()
 
-	d := expectReason(t, importFile(t, s, "ada.pdf", docx.Bytes()), resumeparse.ReasonUnsupportedFormat)
-	if d["detected"] != "docx" {
-		t.Errorf("detected = %v, want docx", d["detected"])
+	out := expect(t, importFile(t, s, "ada.docx", docx.Bytes()), 200)
+	if !strings.Contains(out["text"].(string), "Ada Lovelace") {
+		t.Errorf("text = %v, want Ada Lovelace", out["text"])
+	}
+}
+
+func TestImportRefusesOtherFormats(t *testing.T) {
+	s := newResumeServer(t)
+	var pages bytes.Buffer
+	zw := zip.NewWriter(&pages)
+	f, _ := zw.Create("Index/Document.iwa")
+	f.Write([]byte("x"))
+	zw.Close()
+
+	d := expectReason(t, importFile(t, s, "ada.pdf", pages.Bytes()), resumeparse.ReasonUnsupportedFormat)
+	if d["detected"] != "pages" {
+		t.Errorf("detected = %v, want pages", d["detected"])
 	}
 	expectReason(t, importFile(t, s, "ada.pdf", []byte("\x89PNG\r\n\x1A\n....")), resumeparse.ReasonUnsupportedFormat)
 	expectReason(t, importFile(t, s, "ada.txt", nil), resumeparse.ReasonEmpty)

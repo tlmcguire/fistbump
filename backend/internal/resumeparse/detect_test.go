@@ -45,6 +45,7 @@ func TestDetectAcceptsPDFAndText(t *testing.T) {
 	}{
 		{"resume.pdf", []byte("%PDF-1.7\n..."), KindPDF},
 		{"noext", []byte("%PDF-1.4"), KindPDF}, // the content decides, not the file name
+		{"resume.docx", zipOf(t, map[string]string{"word/document.xml": "<w/>"}), KindDOCX},
 		{"resume.txt", []byte("Jane Doe\nGo, SQL"), KindText},
 		{"resume.md", []byte("# Jane Doe\n\n## Skills\n"), KindText},
 		{"résumé.txt", []byte("Łukasz Ñandú"), KindText},
@@ -88,8 +89,7 @@ func TestDetectRefusesOtherFormatsWithAdvice(t *testing.T) {
 		detected string
 		advice   string
 	}{
-		{"cv.docx", zipOf(t, map[string]string{"word/document.xml": "<w/>"}), "docx", "Save it as a PDF"},
-		{"cv.doc", append([]byte("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"), make([]byte, 20)...), "doc", "Save it as a PDF"},
+		{"cv.doc", append([]byte("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"), make([]byte, 20)...), "doc", "Save it as .docx or PDF"},
 		{"cv.pages", zipOf(t, map[string]string{"Index/Document.iwa": "x"}), "pages", "File > Export To > PDF"},
 		{"cv.odt", zipOf(t, map[string]string{"mimetype": "application/vnd.oasis.opendocument.text"}), "odt", "File > Export as PDF"},
 		{"cv.zip", zipOf(t, map[string]string{"a.txt": "x"}), "zip", "Save your resume as a PDF"},
@@ -114,8 +114,8 @@ func TestDetectRefusesOtherFormatsWithAdvice(t *testing.T) {
 
 // The file's bytes decide what it is, whatever its name says.
 func TestDetectIgnoresTheFileExtension(t *testing.T) {
-	if e := refusal(t, "resume.pdf", zipOf(t, map[string]string{"word/document.xml": "<w/>"})); e.Detected != "docx" {
-		t.Errorf("a Word file renamed .pdf: %+v", e)
+	if got, err := Detect("resume.pdf", zipOf(t, map[string]string{"word/document.xml": "<w/>"})); err != nil || got != KindDOCX {
+		t.Errorf("a DOCX file renamed .pdf = %v, %v; want KindDOCX", got, err)
 	}
 	if e := refusal(t, "resume.txt", []byte("\x89PNG\r\n\x1A\n....")); e.Detected != "png" {
 		t.Errorf("an image renamed .txt: %+v", e)

@@ -115,6 +115,12 @@ func (s *Server) resumeImport(w http.ResponseWriter, r *http.Request) error {
 				return parseError(err)
 			}
 			raw, hidden = ex.Text, ex.Hidden
+		case resumeparse.KindDOCX:
+			ex, err := resumeparse.TextFromDOCX(data)
+			if err != nil {
+				return parseError(err)
+			}
+			raw, hidden = ex.Text, ex.Hidden
 		case resumeparse.KindText:
 			raw = string(data)
 		}

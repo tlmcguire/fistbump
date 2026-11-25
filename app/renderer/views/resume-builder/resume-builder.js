@@ -808,7 +808,7 @@
     // A file (picker or drop) or pasted text becomes a draft from POST /v1/resume/import. The draft
     // is shown in the same forms as the builder; nothing is saved until Apply.
 
-    const IMPORT_EXTENSIONS = ["pdf", "txt", "md"];
+    const IMPORT_EXTENSIONS = ["pdf", "docx", "txt", "md"];
     const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
     const showEditor = shown => {
@@ -961,7 +961,7 @@
       if (!file || !importSection.hidden) return;
       event.preventDefault();
       const ext = (/\.([^.]+)$/.exec(file.name) || [])[1]?.toLowerCase();
-      if (!IMPORT_EXTENSIONS.includes(ext)) return say(`${file.name} is not a PDF, .txt or .md file.`, true);
+      if (!IMPORT_EXTENSIONS.includes(ext)) return say(`${file.name} is not a PDF, .docx, .txt or .md file.`, true);
       if (file.size > MAX_IMPORT_BYTES) return say("The file is larger than 5 MB. Export it again without images, or paste the text instead.", true);
       const bytes = await file.arrayBuffer();
       runImport(() => api().resume.importData(file.name, bytes), file.name);

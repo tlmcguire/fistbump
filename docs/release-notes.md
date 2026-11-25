@@ -1,12 +1,38 @@
 ![Fistbump](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/github-banner.png)
 
-# Fistbump v0.3.0
+# Fistbump v0.4.0
 
 Fistbump is a local-first job application assistant: your resume, the postings, the skills they ask
 for that you do not have yet, a tailored resume you can export as a PDF, and a tracker for the
 applications you sent. Your data stays on your computer unless you choose a remote AI provider.
 
-## What's new in 0.3.0
+## What's new in 0.4.0
+
+This release focuses on resume quality, smarter tailoring, richer PDF formatting, transparent
+compensation sources, and a cleaner search workflow.
+
+- **Five PDF styles.** Choose between **Classic**, **Modern**, **Minimal**, **Compact**, and
+  **Executive** layouts in both Master resume and Tailor, with live PDF previews and remembered
+  style preferences.
+- **DOCX and Markdown resume import.** Import `.docx`, `.md`, `.pdf`, or `.txt` resumes via file
+  picker or drag-and-drop. Hidden text in DOCX files (white-on-white, vanished, or sub-2pt runs) is
+  stripped and reported just like PDF imports.
+- **Stronger resume parser.** Better handling of section headings, bullet markers, degrees (like
+  `B.S.`), multi-line titles, and date ranges when importing resumes.
+- **"Date range not applicable" option.** Mark projects, volunteer work, or undated experience
+  entries as undated so they render cleanly without empty date placeholders.
+- **Sharper AI suggestions and zero no-op diffs.** Tailoring suggestions now cite specific job
+  requirements clearly, skip meaningless rewrites, and ignore cosmetic punctuation differences (such
+  as curly vs. straight apostrophes like `Bachelor’s` vs. `Bachelor's`). Suggestion diffs and
+  bullets also render with cleaner spacing and structure.
+- **Cited cost-of-living, pay, tax, and benefits data — refreshed every 30 days.** Every
+  compensation and cost-of-living estimate now cites its source (BLS OEWS, IRS, HUD FMR, MIT Living
+  Wage, Tax Foundation, and BLS NCS), and Fistbump automatically refreshes the dataset in-app every
+  30 days without needing a new app release.
+- **Unified Search and Paste-a-Link.** The separate "Open a link" tab has been folded into Search —
+  paste a Greenhouse job URL directly into the search bar to open and analyze it.
+
+## In 0.3.0
 
 Fistbump has moved from Electron to a native **Tauri v2** Rust shell. Everything works the same way
 and your existing resume, jobs, applications and local models carry over, while the app itself is
@@ -227,10 +253,10 @@ many questions at a time, so this release makes Fistbump a good guest:
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows 10 and 11 | `FistBump-0.3.0-Windows-x64.exe` | NSIS, x64, unsigned |
-| macOS 12 and later, Apple silicon | `FistBump-0.3.0-macOS-arm64.dmg` | unsigned |
-| macOS 12 and later, Intel | `FistBump-0.3.0-macOS-x64.dmg` | unsigned |
-| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump-0.3.0-Linux-x86_64.AppImage` | x64, unsigned (`libwebkit2gtk-4.1`) |
+| Windows 10 and 11 | `FistBump-0.4.0-Windows-x64.exe` | NSIS, x64, unsigned |
+| macOS 12 and later, Apple silicon | `FistBump-0.4.0-macOS-arm64.dmg` | unsigned |
+| macOS 12 and later, Intel | `FistBump-0.4.0-macOS-x64.dmg` | unsigned |
+| Ubuntu 22.04 and later, Fedora 36 and later | `FistBump-0.4.0-Linux-x86_64.AppImage` | x64, unsigned (`libwebkit2gtk-4.1`) |
 
 The builds are not signed or notarized, so the first launch is stopped by the system: on macOS
 right-click the app and choose Open, on Windows choose "More info" and then "Run anyway". The
@@ -241,25 +267,25 @@ user guide ([user-guide.md](user-guide.md)) walks through it.
 NFR-5 asks for an install under 250 MB, without model weights. Moving from Electron to Tauri v2
 closed the gap without dropping any features. Measured on macOS Apple silicon:
 
-| Metric | Electron (0.2.x) | Tauri v2 (0.3.0) | Change |
+| Metric | Electron (0.2.x) | Tauri v2 (0.3.0+) | Change |
 |---|---|---|---|
 | Installer (`.dmg`) | 180 MB | **66 MB** | **-63%** |
 | Installed app bundle (`.app`) | 429 MB | **161 MB** | **-62%** |
 | Shell overhead (excl. ~126 MB `bin/`) | ~303 MB | **~35 MB** | **-88%** |
 | Idle RAM (RSS, full process tree) | 423.4 MB | **198.1 MB** | **-53%** |
 
-**NFR-5 is now met** (161 MB installed vs. the 250 MB limit, with `fistbump-core` and `llama-server`
+**NFR-5 is met** (161 MB installed vs. the 250 MB limit, with `fistbump-core` and `llama-server`
 still bundled inside the app).
 
 ## Upgrading and data
 
-Because 0.3.0 switches from Electron to Tauri, download this installer once from the releases page
-and install it over the earlier version (future Tauri-to-Tauri updates install in place).
+If you are on **0.3.0**, Fistbump can download and install **0.4.0** in place from the update
+prompt or Settings. If you are upgrading from **0.2.x (Electron)**, download this installer once
+from the releases page and install it over the earlier version.
 
 Your SQLite database, master resume, saved jobs, applications and downloaded local models stay in
-the same data folder and carry over untouched. If you previously saved an optional remote AI API
-key in Settings, re-enter it once after upgrading (the new OS keychain store cannot read Electron's
-older encrypted key file).
+the same data folder and carry over untouched. (If upgrading from 0.2.x with a saved remote AI API
+key, re-enter it once in Settings.)
 
 ## Known limits
 
