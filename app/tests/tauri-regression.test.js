@@ -16,6 +16,7 @@ test('tauri.conf.json bundle identifier avoids .app suffix and updater is config
 });
 
 test('macOS DMG config matches 540x380 background artwork and symmetric icon positions', () => {
+  assert.strictEqual(conf.bundle?.macOS?.signingIdentity, '-', 'macOS must ad-hoc sign the bundle so Gatekeeper does not report it as damaged');
   const dmg = conf.bundle?.macOS?.dmg;
   assert.ok(dmg, 'bundle.macOS.dmg must be configured');
   assert.deepEqual(dmg.windowSize, { width: 540, height: 380 });
