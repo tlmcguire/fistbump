@@ -91,7 +91,7 @@ var (
 	singleRe   = regexp.MustCompile(`(?i)(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\b(?:19|20)\d{2}\b)`)
 	quantRe    = regexp.MustCompile(`\d+(?:\.\d+)?\s*(?:%|x\b|k\b|m\b|\+)|\$\s?\d|\b\d{2,}\b`)
 	gpaRe      = regexp.MustCompile(`(?i)(?:cumulative\s+)?GPA[:\s]*([0-4]\.\d{1,2})(?:\s*/\s*[45]\.0{0,2})?`)
-	degreeRe   = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?(?: of [A-Z][a-z]+)?|J\.?D\.?|M\.?D\.?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|A\.?A\.?S?\.?|A\.?S\.?|High School Diploma|Certificate)\b`)
+	degreeRe   = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?(?: of [A-Z][a-z]+)?|J\.?D\.?|M\.?D\.?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|A\.?A\.?S?\.?|A\.?S\.?|High School Diploma|Certificate)(?:\s|,|$)`)
 	schoolRe   = regexp.MustCompile(`(?i)\b(university|college|institute|school|academy|polytechnic|conservatory|bootcamp)\b`)
 	honorsRe   = regexp.MustCompile(`(?i)(summa|magna)? ?cum laude|honors|dean'?s list|valedictorian`)
 	clearRe    = regexp.MustCompile(`(?i)\b(TS/SCI(?: with (?:full scope |CI )?poly(?:graph)?)?|top secret(?: clearance)?|secret clearance|public trust)\b`)
