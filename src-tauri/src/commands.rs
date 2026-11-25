@@ -1,6 +1,7 @@
 // Tauri command handler bridging renderer IPC channels to the Go backend and native APIs.
 
 use std::path::PathBuf;
+use std::sync::atomic::Ordering;
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
@@ -629,19 +630,14 @@ pub async fn ipc_call(
             _ => bad("Invalid release link"),
         },
 
-        // Updater channels are wired to `tauri-plugin-updater` in Phase 4.
-        "app:check-updates" => json!({
-            "status": "current",
-            "current": app.package_info().version.to_string(),
-            "latest": app.package_info().version.to_string(),
-            "url": "",
-            "publishedAt": "",
-            "message": "Updater will be enabled in Phase 4.",
-            "downloadable": false,
-            "size": 0
-        }),
-        "app:download-update" | "app:cancel-update" | "app:open-update" | "app:install-update" => {
-            bad("Updater is not enabled yet.")
+        "app:check-updates" => crate::updates::check_for_updates(&app, &state).await,
+        "app:download-update" => crate::updates::download_update(&app, &state).await,
+        "app:cancel-update" => crate::updates::cancel_update(&state).await,
+        "app:install-update" => crate::updates::install_update(&app, &state).await,
+        "app:open-update" => {
+            let url = format!("{}/releases", crate::menus::GITHUB_URL);
+            let _ = app.opener().open_url(&url, None::<&str>);
+            json!({ "ok": true })
         }
 
         "error:details" => {
@@ -666,6 +662,7 @@ pub async fn ipc_call(
         }
 
         "error:quit" => {
+            state.explicit_quit.store(true, Ordering::SeqCst);
             app.exit(0);
             json!({ "ok": true })
         }

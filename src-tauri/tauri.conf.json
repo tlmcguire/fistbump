@@ -8,22 +8,11 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "macOSPrivateApi": true,
     "security": {
       "csp": "default-src 'self'; img-src 'self' data:; worker-src 'self' blob:; frame-src blob:; object-src blob:"
     },
-    "windows": [
-      {
-        "label": "main",
-        "title": "Fistbump",
-        "width": 1240,
-        "height": 820,
-        "minWidth": 760,
-        "minHeight": 520,
-        "visible": false,
-        "dragDropEnabled": false,
-        "zoomHotkeysEnabled": false
-      }
-    ]
+    "windows": []
   },
   "bundle": {
     "active": true,
@@ -34,5 +23,11 @@
       "../build/icon.png"
     ],
     "category": "Productivity"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
   }
 }

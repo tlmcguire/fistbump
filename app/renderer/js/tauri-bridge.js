@@ -211,4 +211,75 @@
       bulkArchive: (ids, archived) => call('applications:bulkArchive', ids, archived),
     },
   };
+
+  // Native-style Windows titlebar buttons (replaces Electron's titleBarOverlay on frameless Mica windows).
+  if (platform === 'win32' && window.__TAURI__.window?.getCurrentWindow) {
+    const mountWinControls = () => {
+      if (document.querySelector('.win-controls')) return;
+      const win = window.__TAURI__.window.getCurrentWindow();
+      const bar = document.createElement('div');
+      bar.className = 'win-controls';
+      bar.setAttribute('aria-label', 'Window controls');
+      const addBtn = (label, cls, glyph, onClick) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `win-btn ${cls}`;
+        btn.setAttribute('aria-label', label);
+        btn.innerHTML = glyph;
+        btn.addEventListener('click', onClick);
+        bar.appendChild(btn);
+      };
+      addBtn('Minimize', 'win-min', '<svg viewBox="0 0 10 10"><path d="M1 5h8"/></svg>', () => win.minimize());
+      addBtn('Maximize', 'win-max', '<svg viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7"/></svg>', () => win.toggleMaximize());
+      addBtn('Close', 'win-close', '<svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2L2 8"/></svg>', () => win.close());
+      document.body.appendChild(bar);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountWinControls);
+    else mountWinControls();
+  }
+
+  // Right-click menu for https: links (Open in Browser / Copy Link) matching `app/main/menus.js`.
+  let ctxMenu = null;
+  const closeCtxMenu = () => {
+    if (ctxMenu) {
+      ctxMenu.remove();
+      ctxMenu = null;
+    }
+  };
+  document.addEventListener('click', closeCtxMenu);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCtxMenu(); });
+  window.addEventListener('blur', closeCtxMenu);
+
+  document.addEventListener('contextmenu', (event) => {
+    closeCtxMenu();
+    const link = event.target?.closest?.('a[href]');
+    const href = link?.href || '';
+    if (href.startsWith('https://')) {
+      event.preventDefault();
+      const menu = document.createElement('div');
+      menu.className = 'tauri-context-menu';
+      menu.setAttribute('role', 'menu');
+      const addItem = (label, action) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'menuitem');
+        btn.textContent = label;
+        btn.addEventListener('click', () => { closeCtxMenu(); action(); });
+        menu.appendChild(btn);
+      };
+      addItem('Open in Browser', () => call('app:open-releases', href));
+      addItem('Copy Link', () => navigator.clipboard?.writeText?.(href).catch(() => {}));
+      document.body.appendChild(menu);
+      const rect = menu.getBoundingClientRect();
+      menu.style.left = `${Math.min(event.clientX, window.innerWidth - rect.width - 8)}px`;
+      menu.style.top = `${Math.min(event.clientY, window.innerHeight - rect.height - 8)}px`;
+      ctxMenu = menu;
+      return;
+    }
+    const editable = event.target?.closest?.('input, textarea, [contenteditable="true"]');
+    const hasSelection = Boolean(window.getSelection?.()?.toString?.().trim());
+    if (!editable && !hasSelection) {
+      event.preventDefault();
+    }
+  });
 })();

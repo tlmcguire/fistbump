@@ -1688,3 +1688,59 @@ input.switch:checked::after { transform: translateX(16px); }
 .export-saved { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .link-button { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .link-button:disabled { color: var(--muted); cursor: default; text-decoration: none; }
+
+/* Custom Windows titlebar controls (overlaying the 52px toolbar, matching Electron's titleBarOverlay). */
+.win-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  height: var(--toolbar-height);
+  -webkit-app-region: no-drag;
+}
+.win-btn {
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+}
+.win-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+}
+.win-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.win-btn.win-close:hover:not(:disabled) { background: #c42b1c; color: #fff; }
+
+/* Lightweight right-click context menu for https: links in Tauri. */
+.tauri-context-menu {
+  position: fixed;
+  z-index: 250;
+  min-width: 164px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+.tauri-context-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.tauri-context-menu button:hover:not(:disabled) { background: var(--select); }
