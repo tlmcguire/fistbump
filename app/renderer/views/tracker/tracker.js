@@ -320,60 +320,234 @@
         runCompare();
       };
 
-      // --- Interview Prep Sheet dialog (Item 10) ---
+      // --- Editable, persistent Interview Prep Sheet dialog (synced with Tailor drafts) ---
+      const renderSimpleMarkdown = md => {
+        const frag = document.createDocumentFragment();
+        const lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
+        let listEl = null;
+        let listTag = null;
+        const flushList = () => { if (listEl) { frag.append(listEl); listEl = null; listTag = null; } };
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line) { flushList(); continue; }
+          if (/^###\s+/.test(line)) { flushList(); frag.append(el("h4", {text: line.replace(/^###\s+/, "")})); continue; }
+          if (/^##\s+/.test(line)) { flushList(); frag.append(el("h3", {text: line.replace(/^##\s+/, "")})); continue; }
+          if (/^#\s+/.test(line)) { flushList(); frag.append(el("h2", {text: line.replace(/^#\s+/, "")})); continue; }
+          if (/^[-*]\s+/.test(line)) {
+            if (listTag !== "ul") { flushList(); listEl = el("ul", {class: "prep-list"}); listTag = "ul"; }
+            listEl.append(el("li", {text: line.replace(/^[-*]\s+/, "")}));
+            continue;
+          }
+          if (/^\d+\.\s+/.test(line)) {
+            if (listTag !== "ol") { flushList(); listEl = el("ol", {class: "problem-steps"}); listTag = "ol"; }
+            listEl.append(el("li", {text: line.replace(/^\d+\.\s+/, "")}));
+            continue;
+          }
+          flushList();
+          frag.append(el("p", {text: line}));
+        }
+        flushList();
+        return frag;
+      };
+
       const openPrepSheet = async a => {
         const dialog = el("dialog", {class: "ask prep-dialog", "aria-label": "Interview prep sheet"});
         const body = el("div", {class: "prep-body"}, el("p", {class: "hint", text: "Loading interview prep sheet\u2026"}));
         let mdContent = "";
-        const close = () => { dialog.close(); dialog.remove(); };
+        let saveTimer = null;
+        let saveNow = async () => {};
+        const close = async () => {
+          clearTimeout(saveTimer);
+          await saveNow().catch(() => {});
+          dialog.close();
+          dialog.remove();
+        };
+        const copyBtn = el("button", {type: "button", onclick: async () => {
+          if (!mdContent.trim()) return;
+          try { await navigator.clipboard.writeText(mdContent); prepStatus.textContent = "Copied."; } catch {}
+        }}, "Copy");
         const dlBtn = el("button", {type: "button", onclick: () => {
-          if (!mdContent) return;
-          downloadBlob(`${(a.company_name || "Interview").replace(/[^a-z0-9_-]+/gi, "-")}-Prep-Sheet.md`, mdContent, "text/markdown;charset=utf-8");
+          if (!mdContent.trim()) return;
+          downloadBlob(`${(a.company_name || "Interview").replace(/[^a-z0-9_-]+/gi, "-")}-Prep-Sheet.md`, mdContent.trim() + "\n", "text/markdown;charset=utf-8");
+          prepStatus.textContent = "Downloaded .md.";
         }}, "Download .md");
+        const tailorBtn = el("button", {type: "button", title: "Open this job in Tailor", onclick: async () => {
+          await close();
+          window.Tailor?.open?.(a.job_id);
+        }}, "Open in Tailor");
         const printBtn = el("button", {type: "button", class: "primary", onclick: () => window.print()}, "Print");
+        const prepStatus = el("span", {class: "hint prep-status", role: "status"});
         dialog.append(
           el("h2", {text: `Interview prep: ${a.company_name || "Company"} \u2014 ${a.position_title || "Role"}`}),
           body,
-          el("div", {class: "ask-actions"}, el("button", {type: "button", onclick: close}, "Close"), dlBtn, printBtn));
+          el("div", {class: "ask-actions prep-actions"}, prepStatus, tailorBtn, copyBtn, dlBtn, printBtn, el("button", {type: "button", onclick: close}, "Done")));
         dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
         document.body.append(dialog);
         dialog.showModal();
         try {
-          const [job, analysis, resumeObj] = await Promise.all([
+          const [job, analysis, drafts] = await Promise.all([
             api.jobs.get(a.job_id),
             api.jobs.analyze(a.job_id).catch(() => null),
-            a.tailored_resume_id ? api.tailored.get(a.tailored_resume_id).catch(() => null) : api.resume.preview().catch(() => null),
+            api.drafts?.list ? api.drafts.list(a.job_id).catch(() => []) : Promise.resolve([]),
           ]);
           const matched = (analysis?.required?.tech?.matched || []).map(x => x.skill);
           const missing = analysis?.required?.tech?.missing || [];
-          const questions = [
-            ...missing.slice(0, 3).map(s => `Skill gap (${s}): How are you ramping up on ${s}, and what similar tool or concept from your past work transfers directly?`),
-            ...matched.slice(0, 3).map(s => `Deep dive (${s}): Walk through a concrete production problem you solved with ${s} and how you measured the impact.`),
-            `Role fit: Why ${a.company_name || "this company"} and why the ${a.position_title || "role"} right now?`,
-          ];
-          const resumeText = resumeObj?.content || resumeObj?.markdown || "";
-          mdContent = [
-            `# Interview Prep: ${a.company_name} — ${a.position_title}`,
-            `Status: ${a.status}${a.next_step_date ? ` | Next step: ${a.next_step_date}` : ""}`,
+          const buildDefaultPrep = () => [
+            `# Interview Prep: ${a.company_name || "Company"} — ${a.position_title || "Role"}`,
+            `Stage: ${a.status}${a.next_step_date ? ` · Next step: ${a.next_step_date}` : ""}`,
             a.notes ? `\n## Your Notes\n${a.notes}` : "",
             `\n## Matched Required Skills\n${matched.length ? matched.join(", ") : "None listed"}`,
-            `\n## Missing Required Skills (Prepare Honest Framing)\n${missing.length ? missing.join(", ") : "None"}`,
-            `\n## Practice Questions\n${questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`,
-            job?.raw_text ? `\n## Saved Job Description\n${job.raw_text.slice(0, 1800)}` : "",
-            resumeText ? `\n## Submitted Resume Snapshot\n${resumeText.slice(0, 1800)}` : "",
+            `\n## Gaps to Address Honestly\n${missing.length ? `- Skills not yet on your resume: ${missing.slice(0, 5).join(", ")}.\n- Prepare honest framing connecting adjacent fundamentals and how you are ramping up.` : "No major required skill gaps detected."}`,
+            `\n## Practice Questions (STAR)\n1. Why ${a.company_name || "this company"} and why the ${a.position_title || "role"} right now?\n2. ${matched.length ? `Walk through a concrete production problem you solved with ${matched.slice(0, 2).join(" and ")} and how you measured impact.` : "Walk through a complex project you owned end-to-end and how you measured success."}\n3. ${missing.length ? `How would you ramp up on ${missing[0]} in your first 30–60 days?` : "Tell me about a tough trade-off you had to make under tight constraints."}\n4. Describe a time you collaborated across teams or resolved a technical disagreement.`,
+            `\n## Questions to Ask the Interviewer\n- What does success look like in the first 90 days for this ${a.position_title || "role"}?\n- What are the biggest technical or product challenges the team is tackling this quarter?`,
           ].filter(Boolean).join("\n");
+
+          const isPrepDraft = d => d.kind === "interview_prep" || (d.kind === "qa" && String(d.prompt || "").trim().toLowerCase() === "interview prep");
+          let versions = (drafts || []).filter(isPrepDraft).sort((x, y) => (x.created_at < y.created_at ? -1 : x.created_at > y.created_at ? 1 : x.id - y.id));
+          let activeDraft = versions.at(-1) || null;
+          mdContent = activeDraft?.content || buildDefaultPrep();
+          let lastSaved = activeDraft?.content || "";
+          let mode = "edit";
+
+          const editor = el("textarea", {class: "prep-editor", rows: 14, "aria-label": "Edit interview prep sheet"});
+          editor.value = mdContent;
+          const preview = el("div", {class: "prep-preview cost-card", hidden: true});
+          const versionsBar = el("div", {class: "draft-versions", role: "group", "aria-label": "Saved prep versions"});
+          const wc = el("span", {class: "hint"});
+          const syncWC = () => {
+            const n = editor.value.trim() ? editor.value.trim().split(/\s+/).length : 0;
+            wc.textContent = `${n} word${n === 1 ? "" : "s"}`;
+          };
+          syncWC();
+
+          const createSavedPrep = async text => {
+            if (!api.drafts?.create) return null;
+            try {
+              return await api.drafts.create(a.job_id, {kind: "interview_prep", prompt: "Interview prep", content: text, generate: false});
+            } catch (err) {
+              if (/kind must be cover_letter or qa/i.test(err?.message || "")) {
+                return await api.drafts.create(a.job_id, {kind: "qa", prompt: "Interview prep", content: text, generate: false});
+              }
+              throw err;
+            }
+          };
+
+          const drawVersions = () => {
+            versionsBar.hidden = versions.length < 2;
+            versionsBar.replaceChildren(...versions.map((v, i) => el("button", {
+              type: "button",
+              class: "draft-version-chip",
+              "aria-pressed": String(activeDraft && v.id === activeDraft.id),
+              onclick: async () => {
+                await saveNow();
+                activeDraft = v;
+                mdContent = v.content;
+                lastSaved = v.content;
+                editor.value = mdContent;
+                syncWC();
+                if (mode === "preview") preview.replaceChildren(renderSimpleMarkdown(mdContent));
+                drawVersions();
+              },
+            }, `v${i + 1}`)));
+          };
+          drawVersions();
+
+          saveNow = async () => {
+            clearTimeout(saveTimer);
+            const text = editor.value;
+            mdContent = text;
+            if (!text.trim() || text === lastSaved || !api.drafts?.create) return;
+            prepStatus.textContent = "Saving…";
+            try {
+              if (activeDraft) {
+                const updated = await api.drafts.update(a.job_id, activeDraft.id, {prompt: activeDraft.prompt || "Interview prep", content: text});
+                activeDraft.content = updated.content;
+              } else {
+                const created = await createSavedPrep(text);
+                if (created) {
+                  activeDraft = created;
+                  versions.push(created);
+                  drawVersions();
+                }
+              }
+              lastSaved = text;
+              const idx = activeDraft ? versions.findIndex(v => v.id === activeDraft.id) + 1 : 1;
+              prepStatus.textContent = `Saved v${idx}`;
+            } catch (err) {
+              prepStatus.textContent = err?.message || "Could not save";
+            }
+          };
+          editor.addEventListener("input", () => {
+            mdContent = editor.value;
+            syncWC();
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveNow, 600);
+          });
+          editor.addEventListener("blur", saveNow);
+
+          const modeBtns = [["edit", "Edit"], ["preview", "Preview"]].map(([val, label]) => {
+            const btn = el("button", {
+              type: "button",
+              "aria-pressed": String(mode === val),
+              onclick: () => {
+                mode = val;
+                modeBtns.forEach(([v, b]) => b.setAttribute("aria-pressed", String(mode === v)));
+                editor.hidden = mode !== "edit";
+                preview.hidden = mode !== "preview";
+                if (mode === "preview") preview.replaceChildren(renderSimpleMarkdown(editor.value));
+              },
+            }, label);
+            return [val, btn];
+          });
+          const modeToggle = el("div", {class: "segmented", role: "group", "aria-label": "Prep sheet view"}, modeBtns.map(([, b]) => b));
+
+          const saveNewBtn = el("button", {
+            type: "button",
+            title: "Keep the current version and save a new snapshot",
+            onclick: async () => {
+              if (!editor.value.trim() || !api.drafts?.create) return;
+              prepStatus.textContent = "Saving new version…";
+              try {
+                const created = await createSavedPrep(editor.value);
+                if (created) {
+                  activeDraft = created;
+                  versions.push(created);
+                  lastSaved = created.content;
+                  drawVersions();
+                  prepStatus.textContent = `Saved v${versions.length}`;
+                }
+              } catch (err) {
+                prepStatus.textContent = err?.message || "Could not save";
+              }
+            },
+          }, "+ Save new version");
+
+          const regenBtn = el("button", {
+            type: "button",
+            class: "quiet",
+            title: "Reset editor to a fresh template from this job and your resume",
+            onclick: async () => {
+              if (editor.value.trim() && !await window.UI.ask("Replace the editor text with a fresh prep sheet template?", {confirm: "Replace", title: "Regenerate prep sheet"})) return;
+              editor.value = buildDefaultPrep();
+              mdContent = editor.value;
+              syncWC();
+              if (mode === "preview") preview.replaceChildren(renderSimpleMarkdown(mdContent));
+              await saveNow();
+            },
+          }, "Reset template");
+
           body.replaceChildren(
-            el("p", {class: "hint", text: `Stage: ${a.status}${a.next_step_date ? ` \u00b7 Next step: ${a.next_step_date}` : ""}`}),
-            a.notes ? el("div", {class: "cost-card"}, el("h4", {text: "Your notes"}), el("p", {text: a.notes})) : null,
-            el("div", {class: "cost-card"},
-              el("h4", {text: "Skills summary"}),
-              el("p", {text: `Matched: ${matched.length ? matched.join(", ") : "None listed"}`}),
-              el("p", {text: `Missing: ${missing.length ? missing.join(", ") : "None"}`})),
-            el("div", {class: "cost-card"},
-              el("h4", {text: "Practice questions"}),
-              el("ol", {class: "problem-steps"}, questions.map(q => el("li", {text: q})))),
+            el("div", {class: "prep-toolbar"},
+              modeToggle,
+              versionsBar,
+              saveNewBtn,
+              regenBtn,
+              wc),
+            el("p", {class: "hint", text: `Stage: ${a.status}${a.next_step_date ? ` \u00b7 Next step: ${a.next_step_date}` : ""} · Changes auto-save and stay synced with Tailor.`}),
+            editor,
+            preview,
             job?.raw_text ? el("details", {class: "cost-sources"},
-              el("summary", {text: "Job description"}),
+              el("summary", {text: "Job description reference"}),
               el("pre", {class: "preview-text", text: job.raw_text.slice(0, 3000)})) : null);
         } catch (err) {
           body.replaceChildren(el("p", {class: "resume-status error", text: err.message}));
@@ -506,7 +680,9 @@
             }}, ".ics") : null,
             due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
           el("td", {}, el("span", {text: resumeLabel(a)}), pdf,
-            el("button", {type: "button", class: "link-button", title: "Open printable interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep sheet")),
+            el("div", {class: "tracker-row-actions"},
+              el("button", {type: "button", class: "link-button", title: "Edit or print interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep sheet"),
+              el("button", {type: "button", class: "link-button", title: "Open this job in Tailor for resume, cover letter, and Q&A", onclick: () => window.Tailor?.open?.(a.job_id)}, "Tailor"))),
           el("td", {}, notes,
             el("div", {class: "tracker-row-actions"},
               el("button", {

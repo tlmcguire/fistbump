@@ -154,7 +154,10 @@ test('Remaining planned features & Honest Keyword Bridge are wired end-to-end', 
 
   const tr = read('views/tracker/tracker.js');
   assert.ok(tr.includes('Compare offers') && tr.includes('api.cost.compare'), 'tracker.js should wire side-by-side offer comparison');
-  assert.ok(tr.includes('Prep sheet') && tr.includes('openPrepSheet'), 'tracker.js should wire printable interview prep sheet');
+  assert.ok(tr.includes('Prep sheet') && tr.includes('openPrepSheet') && tr.includes('prep-editor'), 'tracker.js should wire editable persistent interview prep sheets');
+
+  const seg = read('js/segments.js');
+  assert.ok(seg.includes('.draft-mode-toggle') && seg.includes('.draft-versions') && seg.includes('.segmented'), 'segments.js should animate all segmented toggles consistently');
 
   const html = read('index.html');
   assert.ok(html.includes('id="backup-export"') && html.includes('id="backup-restore"'), 'index.html should include local backup & restore controls');
