@@ -483,30 +483,99 @@
         el("p", {class: "hint", text: "You have no saved jobs yet. Save one in the Jobs view first."}),
         el("button", {type: "button", onclick: () => window.App.go("jobs")}, "Find jobs"));
 
+      const selectedDraftByGroup = new Map(); // groupKey -> draft id
+      const downloadDraftFile = (filename, content, mime) => {
+        const blob = new Blob([content], {type: mime});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+      const safeFileSlug = text => String(text || "draft").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "draft";
+      const draftWordHtml = (title, body) => {
+        const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const paras = String(body || "").split(/\n\s*\n/).map(p => `<p style="margin:0 0 11pt 0;line-height:1.45;">${esc(p).replace(/\n/g, "<br/>")}</p>`).join("");
+        return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title></head><body style="font-family:Georgia,serif;font-size:11pt;color:#111827;margin:0.8in;">${paras}</body></html>`;
+      };
+
       const drawDrafts = async () => {
         drawRounds();
         const listRes = await attempt(() => api.drafts.list(jobId));
         const drafts = listRes?.value || [];
+        const activeJob = savedJobs.find(j => Number(j.id) === Number(jobId));
+        const jobSlug = safeFileSlug(activeJob ? `${activeJob.company_name || ""}-${activeJob.position_title || ""}` : "application");
+
+        // Group drafts by (kind, prompt) so multiple saved versions live together in one versioned card.
+        const groupOrder = [];
+        const groups = new Map();
+        const chrono = [...drafts].sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id - b.id));
+        for (const d of chrono) {
+          const key = `${d.kind}::${String(d.prompt || "").trim().toLowerCase()}`;
+          if (!groups.has(key)) {
+            groups.set(key, {key, kind: d.kind, prompt: d.prompt, versions: []});
+            groupOrder.push(key);
+          }
+          groups.get(key).versions.push(d);
+        }
+        groupOrder.sort((ka, kb) => {
+          const la = groups.get(ka).versions.at(-1);
+          const lb = groups.get(kb).versions.at(-1);
+          return la.updated_at < lb.updated_at ? 1 : la.updated_at > lb.updated_at ? -1 : lb.id - la.id;
+        });
+
         const customPrompt = el("input", {type: "text", placeholder: "Custom question, e.g. Why do you want to work here?"});
         const gen = async (kind, prompt) => {
           const created = await attempt(() => api.drafts.create(jobId, {kind, prompt, generate: true}));
-          if (created) drawDrafts();
+          if (created?.value) {
+            selectedDraftByGroup.set(`${kind}::${prompt.trim().toLowerCase()}`, created.value.id);
+            drawDrafts();
+          }
         };
+        const exportAllBtn = groupOrder.length ? el("button", {type: "button", title: "Download the latest version of every draft for this job as one Markdown file", onclick: () => {
+          const sections = groupOrder.map(k => {
+            const g = groups.get(k);
+            const latest = g.versions.at(-1);
+            return `## ${g.prompt} (v${g.versions.length})\n\n${latest.content.trim()}`;
+          });
+          const title = activeJob ? `# Application Drafts — ${activeJob.position_title} at ${activeJob.company_name}` : "# Application Drafts";
+          downloadDraftFile(`${jobSlug}-drafts.md`, `${title}\n\n${sections.join("\n\n---\n\n")}\n`, "text/markdown;charset=utf-8");
+          say("Exported all drafts as Markdown.");
+        }}, "Export all (.md)") : null;
+
         const quickBar = el("div", {class: "round-actions"},
           el("button", {type: "button", class: "primary", onclick: () => gen("cover_letter", "Cover letter")}, "Generate cover letter"),
           el("button", {type: "button", onclick: () => gen("qa", "Why this role?")}, "Why this role?"),
           el("button", {type: "button", onclick: () => gen("qa", "Describe a relevant project")}, "Relevant project"),
+          exportAllBtn,
           el("button", {type: "button", onclick: () => { showDrafts = false; drawBody(); }}, "Back to resume"));
-        const customForm = el("div", {class: "round-actions"},
+        const customForm = el("div", {class: "round-actions draft-custom-form"},
           customPrompt,
           el("button", {type: "button", onclick: () => {
             const q = customPrompt.value.trim();
             if (!q) return;
             gen("qa", q);
           }}, "Draft answer"));
-        const cardsEl = drafts.length ? drafts.map(d => {
-          const area = el("textarea", {rows: 7, value: d.content});
-          area.value = d.content;
+
+        const ITERATE_CHIPS = [
+          ["Shorter", "Make it shorter and more concise"],
+          ["More detailed", "Make it more detailed with another concrete highlight from my resume"],
+          ["Stronger opening", "Give it a stronger opening hook"],
+          ["More formal", "Make the tone more formal and polished"],
+          ["More conversational", "Make the tone warmer and more conversational"],
+          ["Highlight impact", "Highlight quantified impact and measurable results"],
+        ];
+
+        const cardsEl = groupOrder.length ? groupOrder.map(key => {
+          const group = groups.get(key);
+          const wantedId = selectedDraftByGroup.get(key);
+          const active = group.versions.find(v => v.id === wantedId) || group.versions.at(-1);
+          const activeIdx = group.versions.indexOf(active);
+          selectedDraftByGroup.set(key, active.id);
+
+          const area = el("textarea", {rows: 8, value: active.content});
+          area.value = active.content;
           const wc = el("span", {class: "hint"});
           const syncWC = () => {
             const n = area.value.trim() ? area.value.trim().split(/\s+/).length : 0;
@@ -515,24 +584,97 @@
           syncWC();
           area.addEventListener("input", syncWC);
           const copyStatus = el("span", {class: "hint"});
-          return el("section", {class: "tailor-card"},
+          const fileBase = `${jobSlug}-${safeFileSlug(group.prompt)}-v${activeIdx + 1}`;
+
+          const versionTabs = el("div", {class: "draft-versions", role: "group", "aria-label": "Saved versions"},
+            group.versions.map((v, i) => el("button", {
+              type: "button",
+              class: "draft-version-chip",
+              "aria-pressed": String(v.id === active.id),
+              title: v.updated_at ? `Updated ${new Date(v.updated_at).toLocaleString()}` : `Version ${i + 1}`,
+              onclick: () => {
+                selectedDraftByGroup.set(key, v.id);
+                drawDrafts();
+              },
+            }, `v${i + 1}`)));
+
+          const iterateInput = el("input", {
+            type: "text",
+            class: "draft-iterate-input",
+            placeholder: "Iterate on this draft, e.g. emphasize Python & leadership…",
+          });
+          const runIterate = async instruction => {
+            const clean = String(instruction || "").trim();
+            if (!clean) return;
+            copyStatus.textContent = "Creating new version…";
+            const created = await attempt(() => api.drafts.create(jobId, {
+              kind: group.kind,
+              prompt: group.prompt,
+              base_content: area.value,
+              instruction: clean,
+              generate: true,
+            }));
+            if (created?.value) {
+              selectedDraftByGroup.set(key, created.value.id);
+              drawDrafts();
+            }
+          };
+
+          const iterateRow = el("div", {class: "draft-iterate"},
+            el("div", {class: "draft-iterate-chips"},
+              ITERATE_CHIPS.map(([label, inst]) => el("button", {
+                type: "button",
+                class: "quiet draft-chip",
+                onclick: () => runIterate(inst),
+              }, label))),
+            el("div", {class: "draft-iterate-bar"},
+              iterateInput,
+              el("button", {type: "button", onclick: () => runIterate(iterateInput.value)}, "Iterate as new version")));
+
+          return el("section", {class: "tailor-card draft-card"},
             el("div", {class: "card-head"},
-              el("h3", {text: d.prompt}),
-              el("span", {class: "engine-badge", text: d.kind === "cover_letter" ? "Cover letter" : "Q&A"}),
+              el("h3", {text: group.prompt}),
+              el("span", {class: "engine-badge", text: group.kind === "cover_letter" ? "Cover letter" : "Q&A"}),
+              versionTabs,
               wc),
             area,
+            iterateRow,
             el("div", {class: "tailor-actions"},
               el("button", {type: "button", class: "primary", onclick: async () => {
-                if (await attempt(() => api.drafts.update(jobId, d.id, {prompt: d.prompt, content: area.value}))) copyStatus.textContent = "Saved.";
-              }}, "Save"),
+                if (await attempt(() => api.drafts.update(jobId, active.id, {prompt: group.prompt, content: area.value}))) copyStatus.textContent = `Saved v${activeIdx + 1}.`;
+              }}, `Save v${activeIdx + 1}`),
+              el("button", {type: "button", title: "Keep the current version and save your edits as a new version", onclick: async () => {
+                if (!area.value.trim()) return;
+                const created = await attempt(() => api.drafts.create(jobId, {kind: group.kind, prompt: group.prompt, content: area.value, generate: false}));
+                if (created?.value) {
+                  selectedDraftByGroup.set(key, created.value.id);
+                  drawDrafts();
+                }
+              }}, "Save as new version"),
               el("button", {type: "button", onclick: async () => {
                 try { await navigator.clipboard.writeText(area.value); copyStatus.textContent = "Copied."; } catch {}
               }}, "Copy"),
+              el("button", {type: "button", onclick: () => {
+                downloadDraftFile(`${fileBase}.txt`, area.value.trim() + "\n", "text/plain;charset=utf-8");
+                copyStatus.textContent = "Exported .txt.";
+              }}, "Export .txt"),
+              el("button", {type: "button", onclick: () => {
+                downloadDraftFile(`${fileBase}.md`, `# ${group.prompt}\n\n${area.value.trim()}\n`, "text/markdown;charset=utf-8");
+                copyStatus.textContent = "Exported .md.";
+              }}, "Export .md"),
+              el("button", {type: "button", onclick: () => {
+                downloadDraftFile(`${fileBase}.doc`, draftWordHtml(group.prompt, area.value), "application/msword;charset=utf-8");
+                copyStatus.textContent = "Exported .doc.";
+              }}, "Export .doc"),
               el("button", {type: "button", class: "quiet", onclick: async () => {
-                if (await attempt(() => api.drafts.delete(jobId, d.id))) drawDrafts();
-              }}, "Delete"),
+                if (await attempt(() => api.drafts.delete(jobId, active.id))) {
+                  selectedDraftByGroup.delete(key);
+                  drawDrafts();
+                }
+              }}, group.versions.length > 1 ? `Delete v${activeIdx + 1}` : "Delete"),
               copyStatus));
         }) : [el("p", {class: "hint", text: "No drafts yet. Generate a resume-grounded cover letter or application Q&A answer above."})];
+
         fill(stage,
           el("div", {class: "round-head"}, el("h2", {text: "Cover letter & application Q&A"}), quickBar),
           customForm,
@@ -781,16 +923,45 @@
         if (!t || !d) { tailoredId = null; return; }
         drawRounds();
         let showAll = false;
+        const hasChanges = d.value.hunks.some(h => h.status !== "unchanged");
+        const showAllBox = el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }});
+        const diffHead = el("div", {class: "diff-cols"}, el("h4", {text: "Your resume"}), el("h4", {text: "Tailored"}));
         const hunks = el("div", {class: "tailor-stage"});
-        const drawHunks = () => fill(hunks, d.value.hunks.map(h => {
-          if (h.status === "unchanged" && !showAll) {
-            const lines = h.before.split("\n").filter(Boolean).length;
-            return lines ? el("p", {class: "hint", text: `${lines} unchanged line${lines === 1 ? "" : "s"}`}) : null;
+        const drawHunks = () => {
+          diffHead.hidden = !hasChanges && !showAll;
+          if (!hasChanges && !showAll) {
+            fill(hunks, el("div", {class: "stage-empty changes-empty"},
+              el("p", {text: "No changes from your base resume yet."}),
+              el("div", {class: "round-actions"},
+                el("button", {type: "button", class: "primary", onclick: () => pick("edit")}, "Edit resume"),
+                el("button", {type: "button", onclick: () => { showAll = true; showAllBox.checked = true; drawHunks(); }}, "Show full text"))));
+            return;
           }
-          return el("div", {class: "diff-cols"},
-            el("div", {class: "diff-col"}, el("h4", {text: `${hunkTitle(h)} · ${h.status}`}), side(h, "before")),
-            el("div", {class: "diff-col"}, side(h, "after")));
-        }));
+          const nodes = [];
+          let hiddenLines = 0;
+          const flushHidden = () => {
+            if (!hiddenLines) return;
+            const n = hiddenLines;
+            hiddenLines = 0;
+            nodes.push(el("button", {
+              type: "button",
+              class: "quiet unchanged-fold",
+              onclick: () => { showAll = true; showAllBox.checked = true; drawHunks(); },
+            }, `${n} unchanged line${n === 1 ? "" : "s"} — show`));
+          };
+          for (const h of d.value.hunks) {
+            if (h.status === "unchanged" && !showAll) {
+              hiddenLines += h.before.split("\n").filter(Boolean).length;
+              continue;
+            }
+            flushHidden();
+            nodes.push(el("div", {class: "diff-cols"},
+              el("div", {class: "diff-col"}, el("h4", {text: `${hunkTitle(h)} · ${h.status}`}), side(h, "before")),
+              el("div", {class: "diff-col"}, side(h, "after"))));
+          }
+          flushHidden();
+          fill(hunks, nodes);
+        };
 
         const PDF_STYLES = [
           ["classic", "Classic"],
@@ -855,10 +1026,8 @@
           if (!panels.pdf.hidden) pdf.load();
         });
         panels.changes = el("div", {class: "panel", id: "tailor-panel-changes", role: "tabpanel", "aria-labelledby": "tailor-tab-changes"},
-          el("label", {class: "hint"},
-            el("input", {type: "checkbox", onchange: event => { showAll = event.target.checked; drawHunks(); }}),
-            " Show unchanged text"),
-          el("div", {class: "diff-cols"}, el("h4", {text: "Your resume"}), el("h4", {text: "Tailored"})),
+          el("label", {class: "hint"}, showAllBox, " Show unchanged text"),
+          diffHead,
           hunks);
         //your own edits: the whole resume as text, saved over the tailored version
         const editor = el("textarea", {id: "tailor-editor", rows: 28, spellcheck: "true", "aria-label": "Tailored resume text", value: t.value.content});
