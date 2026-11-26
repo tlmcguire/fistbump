@@ -1,5 +1,7 @@
 // German. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("de", {
+  // v3 shell: Jobs sections and the omnibox
+  "Saved": "Gespeichert", "Find": "Suchen", "Paste": "Einfügen", "Jobs sections": "Bereiche für Stellen", "Workflow": "Ablauf", "Search jobs, paste a link, or drop in a posting": "Stellen suchen, Link einfügen oder Anzeige ablegen", "Search jobs, paste a job link, or paste a posting": "Stellen suchen, Stellenlink einfügen oder Anzeige einfügen", "Go to Home, Jobs, Resume, Tracker, Tailor": "Zu Start, Stellen, Lebenslauf, Verfolgung, Anpassen", "Search, paste a link or a posting, from anywhere": "Suchen, Link oder Anzeige einfügen, von überall",
   "App": "App", "Home": "Start", "Tracker": "Verfolgung", "Jobs": "Stellen", "Find jobs": "Stellen suchen",
   "Recent searches": "Letzte Suchen", "Open a link": "Link öffnen", "Paste a job": "Stelle einfügen",
   "Saved jobs": "Gespeicherte Stellen", "Resume": "Lebenslauf", "Master resume": "Haupt-Lebenslauf",
@@ -305,7 +307,6 @@ window.I18n.add("de", {
   "Keyboard shortcuts": "Tastenkürzel",
   "Search, on any view": "Suchen, in jeder Ansicht",
   "Move, accept, reject, edit suggestions": "Vorschläge wechseln, annehmen, ablehnen, bearbeiten",
-  "Go to Home, Tracker, Jobs, Resume, Tailor": "Zu Start, Verfolgung, Stellen, Lebenslauf, Anpassen",
   "Open settings": "Einstellungen öffnen",
   "Close dialogs and panels": "Dialoge und Bereiche schließen",
   "More actions": "Weitere Aktionen",

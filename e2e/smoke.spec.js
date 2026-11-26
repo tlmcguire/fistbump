@@ -1,8 +1,9 @@
 const { test, expect } = require('./fixtures');
 
-test('opens the app with the expected title and sidebar', async ({ window }) => {
+test('opens the app with the expected title and bottom bar', async ({ window }) => {
   await expect(window).toHaveTitle('Fistbump');
-  await expect(window.locator('#nav-home')).toBeVisible();
+  await expect(window.locator('.bottombar #nav-home')).toBeVisible();
+  await expect(window.locator('.sidebar')).toHaveCount(0);
 });
 
 test('the Go backend answers through the bridge API', async ({ window }) => {
@@ -50,12 +51,16 @@ test('navigates between the main views', async ({ window }) => {
   await expect(window.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
   await expect(window.locator('#settings-pane')).toBeVisible();
 
+  await expect(window.locator('.subnav')).toBeHidden();
+
+  await window.locator('#nav-jobs').click();
   await window.locator('#tab-paste').click();
   await expect(window.getByRole('heading', { name: 'Paste a job', level: 1 })).toBeVisible();
 
   await window.locator('#nav-resume').click();
   await expect(window.locator('#settings-pane')).toBeHidden();
 
+  await window.locator('#nav-jobs').click();
   await window.locator('#tab-find').click();
   await expect(window.locator('#search-form')).toBeVisible();
 });
@@ -84,6 +89,7 @@ test('master resume saves profile and renders PDF preview without stuck overlay 
 });
 
 test('open link page is merged into search bar and detects pasted Greenhouse URLs', async ({ window }) => {
+  await window.locator('#nav-jobs').click();
   await window.locator('#tab-find').click();
   await expect(window.locator('#tab-link')).toHaveCount(0);
   await expect(window.locator('#job-form')).toHaveCount(0);
@@ -161,4 +167,39 @@ test('themes and accessibility preferences apply cleanly in Settings', async ({ 
 
   await themeSelect.selectOption('classic');
   await expect(window.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+});
+
+test('the bottom bar marks where you are and Jobs returns to the last section', async ({ window }) => {
+  await expect(window.locator('#nav-home')).toHaveAttribute('aria-current', 'page');
+  await window.locator('#nav-jobs').click();
+  await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
+  await expect(window.locator('#tab-saved')).toHaveAttribute('aria-selected', 'true');
+  await expect(window.locator('.subnav')).toBeVisible();
+
+  await window.locator('#nav-tracker').click();
+  await expect(window.locator('#nav-tracker')).toHaveAttribute('aria-current', 'page');
+  await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
+
+  await window.locator('#nav-home').click();
+  await expect(window.locator('.subnav')).toBeHidden();
+  await window.locator('#nav-jobs').click();
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'tracker');
+
+  await window.keyboard.press('ControlOrMeta+3');
+  await expect(window.locator('#nav-resume')).toHaveAttribute('aria-current', 'page');
+});
+
+test('the omnibox searches, and sends a pasted posting to Paste a job', async ({ window }) => {
+  await window.keyboard.press('ControlOrMeta+k');
+  await expect(window.locator('#omnibox-input')).toBeFocused();
+  await window.keyboard.type('data analyst');
+  await window.keyboard.press('Enter');
+  await expect(window.locator('#search-keywords')).toHaveValue('data analyst');
+  await expect(window.locator('#tab-find')).toHaveAttribute('aria-selected', 'true');
+  await expect(window.locator('#omnibox-input')).toHaveValue('');
+
+  const posting = 'Data Analyst\nTidewater Logistics\nSavannah, GA\n\nBuild dashboards in Tableau.';
+  await window.evaluate(text => window.Omnibox.route(text), posting);
+  await expect(window.locator('#paste-pane')).toBeVisible();
+  await expect(window.locator('#paste-text')).toHaveValue(posting);
 });

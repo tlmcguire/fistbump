@@ -92,6 +92,14 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 - Router in `app.js`: `home`, `jobs`, `job/:id`, `job/:id/tailor`, `resume`, `settings`. Back links replace sidebar context. Keep `⌘1–3` shortcuts.
 - Keep every keyboard shortcut and accessibility preference (Reduce Motion, Text Size, Underline Links, High Contrast).
 
+**Phase 1 as built:**
+- **Window strip:** The sidebar is gone. A 44px window strip replaces it as a drag region; it holds the macOS window buttons and the Windows caption buttons.
+- **Jobs sections:** On the Jobs, Tracker and Tailor views, a Saved · Find · Paste | Tracker · Tailor control sits centered in that strip. Tracker and Tailor stay there until Phases 3 and 5 fold them into the Job page and the Jobs list.
+- **Jobs button:** It returns to the last place you were under it, starting at Saved.
+- **Settings:** It is still a tab of the Jobs view, opened from the gear.
+- **Shortcuts:** ⌘1–5 are Home, Jobs, Resume, Tracker and Tailor; ⌘K focuses the omnibox.
+- **Removed:** `js/sidebar.js`. Recent searches and saved versions remain on Home and in Find's History.
+
 ### Phase 2: Home (`views/home/home.js`)
 - Rebuild render around five blocks: greeting with status line, Up next card, seasonal Pico with tip bubble, Next 7 days, pipeline tiles, New for you.
 - Data: reuse `pipeline()`, `findMatches()`, `resumeGaps()`; add the calendar builder and the gap summary.
