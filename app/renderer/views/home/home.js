@@ -710,5 +710,5 @@
     return refresh;
   }
 
-  window.Home = {mount, recentSearches, openResume, invalidate: invalidateMatches};
+  window.Home = {mount, recentSearches, openResume, resumeGaps, invalidate: invalidateMatches};
 })();

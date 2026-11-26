@@ -51,17 +51,13 @@ test('navigates between the main views', async ({ window }) => {
   await expect(window.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
   await expect(window.locator('#settings-pane')).toBeVisible();
 
-  await expect(window.locator('.subnav')).toBeHidden();
-
-  await window.locator('#nav-jobs').click();
-  await window.locator('#tab-paste').click();
+  await window.evaluate(() => window.Omnibox.route('Data Analyst\nTidewater Logistics\n\nRequirements:\n- SQL'));
   await expect(window.getByRole('heading', { name: 'Paste a job', level: 1 })).toBeVisible();
 
   await window.locator('#nav-resume').click();
   await expect(window.locator('#settings-pane')).toBeHidden();
 
-  await window.locator('#nav-jobs').click();
-  await window.locator('#tab-find').click();
+  await window.evaluate(() => window.App.openTab('tab-find'));
   await expect(window.locator('#search-form')).toBeVisible();
 });
 
@@ -89,8 +85,7 @@ test('master resume saves profile and renders PDF preview without stuck overlay 
 });
 
 test('open link page is merged into search bar and detects pasted Greenhouse URLs', async ({ window }) => {
-  await window.locator('#nav-jobs').click();
-  await window.locator('#tab-find').click();
+  await window.evaluate(() => window.App.openTab('tab-find'));
   await expect(window.locator('#tab-link')).toHaveCount(0);
   await expect(window.locator('#job-form')).toHaveCount(0);
 
@@ -150,14 +145,15 @@ test('cost analysis returns cited sources and 30-day refresh metadata', async ({
 
 test('themes and accessibility preferences apply cleanly in Settings', async ({ window }) => {
   await window.locator('#tab-settings').click();
-  const themeSelect = window.locator('#pref-theme');
-  await expect(themeSelect).toBeVisible();
+  const swatch = theme => window.locator(`.st3-swatch[data-theme="${theme}"]`);
+  await expect(swatch('classic')).toHaveAttribute('aria-checked', 'true');
 
   for (const theme of ['bubblegum', 'cyber', 'retro', 'december']) {
-    await themeSelect.selectOption(theme);
+    await swatch(theme).click();
     await expect(window.locator('html')).toHaveAttribute('data-theme', theme);
+    await expect(swatch(theme)).toHaveAttribute('aria-checked', 'true');
   }
-  await themeSelect.selectOption('auto-season');
+  await swatch('auto-season').click();
   await expect(window.locator('html')).toHaveAttribute('data-theme', /^(january|february|march|april|may|june|july|august|september|october|november|december)$/);
 
   await window.locator('#pref-high-contrast').check();
@@ -165,25 +161,24 @@ test('themes and accessibility preferences apply cleanly in Settings', async ({ 
   await window.locator('#pref-underline-links').check();
   await expect(window.locator('html')).toHaveClass(/underline-links/);
 
-  await themeSelect.selectOption('classic');
+  await swatch('classic').click();
   await expect(window.locator('html')).not.toHaveAttribute('data-theme', /.+/);
 });
 
-test('the bottom bar marks where you are and Jobs returns to the last section', async ({ window }) => {
+test('the bottom bar is the only navigation, and Jobs always opens the list', async ({ window }) => {
   await expect(window.locator('#nav-home')).toHaveAttribute('aria-current', 'page');
+  await expect(window.locator('.section-switches')).toBeHidden();
   await window.locator('#nav-jobs').click();
   await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
-  await expect(window.locator('#tab-saved')).toHaveAttribute('aria-selected', 'true');
-  await expect(window.locator('.subnav')).toBeVisible();
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'list');
 
-  await window.locator('#nav-tracker').click();
-  await expect(window.locator('#nav-tracker')).toHaveAttribute('aria-current', 'page');
-  await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
-
-  await window.locator('#nav-home').click();
-  await expect(window.locator('.subnav')).toBeHidden();
-  await window.locator('#nav-jobs').click();
+  await window.keyboard.press('ControlOrMeta+4');
   await expect(window.locator('.app')).toHaveAttribute('data-route', 'tracker');
+  await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
+
+  await window.evaluate(() => window.App.openTab('tab-find'));
+  await window.locator('#nav-jobs').click();
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'list');
 
   await window.keyboard.press('ControlOrMeta+3');
   await expect(window.locator('#nav-resume')).toHaveAttribute('aria-current', 'page');
@@ -256,7 +251,7 @@ test('a saved job opens on its own page with its stage, fit, notes and next step
   });
 
   await window.locator('#nav-jobs').click();
-  await window.locator('#saved-pane').getByText('Data Analyst').click();
+  await window.locator('.jl3-open', { hasText: 'Data Analyst' }).click();
   await expect(window).toHaveURL(new RegExp(`#/job/${id}$`));
   await expect(window.locator('#job3-title')).toContainText('Data Analyst');
   await expect(window.locator('.job3-go')).toHaveText('Tailor resume');
@@ -274,8 +269,9 @@ test('a saved job opens on its own page with its stage, fit, notes and next step
   await expect(window.locator('.job3-stop.now b')).toHaveText('Applied');
   await expect(window.locator('.job3-go')).toHaveText('Set a follow-up date');
 
+  await expect(window.locator('.job3-back')).toHaveText('\u2190 Your jobs');
   await window.locator('.job3-back').click();
-  await expect(window.locator('#tab-saved')).toHaveAttribute('aria-selected', 'true');
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'list');
 });
 
 test('Tailor shows each change in place on the resume and builds once all are decided', async ({ window }) => {
@@ -305,4 +301,49 @@ test('Tailor shows each change in place on the resume and builds once all are de
   await expect(window.locator('.t3-change ins')).toHaveCount(0);
   await expect(window.locator('.t3-bar-acts .btn-mark')).toBeEnabled();
   await expect(window.locator('.t3-finish')).toBeVisible();
+});
+
+test('the Jobs list groups what needs you, filters by stage, and moves jobs in bulk', async ({ window }) => {
+  await window.evaluate(async () => {
+    const api = window.api;
+    await api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+    const job = (title, company, extra = {}) => api.jobs.create({ source: 'pasted', position_title: title, company_name: company,
+      raw_text: `${title}\n${company}\n\nRequirements:\n- Experience with sql`, ...extra });
+    const a = await job('Backend Engineer', 'Oakline Software', { location: 'Remote, US' });
+    await job('Product Analyst', 'Fernway Health');
+    await job('Financial Analyst', 'Cobalt Rivers');
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    await api.applications.create({ job_id: a.id, status: 'Applied', date_applied: iso, next_step_date: iso });
+  });
+  await window.locator('#nav-jobs').click();
+
+  await expect(window.locator('.jl3-group').first().locator('h2')).toHaveText('Needs you');
+  await expect(window.locator('.jl3-group').first().locator('.jl3-next')).toHaveText('Follow up today');
+  await expect(window.locator('.jl3-stages [aria-selected="true"]')).toContainText('All');
+  await expect(window.locator('.jl3-row')).toHaveCount(3);
+
+  await window.locator('.jl3-quick', { hasText: 'Remote' }).click();
+  await expect(window.locator('.jl3-row')).toHaveCount(1);
+  await window.locator('.jl3-quick', { hasText: 'Remote' }).click();
+
+  await window.locator('.jl3-row', { hasText: 'Product Analyst' }).locator('.jl3-check').check();
+  await window.locator('.jl3-row', { hasText: 'Financial Analyst' }).locator('.jl3-check').check();
+  await expect(window.locator('.jl3-bulk b')).toHaveText('2 selected');
+  await window.locator('.jl3-move').selectOption('Applied');
+  await expect(window.locator('.jl3-stages button', { hasText: 'Applied' }).locator('span')).toHaveText('3');
+
+  await window.locator('.jl3-stages button', { hasText: 'Applied' }).click();
+  await expect(window.locator('.jl3-row')).toHaveCount(3);
+});
+
+test('Resume shows how ready it is, and each gap opens its field', async ({ window }) => {
+  await window.evaluate(async () => {
+    await window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+  });
+  await window.locator('#nav-resume').click();
+  await expect(window.locator('.rs3-ready h2')).toHaveText('Ready to tailor?');
+  await expect(window.locator('.rs3-check').first()).toContainText('Name and contact');
+  await expect(window.locator('.rs3-check', { hasText: 'Write a short summary' })).toBeVisible();
+  await expect(window.locator('.rs3-big b')).not.toHaveText('100%');
 });

@@ -154,6 +154,28 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 - **Resume:** master resume as a paper document with inline editing, plus saved versions.
 - **Settings:** the same paper panels, a visual theme swatch gallery, AI engine and privacy at the top.
 
+**Phase 5 as built:**
+- **Jobs list** (`views/jobs-list/jobs-list.js`, `#/list`):
+  - All jobs in one paper list, grouped "Needs you" (changes to review, due steps, offers) then everything else.
+  - Stage tabs with counts (All, Saved, Tailored, Applied, Interview, Offer, Closed). Closed holds archived, trashed and rejected jobs.
+  - Quick filters (Remote, Has pay, 70%+ fit) and a text filter. Each row shows stage, fit, pay and the next step.
+  - Bulk actions: move to stage, archive, trash (archives jobs that are in the tracker), and, under Closed, restore and delete.
+  - The Jobs button and "Your jobs" in the sub-nav open it. The old Saved tab routes to it.
+  - The Tracker table stays reachable from the list footer for export and offer comparison. The board view in the mockup is not built.
+- **Settings:**
+  - The page carries its own title and jump links.
+  - Sections are paper panels in two columns, and the theme dropdown is a swatch gallery (the select stays, hidden, as the source of truth).
+- **Resume:**
+  - A v3 header with Import, Paste and Save as version.
+  - Every section on paper, plus a "Ready to tailor?" panel built from the same gap rules as Home.
+  - The forms are still forms. Inline editing on the document, as in the mockup, is a follow-up.
+- **Paper adapter:** A `.paper-adapt` class re-points the original tokens at ink and paper. This lets the older components inside Settings and Resume (rows, tables, fields, model lists, switches, checkboxes) render on paper without being rewritten.
+- **Sub-nav removed (decided):** The Jobs sections strip from Phase 1 is gone, and the bottom bar is the only navigation.
+  - Jobs always opens the list.
+  - Find and Paste open from the omnibox.
+  - Tracker opens from the list footer and the Job page, and Tailor from the Job page. ⌘4 and ⌘5 still reach Tracker and Tailor.
+  - The section buttons stay in the DOM, hidden, because the view code and the shortcuts click them.
+
 ### Phase 6: Hardening
 - Tune the remaining themes, run a contrast audit (`impeccable detect` plus a manual check), check narrow windows (1024px and below), and confirm Reduce Motion.
 - Update `e2e/` fixtures and README screenshots. Update `docs/user-guide.md`.

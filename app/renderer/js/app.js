@@ -44,6 +44,13 @@ const VIEWS = {
     redraw: true,
   },
 
+  //v3: every job in one list, at #/list. Drawn again each time it is shown.
+  list: {
+    container: "view-list",
+    mount: container => window.JobsList.mount(container),
+    redraw: true,
+  },
+
   //v3: one saved job, at #/job/<id>. Drawn again each time, and when the id changes.
   job: {
     container: "view-job",
@@ -105,21 +112,19 @@ function show(name) {
     mounted.get(name)?.();
   }
   app.dataset.route = name;
-  if (JOBS_AREA.has(name)) lastJobsRoute = name;
   markCurrent();
   current = name;
 }
 
 // The bottom bar marks Home, Jobs or Resume; Jobs stays marked on Tracker and Tailor, which live under it for now.
 // Settings is a tab of the Jobs view, so while it is open nothing in the bar but the gear is marked.
-const JOBS_AREA = new Set(["jobs", "tracker", "tailor", "job"]);
-let lastJobsRoute = "jobs";
+const JOBS_AREA = new Set(["jobs", "tracker", "tailor", "job", "list"]);
 function markCurrent() {
   const name = app.dataset.route;
   const settingsOpen = name === "jobs" && document.getElementById("tab-settings").getAttribute("aria-selected") === "true";
   app.classList.toggle("settings-open", settingsOpen);
   const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen], ["nav-resume", name === "resume"],
-    ["nav-tracker", name === "tracker"], ["nav-tailor", name === "tailor"]];
+    ["nav-tracker", name === "tracker"], ["nav-tailor", name === "tailor"], ["nav-list", name === "list"]];
   for (const [id, on] of marks) {
     const item = document.getElementById(id);
     if (on) item.setAttribute("aria-current", "page");
@@ -152,25 +157,18 @@ function openJobsTab(tab) {
   show("jobs");
   if (firstMount) tab.click();
 }
-let lastJobsTab = "tab-saved"; //the Jobs section Jobs returns to: Saved until another is chosen
-for (const id of ["tab-find", "tab-paste", "tab-saved", "tab-settings"]) {
+//Saved jobs live in the Jobs list now, so anything that opens the Saved tab lands on the list.
+document.getElementById("tab-saved").addEventListener("click", () => { location.hash = "#/list"; });
+document.getElementById("nav-list").addEventListener("click", () => { location.hash = "#/list"; });
+for (const id of ["tab-find", "tab-paste", "tab-settings"]) {
   const tab = document.getElementById(id);
   tab.addEventListener("click", () => {
-    if (id !== "tab-settings") lastJobsTab = id;
     openJobsTab(tab);
     setTimeout(markCurrent); //after the Jobs view has marked the tab it selected
   });
 }
-//Jobs goes back to where you were under it: Tracker, Tailor, or the last Jobs section.
-document.getElementById("nav-jobs").addEventListener("click", () => {
-  if (lastJobsRoute === "tracker" || lastJobsRoute === "tailor") {
-    location.hash = `#/${lastJobsRoute}`;
-    return;
-  }
-  const tab = document.getElementById(lastJobsTab);
-  if (routeName() !== "jobs") openJobsTab(tab);
-  tab.click();
-});
+//Jobs is the Jobs list. Find and Paste open from the omnibox; Tracker and Tailor from the list and the Job page.
+document.getElementById("nav-jobs").addEventListener("click", () => { location.hash = "#/list"; });
 document.getElementById("nav-home").addEventListener("click", () => { location.hash = "#/home"; });
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
 document.getElementById("nav-tailor").addEventListener("click", () => { location.hash = "#/tailor"; });
