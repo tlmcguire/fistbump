@@ -95,12 +95,26 @@ function show(name) {
     mounted.get(name)?.();
   }
   app.dataset.route = name;
-  for (const [id, route] of [["nav-home", "home"], ["nav-tracker", "tracker"], ["nav-resume", "resume"], ["nav-tailor", "tailor"]]) {
+  if (JOBS_AREA.has(name)) lastJobsRoute = name;
+  markCurrent();
+  current = name;
+}
+
+// The bottom bar marks Home, Jobs or Resume; Jobs stays marked on Tracker and Tailor, which live under it for now.
+// Settings is a tab of the Jobs view, so while it is open nothing in the bar but the gear is marked.
+const JOBS_AREA = new Set(["jobs", "tracker", "tailor"]);
+let lastJobsRoute = "jobs";
+function markCurrent() {
+  const name = app.dataset.route;
+  const settingsOpen = name === "jobs" && document.getElementById("tab-settings").getAttribute("aria-selected") === "true";
+  app.classList.toggle("settings-open", settingsOpen);
+  const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen], ["nav-resume", name === "resume"],
+    ["nav-tracker", name === "tracker"], ["nav-tailor", name === "tailor"]];
+  for (const [id, on] of marks) {
     const item = document.getElementById(id);
-    if (name === route) item.setAttribute("aria-current", "page");
+    if (on) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   }
-  current = name;
 }
 
 // Every launch starts on Home; it shows new users how to begin.
@@ -119,7 +133,7 @@ function route() {
 
 window.addEventListener("hashchange", route);
 
-//Sidebar: Home and Resume open their views, and the Jobs tabs and Settings return to the Jobs view (the view then picks the tab).
+//Home and Resume open their views, and the Jobs tabs and Settings return to the Jobs view (the view then picks the tab).
 //The Jobs view adds its tab listeners when it first mounts, so a click that mounts it is passed on again.
 function openJobsTab(tab) {
   if (routeName() === "jobs") return;
@@ -128,10 +142,25 @@ function openJobsTab(tab) {
   show("jobs");
   if (firstMount) tab.click();
 }
+let lastJobsTab = "tab-saved"; //the Jobs section Jobs returns to: Saved until another is chosen
 for (const id of ["tab-find", "tab-paste", "tab-saved", "tab-settings"]) {
   const tab = document.getElementById(id);
-  tab.addEventListener("click", () => openJobsTab(tab));
+  tab.addEventListener("click", () => {
+    if (id !== "tab-settings") lastJobsTab = id;
+    openJobsTab(tab);
+    setTimeout(markCurrent); //after the Jobs view has marked the tab it selected
+  });
 }
+//Jobs goes back to where you were under it: Tracker, Tailor, or the last Jobs section.
+document.getElementById("nav-jobs").addEventListener("click", () => {
+  if (lastJobsRoute === "tracker" || lastJobsRoute === "tailor") {
+    location.hash = `#/${lastJobsRoute}`;
+    return;
+  }
+  const tab = document.getElementById(lastJobsTab);
+  if (routeName() !== "jobs") openJobsTab(tab);
+  tab.click();
+});
 document.getElementById("nav-home").addEventListener("click", () => { location.hash = "#/home"; });
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
 document.getElementById("nav-tailor").addEventListener("click", () => { location.hash = "#/tailor"; });
@@ -153,12 +182,12 @@ window.api?.app?.onOpenSettings?.(() => {
   else openJobsTab(tab);
 });
 
-// Keyboard: Cmd/Ctrl+1..5 go to Home, Tracker, Jobs, Resume and Tailor; "/" goes to the search box on the view.
-const SHORTCUTS = {1: "home", 2: "tracker", 3: "jobs", 4: "resume", 5: "tailor"};
+// Keyboard: Cmd/Ctrl+1..5 go to Home, Jobs, Resume, Tracker and Tailor; "/" goes to the search box on the view.
+const SHORTCUTS = {1: "nav-home", 2: "nav-jobs", 3: "nav-resume", 4: "nav-tracker", 5: "nav-tailor"};
 document.addEventListener("keydown", event => {
   if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && SHORTCUTS[event.key]) {
     event.preventDefault();
-    window.App.go(SHORTCUTS[event.key]);
+    document.getElementById(SHORTCUTS[event.key]).click();
     return;
   }
   if (event.key === "/" && !event.metaKey && !event.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) {
@@ -172,11 +201,11 @@ document.addEventListener("keydown", event => {
   }
 });
 
-// The sidebar's tooltips name each place and its shortcut.
+// Tooltips name each place and its shortcut.
 {
   const mod = window.api?.platform === "darwin" ? "\u2318" : "Ctrl+";
-  for (const [id, key, label] of [["nav-home", 1, "Home"], ["nav-tracker", 2, "Tracker"], ["tab-find", 3, "Find jobs"],
-    ["nav-resume", 4, "Master resume"], ["nav-tailor", 5, "Tailor"]]) {
+  for (const [id, key, label] of [["nav-home", 1, "Home"], ["nav-jobs", 2, "Jobs"], ["nav-resume", 3, "Master resume"],
+    ["nav-tracker", 4, "Tracker"], ["nav-tailor", 5, "Tailor"]]) {
     const item = document.getElementById(id);
     item.title = label;
     item.dataset.shortcut = `${mod}${key}`;

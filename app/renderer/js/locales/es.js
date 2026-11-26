@@ -6,6 +6,8 @@ window.I18n.add("es", {
   "Saved jobs": "Empleos guardados", "Resume": "Currículum", "Master resume": "Currículum maestro",
   "Saved versions": "Versiones guardadas", "Tailor": "Adaptar", "Settings": "Ajustes",
   "Settings (Cmd or Ctrl and comma)": "Ajustes (Cmd o Ctrl y coma)", "An update is available": "Hay una actualización",
+  // v3 shell: Jobs sections and the omnibox
+  "Saved": "Guardados", "Find": "Buscar", "Paste": "Pegar", "Jobs sections": "Secciones de empleos", "Workflow": "Flujo de trabajo", "Search jobs, paste a link, or drop in a posting": "Busca empleos, pega un enlace o suelta una oferta", "Search jobs, paste a job link, or paste a posting": "Busca empleos, pega un enlace de empleo o pega una oferta", "Go to Home, Jobs, Resume, Tracker, Tailor": "Ir a Inicio, Empleos, Currículum, Seguimiento, Adaptar", "Search, paste a link or a posting, from anywhere": "Buscar, pegar un enlace o una oferta, desde cualquier lugar",
   // Search toolbar and filters
   "Keywords": "Palabras clave", "Job title or keywords, e.g. data analyst": "Puesto o palabras clave, p. ej. analista de datos",
   "Location": "Ubicación", "Search": "Buscar", "Filters": "Filtros", "No recent searches yet": "Aún no hay búsquedas recientes",
@@ -313,7 +315,6 @@ window.I18n.add("es", {
   "Keyboard shortcuts": "Atajos de teclado",
   "Search, on any view": "Buscar, en cualquier vista",
   "Move, accept, reject, edit suggestions": "Mover, aceptar, rechazar y editar sugerencias",
-  "Go to Home, Tracker, Jobs, Resume, Tailor": "Ir a Inicio, Seguimiento, Empleos, Currículum, Adaptar",
   "Open settings": "Abrir ajustes",
   "Close dialogs and panels": "Cerrar diálogos y paneles",
   "More actions": "Más acciones",

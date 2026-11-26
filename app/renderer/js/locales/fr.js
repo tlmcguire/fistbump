@@ -1,5 +1,7 @@
 // French. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("fr", {
+  // v3 shell: Jobs sections and the omnibox
+  "Saved": "Enregistrés", "Find": "Chercher", "Paste": "Coller", "Jobs sections": "Sections des offres", "Workflow": "Flux de travail", "Search jobs, paste a link, or drop in a posting": "Cherchez des offres, collez un lien ou déposez une annonce", "Search jobs, paste a job link, or paste a posting": "Cherchez des offres, collez un lien d’offre ou collez une annonce", "Go to Home, Jobs, Resume, Tracker, Tailor": "Aller à Accueil, Emplois, CV, Suivi, Adapter", "Search, paste a link or a posting, from anywhere": "Chercher, coller un lien ou une annonce, depuis n’importe où",
   "App": "Application", "Home": "Accueil", "Tracker": "Suivi", "Jobs": "Emplois", "Find jobs": "Chercher des emplois",
   "Recent searches": "Recherches récentes", "Open a link": "Ouvrir un lien", "Paste a job": "Coller une offre",
   "Saved jobs": "Emplois enregistrés", "Resume": "CV", "Master resume": "CV principal",
@@ -305,7 +307,6 @@ window.I18n.add("fr", {
   "Keyboard shortcuts": "Raccourcis clavier",
   "Search, on any view": "Rechercher, depuis n'importe quelle vue",
   "Move, accept, reject, edit suggestions": "Parcourir, accepter, refuser, modifier les suggestions",
-  "Go to Home, Tracker, Jobs, Resume, Tailor": "Aller à Accueil, Suivi, Emplois, CV, Adapter",
   "Open settings": "Ouvrir les réglages",
   "Close dialogs and panels": "Fermer les dialogues et panneaux",
   "More actions": "Autres actions",

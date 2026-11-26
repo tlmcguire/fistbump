@@ -13,40 +13,44 @@
     </head>
     <body spellcheck="false">
         <div class="app">
-            <!--Sidebar: app navigation as a tree, in the manner of a notes app. Its top is a drag region that leaves
-                room for the macOS window buttons; Fistbump's name and Settings sit at the foot.-->
-            <aside class="sidebar">
-                <div class="sidebar-top drag" data-tauri-drag-region></div>
-                <nav class="tree" aria-label="App">
-                    <button type="button" id="nav-home" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Home</button>
-                    <button type="button" id="nav-tracker" class="nav-item" data-route="tracker"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Tracker</button>
+            <!--Window strip: an empty drag region across the top. On macOS it leaves room for the window buttons,
+                and on Windows the minimize, maximize and close buttons are drawn over its right end.-->
+            <div class="titlebar drag" data-tauri-drag-region></div>
 
-                    <div class="tree-group" data-group="jobs">
-                        <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-jobs"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Jobs</button>
-                        <div id="tree-jobs" class="tree-body" role="tablist" aria-label="Jobs">
-                            <button type="button" id="tab-find" class="nav-item" role="tab" aria-selected="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Find jobs</button>
-                            <ul id="tree-searches" class="tree-children" aria-label="Recent searches"></ul>
-                            <button type="button" id="tab-paste" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg>Paste a job</button>
-                            <button type="button" id="tab-saved" class="nav-item" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg>Saved jobs</button>
-                        </div>
-                    </div>
-
-                    <div class="tree-group" data-group="resume">
-                        <button type="button" class="tree-head" aria-expanded="true" aria-controls="tree-resume"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>Resume</button>
-                        <div id="tree-resume" class="tree-body">
-                            <button type="button" id="nav-resume" class="nav-item" data-route="resume"><svg class="icon" aria-hidden="true"><use href="#i-person"/></svg>Master resume</button>
-                            <ul id="tree-versions" class="tree-children" aria-label="Saved versions"></ul>
-                                                        <button type="button" id="nav-tailor" class="nav-item" data-route="tailor"><svg class="icon" aria-hidden="true"><use href="#i-wand"/></svg>Tailor</button>
-                        </div>
-                    </div>
-                </nav>
-                <div class="sidebar-foot" role="tablist" aria-label="App">
-                    <img src="views/graphics/logo.png" alt="Fistbump" class="wordmark">
-                    <button type="button" id="tab-settings" class="icon-button" role="tab" aria-selected="false"  aria-label="Settings" title="Settings (Cmd or Ctrl and comma)"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="icon-button-label">Settings</span><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
+            <!--Jobs sections: shown above the Jobs, Tracker and Tailor views. Tracker and Tailor move into the Job
+                page in later v3 phases; until then they stay one click away here.-->
+            <nav class="subnav" aria-label="Jobs sections">
+                <div class="seg" role="tablist" aria-label="Jobs">
+                    <button type="button" id="tab-saved" class="seg-item" role="tab" aria-selected="false">Saved</button>
+                    <button type="button" id="tab-find" class="seg-item" role="tab" aria-selected="true">Find</button>
+                    <button type="button" id="tab-paste" class="seg-item" role="tab" aria-selected="false">Paste</button>
                 </div>
-            </aside>
+                <div class="seg" aria-label="Workflow">
+                    <button type="button" id="nav-tracker" class="seg-item" data-route="tracker">Tracker</button>
+                    <button type="button" id="nav-tailor" class="seg-item" data-route="tailor">Tailor</button>
+                </div>
+            </nav>
 
-            <!--The sidebar's icons: one set, drawn as 1.6px strokes on a 24px grid.-->
+            <!--Bottom bar: the app's navigation, grounded at the foot of the window. The omnibox in the middle takes a
+                search, a job link, or a pasted posting.-->
+            <nav class="bottombar" aria-label="App">
+                <img src="views/graphics/logo.png" alt="Fistbump" class="wordmark">
+                <div class="bottombar-nav">
+                    <button type="button" id="nav-home" class="bar-item">Home</button>
+                    <button type="button" id="nav-jobs" class="bar-item">Jobs</button>
+                    <button type="button" id="nav-resume" class="bar-item" data-route="resume">Resume</button>
+                </div>
+                <form id="omnibox" class="omnibox" role="search" autocomplete="off">
+                    <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                    <input id="omnibox-input" type="search" aria-label="Search jobs, paste a job link, or paste a posting" placeholder="Search jobs, paste a link, or drop in a posting">
+                    <kbd id="omnibox-key" aria-hidden="true"></kbd>
+                </form>
+                <div class="bottombar-end" role="tablist" aria-label="Settings">
+                    <button type="button" id="tab-settings" class="bar-icon" role="tab" aria-selected="false" aria-label="Settings" title="Settings (Cmd or Ctrl and comma)"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
+                </div>
+            </nav>
+
+            <!--The app's icons: one set, drawn as 1.6px strokes on a 24px grid.-->
             <svg class="icon-sprite" aria-hidden="true">
                 <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5.5h4V20"/></symbol>
                 <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
@@ -361,7 +365,8 @@
                         <section class="settings-group" aria-labelledby="set-keys">
                             <h2 id="set-keys">Keyboard shortcuts</h2>
                             <div class="settings-card">
-                                <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Tracker, Jobs, Resume, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Jobs, Resume, Tracker, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Search, paste a link or a posting, from anywhere</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>K</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Search, on any view</span></div><span class="keys"><kbd>/</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Move, accept, reject, edit suggestions</span></div><span class="keys"><kbd>J</kbd> <kbd>K</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>E</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Open settings</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>,</kbd></span></div>
@@ -774,7 +779,7 @@
         <script src="views/diff-view/diff-view.js" defer></script>
         <script src="views/tracker/tracker.js" defer></script>
         <script src="views/home/home.js" defer></script>
-        <script src="js/sidebar.js" defer></script>
+        <script src="js/omnibox.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
     </body>
