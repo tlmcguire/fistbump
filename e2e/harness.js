@@ -150,6 +150,7 @@ const CLIENT_SHIM = `
     shell: group('shell', { showItem: 0 }),
     settings: group('settings', { get: 0, put: 0 }),
     storage: group('storage', { report: 0, cleanup: 0 }),
+    desktop: { setShortcut: async () => ({ ok: true }), setTray: async () => ({ ok: true }), notify: async () => ({ ok: true }), onFocusSearch: () => {}, onDeepLink: () => {} },
     app: { ...group('app', { info: 0, checkForUpdates: 'app:check-updates', showDataFolder: 'app:show-data-folder', openReleases: 'app:open-releases', downloadUpdate: 'app:download-update', cancelUpdate: 'app:cancel-update', openUpdate: 'app:open-update', installUpdate: 'app:install-update' }), onUpdateProgress: () => {}, onOpenSettings: () => {} },
     jobs: group('jobs', { parse: 0, create: 0, list: 0, get: 0, update: 0, delete: 0, analyze: 0, analyzeText: 0, archive: 0, unarchive: 0, trash: 0, restore: 0 }),
     cost: group('cost', { analyze: 0 }),

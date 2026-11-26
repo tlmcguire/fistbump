@@ -650,6 +650,21 @@ pub async fn ipc_call(
             _ => bad("Invalid release link"),
         },
 
+        //Opt-in desktop integration, see desktop.rs
+        #[cfg(desktop)]
+        "app:setShortcut" => crate::desktop::set_shortcut(&app, a0.and_then(|v| v.as_bool()).unwrap_or(false)),
+        #[cfg(desktop)]
+        "app:setTray" => {
+            let enabled = a0.and_then(|v| v.as_bool()).unwrap_or(false);
+            let status = a1.and_then(|v| v.get("status")).and_then(|v| v.as_str()).unwrap_or("Nothing due today");
+            let count = a1.and_then(|v| v.get("count")).and_then(|v| v.as_u64()).unwrap_or(0);
+            crate::desktop::set_tray(&app, enabled, status, count)
+        }
+        #[cfg(desktop)]
+        "app:notify" => match (as_non_empty_str(a0), a1.and_then(|v| v.as_str())) {
+            (Some(title), body) => crate::desktop::notify(&app, title, body.unwrap_or("")),
+            _ => bad("A notification needs a title"),
+        },
         "app:check-updates" => crate::updates::check_for_updates(&app, &state).await,
         "app:download-update" => crate::updates::download_update(&app, &state).await,
         "app:cancel-update" => crate::updates::cancel_update(&state).await,

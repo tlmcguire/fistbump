@@ -1000,8 +1000,9 @@
   border: 1.5px solid var(--rule);
   border-radius: 9px;
 }
-:root .v3 .paper-adapt button:not(.st3-swatch):not(.btn) { background: var(--paper-2); color: var(--ink); border-radius: 10px; font-weight: 650; }
-:root .v3 .paper-adapt button:not(.st3-swatch):not(.btn):hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+/* Kept light (:where) so a component that styles its own buttons always wins over this default. */
+:root .v3 .paper-adapt :where(button:not(.st3-swatch):not(.btn)) { background: var(--paper-2); color: var(--ink); border-radius: 10px; font-weight: 650; }
+:root .v3 .paper-adapt :where(button:not(.st3-swatch):not(.btn)):hover:not(:disabled) { background: var(--ink); color: var(--paper); }
 :root .v3 .paper-adapt button.primary { background: var(--ink); color: var(--paper); }
 :root .v3 .paper-adapt button.danger-solid { background: var(--urgent-ink); color: var(--paper); }
 :root .v3 .paper-adapt kbd { background: var(--paper-2); color: var(--ink); border-color: var(--rule); }
@@ -1422,3 +1423,11 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 /* Long lists: rows off-screen are not laid out or painted until they scroll near, so hundreds of jobs stay smooth. */
 :root .v3 .jl3-row { content-visibility: auto; contain-intrinsic-size: auto 58px; }
 :root .v3 .jl3-card { content-visibility: auto; contain-intrinsic-size: auto 112px; }
+:root .v3 .desktop-problem { margin-top: 6px; color: var(--urgent-ink); font-weight: 600; }
+
+:root .v3 .rs3-target-custom { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; font-size: 13px; color: var(--ink-2); }
+:root .v3 .rs3-target-custom input { width: 56px; height: 30px; padding: 0 8px; border-radius: 9px; border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink); font: 650 13px system-ui, sans-serif; }
+:root .v3 .rs3-target-custom[hidden] { display: none; }
+:root .v3 .rs3-target { flex-wrap: wrap; row-gap: 6px; }
+:root .v3 .rs3-target-label { flex-basis: 100%; margin: 0 0 2px; }
+:root .v3 .rs3-target button[aria-checked="true"]:hover:not(:disabled) { background: var(--ink); color: var(--paper); }

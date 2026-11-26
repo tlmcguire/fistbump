@@ -226,6 +226,19 @@ window.Settings = {
     bind("pref-default-sort", "defaultSort");
     bind("pref-show-logos", "showLogos", ...checked);
     bind("pref-check-updates", "notifyUpdates", ...checked);
+    bind("pref-global-shortcut", "globalShortcut", ...checked);
+    bind("pref-menu-bar", "menuBarItem", ...checked);
+    bind("pref-notify-due", "notifyDue", ...checked);
+    //the shortcut's keys as this computer names them, and what the shell said if the keys are taken
+    if (api?.platform !== "darwin") document.querySelectorAll(".alt-key").forEach(k => { k.textContent = "Alt"; });
+    const showDesktopProblem = () => {
+      const line = $("desktop-shortcut-problem");
+      const problem = window.Desktop?.problem || "";
+      line.textContent = problem;
+      line.hidden = !problem;
+    };
+    window.addEventListener("fistbump:desktop", showDesktopProblem);
+    showDesktopProblem();
 
     //A status line under a card. After a cleanup it shows the mascot tidying up beside what was cleared.
     const setStatus = (id, text, {cleaned = false} = {}) => {

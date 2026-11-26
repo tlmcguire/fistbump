@@ -1,6 +1,17 @@
 // Spanish. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("es", {
   // v3 screens: Home, Jobs list, Job page, Tailor desk, Settings, Resume
+  "Custom": "Personalizado",
+  "pages": "páginas",
+  "Custom number of pages": "Número de páginas personalizado",
+  "Desktop": "Escritorio",
+  "Shortcut from any app": "Atajo desde cualquier app",
+  "Show what is due in the menu bar": "Mostrar lo pendiente en la barra de menús",
+  "Notify me about follow-ups and interviews": "Avisarme de seguimientos y entrevistas",
+  "A small Fistbump item that counts follow-ups and interviews due, and opens the app or the search box.": "Un pequeño elemento de Fistbump que cuenta seguimientos y entrevistas pendientes y abre la app o la búsqueda.",
+  "Once for each follow-up due and each interview today or tomorrow. Nothing leaves this computer.": "Una vez por cada seguimiento pendiente y cada entrevista de hoy o mañana. Nada sale de este equipo.",
+  "Nothing due today": "Nada pendiente hoy",
+  "Interview tomorrow": "Entrevista mañana",
   "Navigation bar": "Barra de navegación",
   "Bottom": "Abajo",
   "Top": "Arriba",

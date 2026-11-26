@@ -1,6 +1,17 @@
 // German. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("de", {
   // v3 screens: Home, Jobs list, Job page, Tailor desk, Settings, Resume
+  "Custom": "Eigene",
+  "pages": "Seiten",
+  "Custom number of pages": "Eigene Seitenzahl",
+  "Desktop": "Desktop",
+  "Shortcut from any app": "Kurzbefehl aus jeder App",
+  "Show what is due in the menu bar": "Fälliges in der Menüleiste zeigen",
+  "Notify me about follow-ups and interviews": "Über Nachfassen und Gespräche benachrichtigen",
+  "A small Fistbump item that counts follow-ups and interviews due, and opens the app or the search box.": "Ein kleines Fistbump-Element, das fällige Nachfassaktionen und Gespräche zählt und die App oder die Suche öffnet.",
+  "Once for each follow-up due and each interview today or tomorrow. Nothing leaves this computer.": "Einmal pro fälliger Nachfassaktion und pro Gespräch heute oder morgen. Nichts verlässt diesen Computer.",
+  "Nothing due today": "Heute nichts fällig",
+  "Interview tomorrow": "Gespräch morgen",
   "Navigation bar": "Navigationsleiste",
   "Bottom": "Unten",
   "Top": "Oben",

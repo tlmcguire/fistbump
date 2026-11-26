@@ -6,6 +6,9 @@ window.Prefs = (() => {
     theme: "classic",        // classic | bubblegum | techno | cyber | retro | auto-season | january..december
     accent: "theme",         // theme (the theme's own) | gold | coral | mint | sky | violet | rose
     barPosition: "bottom",   // where the navigation bar sits: bottom | top
+    globalShortcut: false,   // Cmd/Ctrl+Alt+Space brings Fistbump forward with the search box, from any app
+    menuBarItem: false,      // a menu-bar (tray) item that shows what is due
+    notifyDue: false,        // notifications for follow-ups due and interviews coming up
     language: "system",      // system | en | es | fr | de
     textSize: "default",     // small | default | large | larger
     reduceMotion: "system",  // system | on | off
@@ -15,7 +18,7 @@ window.Prefs = (() => {
     defaultSort: "relevance",
     showLogos: true,
     pdfStyle: "classic",     // classic | modern | minimal | compact | executive
-    resumePages: 1,          // the length the resume should fit: 1 | 2 | 3 pages
+    resumePages: 1,          // the length the resume should fit, in pages: 1, 2, or a custom number up to 10
     notifyUpdates: true,     // look for a new version when Fistbump opens, and say so
     skippedUpdate: "",       // a version the user chose not to hear about again
   };
@@ -38,7 +41,7 @@ window.Prefs = (() => {
     pageSize: [20, 30, 50],
     defaultSort: ["relevance", "newest"],
     pdfStyle: ["classic", "modern", "minimal", "compact", "executive"],
-    resumePages: [1, 2, 3],
+    resumePages: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   };
 
   let values = {...DEFAULTS};
