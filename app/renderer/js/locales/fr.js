@@ -1,6 +1,18 @@
 // French. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("fr", {
   // v3 screens: Home, Jobs list, Job page, Tailor desk, Settings, Resume
+  "Search job boards for “{0}”": "Chercher « {0} » sur les sites d’emploi",
+  "Greenhouse, Lever and Ashby": "Greenhouse, Lever et Ashby",
+  "Go to": "Aller à",
+  "Browse job boards": "Parcourir les sites d’emploi",
+  "Search with filters for place, pay and fit": "Cherchez avec des filtres de lieu, salaire et adéquation",
+  "Paste a job posting": "Coller une annonce",
+  "From any site": "Depuis n’importe quel site",
+  "Everything you have saved": "Tout ce que vous avez enregistré",
+  "Open this job link": "Ouvrir ce lien d’offre",
+  "Suggestions": "Suggestions",
+  "Testing…": "Test en cours…",
+  "Testing… {0} s": "Test en cours… {0} s",
   "{0} active": "{0} actives",
   "1 active": "1 active",
   "{0} need you today": "{0} vous attendent aujourd’hui",

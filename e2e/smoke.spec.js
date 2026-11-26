@@ -391,3 +391,46 @@ test('resume sections reorder by dragging, by the arrows, and by Alt+arrow keys'
   await expect.poll(async () => (await window.evaluate(() => window.api.settings.get()))['resume.section_order'])
     .toEqual(['summary', 'skills', 'education', 'experience', 'custom']);
 });
+
+test('a running engine test says so on its button, then gives the button back', async ({ window }) => {
+  await window.evaluate(() => {
+    //a test that takes a moment, so the button can be seen while it runs
+    window.api.ai.test = () => new Promise(resolve => setTimeout(() => resolve({ ok: true, latency_ms: 1200 }), 1200));
+    window.api.ai.status = async () => ({ mode: 'auto', active_engine: 'rules', local: { available: true }, remote: { configured: false } });
+  });
+  await window.locator('#tab-settings').click();
+  const button = window.locator('#ai-test-local');
+  await button.evaluate(b => { b.disabled = false; });
+  await button.click();
+  await expect(button).toHaveText(/^Testing/);
+  await expect(button).toHaveAttribute('aria-busy', 'true');
+  await expect(button).toHaveText('Test', { timeout: 5000 });
+  await expect(button).not.toHaveAttribute('aria-busy', 'true');
+});
+
+test('the search box suggests before anything is typed, and the Search button opens Find', async ({ window }) => {
+  await window.evaluate(async () => {
+    await window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+    await window.api.jobs.create({ source: 'pasted', position_title: 'Data Analyst', company_name: 'Tidewater Logistics',
+      raw_text: 'Data Analyst\nTidewater Logistics\n\nRequirements:\n- sql' });
+  });
+  await window.locator('#omnibox-input').click();
+  const panel = window.locator('#omnibox-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('option', { name: /Browse job boards/ })).toBeVisible();
+  await expect(window.locator('#omnibox-input')).toHaveAttribute('aria-expanded', 'true');
+
+  await window.keyboard.type('tidewater');
+  await expect(panel.getByRole('option', { name: /Data Analyst/ })).toBeVisible();
+  await window.keyboard.press('ArrowDown');
+  await window.keyboard.press('Enter');
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'job');
+
+  await window.locator('#omnibox-input').click();
+  await window.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+
+  await window.locator('#nav-search').click();
+  await expect(window.locator('#search-form')).toBeVisible();
+  await expect(window.locator('#nav-search')).toHaveAttribute('aria-current', 'page');
+});

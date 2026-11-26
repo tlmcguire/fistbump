@@ -123,7 +123,9 @@ function markCurrent() {
   const name = app.dataset.route;
   const settingsOpen = name === "jobs" && document.getElementById("tab-settings").getAttribute("aria-selected") === "true";
   app.classList.toggle("settings-open", settingsOpen);
-  const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen], ["nav-resume", name === "resume"],
+  //Find is the Search page; Paste and the other job places count as Jobs
+  const finding = name === "jobs" && !settingsOpen && document.getElementById("tab-find").getAttribute("aria-selected") === "true";
+  const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen && !finding], ["nav-search", finding], ["nav-resume", name === "resume"],
     ["nav-tracker", name === "tracker"], ["nav-tailor", name === "tailor"], ["nav-list", name === "list"]];
   for (const [id, on] of marks) {
     const item = document.getElementById(id);
