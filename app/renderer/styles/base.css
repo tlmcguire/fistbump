@@ -33,6 +33,7 @@
   --bad: #ffb4ab;          /* rejected, failed */
   --due: #ff9d8a;          /* overdue and due today: a warm coral, apart from the gold */
   --link: #f2f5fb;         /* links are the text colour, underlined */
+  --tint: 255 255 255;     /* faint overlays (hovers, tracks, wells): white by night, ink by day (modes.css) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --radius: 6px;
   --sidebar-width: 212px;
@@ -102,8 +103,8 @@ a { color: inherit; }
 
 /* Thin scrollbars that suit the dark panes. */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.26); }
+::-webkit-scrollbar-thumb { background: rgb(var(--tint) / 0.16); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--tint) / 0.26); }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* Window drag regions. Controls inside them must stay clickable. */
@@ -170,7 +171,7 @@ button:focus-visible, .button:focus-visible {
   outline-offset: 1px;
 }
 button:disabled {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--tint) / 0.05);
   color: var(--faint);
 }
 button.primary:disabled, .button.primary:disabled { background: rgba(206, 166, 21, 0.22); color: rgba(242, 245, 251, 0.7); }
@@ -267,7 +268,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 }
 
 .nav-item .icon { color: var(--faint); }
-.nav-item:hover:not(:disabled), .tree-leaf:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.nav-item:hover:not(:disabled), .tree-leaf:hover:not(:disabled) { background: rgb(var(--tint) / 0.06); color: var(--text); }
 .nav-item:hover .icon { color: var(--muted); }
 
 .nav-item[aria-selected="true"],
@@ -348,7 +349,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   background: transparent;
   color: var(--faint);
 }
-.icon-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.icon-button:hover:not(:disabled) { background: rgb(var(--tint) / 0.06); color: var(--text); }
 .icon-button[aria-selected="true"] { background: var(--select); color: var(--accent-hover); }
 .icon-button-label { font-size: 12px; font-weight: 550; }
 .icon-button .dot { flex: none; margin: 0 8px 0 0; } /* after the label, not over it */
@@ -374,8 +375,8 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 }
 
 /* When the window is in the background its selection greys out, as native apps do. */
-.window-inactive .nav-item[aria-selected="true"] { background: rgba(255, 255, 255, 0.08); }
-.window-inactive .result.selected { background: rgba(255, 255, 255, 0.08); }
+.window-inactive .nav-item[aria-selected="true"] { background: rgb(var(--tint) / 0.08); }
+.window-inactive .result.selected { background: rgb(var(--tint) / 0.08); }
 
 /* ---------- Toolbar and filters ---------- */
 
@@ -525,7 +526,7 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
 .spinner {
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border: 2px solid rgb(var(--tint) / 0.18);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -627,7 +628,7 @@ label.sort select {
   border-bottom: 1px solid var(--line);
 }
 
-.result:hover { background: rgba(255, 255, 255, 0.04); }
+.result:hover { background: rgb(var(--tint) / 0.04); }
 .result.selected { background: var(--select); }
 
 .result-body {
@@ -754,7 +755,7 @@ label.sort select {
   font-size: 22px;
 }
 
-.logo-tile.pending { background: rgba(255, 255, 255, 0.10); }
+.logo-tile.pending { background: rgb(var(--tint) / 0.10); }
 
 .logo-tile.reveal > * { animation: logo-in 180ms ease-out; }
 
@@ -1209,7 +1210,7 @@ button.danger:hover:not(:disabled) { background: rgba(255, 120, 110, 0.22); }
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(var(--tint) / 0.03);
 }
  
 .entry-head, .version-head {
@@ -1404,7 +1405,7 @@ li.result * {
   text-align: left;
   white-space: normal;
 }
-.home-row:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+.home-row:hover:not(:disabled) { background: rgb(var(--tint) / 0.05); }
 .home-row strong { display: block; font-weight: 600; }
 .home-row span, .home-row small { color: var(--muted); font-size: 12px; }
 .home-row small { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1646,7 +1647,7 @@ input.switch {
   /* No border: inputs get a 1px one, which pushed the knob 1px down and right. */
   border: 0;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--tint) / 0.22);
   transition: background-color 140ms ease;
 }
 
@@ -1675,7 +1676,7 @@ input.switch:checked::after { transform: translateX(16px); }
 }
 
 .reduce-motion .spinner {
-  border-top-color: rgba(255, 255, 255, 0.18);
+  border-top-color: rgb(var(--tint) / 0.18);
   border-right-color: var(--accent);
 }
 
@@ -1684,10 +1685,10 @@ input.switch:checked::after { transform: translateX(16px); }
   --muted: rgba(242, 245, 251, 0.88);
   --faint: rgba(242, 245, 251, 0.72);
   --dim: rgba(242, 245, 251, 0.8);
-  --line: rgba(255, 255, 255, 0.28);
+  --line: rgb(var(--tint) / 0.28);
   --line-strong: rgba(255, 255, 255, 0.42);
-  --control: rgba(255, 255, 255, 0.18);
-  --control-hover: rgba(255, 255, 255, 0.28);
+  --control: rgb(var(--tint) / 0.18);
+  --control-hover: rgb(var(--tint) / 0.28);
 }
 
 .high-contrast :focus-visible { outline-width: 3px !important; }
@@ -1731,7 +1732,7 @@ input.switch:checked::after { transform: translateX(16px); }
   stroke: currentColor;
   stroke-width: 1.25;
 }
-.win-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.win-btn:hover:not(:disabled) { background: rgb(var(--tint) / 0.12); }
 .win-btn.win-close:hover:not(:disabled) { background: #c42b1c; color: #fff; }
 
 /* Lightweight right-click context menu for https: links in Tauri. */

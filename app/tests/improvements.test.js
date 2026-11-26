@@ -232,8 +232,8 @@ test('Home refreshes and clears stale listings/cache when history, jobs, or stor
   const tr = read('views/tracker/tracker.js');
   assert.ok(tr.includes('fistbump:jobs') && tr.includes('fistbump:applications') && tr.includes('fistbump:storage-cleaned') && tr.includes('fistbump:versions'),
     'tracker.js should refresh pipeline stats and stage chips when jobs, applications, storage, or versions change');
-  assert.ok(tr.includes('drawStats') && tr.includes('statsStrip.textContent = ""'),
-    'tracker.js should compute scope-accurate stats and clear statsStrip when empty');
+  assert.ok(tr.includes('drawStats') && tr.includes('summary.hidden = !rows.length'),
+    'tracker.js should compute scope-accurate stats and hide the summary when empty');
 });
 
 test('App version stays in sync across package.json, tauri.conf.json, and Cargo.toml', () => {

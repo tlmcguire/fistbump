@@ -28,12 +28,12 @@
 
 :root {
   --display: "Bricolage Grotesque", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --lit: inset 0 1px 0 rgba(255, 255, 255, 0.07);                 /* the top edge catching the light */
+  --lit: inset 0 1px 0 rgb(var(--tint) / 0.07);                 /* the top edge catching the light */
   --lift-1: 0 1px 2px rgba(3, 10, 30, 0.35), 0 6px 14px -6px rgba(3, 10, 30, 0.45);
   --lift-2: 0 2px 4px rgba(3, 10, 30, 0.3), 0 18px 36px -12px rgba(3, 10, 30, 0.6);
   --panel: #10306c;          /* a panel on the page */
   --panel-hover: #143675;
-  --panel-line: rgba(255, 255, 255, 0.085);
+  --panel-line: rgb(var(--tint) / 0.085);
 }
 
 /* ---------- Type ---------- */
@@ -81,7 +81,7 @@ dialog.ask h2, .due-strip h2, .listing h2, #job-title {
 .nav-item[aria-selected="true"], .nav-item[aria-current="page"],
 .nav-item[aria-selected="true"]:hover:not(:disabled) {
   background: var(--select);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgb(var(--tint) / 0.07);
   color: var(--text);
 }
 .app:not([data-route="jobs"]) .nav-item[aria-selected="true"] { box-shadow: none; }
@@ -123,13 +123,13 @@ input:not([type="checkbox"]):not(.switch):focus-visible, select:focus-visible, t
 .home-section .home-rows { padding: 4px; }
 .home-section .home-row { width: 100%; margin-inline: 0; padding: 11px 14px; border-radius: 9px; }
 .home-section .home-row:hover:not(:disabled) { background: var(--panel-hover); }
-.home-rows > li + li { border-top-color: rgba(255, 255, 255, 0.06); }
+.home-rows > li + li { border-top-color: rgb(var(--tint) / 0.06); }
 .home-row strong { font-size: 14px; }
 
 /* The welcome: the one hero, a solid raised panel. Pico stands in it with no frame or shadow. */
 .home-welcome {
   padding: 30px 30px 26px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(var(--tint) / 0.1);
   border-radius: 18px;
   background: #153678;
   box-shadow: var(--lit), var(--lift-2);
@@ -146,7 +146,7 @@ input:not([type="checkbox"]):not(.switch):focus-visible, select:focus-visible, t
 
 /* ---------- Tailor ---------- */
 
-.reason { border: 1px solid rgba(255, 255, 255, 0.07); }
+.reason { border: 1px solid rgb(var(--tint) / 0.07); }
 .score-ring::before { background: var(--bg); }
 
 /* ---------- Dialogs ---------- */
@@ -179,7 +179,7 @@ dialog.ask { border-color: var(--line-strong); background: var(--raised); box-sh
 /* With Increase contrast on, the filters panel ends in a clear edge, so it never blends into the results beneath it. */
 .high-contrast .filters {
   background: rgba(0, 0, 0, 0.22);
-  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  border-top: 1px solid rgb(var(--tint) / 0.28);
   border-bottom: 2px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.55);
   position: relative;
@@ -239,7 +239,7 @@ dialog.ask { border-color: var(--line-strong); background: var(--raised); box-sh
   padding: 0 4px 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--tint) / 0.06);
   color: var(--text);
   font-size: 12px;
 }

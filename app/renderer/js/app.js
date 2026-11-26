@@ -44,6 +44,13 @@ const VIEWS = {
     redraw: true,
   },
 
+  //the calendar: interviews and follow-ups by week or month, at #/calendar. Drawn again each time it is shown.
+  calendar: {
+    container: "view-calendar",
+    mount: container => window.CalendarView.mount(container),
+    redraw: true,
+  },
+
   //v3: every job in one list, at #/list. Drawn again each time it is shown.
   list: {
     container: "view-list",
@@ -90,6 +97,18 @@ const routeName = () => {
   return Object.hasOwn(VIEWS, name) ? name : "";
 };
 
+//For a moment after a view appears it is "arriving": its sheets settle in one after another and its ink marks draw
+//themselves (motion.css / v3.css). Content redrawn later, while you work, does not replay that.
+const arriveTimers = new WeakMap();
+function arrive(container) {
+  if (!window.UI.motion()) return;
+  clearTimeout(arriveTimers.get(container));
+  container.classList.remove("arriving");
+  void container.offsetWidth;
+  container.classList.add("arriving");
+  arriveTimers.set(container, setTimeout(() => container.classList.remove("arriving"), 1800));
+}
+
 function show(name) {
   if (current === name) {
     if (name === "job") mounted.get(name)?.(); //another job opened over this one
@@ -110,6 +129,7 @@ function show(name) {
         if (key !== name && !other.hidden) window.ViewState.hide(other);
       }
       window.ViewState.show(container);
+      arrive(container);
       app.dataset.route = name;
       markCurrent();
     };
@@ -123,8 +143,9 @@ function show(name) {
     if (key !== name && !container.hidden) window.ViewState.hide(container);
   }
   window.ViewState.show(container);
+  arrive(container);
   //Tailor animates its own stage and sidebar as they fill, so the page does not also fade in around them
-  if (current !== null && !view.selfAnimated) window.UI.play(container, "view-enter", 320);
+  if (current !== null && !view.selfAnimated && !container.classList.contains("arriving")) window.UI.play(container, "view-enter", 320);
   if (!mounted.has(name)) {
     const redraw = view.mount(container);
     mounted.set(name, view.redraw ? redraw : null);
@@ -145,7 +166,7 @@ function markCurrent() {
   app.classList.toggle("settings-open", settingsOpen);
   //Find is the Search page; Paste and the other job places count as Jobs
   const finding = name === "jobs" && !settingsOpen && document.getElementById("tab-find").getAttribute("aria-selected") === "true";
-  const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen && !finding], ["nav-search", finding], ["nav-resume", name === "resume"],
+  const marks = [["nav-home", name === "home"], ["nav-jobs", JOBS_AREA.has(name) && !settingsOpen && !finding], ["nav-search", finding], ["nav-resume", name === "resume"], ["nav-calendar", name === "calendar"],
     ["nav-tracker", name === "tracker"], ["nav-tailor", name === "tailor"], ["nav-list", name === "list"]];
   for (const [id, on] of marks) {
     const item = document.getElementById(id);
@@ -196,6 +217,7 @@ document.getElementById("nav-home").addEventListener("click", () => { location.h
 document.getElementById("nav-resume").addEventListener("click", () => { location.hash = "#/resume"; });
 document.getElementById("nav-tailor").addEventListener("click", () => { location.hash = "#/tailor"; });
 document.getElementById("nav-tracker").addEventListener("click", () => { location.hash = "#/tracker"; });
+document.getElementById("nav-calendar").addEventListener("click", () => { location.hash = "#/calendar"; });
 
 // What Home needs to open the other views: go("resume") shows a view at once, openTab("tab-find") a Jobs tab.
 window.App = {
@@ -214,7 +236,7 @@ window.api?.app?.onOpenSettings?.(() => {
 });
 
 // Keyboard: Cmd/Ctrl+1..5 go to Home, Jobs, Resume, Tracker and Tailor; "/" goes to the search box on the view.
-const SHORTCUTS = {1: "nav-home", 2: "nav-jobs", 3: "nav-resume", 4: "nav-tracker", 5: "nav-tailor"};
+const SHORTCUTS = {1: "nav-home", 2: "nav-jobs", 3: "nav-resume", 4: "nav-tracker", 5: "nav-tailor", 6: "nav-calendar"};
 document.addEventListener("keydown", event => {
   if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && SHORTCUTS[event.key]) {
     event.preventDefault();
@@ -236,7 +258,7 @@ document.addEventListener("keydown", event => {
 {
   const mod = window.api?.platform === "darwin" ? "\u2318" : "Ctrl+";
   for (const [id, key, label] of [["nav-home", 1, "Home"], ["nav-jobs", 2, "Jobs"], ["nav-resume", 3, "Master resume"],
-    ["nav-tracker", 4, "Tracker"], ["nav-tailor", 5, "Tailor"]]) {
+    ["nav-tracker", 4, "Tracker"], ["nav-tailor", 5, "Tailor"], ["nav-calendar", 6, "Calendar"]]) {
     const item = document.getElementById(id);
     item.title = label;
     item.dataset.shortcut = `${mod}${key}`;

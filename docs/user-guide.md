@@ -158,7 +158,41 @@ Copying the folder back into the same place restores everything: your resume, yo
 
 ## Themes & accessibility
 
-In **Settings**, under **Appearance & accessibility**, you can choose from 11 style themes, 12 monthly seasonal themes with custom offline SVG artwork, or **Auto — Current Month** so the app automatically matches the current month. All accessibility options (**Text size**, **Reduce motion**, **Increase contrast**, and **Underline links**) apply across every theme.
+In **Settings**, under **Appearance & accessibility**, you can choose from 11 style themes, 12 monthly seasonal themes with custom offline SVG artwork, or **Auto — Current Month** so the app automatically matches the current month. The rest mixes with any theme:
+
+- **Day or night**: every theme comes in Night, Darker (the panels turn to dark paper with light ink, for dark rooms) and Day. **Match system** follows your computer's light and dark appearance as it changes.
+- **Accent color**: the theme's own, or one of six for every theme.
+- **Paper**: cream, white, or tinted with the accent.
+- **Ink marks**: the hand-drawn underlines, circles and stars, or off.
+- **Navigation bar**: at the bottom of the window or at the top.
+- **Motion**: Full, Gentle (short fades only) or None.
+
+**Text size**, **Increase contrast** and **Underline links** apply across every theme. The **View** menu has Day or Night, the navigation bar and text size too.
+
+## The menu bar
+
+On a Mac the menu bar follows the usual layout. **File** starts a new search (⌘N), pastes a job posting (⇧⌘N), imports a resume (⌘O) and exports your applications as a spreadsheet (⇧⌘E). **Edit** has Find (⌘F) for the search box on the page you are on. **View** has day or night, the navigation bar, text size and full screen. **Go** moves Back and Forward (⌘[ and ⌘]), to each place (⌘1 to ⌘6) and to the search box (⌘K). **Help** opens this guide, the keyboard shortcuts, and **Report an Issue**. On Windows and Linux the same menus are in the window, with Settings and Quit under File.
+
+## Calendar
+
+**Calendar** in the bar (⌘6) shows your plans by week or month: interviews, calls and follow-ups, plus each tracker follow-up date on its day. Click an empty hour, or **Plan an interview** (also on a job's page, under More actions), to add one: the job, the day and time, how long, where, and notes. If it runs into another plan, or into something on your own calendar, the form says so before you save, and the plan is marked **Overlaps** after.
+
+Everything stays in Fistbump until you choose otherwise, in **Settings → Calendar**:
+
+- **Add plans to**: the calendar app on this computer (Apple Calendar or Outlook, through an .ics file), Google Calendar, Outlook.com, or ask each time. Open any plan to add it there, or turn on **Add new plans to my calendar**.
+- **Check for clashes with my calendar**: paste your calendar's private iCal address (Google Calendar: your calendar's settings, "Secret address in iCal format"; Outlook: Publish calendar; iCloud: Public calendar). Fistbump reads only when you are busy, never what your events are, keeps the address in your system keychain, and checks again about every 15 minutes while the calendar is open. **Forget my calendars** removes it.
+- **Export .ics** on the calendar saves every plan from today on as one file to import anywhere.
+
+## Report an issue
+
+**Help → Report an Issue…** (or **Settings → About**) sends a problem, an idea or a question to the people who make Fistbump. You do not need an account. As you type, reports that look the same are shown; **That's mine** adds your note to one instead of filing another. **What will be sent** shows exactly what goes: no name, email, resume or jobs, and email addresses and phone numbers are removed. If the service cannot be reached, you can copy the report or open it on GitHub.
+
+## Shared job boards
+
+Two switches in **Settings → Job search**, both off until you turn them on:
+
+- **Use boards other people found** adds job boards other Fistbump users shared, and that were checked, to your searches. The list is fetched about once a day.
+- **Share the boards I add** sends the name of each board you add to your watchlist (like `lever:netflix`), nothing else. Each one is checked and reviewed before it reaches everyone.
 
 ## Known limits
 

@@ -1087,6 +1087,7 @@
       runImport(() => api().resume.importData(file.name, bytes), file.name);
     });
     //A resume dropped anywhere else in the window comes here (see js/desktop.js).
+    window.ResumeBuilder.openImport = () => importButton.click(); //File > Import Resume…
     window.ResumeBuilder.importFile = async file => {
       if (importing) return;
       const ext = (/\.([^.]+)$/.exec(file.name) || [])[1]?.toLowerCase();

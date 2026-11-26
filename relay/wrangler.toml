@@ -1,0 +1,20 @@
+name = "fistbump-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+REPO = "tlmcguire/fistbump"
+
+# Rate limits, boards waiting for the daily pull request, and recent report fingerprints.
+# Create it with `npx wrangler kv namespace create RELAY` and put the id here.
+[[kv_namespaces]]
+binding = "RELAY"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Once a day, the shared boards waiting in the queue become one pull request.
+[triggers]
+crons = ["17 6 * * *"]
+
+# Secrets, set with `npx wrangler secret put NAME`:
+#   GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_INSTALLATION_ID   (or GITHUB_TOKEN instead of the three)
+#   RATE_SALT

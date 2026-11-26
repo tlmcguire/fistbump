@@ -45,6 +45,17 @@
     mount(container) {
       const {el, fill} = window.ResumeBuilder;
       const {icon, pico, stagger, play} = window.UI;
+      const ink = name => {
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("class", `ink ink-${name}`);
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("preserveAspectRatio", "none");
+        const use = document.createElementNS(ns, "use");
+        use.setAttribute("href", `#ink-${name}`);
+        svg.append(use);
+        return svg;
+      };
       const api = window.FistBumpAPI;
 
       let rows = [];             //the applications shown, in table order
@@ -65,9 +76,9 @@
       };
 
       // --- toolbar: search and Active/Archived/All; under it the stage chips ---
-      const search = el("input", {type: "search", "aria-label": "Search applications", placeholder: "Search by company or title"});
+      const search = el("input", {type: "search", class: "jl3-filter", "aria-label": "Search applications", placeholder: "Search by company or title"});
       const stageChips = STAGES.map(s => el("button", {
-        type: "button", class: "stage-chip", "data-stage": s, "aria-pressed": "false",
+        type: "button", class: "tr3-stage", "data-stage": s, "aria-pressed": "false",
         onclick: () => {
           if (statuses.has(s)) statuses.delete(s);
           else {
@@ -79,12 +90,12 @@
           stageChips.forEach(chip => chip.setAttribute("aria-pressed", String(statuses.has(chip.dataset.stage))));
           draw();
         },
-      }, el("span", {class: "stage-dot", "aria-hidden": "true"}), s, el("span", {class: "stage-count", "aria-hidden": "true"})));
+      }, el("span", {class: "tr3-dot", "aria-hidden": "true"}), s, el("span", {class: "stage-count num", "aria-hidden": "true"})));
       const scopeButtons = SCOPES.map(([value, label]) => el("button", {
-        type: "button", class: "tracker-scope", "aria-pressed": String(value === scope), title: SCOPE_HINTS[value],
+        type: "button", role: "radio", class: "tracker-scope", "aria-checked": String(value === scope), title: SCOPE_HINTS[value],
         onclick: () => {
           scope = value;
-          scopeButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(SCOPES[i][0] === scope)));
+          scopeButtons.forEach((b, i) => b.setAttribute("aria-checked", String(SCOPES[i][0] === scope)));
           load();
         },
       }, label));
@@ -93,13 +104,13 @@
 
       // --- bulk bar, shown while rows are selected ---
       const bulkCount = el("span");
-      const bulkStatus = el("select", {"aria-label": "New status for the selected applications"},
+      const bulkStatus = el("select", {class: "jl3-move", "aria-label": "New status for the selected applications"},
         el("option", {value: "", text: "Set status…"}), STAGES.map(s => el("option", {value: s, text: s})));
-      const bulkArchive = el("button", {type: "button", title: "Hide these applications from Active. They are kept, not deleted."}, "Archive");
-      const bulkRestore = el("button", {type: "button", title: "Bring these applications back to Active."}, "Unarchive");
-      const bulkDelete = el("button", {type: "button", class: "danger-solid", title: "Permanently remove the selected tracked applications from your Tracker."}, "Delete selected");
-      const bulkBar = el("div", {class: "tracker-bulk", hidden: true}, bulkCount, bulkStatus, bulkArchive, bulkRestore, bulkDelete,
-        el("button", {type: "button", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
+      const bulkArchive = el("button", {type: "button", class: "btn", title: "Hide these applications from Active. They are kept, not deleted."}, "Archive");
+      const bulkRestore = el("button", {type: "button", class: "btn", title: "Bring these applications back to Active."}, "Unarchive");
+      const bulkDelete = el("button", {type: "button", class: "btn job3-danger", title: "Permanently remove the selected tracked applications from your Tracker."}, "Delete selected");
+      const bulkBar = el("div", {class: "jl3-bulk tr3-bulk", hidden: true}, el("b", {}, bulkCount), bulkStatus, bulkArchive, bulkRestore, bulkDelete,
+        el("button", {type: "button", class: "btn-text", onclick: () => { selected.clear(); draw(); }}, "Clear selection"));
 
       const notifyAppsChanged = () => {
         window.dispatchEvent(new CustomEvent("fistbump:applications", {detail: {invalidateMatches: false, source: "tracker"}}));
@@ -156,7 +167,7 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       };
 
-      const exportCsvButton = el("button", {type: "button", onclick: () => {
+      const exportCsvButton = el("button", {type: "button", class: "tr3-tool", title: "Save every application shown as a spreadsheet file", onclick: () => {
         const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
         const header = ["Company", "Position", "Status", "Date Applied", "Next Step Date", "Notes"].map(esc).join(",");
         const lines = rows.map(a => [a.company_name, a.position_title, a.status, a.date_applied || "", a.next_step_date || "", a.notes || ""].map(esc).join(","));
@@ -605,22 +616,30 @@
         }
       };
 
-      const compareButton = el("button", {type: "button", title: "Compare 2\u20133 tracked offers side by side", onclick: openCompareOffers}, "Compare offers");
-      const statsStrip = el("p", {class: "hint", role: "status", hidden: true});
-      const dueStrip = el("section", {class: "due-strip", "aria-label": "Needs you today", hidden: true});
-      const table = el("div", {class: "tracker-table-wrap"});
-      const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
-        el("div", {class: "toolbar-form resume-toolbar"},
-          el("h1", {class: "view-title", text: "Tracker"}),
-          status,
-          el("div", {class: "toolbar-actions"}, search, compareButton, exportCsvButton, el("div", {class: "tracker-scopes", role: "group", "aria-label": "Show"}, scopeButtons))));
-      fill(container, toolbar,
-        el("div", {class: "pane tracker"},
+      const compareButton = el("button", {type: "button", class: "tr3-tool", title: "Compare 2\u20133 tracked offers side by side", onclick: openCompareOffers}, "Compare offers");
+      const summary = el("p", {class: "jl3-sum", role: "status"});
+      const gapsLine = el("p", {class: "tr3-gaps", hidden: true});
+      const dueStrip = el("section", {class: "paper tr3-due", "aria-label": "Needs you today", hidden: true});
+      const table = el("div", {class: "tr3-table-wrap"});
+      const sheet = el("section", {class: "paper tr3-sheet", "aria-label": "Applications"}, bulkBar, table,
+        el("div", {class: "jl3-foot ruled-top"},
+          el("span", {class: "ink-2", text: "Changes save as you make them. Archived applications are kept, only hidden."}),
+          el("span", {}, el("a", {href: "#/list", text: "Back to your jobs"}))));
+      container.classList.add("v3", "tr3");
+      fill(container, el("div", {class: "jl3-scroll"},
+        el("div", {class: "jl3-grid"},
+          el("header", {class: "jl3-head tr3-head drag", "data-tauri-drag-region": ""},
+            el("h1", {class: "display-xl"}, "Your ", el("span", {class: "underlined"}, "applications", ink("underline"))),
+            summary, gapsLine),
           dueStrip,
-          statsStrip,
-          el("div", {class: "stage-chips", role: "group", "aria-label": "Filter by stage"}, stageChips),
-          bulkBar,
-          table));
+          el("div", {class: "jl3-tools"},
+            el("div", {class: "jl3-view", role: "radiogroup", "aria-label": "Show"}, scopeButtons),
+            el("div", {class: "tr3-stages", role: "group", "aria-label": "Filter by stage"}, stageChips),
+            el("label", {class: "jl3-search"}, icon("search"), search),
+            el("button", {type: "button", class: "tr3-tool", title: "Interviews and follow-ups by week, with clashes flagged", onclick: () => window.App.go("calendar")}, "Calendar"),
+            compareButton, exportCsvButton),
+          status,
+          sheet)));
 
       // --- one PUT per edit; on failure the old value goes back ---
       const save = async (app, field, value, restore) => {
@@ -657,37 +676,58 @@
         return "Master";
       };
 
-      const row = (a, today) => {
-        const pick = el("input", {type: "checkbox", "aria-label": `Select ${a.company_name} ${a.position_title}`, checked: selected.has(a.id),
-          onchange: event => { if (event.target.checked) selected.add(a.id); else selected.delete(a.id); drawBulk(); }});
+      //a date that reads as text and opens the system's date picker when clicked; empty, it says what to add
+      const dateCell = (a, field, label, emptyText) => {
+        const input = el("input", {type: "date", "aria-label": label, value: a[field] || ""});
+        const wrap = el("label", {class: a[field] ? "tr3-date" : "tr3-date blank"}, input, el("span", {class: "tr3-date-empty", "aria-hidden": "true", text: emptyText}));
+        input.addEventListener("change", () => {
+          const old = a[field] || "";
+          wrap.classList.toggle("blank", !input.value);
+          save(a, field, input.value || null, () => { input.value = old; wrap.classList.toggle("blank", !old); }).then(updated => { if (updated) draw(); });
+        });
+        return {wrap, input};
+      };
 
-        const stage = el("select", {class: "stage-select", "aria-label": `Status of ${a.company_name} ${a.position_title}`, "data-stage": a.status}, STAGES.map(s => el("option", {value: s, text: s})));
+      const icsFor = a => {
+        const d = a.next_step_date.replace(/-/g, "");
+        const nextDay = new Date(a.next_step_date + "T00:00:00");
+        nextDay.setDate(nextDay.getDate() + 1);
+        const end = `${nextDay.getFullYear()}${String(nextDay.getMonth() + 1).padStart(2, "0")}${String(nextDay.getDate()).padStart(2, "0")}`;
+        const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fistbump//Tracker//EN", "BEGIN:VEVENT",
+          `UID:fistbump-app-${a.id}@local`, `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
+          `SUMMARY:Follow-up: ${a.company_name || "Company"} - ${a.position_title || "Role"}`,
+          `DESCRIPTION:Status: ${a.status}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
+        downloadBlob(`${(a.company_name || "Follow-up").replace(/[^a-z0-9_-]+/gi, "-")}.ics`, ics, "text/calendar;charset=utf-8");
+      };
+
+      const row = (a, today) => {
+        const pick = el("input", {type: "checkbox", class: "jl3-check", "aria-label": `Select ${a.company_name} ${a.position_title}`, checked: selected.has(a.id),
+          onchange: event => {
+            if (event.target.checked) selected.add(a.id); else selected.delete(a.id);
+            event.target.closest("tr").classList.toggle("picked", event.target.checked);
+            drawBulk();
+          }});
+
+        const stage = el("select", {class: "tr3-stage-select", "aria-label": `Status of ${a.company_name} ${a.position_title}`, "data-stage": a.status}, STAGES.map(s => el("option", {value: s, text: s})));
         stage.value = a.status;
         stage.addEventListener("change", async () => {
           const old = a.status;
+          stage.dataset.stage = stage.value;
           const updated = await save(a, "status", stage.value, () => { stage.value = old; stage.dataset.stage = old; });
           if (updated) {
             stage.dataset.stage = updated.status;
-            applied.value = updated.date_applied || ""; //Applied fills today's date
+            applied.input.value = updated.date_applied || ""; //Applied fills today's date
             play(stage, "pop", 500);
             draw();
             notifyAppsChanged();
           }
         });
 
-        const dateInput = (field, label) => {
-          const input = el("input", {type: "date", "aria-label": label, value: a[field] || ""});
-          input.addEventListener("change", () => {
-            const old = a[field] || "";
-            save(a, field, input.value || null, () => { input.value = old; }).then(updated => { if (updated) draw(); });
-          });
-          return input;
-        };
-        const applied = dateInput("date_applied", "Date applied");
-        const next = dateInput("next_step_date", "Next step");
+        const applied = dateCell(a, "date_applied", "Date applied", "Not yet");
+        const next = dateCell(a, "next_step_date", "Next step", "Add a date");
         const due = a.next_step_date && a.next_step_date <= today;
 
-        const notes = el("textarea", {rows: "1", "aria-label": "Notes", placeholder: "Notes", value: a.notes || ""});
+        const notes = el("textarea", {class: "tr3-notes", rows: "1", "aria-label": `Notes on ${a.company_name || "this application"}`, placeholder: "Add a note", value: a.notes || ""});
         notes.value = a.notes || "";
         notes.addEventListener("blur", () => {
           const old = a.notes || "";
@@ -695,79 +735,63 @@
           save(a, "notes", notes.value.trim() ? notes.value : null, () => { notes.value = old; });
         });
 
-        const pdf = a.exported_pdf_path ? el("span", {class: "tracker-pdf"}, "PDF saved ",
-          el("button", {type: "button", class: "link-button", onclick: async event => {
-            try {
-              await api.shell.showItem(a.exported_pdf_path);
-            } catch (err) {
-              event.target.textContent = err.message;
-              event.target.disabled = true;
-            }
-          }}, "Show in folder")) : null;
+        const pdf = a.exported_pdf_path ? el("button", {type: "button", class: "tr3-mini", title: "Show the saved PDF in its folder", onclick: async event => {
+          try {
+            await api.shell.showItem(a.exported_pdf_path);
+          } catch (err) {
+            event.target.textContent = err.message;
+            event.target.disabled = true;
+          }
+        }}, "PDF") : null;
 
-        return el("tr", {class: [due ? "due" : "", a.archived_at ? "archived" : ""].join(" ").trim() || null, "data-id": String(a.id)},
-          el("td", {}, pick),
-          el("td", {}, el("button", {type: "button", class: "link-button", onclick: () => openJob(a.job_id)}, a.company_name || "Unknown company"),
-            el("button", {type: "button", class: "icon-link", title: "Open the company's site", "aria-label": `Open ${a.company_name || "the company"}'s site`,
-              onclick: () => openSite(a.job_id)}, icon("external"))),
-          el("td", {}, el("button", {type: "button", class: "link-button", onclick: () => openJob(a.job_id)}, a.position_title || "Unknown position"),
-            a.archived_at ? el("span", {class: "hint", text: " (archived)"}) : null),
+        const name = a.company_name || "Unknown company";
+        const iconButton = (iconName, title, onclick, cls = "") => el("button", {type: "button", class: `tr3-icon ${cls}`.trim(), title, "aria-label": `${title}: ${name}`, onclick}, icon(iconName));
+
+        return el("tr", {class: [due ? "due" : "", a.archived_at ? "archived" : "", selected.has(a.id) ? "picked" : ""].join(" ").trim() || null, "data-id": String(a.id)},
+          el("td", {class: "tr3-pick"}, pick),
+          el("td", {class: "tr3-job"},
+            el("span", {class: a.status === "Interviewing" || a.status === "Offered" ? "tile tile-mark" : "tile", "aria-hidden": "true", text: name.trim().charAt(0).toUpperCase()}),
+            el("span", {class: "tr3-job-words"},
+              el("button", {type: "button", class: "tr3-title", translate: "no", onclick: () => openJob(a.job_id)}, a.position_title || "Unknown position"),
+              el("span", {class: "tr3-company"},
+                el("span", {translate: "no", text: name}),
+                el("button", {type: "button", class: "tr3-site", title: "Open the company's site", "aria-label": `Open ${name}'s site`, onclick: () => openSite(a.job_id)}, icon("external")),
+                a.archived_at ? el("span", {class: "tr3-archived", text: "Archived"}) : null))),
           el("td", {}, stage),
-          el("td", {}, applied),
-          el("td", {}, next,
-            a.next_step_date ? el("button", {type: "button", class: "link-button", title: "Download .ics calendar reminder", onclick: () => {
-              const d = a.next_step_date.replace(/-/g, "");
-              const nextDay = new Date(a.next_step_date + "T00:00:00");
-              nextDay.setDate(nextDay.getDate() + 1);
-              const end = `${nextDay.getFullYear()}${String(nextDay.getMonth() + 1).padStart(2, "0")}${String(nextDay.getDate()).padStart(2, "0")}`;
-              const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fistbump//Tracker//EN", "BEGIN:VEVENT",
-                `UID:fistbump-app-${a.id}@local`, `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
-                `SUMMARY:Follow-up: ${a.company_name || "Company"} - ${a.position_title || "Role"}`,
-                `DESCRIPTION:Status: ${a.status}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
-              downloadBlob(`${(a.company_name || "Follow-up").replace(/[^a-z0-9_-]+/gi, "-")}.ics`, ics, "text/calendar;charset=utf-8");
-            }}, ".ics") : null,
-            due ? el("span", {class: "tracker-due"}, icon("clock"), a.next_step_date < today ? "Overdue" : "Due today") : null),
-          el("td", {}, el("span", {text: resumeLabel(a)}), pdf,
-            el("div", {class: "tracker-row-actions"},
-              el("button", {type: "button", class: "link-button", title: "Edit or print interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep sheet"),
-              el("button", {type: "button", class: "link-button", title: "Open this job in Tailor for resume, cover letter, and Q&A", onclick: () => window.Tailor?.open?.(a.job_id)}, "Tailor"))),
-          el("td", {}, notes,
-            el("div", {class: "tracker-row-actions"},
-              el("button", {
-                type: "button",
-                class: "link-button",
-                title: a.archived_at ? "Restore this application to Active" : "Archive this application",
-                onclick: async () => {
-                  try {
-                    await api.applications.bulkArchive([a.id], !a.archived_at);
-                    say(a.archived_at ? "Restored application." : "Archived application.");
-                    notifyAppsChanged();
-                    load();
-                  } catch (err) {
-                    say(err.message, true);
-                  }
-                },
-              }, a.archived_at ? "Unarchive" : "Archive"),
-              el("button", {
-                type: "button",
-                class: "link-button danger-link",
-                title: "Delete this tracked application",
-                onclick: async () => {
-                  const ok = await window.UI.ask(
-                    `Delete "${a.company_name || "Unknown"} — ${a.position_title || "Role"}" from your Tracker?`,
-                    {confirm: "Delete", danger: true, title: "Delete tracked application"}
-                  );
-                  if (!ok) return;
-                  try {
-                    await api.applications.delete(a.id);
-                    say("Deleted application.");
-                    notifyAppsChanged();
-                    load();
-                  } catch (err) {
-                    say(err.message, true);
-                  }
-                },
-              }, "Delete"))));
+          el("td", {class: "num"}, applied.wrap),
+          el("td", {class: "num tr3-next"}, next.wrap,
+            due ? el("span", {class: "tr3-due-flag"}, a.next_step_date < today ? "Overdue" : "Due today") : null,
+            a.next_step_date ? iconButton("calendar", "Add to calendar (.ics)", () => icsFor(a), "tr3-ics") : null),
+          el("td", {class: "tr3-resume"}, el("span", {text: resumeLabel(a)}), pdf),
+          el("td", {class: "tr3-notes-cell"}, notes),
+          el("td", {class: "tr3-actions"},
+            el("button", {type: "button", class: "tr3-mini", title: "Edit or print the interview prep sheet", onclick: () => openPrepSheet(a)}, "Prep"),
+            el("button", {type: "button", class: "tr3-mini", title: "Open this job in Tailor for resume, cover letter, and Q&A", onclick: () => window.Tailor?.open?.(a.job_id)}, "Tailor"),
+            iconButton("archive", a.archived_at ? "Unarchive" : "Archive", async () => {
+              try {
+                await api.applications.bulkArchive([a.id], !a.archived_at);
+                say(a.archived_at ? "Restored application." : "Archived application.");
+                notifyAppsChanged();
+                load();
+              } catch (err) {
+                say(err.message, true);
+              }
+            }),
+            iconButton("trash", "Delete", async () => {
+              const ok = await window.UI.ask(
+                `Delete "${a.company_name || "Unknown"} — ${a.position_title || "Role"}" from your Tracker?`,
+                {confirm: "Delete", danger: true, title: "Delete tracked application"}
+              );
+              if (!ok) return;
+              try {
+                await api.applications.delete(a.id);
+                say("Deleted application.");
+                notifyAppsChanged();
+                load();
+              } catch (err) {
+                say(err.message, true);
+              }
+            }, "tr3-danger")));
       };
 
       const drawBulk = () => {
@@ -776,7 +800,7 @@
         bulkCount.textContent = `${n} selected`;
       };
 
-      const SORTS = {company_name: "Company", position_title: "Position", status: "Status", date_applied: "Date applied", next_step_date: "Next step"};
+      const SORTS = {position_title: "Job", status: "Stage", date_applied: "Applied", next_step_date: "Next step"};
       const sortValue = (a, key) => key === "status" ? STAGES.indexOf(a.status) : (a[key] || "");
       const sorted = (list, today) => {
         if (!sortKey) return order(list, today);
@@ -793,27 +817,33 @@
         dueStrip.hidden = dueRows.length === 0;
         if (!dueRows.length) return;
         fill(dueStrip,
-          el("h2", {text: dueRows.length === 1 ? "1 step needs you" : `${dueRows.length} steps need you`}),
-          el("ul", {}, order(dueRows, today).map(a => el("li", {},
-            el("button", {type: "button", class: "due-item", onclick: () => {
+          el("p", {class: "home3-kicker urgent", text: dueRows.length === 1 ? "1 step needs you" : `${dueRows.length} steps need you`}),
+          el("ul", {class: "tr3-due-list"}, order(dueRows, today).map(a => el("li", {},
+            el("button", {type: "button", class: "tr3-due-item", onclick: () => {
               const tr = table.querySelector(`tr[data-id="${a.id}"]`);
               if (!tr) return;
               tr.scrollIntoView({block: "center", behavior: window.UI.motion() ? "smooth" : "auto"});
               play(tr, "flash", 1400);
-            }}, icon("clock"), el("span", {class: "due-what", text: `${a.company_name || "Unknown company"}, ${a.position_title || "Unknown position"}`}),
-              el("span", {class: "due-when", text: a.next_step_date < today ? "Overdue" : "Today"}))))));
+            }}, el("span", {class: "tr3-due-what"}, el("b", {translate: "no", text: a.position_title || "Unknown position"}), el("span", {translate: "no", text: a.company_name || "Unknown company"})),
+              el("span", {class: "tr3-due-flag", text: a.next_step_date < today ? "Overdue" : "Today"}))))));
       };
 
       const drawStats = () => {
-        if (!rows.length) {
-          statsStrip.textContent = "";
-          statsStrip.hidden = true;
-          return;
-        }
         const countStage = name => rows.filter(a => a.status === name).length;
-        const gaps = topSkillGaps.slice(0, 4).map(g => `${g.skill} (${g.count})`).join(", ");
-        statsStrip.textContent = `Pipeline: ${rows.length} total · ${countStage("Applied")} applied · ${countStage("Interviewing")} interviewing · ${countStage("Offered")} offered` + (gaps ? ` · Top skill gaps: ${gaps}` : "");
-        statsStrip.hidden = false;
+        const today = localToday();
+        const needs = rows.filter(a => a.next_step_date && a.next_step_date <= today && !a.archived_at).length;
+        //each part is its own text, so each one matches its translation
+        summary.replaceChildren(
+          el("b", {text: rows.length === 1 ? "1 tracked" : `${rows.length} tracked`}),
+          " · ", el("span", {text: needs === 1 ? "1 needs you today" : `${needs} need you today`}),
+          " · ", el("span", {text: `${countStage("Applied")} applied`}),
+          " · ", el("span", {text: `${countStage("Interviewing")} interviewing`}),
+          " · ", el("span", {text: countStage("Offered") === 1 ? "1 offer" : `${countStage("Offered")} offers`}));
+        summary.hidden = !rows.length;
+        const gaps = topSkillGaps.slice(0, 4);
+        gapsLine.hidden = !rows.length; //keeps its room once there are rows, so the page does not move when it fills
+        gapsLine.replaceChildren(el("span", {text: "Skills these jobs ask for that your resume lacks:"}), " ",
+          ...gaps.map(g => el("span", {class: "tag", translate: "no", text: `${g.skill} ${g.count}`})));
       };
 
       const draw = () => {
@@ -833,8 +863,8 @@
         if (!rows.length) {
           const searching = search.value.trim();
           const go = scope === "only" || searching ? null
-            : el("button", {type: "button", class: "primary", onclick: () => window.App.openTab("tab-saved")}, "Open saved jobs");
-          fill(table, el("div", {class: "empty tracker-empty"}, pico("33-empty-tracker.png"),
+            : el("button", {type: "button", class: "btn btn-primary", onclick: () => window.App.go("list")}, "Open your jobs");
+          fill(table, el("div", {class: "tr3-empty"}, pico("33-empty-tracker.png"),
             el("h2", {text: scope === "only" ? "No archived applications" : searching ? "No applications match your search" : "Nothing tracked yet"}),
             el("p", {text: scope === "only"
               ? "Archived applications are hidden from Active, but nothing is deleted — unarchive them to bring them back."
@@ -845,10 +875,10 @@
           return;
         }
         if (!shown.length) {
-          fill(table, el("div", {class: "empty tracker-empty"}, el("p", {text: "No applications in the chosen stages."})));
+          fill(table, el("p", {class: "jl3-none ink-2", text: "No applications in the chosen stages."}));
           return;
         }
-        const all = el("input", {type: "checkbox", "aria-label": "Select all shown", checked: shown.every(a => selected.has(a.id)),
+        const all = el("input", {type: "checkbox", class: "jl3-check", "aria-label": "Select all shown", checked: shown.every(a => selected.has(a.id)),
           onchange: event => { shown.forEach(a => event.target.checked ? selected.add(a.id) : selected.delete(a.id)); draw(); }});
         const head = (key, label) => el("th", {scope: "col", "aria-sort": sortKey === key ? (sortDir === 1 ? "ascending" : "descending") : "none"},
           el("button", {type: "button", class: "sort-button", onclick: () => {
@@ -858,10 +888,10 @@
             draw();
           }}, label, el("span", {class: "sort-arrow", "aria-hidden": "true", text: sortKey === key ? (sortDir === 1 ? "\u2191" : "\u2193") : ""})));
         const body = el("tbody", {}, sorted(shown, today).map(a => row(a, today)));
-        fill(table, el("table", {class: "tracker-table"},
+        fill(table, el("table", {class: "tr3-table"},
           el("thead", {}, el("tr", {}, el("th", {scope: "col"}, all),
             Object.entries(SORTS).map(([key, label]) => head(key, label)),
-            el("th", {scope: "col", text: "Resume"}), el("th", {scope: "col", text: "Notes"}))),
+            el("th", {scope: "col", class: "tr3-resume", text: "Resume"}), el("th", {scope: "col", text: "Notes"}), el("th", {scope: "col"}, el("span", {class: "visually-hidden", text: "Actions"})))),
           body));
         if (!draw.seen) { draw.seen = true; stagger(body, 24, 14); }
 
@@ -902,7 +932,7 @@
             const focused = await api.applications.get(window.Tracker.focusId).catch(() => null);
             if (focused?.archived_at) {
               scope = "include";
-              scopeButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(SCOPES[i][0] === scope)));
+              scopeButtons.forEach((b, i) => b.setAttribute("aria-checked", String(SCOPES[i][0] === scope)));
             }
           }
           const list = await api.applications.list({q: search.value.trim(), archived: scope});
@@ -947,6 +977,10 @@
       window.addEventListener("fistbump:storage-cleaned", onDataChange);
       window.addEventListener("fistbump:versions", onDataChange);
 
+      //File > Export Applications as CSV: what is shown, once it has loaded
+      window.Tracker.exportCsv = async () => { await load(); exportCsvButton.click(); };
+      //rows are sketched until the first load arrives, so the sheet does not grow from nothing
+      fill(table, [0, 1, 2].map(() => el("div", {class: "tr3-skel", "aria-hidden": "true"})));
       load();
       return load; //drawn again whenever the view is shown
     },

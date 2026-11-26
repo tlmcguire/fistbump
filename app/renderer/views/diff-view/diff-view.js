@@ -85,7 +85,7 @@
 
       const jobSelect = el("select", {id: "tailor-job"});
       const baseSelect = el("select", {id: "tailor-base"});
-      const generate = el("button", {type: "button", class: "primary", title: "Write a new round of suggestions for the chosen job", onclick: () => { showDrafts = false; startRound(); }}, "Generate suggestions");
+      const generate = el("button", {type: "button", class: "primary btn btn-mark", title: "Write a new round of suggestions for the chosen job", onclick: () => { showDrafts = false; startRound(); }}, "Generate suggestions");
       const ownEdit = el("button", {type: "button", title: "Start from your resume and edit it yourself, with no suggestions", onclick: () => { showDrafts = false; startOwnEdit(); }}, "Edit it myself");
       const draftsBtn = el("button", {type: "button", title: "Write a cover letter or application Q&A answers for this job", onclick: () => { showDrafts = !showDrafts; drawBody(); }}, "Cover letter & Q&A");
       const engineChip = el("button", {type: "button", class: "engine-chip", onclick: () => window.App.openTab("tab-settings")});
@@ -93,7 +93,17 @@
 
       const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
         el("div", {class: "toolbar-form tailor-toolbar"},
-          el("h1", {class: "view-title", text: "Tailor"}),
+          el("h1", {class: "view-title display-xl"}, el("span", {class: "underlined"}, "Tailor", (() => {
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("class", "ink ink-underline");
+            svg.setAttribute("aria-hidden", "true");
+            svg.setAttribute("preserveAspectRatio", "none");
+            const use = document.createElementNS(ns, "use");
+            use.setAttribute("href", "#ink-underline");
+            svg.append(use);
+            return svg;
+          })())),
           engineChip,
           status,
           el("div", {class: "toolbar-actions"},
@@ -105,8 +115,11 @@
 
       const roundsBar = el("div", {class: "tailor-rounds", role: "group", "aria-label": "Rounds", title: "Each round is one set of suggestions. Start another to compare them."});
       const stage = el("div", {class: "tailor-stage"});
+      //Drafts, the tailored resume and problems sit on a paper sheet; the proof desk and the empty page bring their own.
+      const onPaper = on => { stage.classList.toggle("paper", on); stage.classList.toggle("paper-adapt", on); };
       const mainPane = el("div", {class: "pane tailor-main"}, roundsBar, stage);
-      const aside = el("aside", {class: "pane tailor-aside", "aria-label": "About this job"});
+      const aside = el("aside", {class: "pane tailor-aside paper paper-adapt", "aria-label": "About this job"});
+      container.classList.add("v3", "tl3");
       fill(container, toolbar, el("div", {class: "content tailor-content"}, mainPane, aside));
 
       //Picks the job to tailor for: the one in the toolbar, or one of the saved jobs on the empty page.
@@ -218,7 +231,8 @@
         el("ul", {class: "problem-steps"}, p.steps.map(step => el("li", {text: step}))),
         el("div", {class: "round-actions"},
           p.retry ? el("button", {type: "button", class: "primary", onclick: () => startRound()}, "Try again") : null,
-          p.settings ? el("button", {type: "button", onclick: () => window.App.openTab("tab-settings")}, "Open settings") : null));
+          p.settings ? el("button", {type: "button", onclick: () => window.App.openTab("tab-settings")}, "Open settings") : null,
+          el("button", {type: "button", class: "quiet", onclick: () => window.Report?.open({kind: "bug", title: p.title, details: p.reason ? `Tailor said: ${p.reason}` : ""})}, "Report it")));
 
       //a copy of the resume for this job that is edited by hand, with no suggestions behind it
       const startOwnEdit = async () => {
@@ -1142,6 +1156,7 @@
               copyStatus));
         }) : [el("p", {class: "hint", text: "No drafts yet. Click Generate kit above for a cover letter + interview prep in one click, or add a custom question."})];
 
+        onPaper(true);
         fill(stage,
           el("div", {class: "round-head drafts-head"}, el("h2", {text: "Cover letter, Q&A & interview prep"}), quickBar),
           customForm,
@@ -1166,6 +1181,7 @@
         }
         drawRounds();
         if (problem) {
+          onPaper(true);
           fill(stage, problemPanel(problem));
           play(stage, "enter", 500);
           return;
@@ -1179,6 +1195,7 @@
               : "Choose a saved job above. Nothing changes in your resume until you accept it."}));
           //with no job chosen, the saved jobs are offered here, so there is something to start from
           if (!jobId) empty.append(savedJobs.length ? suggestedJobs() : noJobsYet());
+          onPaper(false);
           fill(stage, empty);
           play(stage, "enter", 500);
           return;
@@ -1200,6 +1217,7 @@
           confirmFirst(el("button", {type: "button", class: "quiet"}, "Delete round"), "Delete round?", async () => {
             if (await attempt(() => api.revisions.delete(rev.id))) { revId = null; await loadRounds(); drawBody(); }
           }));
+        onPaper(rev.status !== "done");
         fill(stage,
           el("div", {class: "round-head"},
             el("h2", {text: `Round ${round?.n ?? ""}`}),
@@ -1690,6 +1708,7 @@
           tabButtons[tabs.findIndex(([k]) => k === next)].focus();
         });
 
+        onPaper(true);
         fill(stage,
           el("div", {class: "round-head"},
             el("h2", {text: "Tailored resume"}),

@@ -133,7 +133,7 @@ html[data-vt="language"]::view-transition-new(root) {
   transform: translateX(var(--pill-x));
   border-radius: 6px;
   background: var(--raised);
-  box-shadow: var(--lit, inset 0 1px 0 rgba(255, 255, 255, 0.08)), 0 1px 3px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--lit, inset 0 1px 0 rgb(var(--tint) / 0.08)), 0 1px 3px rgba(0, 0, 0, 0.28);
   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), width 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .pill-still::before { transition: none !important; }
@@ -162,7 +162,7 @@ html[data-vt="language"]::view-transition-new(root) {
   to   { background-position: -60% 0; }
 }
 .skeleton {
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.035) 30%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.035) 70%);
+  background: linear-gradient(100deg, rgb(var(--tint) / 0.035) 30%, rgb(var(--tint) / 0.09) 50%, rgb(var(--tint) / 0.035) 70%);
   background-size: 220% 100%;
   animation: shimmer 1.6s ease-in-out infinite, arrive 260ms var(--ease-out) both;
 }
@@ -276,7 +276,7 @@ button:active:not(:disabled), .button:active { transform: scale(0.98); }
    tick draws itself. A selector on the button cannot reach those parts, but custom properties inherit into
    them, so the playing control names each part's animation in a variable, and a part with no name plays none. */
 
-:root { --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
+:root { --ease-spring: cubic-bezier(0.22, 1, 0.36, 1); } /* the keyframes carry the overshoot; the curve only settles */
 
 :is(button, a, [role="tab"], .nav-item):is([data-ico], [aria-selected="true"], [aria-current="page"]) {
   --ico-knob-a: ico-knob-a;

@@ -165,6 +165,12 @@ Accents come from Pico's art:
 - `urgent`, coral, means due or missing. On paper, its text uses `urgent-ink`.
 - `success`, mint, means matched or done. On paper, its text uses `success-ink`.
 
+**Day and night.** Every theme has both (`modes.css`). Night is the theme as drawn. Day ("Paper on day") is derived: a warm off-white canvas tinted by the theme's night colour (`--night`, 7%) and its accent (`--mark`, 9%), white paper, and the night colour darkened into ink. So a picked accent changes the day canvas too. Marks drawn on the day canvas use `mark-deep` so gold still shows on cream. Faint overlays in older components use `rgb(var(--tint) / a)`: white by night, ink by day and inside paper.
+
+**Darker** keeps the theme's night canvas and turns the paper dark: a lifted shade of the night colour grounded in near-black, with cream ink. Gold surfaces (the bubble, gold buttons, plan tiles) restore the light ink and paper pair locally, so dark ink on gold reads the same in every mode.
+
+**Mix and match.** Theme, day or night (or Match system), accent, paper (`cream`, `white`, `tinted` with the accent) and ink marks (drawn or off) are separate choices. Status marks (check, half, open) stay when marks are off.
+
 **Themes.** Classic uses the hand-tuned values above. The other 22 themes derive theirs from their own `--bg`, `--text` and `--muted`: paper is warm white tinted 7% toward the theme background, and ink is the background darkened 28%. All 22 are dark themes. `.high-contrast` overrides every theme with white paper, black ink and darker accent inks.
 
 **Contrast**, measured across all 23 themes plus High Contrast:
@@ -211,6 +217,10 @@ Scale:
 ## Elevation & Depth
 
 Paper lifts off the canvas with a soft, offset shadow (`--shadow-paper`): a 1px inner highlight on the top edge, a long blurred drop below, and a short contact shadow. Primary buttons and the bubble get a smaller version (`--shadow-control`). There are no glows, no zero-offset colored halos, no blur or glass, and no nested paper. Inside paper, structure comes from dashed rules (`.ruled`), never from cards inside cards.
+
+**Layers**, lowest first: page content and sticky heads (2), view toolbars and their menus (40), the navigation bar and its suggestions (70), notices (75), window controls (80), the expanded PDF (90), then the top layer (tooltip, dialogs). Anything that opens over paper gets a 1px ink edge and is a shade whiter than the paper under it, so cream over cream always reads as on top.
+
+**Motion.** When a view arrives, its sheets settle in reading order (520ms, 60ms apart) and its ink marks draw themselves: underlines left to right, circles round the clock, stars spun in, Pico hops in and the bubble pops from its tail. Pages cross with a short fade into focus. Only on arrival, never while you work. Gentle motion keeps the fades and drops the movement; Reduce motion (or None) turns it all off.
 
 ## Shapes
 
