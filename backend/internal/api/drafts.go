@@ -67,10 +67,10 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 			qs, engine, err := s.generateQuestionsAI(r.Context(), job, master)
 			if err != nil {
 				if errors.Is(err, ai.ErrUnavailable) {
-					return apiError{status: http.StatusServiceUnavailable, code: "ai_unavailable",
-						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Deterministic mode."}
+					return &apiError{Status: http.StatusServiceUnavailable, Code: "ai_unavailable",
+						Message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Deterministic mode."}
 				}
-				return apiError{status: http.StatusBadGateway, code: "ai_failed", message: err.Error()}
+				return &apiError{Status: http.StatusBadGateway, Code: "ai_failed", Message: err.Error()}
 			}
 			writeJSON(w, http.StatusOK, map[string]any{"questions": qs, "engine": engine})
 			return nil
@@ -120,10 +120,10 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 			}
 			if aiErr != nil {
 				if errors.Is(aiErr, ai.ErrUnavailable) {
-					return apiError{status: http.StatusServiceUnavailable, code: "ai_unavailable",
-						message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Instant mode."}
+					return &apiError{Status: http.StatusServiceUnavailable, Code: "ai_unavailable",
+						Message: "No local or remote AI model is ready. Configure one in Settings → AI suggestions, or switch to Instant mode."}
 				}
-				return apiError{status: http.StatusBadGateway, code: "ai_failed", message: aiErr.Error()}
+				return &apiError{Status: http.StatusBadGateway, Code: "ai_failed", Message: aiErr.Error()}
 			}
 		} else if instruction != "" {
 			if baseContent == "" {
@@ -141,9 +141,9 @@ func (s *Server) draftCreate(w http.ResponseWriter, r *http.Request) error {
 		return storeError(err, "Draft")
 	}
 	writeJSON(w, http.StatusCreated, struct {
-		models.Draft
+		models.ApplicationDraft
 		Engine string `json:"engine,omitempty"`
-	}{Draft: created, Engine: usedEngine})
+	}{ApplicationDraft: created, Engine: usedEngine})
 	return nil
 }
 
@@ -260,8 +260,8 @@ func (s *Server) generateDraftText(job models.Job, master models.Master, kind, p
 		var b strings.Builder
 		fmt.Fprintf(&b, "# Interview Prep: %s at %s\n\n", role, company)
 		b.WriteString("## 60-Second Pitch\n")
-		if master.Profile != nil && strings.TrimSpace(master.Profile.Summary) != "" {
-			b.WriteString(strings.TrimSpace(master.Profile.Summary) + "\n")
+		if master.Profile != nil && master.Profile.Summary != nil && strings.TrimSpace(*master.Profile.Summary) != "" {
+			b.WriteString(strings.TrimSpace(*master.Profile.Summary) + "\n")
 		} else if expLine != "" {
 			b.WriteString(expLine + "\n")
 		} else {

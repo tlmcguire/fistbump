@@ -990,6 +990,7 @@
   --danger-text: var(--urgent-ink);
   --danger-line: var(--urgent-ink);
   --link: var(--ink);
+  --tint: 20 24 60;
   color: var(--ink);
 }
 :root .v3 .paper-adapt input:not([type="checkbox"]):not([type="radio"]):not(.switch),
@@ -1251,7 +1252,7 @@
 .app[data-route="jobs"] .titlebar { background: var(--bg); } /* matches the result panes below, still drawn on --bg */
 :root[data-theme] .app[data-route="jobs"] .titlebar { background: var(--bg); }
 .app[data-route="jobs"] #search-form { gap: 10px; padding: 10px 24px 12px; }
-:root .app[data-route="jobs"] #search-form input:not([type="checkbox"]):not(.switch),
+:root .app[data-route="jobs"] #search-form > .field input,
 :root .app[data-route="jobs"] #saved-form input:not([type="checkbox"]):not(.switch) {
   height: 40px;
   padding: 0 14px;
@@ -1262,9 +1263,9 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--on-canvas) 8%, transparent);
   font-size: 14px;
 }
-:root .app[data-route="jobs"] #search-form input::placeholder { color: color-mix(in oklab, var(--on-canvas) 70%, var(--canvas)); }
-:root .app[data-route="jobs"] #search-form input:focus,
-:root .app[data-route="jobs"] #search-form input:focus-visible {
+:root .app[data-route="jobs"] #search-form > .field input::placeholder { color: color-mix(in oklab, var(--on-canvas) 80%, var(--canvas)); }
+:root .app[data-route="jobs"] #search-form > .field input:focus,
+:root .app[data-route="jobs"] #search-form > .field input:focus-visible {
   outline: none;
   background: color-mix(in srgb, var(--on-canvas) 14%, transparent);
   box-shadow: inset 0 0 0 2px var(--mark);
@@ -1355,7 +1356,7 @@
 /* ==================== Container queries ==================== */
 
 /* Panels lay themselves out by their own width, so they read well wherever they sit and at any window size. */
-:root .v3 .jl3-list, :root .v3 .jl3-col, :root .v3 .home3-week, :root .v3 .t3-desk, :root .v3.settings-pane .settings-group, :root .v3 .job3-req { container-type: inline-size; }
+:root .v3 .jl3-list, :root .v3 .jl3-col, :root .v3 .home3-week, :root .v3 .t3-desk, :root .v3.settings-pane .settings-group, :root .v3 .job3-req, :root .v3 .tr3-sheet { container-type: inline-size; }
 
 @container (max-width: 860px) {
   :root .v3 .jl3-open { grid-template-columns: 38px minmax(0, 1fr) 84px 50px minmax(130px, 190px); }
@@ -1431,3 +1432,579 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3 .rs3-target { flex-wrap: wrap; row-gap: 6px; }
 :root .v3 .rs3-target-label { flex-basis: 100%; margin: 0 0 2px; }
 :root .v3 .rs3-target button[aria-checked="true"]:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+
+/* ==================== Tracker table (tr3) ==================== */
+/* The same canvas, header and tools as the Jobs list; the table is one paper sheet whose cells read as text until
+   touched. Dates, stage and notes are edited in place: no boxed inputs, no column of buttons. */
+
+.tr3 { display: flex; flex-direction: column; }
+:root .v3 .tr3-head { -webkit-user-select: text; user-select: text; }
+:root .v3 .tr3-gaps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; color: var(--on-canvas-2); font-size: 13.5px; }
+:root .v3 .tr3-gaps .tag { background: color-mix(in srgb, var(--on-canvas) 10%, transparent); color: var(--on-canvas); }
+
+/* What needs you, first: a paper strip of the steps due, each one jumps to its row. */
+:root .v3 .tr3-due { padding: 16px 22px 14px; }
+:root .v3 .tr3-due-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+:root .v3 .tr3-due-item { display: flex; align-items: center; gap: 14px; height: auto; min-height: 0; padding: 9px 12px 9px 14px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--urgent) 10%, var(--paper)); color: var(--ink); text-align: left; font-weight: 500; }
+:root .v3 .tr3-due-item:hover:not(:disabled) { background: color-mix(in srgb, var(--urgent) 16%, var(--paper)); }
+:root .v3 .tr3-due-what b { display: block; font-weight: 700; }
+:root .v3 .tr3-due-what span { display: block; font-size: 13px; color: var(--ink-2); }
+:root .v3 .tr3-due-flag { flex: none; padding: 3px 8px; border-radius: 7px; background: color-mix(in srgb, var(--urgent) 14%, var(--paper)); color: var(--urgent-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+/* Tools: scope, stage filters, search, and two quiet actions. */
+:root .v3 .tr3-stages { display: flex; flex-wrap: wrap; gap: 6px; }
+:root .v3 .tr3-stage { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 999px; background: transparent; border: 1.5px dashed color-mix(in srgb, var(--on-canvas) 30%, transparent); color: var(--on-canvas-2); font-size: 13px; font-weight: 600; }
+:root .v3 .tr3-stage:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 8%, transparent); color: var(--on-canvas); }
+:root .v3 .tr3-stage[aria-pressed="true"] { border-style: solid; border-color: var(--mark); color: var(--on-canvas); background: color-mix(in srgb, var(--mark) 14%, transparent); }
+:root .v3 .tr3-stage .stage-count:empty { display: none; }
+:root .v3 .tr3-stage .stage-count { opacity: 0.75; }
+:root .v3 .tr3-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stage, var(--on-canvas-2)); }
+:root .v3 [data-stage="Saved"] { --stage: color-mix(in oklab, var(--on-canvas-2) 80%, transparent); }
+:root .v3 [data-stage="Applied"] { --stage: #8cc2ff; }
+:root .v3 [data-stage="Interviewing"] { --stage: var(--mark); }
+:root .v3 [data-stage="Offered"] { --stage: var(--success); }
+:root .v3 [data-stage="Rejected"] { --stage: var(--urgent); }
+:root .v3 .tr3-tool { height: 34px; padding: 0 12px; border-radius: 10px; background: transparent; color: var(--on-canvas); font-size: 13px; font-weight: 650; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--mark) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+:root .v3 .tr3-tool:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 8%, transparent); }
+:root .v3 .jl3-tools .jl3-search { margin-left: auto; }
+:root .v3.tr3 .jl3-search { min-width: 260px; }
+.tr3 > .jl3-scroll > .jl3-grid > .resume-status:empty { display: none; }
+
+/* The sheet. */
+:root .v3 .tr3-sheet { padding: 8px 22px 14px; }
+:root .v3 .tr3-bulk { padding: 10px 4px 6px; }
+:root .v3 .tr3-bulk[hidden] { display: none; }
+:root .v3 .tr3-table-wrap { overflow-x: auto; }
+:root .v3 .tr3-table { width: 100%; border-collapse: collapse; color: var(--ink); font-size: 14px; }
+:root .v3 .tr3-table th { padding: 12px 8px 8px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+:root .v3 .tr3-table .sort-button { height: auto; min-height: 0; padding: 2px 4px; margin: -2px -4px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+:root .v3 .tr3-table .sort-button:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
+:root .v3 .tr3-table th[aria-sort="ascending"], :root .v3 .tr3-table th[aria-sort="descending"] { color: var(--ink); }
+:root .v3 .tr3-table .sort-arrow { margin-left: 4px; }
+:root .v3 .tr3-table td { padding: 10px 8px; vertical-align: middle; border-top: 1.5px dashed var(--rule); }
+:root .v3 .tr3-table tbody tr { transition: background-color 160ms var(--ease-settle); }
+:root .v3 .tr3-table tbody tr:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+:root .v3 .tr3-table tr.picked { background: color-mix(in srgb, var(--mark) 14%, transparent); }
+:root .v3 .tr3-table tr.archived .tr3-job-words { opacity: 0.7; }
+:root .v3 .tr3-table tr.focused { background: color-mix(in srgb, var(--mark) 18%, transparent); }
+:root .v3 .tr3-pick { width: 26px; }
+
+/* Job: initial tile, the title (opens the job), the company with a quiet link out. */
+:root .v3 .tr3-job { display: flex; align-items: center; gap: 12px; min-width: 240px; }
+:root .v3 .tr3-job .tile { flex: none; }
+:root .v3 .tr3-job-words { display: flex; flex-direction: column; min-width: 0; }
+:root .v3 .tr3-title { align-self: flex-start; height: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 700; font-size: 14.5px; text-align: left; }
+:root .v3 .tr3-title:hover:not(:disabled) { background: none; text-decoration: underline; text-decoration-color: var(--mark-deep); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+:root .v3 .tr3-company { display: block; color: var(--ink-2); font-size: 13px; }
+:root .v3 .tr3-company .tr3-site { display: inline-grid; vertical-align: -6px; margin-left: 2px; }
+:root .v3 .tr3-site { width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--ink-2); place-items: center; }
+:root .v3 .tr3-site .icon { width: 13px; height: 13px; }
+:root .v3 .tr3-site:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
+:root .v3 .tr3-archived { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--paper-2); font-size: 11.5px; font-weight: 650; }
+
+/* Stage: a pill with the stage's dot; the select is the whole pill. */
+:root .v3 .tr3-stage-select {
+  height: 30px; padding: 0 26px 0 24px; border: 0; border-radius: 999px; box-shadow: none;
+  background: var(--paper-2) no-repeat; color: var(--ink); font: 650 13px system-ui, sans-serif; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background-image: radial-gradient(circle at 12px 50%, var(--stage) 0 4px, transparent 4.5px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23575c86' stroke-width='1.6'%3E%3Cpath d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: 0 0, right 10px center;
+  background-size: auto, 10px 6px;
+}
+:root .v3 .tr3-stage-select[data-stage="Saved"] { --stage: var(--ink-2); }
+:root .v3 .tr3-stage-select[data-stage="Applied"] { --stage: #3f7fd6; }
+:root .v3 .tr3-stage-select[data-stage="Interviewing"] { --stage: var(--mark-deep); background-color: color-mix(in srgb, var(--mark) 22%, var(--paper)); }
+:root .v3 .tr3-stage-select[data-stage="Offered"] { --stage: var(--success-ink); background-color: color-mix(in srgb, var(--success) 18%, var(--paper)); }
+:root .v3 .tr3-stage-select[data-stage="Rejected"] { --stage: var(--urgent-ink); color: var(--ink-2); }
+:root .v3 .tr3-stage-select:hover { background-color: color-mix(in srgb, var(--ink) 8%, var(--paper-2)); }
+:root .v3 .tr3-stage-select option { color: var(--field-ink); background: #fff; }
+
+/* Dates read as text; the picker opens on click. Empty, they say what to add. */
+:root .v3 .tr3-date { position: relative; display: inline-flex; align-items: center; border-radius: 8px; }
+:root .v3 .tr3-date input { height: 30px; padding: 0 6px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ink); font: 600 13.5px system-ui, sans-serif; font-variant-numeric: tabular-nums; color-scheme: light; cursor: pointer; }
+:root .v3 .tr3-date input:hover { background: var(--paper-2); }
+:root .v3 .tr3-date input::-webkit-calendar-picker-indicator { opacity: 0; width: 0; margin: 0; }
+:root .v3 .tr3-date input:hover::-webkit-calendar-picker-indicator, :root .v3 .tr3-date input:focus::-webkit-calendar-picker-indicator { opacity: 0.55; width: 14px; }
+:root .v3 .tr3-date-empty { display: none; position: absolute; left: 6px; pointer-events: none; color: var(--ink-2); font-size: 13px; font-style: italic; }
+:root .v3 .tr3-date.blank:not(:focus-within) input::-webkit-datetime-edit { opacity: 0; }
+:root .v3 .tr3-date.blank:not(:focus-within) .tr3-date-empty { display: block; }
+:root .v3 .tr3-next { white-space: nowrap; }
+:root .v3 .tr3-next .tr3-due-flag { margin-left: 4px; }
+:root .v3 .tr3-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--ink-2); vertical-align: middle; }
+:root .v3 .tr3-icon .icon { width: 16px; height: 16px; }
+:root .v3 .tr3-icon:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
+:root .v3 .tr3-icon.tr3-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--urgent) 14%, var(--paper)); color: var(--urgent-ink); }
+
+:root .v3 .tr3-resume { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+:root .v3 .tr3-resume .tr3-mini { margin-left: 6px; }
+
+/* Notes: a line of handwriting space that grows as you type. */
+:root .v3 .tr3-notes-cell { width: 26%; min-width: 180px; }
+:root .v3 .tr3-notes { display: block; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ink); font: 13.5px/1.45 system-ui, sans-serif; resize: none; field-sizing: content; max-height: 9em; }
+:root .v3 .tr3-notes::placeholder { color: var(--ink-2); font-style: italic; }
+:root .v3 .tr3-notes:hover { background: var(--paper-2); }
+:root .v3 .tr3-notes:focus { background: var(--paper); box-shadow: inset 0 -2px 0 var(--mark-deep); outline: none; }
+
+/* Actions: two words and two icons, in one quiet line. */
+:root .v3 .tr3-actions { white-space: nowrap; text-align: right; }
+:root .v3 .tr3-mini { height: 28px; min-height: 0; padding: 0 9px; border: 0; border-radius: 8px; background: var(--paper-2); color: var(--ink); font-size: 12.5px; font-weight: 650; vertical-align: middle; }
+:root .v3 .tr3-mini:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+:root .v3 .tr3-actions .tr3-mini + .tr3-mini { margin-left: 4px; }
+:root .v3 .tr3-actions .tr3-icon:first-of-type { margin-left: 6px; }
+
+:root .v3 .tr3-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 34px 12px 26px; text-align: center; }
+:root .v3 .tr3-empty img { width: 150px; height: auto; }
+:root .v3 .tr3-empty h2 { font-size: 22px; }
+:root .v3 .tr3-empty p { max-width: 52ch; color: var(--ink-2); margin: 0 0 8px; }
+
+@container (max-width: 1100px) {
+  :root .v3 .tr3-resume { display: none; }
+}
+
+/* ==================== Find, Paste and the listing (find3) ==================== */
+/* The search tools sit on the canvas; the result list and the listing are two paper sheets side by side, each
+   scrolling on its own. Old components inside them read through .paper-adapt. */
+
+:root .v3.find3 .toolbar-title { padding: 18px 24px 6px; }
+:root .v3.find3 .toolbar-title h1 { font-family: var(--theme-font-display, var(--display)); font-size: var(--type-page); letter-spacing: -0.02em; color: var(--on-canvas); }
+.app[data-route="jobs"] #main.find3 > .toolbar { border-bottom: 0; }
+
+/* The filters open in place under the bar, as one paper sheet, never over the results. */
+:root .v3.find3 .filters.paper { margin-top: 4px; padding: 18px 22px; border: 0; box-shadow: var(--shadow-paper); }
+:root .v3.find3 .filters legend, :root .v3.find3 .filters summary { color: var(--ink); font: 720 15px var(--theme-font-display, var(--display)); }
+:root .v3.find3 .filters label { color: var(--ink-2); }
+:root .v3.find3 .history.paper { padding: 14px; border: 0; border-radius: 16px; box-shadow: var(--shadow-paper), 0 24px 48px -20px rgba(0, 0, 0, 0.5); }
+
+/* The two sheets. */
+:root .v3.find3 > .content { gap: 18px; padding: 4px 24px 22px; }
+:root .v3.find3 .results-pane.paper,
+:root .v3.find3 .detail-pane.paper { padding: 0; border: 0; overflow-y: auto; scrollbar-gutter: auto; }
+:root .v3.find3 .results-pane .results-head { padding: 14px 18px 8px; }
+:root .v3.find3 #result-counts { color: var(--ink-2); font-weight: 600; }
+:root .v3.find3 .results-pane .note { margin: 0 18px 10px; padding: 10px 12px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--mark) 14%, var(--paper)); color: var(--ink); }
+:root .v3.find3 .results { padding: 0 10px 10px; }
+:root .v3.find3 .result { margin: 0; padding: 14px 10px; border: 0; border-top: 1.5px dashed var(--rule); border-radius: 0; background: transparent; box-shadow: none; transition: background-color 140ms var(--ease-settle); }
+:root .v3.find3 .result:first-child { border-top: 0; }
+:root .v3.find3 .result:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+:root .v3.find3 .result.selected { background: color-mix(in srgb, var(--mark) 18%, transparent); border-radius: 12px; }
+:root .v3.find3 .result.selected + .result { border-top-color: transparent; }
+:root .v3.find3 .result h3, :root .v3.find3 .result .result-title { color: var(--ink); font-weight: 700; }
+:root .v3.find3 .logo-tile { border-radius: var(--radius-tile); }
+:root .v3.find3 .pager { padding: 8px 14px 16px; }
+:root .v3.find3 .state-message { color: var(--ink-2); }
+:root .v3.find3 .state-message h2 { color: var(--ink); font-family: var(--theme-font-display, var(--display)); }
+
+/* The listing reads like the Job page: a big title, its facts, the actions, then the sections. */
+:root .v3.find3 .detail-pane .listing { padding: 26px 32px 32px; }
+:root .v3.find3 .detail-pane .job-heading h2, :root .v3.find3 #job-title { color: var(--ink); font-family: var(--theme-font-display, var(--display)); font-size: clamp(24px, 1vw + 16px, 32px); line-height: 1.15; letter-spacing: -0.02em; }
+:root .v3.find3 .detail-pane .job-meta { color: var(--ink-2); }
+:root .v3.find3 .detail-pane #save-listing { background: var(--ink); color: var(--paper); border-radius: 12px; min-height: 40px; padding: 0 18px; }
+:root .v3.find3 .detail-pane .job-actions .button { border-radius: 10px; background: var(--paper-2); color: var(--ink); }
+:root .v3.find3 .detail-pane .job-actions .button:hover { background: var(--ink); color: var(--paper); }
+:root .v3.find3 .detail-pane .cost-card,
+:root .v3.find3 .detail-pane .section,
+:root .v3.find3 .detail-pane .writing { background: var(--paper-2); border: 0; border-radius: 14px; box-shadow: none; }
+:root .v3.find3 .detail-pane h3, :root .v3.find3 .detail-pane h4 { color: var(--ink); }
+:root .v3.find3 .detail-pane .cost-pill { border-color: var(--rule); background: var(--paper); color: var(--ink); }
+:root .v3.find3 .detail-pane .chip { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+
+/* Paste: one sheet to paste into, with room to see the posting whole. */
+:root .v3.find3 .paste-pane.paper { align-self: start; width: min(1100px, calc(100% - 48px)); margin: 6px auto 22px; padding: 22px 24px; overflow: visible; }
+:root .v3.find3 #paste-text { min-height: 46vh; padding: 16px 18px; border: 1.5px dashed var(--rule); border-radius: 14px; background: var(--paper); font: 15px/1.6 system-ui, sans-serif; resize: vertical; }
+:root .v3.find3 #paste-text:focus { border-style: solid; border-color: var(--mark-deep); outline: none; }
+:root .v3.find3 #paste-preview { min-height: 44px; padding: 0 22px; border-radius: 12px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-control); }
+
+/* Saved jobs list (reached from older links): the same sheet as results. */
+:root .v3.find3 .saved-bulk { padding: 12px 18px; }
+:root .v3.find3 .result-open,
+:root .v3.find3 .result-open:hover:not(:disabled) { background: transparent; color: var(--ink); border-radius: 0; font-weight: 500; }
+:root .v3.find3 .result-open strong { color: var(--ink); font-weight: 700; }
+:root .v3.find3 .result-open span { color: var(--ink-2); font-weight: 500; }
+:root .v3.find3 .result:hover .result-open strong { text-decoration: underline; text-decoration-color: var(--mark-deep); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+:root .v3.find3 .signal { background: var(--paper-2); color: var(--ink); }
+:root .v3.find3 .result-link { color: var(--ink-2); }
+
+/* ==================== Tailor: the rest of the desk (tl3) ==================== */
+/* A display title and the two pickers on the canvas; the job's facts in a paper side sheet; drafts, the tailored
+   resume and problems on a paper sheet. The proof desk (.t3-desk) keeps its own paper. */
+
+:root .v3.tl3 > .toolbar { background: transparent; border-bottom: 0; }
+:root .v3.tl3 .tailor-toolbar { gap: 12px 16px; padding: 18px 24px 10px; align-items: flex-end; }
+:root .v3.tl3 .view-title { font-size: var(--type-page); color: var(--on-canvas); line-height: 1.05; margin-right: 6px; }
+:root .v3.tl3 .engine-chip { height: 30px; padding: 0 10px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--on-canvas) 9%, transparent); color: var(--on-canvas-2); align-self: center; }
+:root .v3.tl3 .engine-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 15%, transparent); color: var(--on-canvas); }
+:root .v3.tl3 .tailor-toolbar .toolbar-actions { gap: 10px; }
+:root .v3.tl3 .picker label { color: var(--on-canvas-2); font-size: 12px; font-weight: 650; letter-spacing: 0.02em; }
+:root .v3.tl3 .picker select { height: 40px; padding: 0 34px 0 12px; border: 0; border-radius: 12px; background-color: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-control); }
+:root .v3.tl3 .tailor-toolbar .toolbar-actions > button:not(.btn) { height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--on-canvas) 10%, transparent); color: var(--on-canvas); font-weight: 650; }
+:root .v3.tl3 .tailor-toolbar .toolbar-actions > button:not(.btn):hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 16%, transparent); }
+:root .v3.tl3 .tailor-toolbar .toolbar-actions > button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+:root .v3.tl3 .tailor-toolbar .toolbar-actions > button:disabled { opacity: 0.5; }
+:root .v3.tl3 .tailor-toolbar .btn-mark { min-height: 40px; height: 40px; padding: 0 18px; box-shadow: var(--shadow-control); }
+
+:root .v3.tl3 .tailor-content { gap: 18px; padding: 0 24px 22px 0; }
+:root .v3.tl3 .tailor-main { border-right: 0; padding: 4px 4px 28px 24px; }
+:root .v3.tl3 .tailor-aside.paper { align-self: start; max-height: 100%; margin-top: 4px; padding: 20px 22px; border: 0; overflow-y: auto; }
+:root .v3.tl3 .tailor-aside h2 { color: var(--ink); font-family: var(--theme-font-display, var(--display)); }
+:root .v3.tl3 .tailor-stage.paper { padding: 22px 26px 26px; }
+:root .v3.tl3 .tailor-stage.paper .round-head h2 { color: var(--ink); font-family: var(--theme-font-display, var(--display)); font-size: 22px; }
+:root .v3.tl3 .tailor-stage.paper .card,
+:root .v3.tl3 .tailor-stage.paper .draft-card,
+:root .v3.tl3 .tailor-stage.paper .entry { background: var(--paper-2); border: 0; border-radius: 14px; box-shadow: none; }
+:root .v3.tl3 .tailor-stage.paper textarea { border: 1.5px dashed var(--rule); border-radius: 12px; background: var(--paper); font: 14.5px/1.6 system-ui, sans-serif; }
+:root .v3.tl3 .tailor-stage.paper textarea:focus { border-style: solid; border-color: var(--mark-deep); outline: none; }
+:root .v3.tl3 .tailor-stage.paper [role="tablist"] button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+
+/* The rounds: tabs on the canvas. */
+:root .v3.tl3 .tailor-rounds button { border: 0; border-radius: 10px; background: color-mix(in srgb, var(--on-canvas) 9%, transparent); color: var(--on-canvas-2); }
+:root .v3.tl3 .tailor-rounds button[aria-pressed="true"], :root .v3.tl3 .tailor-rounds button[aria-current="true"] { background: var(--paper); color: var(--ink); }
+:root .v3.tl3 .tailor-rounds .round-meta { opacity: 0.8; }
+
+/* The empty page: Pico, a line, and the saved jobs as small paper cards. */
+:root .v3.tl3 .stage-empty h2 { color: var(--on-canvas); font-family: var(--theme-font-display, var(--display)); font-size: 26px; }
+:root .v3.tl3 .stage-empty p { color: var(--on-canvas-2); }
+:root .v3.tl3 .stage-job { min-width: 190px; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--paper); color: var(--ink); box-shadow: var(--shadow-control); }
+:root .v3.tl3 .stage-job:hover:not(:disabled) { background: var(--paper); transform: translateY(0) scale(1.02); }
+:root .v3.tl3 .stage-job span, :root .v3.tl3 .stage-job small { color: var(--ink-2); }
+:root .v3.tl3 .stage-jobs > p { color: var(--on-canvas-2); }
+
+/* ==================== Dialogs: a sheet of paper over a dimmed canvas ==================== */
+/* Dialogs live on <body>, outside every view, so they take the paper tokens themselves. */
+:root dialog.ask,
+:root[data-theme] dialog.ask {
+  --text: var(--ink);
+  --muted: var(--ink-2);
+  --faint: var(--ink-2);
+  --dim: var(--ink-2);
+  --line: var(--rule);
+  --line-strong: color-mix(in srgb, var(--ink) 28%, transparent);
+  --surface: var(--paper-2);
+  --raised: var(--paper);
+  --panel: transparent;
+  --panel-hover: color-mix(in srgb, var(--ink) 5%, transparent);
+  --panel-line: var(--rule);
+  --control: var(--paper-2);
+  --control-hover: color-mix(in oklab, var(--paper-2) 80%, var(--ink));
+  --field: var(--paper);
+  --field-ink: var(--ink);
+  --accent: var(--ink);
+  --accent-hover: var(--ink);
+  --accent-ink: var(--paper);
+  --note: color-mix(in srgb, var(--mark) 16%, transparent);
+  --good: var(--success-ink);
+  --bad: var(--urgent-ink);
+  --danger-text: var(--urgent-ink);
+  --link: var(--ink);
+  --tint: 20 24 60;
+  padding: 24px 26px 20px;
+  border: 0;
+  border-radius: var(--radius-paper);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+:root dialog.ask::backdrop { background: color-mix(in srgb, var(--canvas-deep) 62%, transparent); }
+:root dialog.ask h2 { font-family: var(--theme-font-display, var(--display)); font-size: 21px; letter-spacing: -0.015em; color: var(--ink); }
+:root dialog.ask button { border: 0; border-radius: 10px; background: var(--paper-2); color: var(--ink); font-weight: 650; }
+:root dialog.ask button:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+:root dialog.ask button.primary { background: var(--ink); color: var(--paper); }
+:root dialog.ask button.danger, :root dialog.ask button.danger-solid { background: var(--urgent-ink); color: #ffffff; }
+:root dialog.ask input:not([type="checkbox"]):not([type="radio"]),
+:root dialog.ask select,
+:root dialog.ask textarea { border: 1.5px solid var(--rule); border-radius: 10px; background: var(--paper); color: var(--ink); }
+:root dialog.ask .dialog-close { background: transparent; color: var(--ink-2); }
+:root dialog.ask .cost-card, :root dialog.ask .compare-card { background: var(--paper-2); border: 0; border-radius: 14px; box-shadow: none; }
+:root .v3.find3 .paste-pane.paper { flex: 0 1 auto; height: auto; min-height: 0; overflow-y: auto; }
+:root .v3.find3 #paste-title { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 22px 0 8px; }
+:root .v3.find3 #paste-text { font-size: 15px; }
+:root .v3.find3 #paste-text::placeholder { color: var(--ink-2); font-size: 15px; }
+
+/* ==================== Arrival: sheets settle, ink draws itself ==================== */
+/* For a moment after a view is shown (.arriving, set by app.js), its paper sheets settle onto the canvas one after
+   another, and the hand-drawn marks are drawn in: underlines left to right, circles round the clock, stars spun in.
+   Only on arrival, so redrawing while you work never replays it. Gentle motion keeps the fades and drops the movement;
+   Reduce motion turns all of it off (the rules above). */
+
+@property --sweep { syntax: "<angle>"; inherits: false; initial-value: 360deg; }
+:root { --rise: 12px; --settle-scale: 0.992; }
+:root.motion-gentle { --rise: 0px; --settle-scale: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.reduce-motion) .v3.arriving .paper,
+  :root:not(.reduce-motion) .arriving .v3 .paper,
+  :root:not(.reduce-motion) .v3.arriving .jl3-card,
+  :root:not(.reduce-motion) .v3.arriving .stage-job {
+    animation: sheet-settle 520ms var(--ease-settle) both;
+    animation-delay: calc(var(--order, 0) * 60ms + 40ms);
+  }
+  :root:not(.reduce-motion) .v3.arriving .ink-underline { animation: ink-stroke 720ms cubic-bezier(0.55, 0, 0.25, 1) 260ms both; }
+  :root:not(.reduce-motion) .v3.arriving .ink-circle { animation: ink-sweep 760ms cubic-bezier(0.5, 0, 0.3, 1) 380ms both; }
+  :root:not(.reduce-motion) .v3.arriving .ink-star { animation: ink-twinkle 700ms var(--ease-settle) 520ms both; }
+  :root:not(.reduce-motion) .v3.arriving .pico { animation: pico-arrive 640ms var(--ease-settle) 120ms both; }
+  :root:not(.reduce-motion) .v3.arriving .bubble { animation: bubble-pop 460ms var(--ease-settle) 420ms both; }
+  :root:not(.reduce-motion) .v3.arriving .display-xl { animation: words-dry 560ms ease-out both; }
+
+  /* Pages cross like ink drying: the old page fades, the new one comes into focus as it settles. */
+  html[data-vt="page"]::view-transition-new(root) { animation: v3-page-in 340ms var(--ease-settle) both; }
+  :root.motion-gentle[data-vt="page"]::view-transition-new(root) { animation: fade-in 180ms ease both; }
+}
+
+/* Stagger: the first sheets of a view arrive in reading order. */
+:root .v3 :is(.home3-grid, .jl3-grid, .job3-grid, .rs3-grid, .content, .st3-col, .settings, .stage-job-list) > :nth-child(2) { --order: 1; }
+:root .v3 :is(.home3-grid, .jl3-grid, .job3-grid, .rs3-grid, .content, .st3-col, .settings, .stage-job-list) > :nth-child(3) { --order: 2; }
+:root .v3 :is(.home3-grid, .jl3-grid, .job3-grid, .rs3-grid, .content, .st3-col, .settings, .stage-job-list) > :nth-child(4) { --order: 3; }
+:root .v3 :is(.home3-grid, .jl3-grid, .job3-grid, .rs3-grid, .content, .st3-col, .settings, .stage-job-list) > :nth-child(n+5) { --order: 4; }
+
+@keyframes sheet-settle {
+  from { opacity: 0; transform: translateY(var(--rise)) scale(var(--settle-scale)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ink-stroke {
+  from { clip-path: inset(-20% 100% -20% 0); }
+  to { clip-path: inset(-20% -2% -20% 0); }
+}
+@keyframes ink-sweep {
+  from { --sweep: 0deg; }
+  to { --sweep: 360deg; }
+}
+:root .v3 .ink-circle { -webkit-mask: conic-gradient(from 200deg, #000 var(--sweep), transparent 0); mask: conic-gradient(from 200deg, #000 var(--sweep), transparent 0); }
+@keyframes ink-twinkle {
+  0% { opacity: 0; transform: scale(0.4) rotate(-40deg); }
+  60% { opacity: 1; transform: scale(1.15) rotate(8deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes pico-arrive {
+  0% { opacity: 0; transform: translateY(calc(var(--rise) * 1.5)) rotate(-4deg); }
+  60% { opacity: 1; transform: translateY(calc(var(--rise) * -0.25)) rotate(1.5deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes bubble-pop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes words-dry {
+  from { opacity: 0.001; filter: blur(4px); }
+  to { opacity: 1; filter: none; }
+}
+@keyframes v3-page-in { from { opacity: 0; transform: translateY(var(--rise)); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+:root.motion-gentle .v3.arriving .ink-underline,
+:root.motion-gentle .v3.arriving .ink-circle,
+:root.motion-gentle .v3.arriving .ink-star { animation-name: fade-in; animation-duration: 240ms; }
+:root.motion-gentle .v3.arriving .display-xl { animation: none; }
+:root .v3 .bubble.tail-right { transform-origin: 100% 58%; }
+:root .v3 .bubble.tail-down { transform-origin: 44px 100%; }
+/* No jump while the Tracker loads: the skill line keeps its room, and rows are sketched until they arrive. */
+:root .v3 .tr3-gaps { min-height: 26px; }
+:root .v3 .tr3-skel { height: 56px; margin: 6px 0; border-radius: 12px; background: linear-gradient(100deg, var(--paper-2) 30%, color-mix(in oklab, var(--paper-2) 60%, var(--paper)) 50%, var(--paper-2) 70%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
+
+/* ==================== Layers ==================== */
+/* One order for everything that can overlap, lowest first:
+     page content and its sticky heads (2) · view toolbars and their menus (40) · the navigation bar and its
+     suggestions (70) · notices (75) · window controls (80) · expanded PDF (90) · tooltip, dialogs (top layer).
+   The bar is its own layer, so its suggestions are never painted under a view's toolbar or a settling sheet. */
+.bottombar { position: relative; z-index: 70; }
+.backend-notice { z-index: 75; bottom: 76px; }
+:root.bar-top .backend-notice { bottom: 22px; }
+
+/* Anything that opens over paper gets an edge of its own, so cream over cream never blurs into one sheet. */
+.omnibox-panel,
+:root .app .suggestions,
+:root .v3.find3 .history.paper {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 16%, transparent), 0 28px 56px -18px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+:root.day .omnibox-panel,
+:root.day .app .suggestions,
+:root.day .v3.find3 .history.paper {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 16%, transparent), 0 24px 48px -18px rgba(20, 24, 60, 0.35), 0 3px 10px rgba(20, 24, 60, 0.1);
+}
+/* The suggestions are whiter than the paper beneath them, so the top sheet always reads as on top. */
+.omnibox-panel { background: color-mix(in oklab, var(--paper) 55%, #ffffff); }
+
+/* ==================== Report an issue ==================== */
+:root dialog.ask.report-dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 64px); overflow-y: auto; }
+:root dialog.report-dialog .report-lede { margin: 2px 0 14px; color: var(--ink-2); font-size: 14px; }
+:root dialog.report-dialog .report-kinds { margin-bottom: 14px; }
+:root dialog.report-dialog .report-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+:root dialog.report-dialog .report-field > span { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+:root dialog.report-dialog input, :root dialog.report-dialog textarea { width: 100%; padding: 10px 12px; font: 14.5px/1.5 system-ui, sans-serif; resize: vertical; }
+:root dialog.report-dialog input:focus, :root dialog.report-dialog textarea:focus { outline: none; border-color: var(--mark-deep); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mark) 35%, transparent); }
+:root dialog.report-dialog .report-more { margin: 4px 0 10px; }
+:root dialog.report-dialog .report-more summary { cursor: pointer; color: var(--ink-2); font-weight: 650; font-size: 13.5px; padding: 4px 0; }
+:root dialog.report-dialog .report-more textarea { margin-top: 6px; }
+:root dialog.report-dialog .report-preview { margin: 6px 0 0; padding: 12px 14px; max-height: 180px; overflow: auto; border-radius: 12px; background: var(--paper-2); color: var(--ink); font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+:root dialog.report-dialog .report-note { margin: 6px 0 0; color: var(--ink-2); font-size: 12.5px; }
+:root dialog.report-dialog .report-alike { margin: -2px 0 14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--mark) 16%, var(--paper)); }
+:root dialog.report-dialog .report-alike[hidden] { display: none; }
+:root dialog.report-dialog .report-alike h3 { margin: 0 0 6px; font-size: 13.5px; color: var(--ink); }
+:root dialog.report-dialog .report-alike ul { margin: 0; padding: 0; list-style: none; }
+:root dialog.report-dialog .report-alike li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1.5px dashed var(--rule); }
+:root dialog.report-dialog .report-alike li:first-child { border-top: 0; }
+:root dialog.report-dialog .report-alike-words { flex: 1; min-width: 0; }
+:root dialog.report-dialog .report-alike-words b { display: block; font-size: 14px; }
+:root dialog.report-dialog .report-alike-words span { font-size: 12.5px; color: var(--ink-2); }
+:root dialog.report-dialog .report-alike button { flex: none; min-height: 30px; padding: 0 12px; }
+:root dialog.report-dialog .report-status { min-height: 1.4em; margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
+:root dialog.report-dialog .report-fallback { display: flex; gap: 8px; margin-top: 8px; }
+:root dialog.report-dialog .report-done { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 0; text-align: center; }
+:root dialog.report-dialog .report-done .pico { width: 120px; height: auto; }
+:root dialog.report-dialog .report-done p { max-width: 42ch; color: var(--ink-2); }
+:root dialog.report-dialog .report-done a { color: var(--ink); font-weight: 650; }
+:root dialog.report-dialog .st3-seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+:root dialog.report-dialog .st3-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
+:root dialog.report-dialog .st3-seg button { height: 32px; min-height: 0; padding: 0 14px; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; }
+:root dialog.report-dialog .st3-seg button:hover:not(:disabled):not([aria-checked="true"]) { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+
+/* Resume entries are rows on their sheet, divided by the same dashed rule as every list, never cards on paper. */
+:root .v3 .resume-section.paper .entry,
+:root .v3 .resume-section.paper .entry-form { padding: 14px 2px; border: 0; border-top: 1.5px dashed var(--rule); border-radius: 0; background: none; box-shadow: none; }
+:root .v3 .resume-section.paper .entry:first-of-type { border-top: 0; }
+:root .v3 .resume-section.paper .entry-form { background: color-mix(in srgb, var(--mark) 7%, transparent); border-radius: 12px; border-top-color: transparent; padding: 14px 14px; }
+/* Small targets get at least 24px. */
+:root .v3 .tr3-site { width: 24px; height: 24px; }
+
+/* ==================== Update prompt ==================== */
+:root dialog.update-notice { width: min(460px, calc(100vw - 48px)); text-align: center; }
+:root dialog.update-notice .update-pico { display: block; width: 110px; height: auto; margin: -6px auto 6px; }
+:root dialog.update-notice h2 { padding-right: 0; }
+:root dialog.update-notice p { margin: 6px auto 0; max-width: 38ch; }
+:root dialog.update-notice .update-skip { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+:root dialog.update-notice .ask-actions { justify-content: center; margin-top: 16px; }
+:root dialog.update-notice progress { width: 100%; height: 8px; margin-top: 12px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 999px; background: var(--paper-2); overflow: hidden; }
+:root dialog.update-notice progress::-webkit-progress-bar { background: var(--paper-2); border-radius: 999px; }
+:root dialog.update-notice progress::-webkit-progress-value { background: var(--mark-deep); border-radius: 999px; transition: width 300ms var(--ease-settle); }
+
+/* Checkboxes in dialogs match the ones on paper: ink when on, a drawn tick. */
+:root dialog.ask input[type="checkbox"]:not(.switch) {
+  appearance: none; -webkit-appearance: none; display: inline-grid; place-items: center; flex: none;
+  width: 18px; height: 18px; margin: 0; border: 1.5px solid color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 5px; background: var(--paper);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+:root dialog.ask input[type="checkbox"]:not(.switch):checked { background: var(--ink); border-color: var(--ink); }
+:root dialog.ask input[type="checkbox"]:not(.switch):checked::after { content: ""; width: 9px; height: 5px; margin-top: -2px; border: 2px solid var(--paper); border-top: 0; border-right: 0; transform: rotate(-45deg); }
+
+/* ==================== Controls: how they answer a press ==================== */
+/* Each control says it heard you: buttons give a little under the finger, switches slide with a squash, a choice
+   in a segment fades across, a tick is drawn. All transform/opacity/colour, all off with Reduce motion. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.reduce-motion) :is(.st3-seg, .jl3-view, .jl3-stages) button,
+  :root:not(.reduce-motion) :is(.tr3-mini, .tr3-icon, .tr3-stage, .tr3-tool, .jl3-quick, .st3-accent, .bar-item, .bar-icon) {
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms var(--ease-settle);
+  }
+  :root:not(.reduce-motion) :is(.st3-seg, .jl3-view, .jl3-stages) button:active:not(:disabled),
+  :root:not(.reduce-motion) :is(.tr3-mini, .tr3-icon, .tr3-stage, .tr3-tool, .jl3-quick, .bar-item, .bar-icon):active:not(:disabled),
+  :root:not(.reduce-motion) dialog.ask button:active:not(:disabled) { transform: scale(0.96); }
+
+  /* switches: the knob travels on a settling curve and squashes while held */
+  :root:not(.reduce-motion) input.switch { transition: background-color 200ms ease; }
+  :root:not(.reduce-motion) input.switch::after { transition: transform 260ms var(--ease-settle), width 160ms var(--ease-settle); }
+  :root:not(.reduce-motion) input.switch:active::after { width: 22px; }
+  :root:not(.reduce-motion) input.switch:checked:active::after { transform: translateX(12px); }
+
+  /* ticks are drawn, not switched on */
+  :root:not(.reduce-motion) :is(.jl3-check, .paper-adapt input[type="checkbox"]:not(.switch), dialog.ask input[type="checkbox"]:not(.switch)):checked::after { animation: tick-draw 220ms var(--ease-settle) both; }
+
+  /* a details summary opens with its content easing down */
+  :root:not(.reduce-motion) :is(dialog.ask, .v3) details[open] > :not(summary) { animation: unfold 240ms var(--ease-settle) both; }
+}
+@keyframes tick-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes unfold { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* ==================== Calendar (cal3) ==================== */
+/* One paper sheet: the week as a grid of hours, or the month as a grid of days. Plans are tiles in the theme's
+   accent; busy times from the person's own calendar are hatched; a clash gets the urgent colour and the word. */
+.cal3 { display: flex; flex-direction: column; }
+:root .v3 .cal3-step { display: inline-flex; align-items: center; gap: 2px; }
+:root .v3 .cal3-step .tr3-icon { color: var(--on-canvas-2); }
+:root .v3 .cal3-step .tr3-icon:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 10%, transparent); color: var(--on-canvas); }
+:root .v3 .cal3-prev .icon { transform: rotate(90deg); }
+:root .v3 .cal3-next .icon { transform: rotate(-90deg); }
+:root .v3 .cal3-step .tr3-mini { background: color-mix(in srgb, var(--on-canvas) 10%, transparent); color: var(--on-canvas); }
+:root .v3 .cal3-step .tr3-mini:hover:not(:disabled) { background: var(--paper); color: var(--ink); }
+:root .v3 .cal3-range { margin: 0 6px; color: var(--on-canvas); font: 720 18px var(--theme-font-display, var(--display)); letter-spacing: -0.01em; }
+:root .v3 .cal3-sync { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--on-canvas-2); font-size: 13px; }
+:root .v3 .cal3-sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+:root .v3 .cal3-sync-warn { color: var(--mark-text); }
+:root .v3 .cal3-new { min-height: 38px; padding: 0 16px; box-shadow: var(--shadow-control); }
+:root .v3 .cal3-sum-clash { color: var(--mark-text); font-weight: 650; }
+:root .v3 .cal3-sheet { padding: 0; overflow: hidden; }
+
+/* Week */
+:root .v3 .cal3-week { --gutter: 64px; display: flex; flex-direction: column; }
+:root .v3 .cal3-week-head, :root .v3 .cal3-allday, :root .v3 .cal3-week-body { display: grid; grid-template-columns: var(--gutter) repeat(7, minmax(0, 1fr)); }
+:root .v3 .cal3-week-head { padding: 12px 0 6px; border-bottom: 1.5px dashed var(--rule); }
+:root .v3 .cal3-day { display: flex; align-items: baseline; justify-content: center; gap: 6px; color: var(--ink-2); }
+:root .v3 .cal3-dow { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+:root .v3 .cal3-day .num { color: var(--ink); font: 760 20px var(--theme-font-display, var(--display)); }
+:root .v3 .cal3-day.today .cal3-dow { color: var(--urgent-ink); }
+:root .v3 .cal3-allday { min-height: 34px; border-bottom: 1.5px dashed var(--rule); }
+:root .v3 .cal3-gutter-label { align-self: center; padding-right: 10px; text-align: right; color: var(--ink-2); font-size: 11.5px; font-weight: 650; }
+:root .v3 .cal3-allday-cell { display: flex; flex-direction: column; gap: 3px; padding: 4px; border-left: 1px solid var(--rule); }
+:root .v3 .cal3-follow { display: block; width: 100%; height: auto; min-height: 0; padding: 3px 7px; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--mark) 22%, var(--paper)); color: var(--mark-ink); font-size: 12px; font-weight: 650; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .v3 .cal3-follow:hover:not(:disabled) { background: color-mix(in srgb, var(--mark) 34%, var(--paper)); color: var(--ink); }
+:root .v3 .cal3-busy-day { padding: 2px 7px; border-radius: 7px; background: repeating-linear-gradient(135deg, var(--paper-2) 0 5px, transparent 5px 10px); color: var(--ink-2); font-size: 11.5px; font-weight: 650; }
+:root .v3 .cal3-scrollbox { max-height: calc(100vh - 330px); min-height: 320px; overflow-y: auto; }
+:root .v3 .cal3-week-body { position: relative; }
+:root .v3 .cal3-gutter { display: grid; grid-auto-rows: var(--row); }
+:root .v3 .cal3-gutter span { padding: 0 10px 0 0; transform: translateY(-0.6em); text-align: right; color: var(--ink-2); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+:root .v3 .cal3-gutter span:first-child { visibility: hidden; }
+:root .v3 .cal3-col { position: relative; display: grid; grid-auto-rows: var(--row); border-left: 1px solid var(--rule); }
+:root .v3 .cal3-col.today { background: color-mix(in srgb, var(--mark) 6%, transparent); }
+:root .v3 .cal3-slot { height: 100%; min-height: 0; padding: 0; border: 0; border-top: 1px dashed color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 0; background: transparent; cursor: copy; }
+:root .v3 .cal3-slot:hover:not(:disabled) { background: color-mix(in srgb, var(--mark) 14%, transparent); }
+:root .v3 .cal3-slot:focus-visible { outline: 2px solid var(--mark-deep); outline-offset: -2px; }
+:root .v3 .cal3-busy { position: absolute; left: 3px; right: 3px; z-index: 1; display: flex; align-items: flex-start; padding: 4px 6px; border-radius: 8px; pointer-events: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 10%, transparent) 0 6px, transparent 6px 12px); color: var(--ink-2); font-size: 11px; font-weight: 650; }
+:root .v3 .cal3-plan { position: absolute; left: 4px; right: 4px; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; height: auto; min-height: 0; padding: 5px 8px; overflow: hidden;
+  border: 0; border-radius: 10px; background: var(--mark); color: var(--ink); text-align: left; font-weight: 500; box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.45); }
+:root .v3 .cal3-plan b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 720; }
+:root .v3 .cal3-plan span { font-size: 11.5px; color: color-mix(in oklab, var(--ink) 82%, var(--mark)); }
+:root .v3 .cal3-plan.short { flex-direction: row; align-items: center; gap: 6px; padding-block: 2px; }
+:root .v3 .cal3-plan.kind-call { background: color-mix(in oklab, var(--mark) 55%, var(--paper)); }
+:root .v3 .cal3-plan.kind-follow_up { background: color-mix(in oklab, var(--success) 45%, var(--paper)); }
+:root .v3 .cal3-plan.kind-other { background: var(--paper-2); box-shadow: inset 0 0 0 1.5px var(--rule); }
+:root .v3 .cal3-plan:hover:not(:disabled) { filter: none; box-shadow: 0 0 0 2px var(--ink), 0 6px 12px -8px rgba(0, 0, 0, 0.45); }
+:root .v3 .cal3-plan.clash { box-shadow: 0 0 0 2px var(--urgent-ink), 0 6px 12px -8px rgba(0, 0, 0, 0.45); }
+:root .v3 .cal3-clash-tag { margin-top: 2px; padding: 1px 6px; border-radius: 6px; background: var(--paper); color: var(--urgent-ink) !important; font-weight: 700; }
+:root .v3 .cal3-now { position: absolute; left: 0; right: 0; z-index: 3; height: 2px; background: var(--urgent); pointer-events: none; }
+:root .v3 .cal3-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--urgent); }
+
+/* Month */
+:root .v3 .cal3-month-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 12px 0 6px; border-bottom: 1.5px dashed var(--rule); }
+:root .v3 .cal3-month-head span { text-align: center; color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+:root .v3 .cal3-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-auto-rows: minmax(104px, 1fr); }
+:root .v3 .cal3-mday { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px; border-left: 1px solid var(--rule); border-top: 1px solid var(--rule); }
+:root .v3 .cal3-mday:nth-child(7n + 1) { border-left: 0; }
+:root .v3 .cal3-mday.out { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+:root .v3 .cal3-mday.out .cal3-mday-n { color: var(--ink-2); }
+:root .v3 .cal3-mday-n { align-self: flex-start; height: 26px; min-height: 0; min-width: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: 720 14px var(--theme-font-display, var(--display)); }
+:root .v3 .cal3-mday-n:hover:not(:disabled) { background: var(--paper-2); }
+:root .v3 .cal3-mday-list { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+:root .v3 .cal3-plan.mini { position: static; flex-direction: row; align-items: center; gap: 6px; padding: 2px 7px; border-radius: 7px; }
+:root .v3 .cal3-plan.mini span.num { flex: none; order: -1; }
+:root .v3 .cal3-plan.mini b { min-width: 0; }
+:root .v3 .cal3-more, :root .v3 .cal3-busy-note { color: var(--ink-2); font-size: 11.5px; }
+
+/* The plan form */
+:root dialog.ask.plan-dialog { width: min(600px, calc(100vw - 48px)); max-height: calc(100vh - 64px); overflow-y: auto; }
+:root dialog.plan-dialog .plan-kinds { margin: 4px 0 14px; display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
+:root dialog.plan-dialog .plan-kinds button { height: 32px; min-height: 0; padding: 0 14px; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; }
+:root dialog.plan-dialog .plan-kinds button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+:root dialog.plan-dialog .plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+:root dialog.plan-dialog .plan-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+:root dialog.plan-dialog .plan-field.wide { grid-column: 1 / -1; }
+:root dialog.plan-dialog .plan-field > span { font-weight: 700; font-size: 13px; color: var(--ink); }
+:root dialog.plan-dialog .plan-field :is(input, select, textarea) { width: 100%; min-height: 38px; padding: 8px 10px; font: 14px/1.4 system-ui, sans-serif; color-scheme: light; }
+:root dialog.plan-dialog .plan-clash { margin-top: 12px; }
+:root dialog.plan-dialog .plan-clash.has { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--urgent) 12%, var(--paper)); }
+:root dialog.plan-dialog .plan-clash-line { margin: 0; color: var(--urgent-ink); font-size: 13.5px; }
+:root dialog.plan-dialog .plan-clash-line + .plan-clash-line { margin-top: 4px; }
+:root dialog.plan-dialog .plan-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1.5px dashed var(--rule); }
+:root dialog.plan-dialog .plan-add > span { margin-right: 4px; color: var(--ink-2); font-size: 13px; font-weight: 650; }
+:root dialog.plan-dialog .plan-add button { min-height: 32px; padding: 0 12px; }
+:root dialog.plan-dialog .ask-actions { display: flex; align-items: center; gap: 8px; }
+:root dialog.plan-dialog .plan-gap { flex: 1; }
+:root .v3 .cal3-sheet { container-type: inline-size; }
+@container (max-width: 760px) {
+  :root .v3 .cal3-plan span:not(.cal3-clash-tag) { display: none; }
+}

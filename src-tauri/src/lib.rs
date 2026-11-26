@@ -1,7 +1,9 @@
 pub mod backend;
+pub mod calendar;
 pub mod commands;
 pub mod desktop;
 pub mod menus;
+pub mod relay;
 pub mod routes;
 pub mod secrets;
 pub mod updates;
@@ -165,6 +167,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
+        .manage(menus::MenuState::default())
         .invoke_handler(tauri::generate_handler![commands::ipc_call])
         .on_menu_event(|app, event| {
             handle_menu_event(app, event.id().as_ref());

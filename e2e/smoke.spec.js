@@ -471,7 +471,7 @@ test('the resume target length sets what the page-count badge checks', async ({ 
 
 test('the navigation bar can move to the top, where it is also the drag area', async ({ window }) => {
   await window.locator('#tab-settings').click();
-  await window.locator('.st3-seg button[data-bar="top"]').click();
+  await window.locator('.st3-barPosition-row button[data-value="top"]').click();
   await expect(window.locator('html')).toHaveClass(/bar-top/);
   await expect(window.locator('.titlebar')).toBeHidden();
   const bar = await window.locator('.bottombar').boundingBox();
@@ -482,7 +482,7 @@ test('the navigation bar can move to the top, where it is also the drag area', a
   expect(panel.y).toBeGreaterThan(bar.y + bar.height - 1);
   await window.keyboard.press('Escape');
   await window.locator('#tab-settings').click();
-  await window.locator('.st3-seg button[data-bar="bottom"]').click();
+  await window.locator('.st3-barPosition-row button[data-value="bottom"]').click();
   await expect(window.locator('html')).not.toHaveClass(/bar-top/);
   await expect(window.locator('.bottombar')).not.toHaveAttribute('data-tauri-drag-region', '');
 });
@@ -521,4 +521,125 @@ test('the desktop switches in Settings are off until turned on, and are remember
     expect(await window.evaluate(k => window.Prefs.get(k), key)).toBe(true);
     await window.locator(id).uncheck();
   }
+});
+
+test('every theme has a day version, chosen in Settings or following the system', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  await window.locator('.st3-mode-row button[data-value="day"]').click();
+  await expect(window.locator('html')).toHaveClass(/\bday\b/);
+  const bg = await window.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bg'));
+  expect(bg).toBeTruthy();
+  const canvas = await window.evaluate(() => {
+    //painted onto a canvas, whatever colour syntax the page computed comes back as plain RGB
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.fillStyle = getComputedStyle(document.querySelector('.settings-pane')).backgroundColor;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return (r + g + b) / 3;
+  });
+  expect(canvas).toBeGreaterThan(180);
+  await window.locator('.st3-paper-row button[data-value="white"]').click();
+  await expect(window.locator('html')).toHaveAttribute('data-paper', 'white');
+  await window.locator('.st3-inkMarks-row button[data-value="false"]').click();
+  await expect(window.locator('html')).toHaveClass(/no-marks/);
+  await window.locator('.st3-mode-row button[data-value="night"]').click();
+  await window.locator('.st3-paper-row button[data-value="cream"]').click();
+  await window.locator('.st3-inkMarks-row button[data-value="true"]').click();
+  await expect(window.locator('html')).not.toHaveClass(/\bday\b/);
+});
+
+test('the Tracker is one sheet: dates edit in place and empty ones say what to add', async ({ window }) => {
+  await window.evaluate(() => window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' }));
+  const job = await window.evaluate(() => window.api.jobs.create({ source: 'pasted', raw_text: 'Analyst at Tracker Co\nRemote\nWe need SQL.' }));
+  const id = job.id ?? job.data?.id;
+  await window.evaluate(jobId => window.api.applications.create({ job_id: jobId, status: 'Saved' }), id);
+  await window.evaluate(() => window.App.go('tracker'));
+  const row = window.locator('.tr3-table tbody tr').first();
+  await expect(row).toBeVisible();
+  await expect(row.locator('.tr3-date.blank .tr3-date-empty').first()).toBeVisible();
+  await row.locator('.tr3-stage-select').selectOption('Applied');
+  await expect(row.locator('.tr3-stage-select')).toHaveAttribute('data-stage', 'Applied');
+  await expect(window.locator('.jl3-sum')).toContainText('tracked');
+});
+
+test('Report an issue offers similar reports and sends only what it shows', async ({ window }) => {
+  await window.evaluate(() => window.Desktop.menu('report'));
+  const dialog = window.locator('dialog.report-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('#report-what').fill('Search results never load');
+  await dialog.locator('#report-details').fill('The list stays empty. Write to ada@example.com');
+  await expect(dialog.locator('.report-alike')).toContainText('Search results never load');
+  await expect(dialog.locator('.report-preview')).toContainText('[email removed]');
+  await dialog.getByRole('button', { name: 'Send report' }).click();
+  await expect(dialog).toContainText("Thank you, it's filed");
+  const sent = await window.evaluate(() => window.__report);
+  expect(sent.details).not.toContain('ada@example.com');
+  await dialog.getByRole('button', { name: 'Done' }).click();
+});
+
+test('the menu bar runs the same actions as the buttons', async ({ window }) => {
+  await window.evaluate(() => window.Desktop.menu('go-resume'));
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'resume');
+  await window.evaluate(() => window.Desktop.menu('mode-day'));
+  await expect(window.locator('html')).toHaveClass(/\bday\b/);
+  await window.evaluate(() => window.Desktop.menu('mode-night'));
+  await window.evaluate(() => window.Desktop.menu('paste-job'));
+  await expect(window.locator('#paste-text')).toBeFocused();
+});
+
+test('boards added to the watchlist are shared only when sharing is on', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  await window.locator('#watchlist-input').fill('lever:examplecorp');
+  await window.locator('#watchlist-add').click();
+  await expect(window.locator('#watchlist-status')).toContainText('Added');
+  expect(await window.evaluate(() => window.__shared)).toBeUndefined();
+  await window.locator('#pref-community-share').check();
+  await expect.poll(() => window.evaluate(() => window.__shared?.boards)).toEqual(['lever:examplecorp']);
+  await window.locator('#pref-community-share').uncheck();
+});
+
+test('the calendar plans an interview, flags a clash with a busy time, and adds it to a calendar app', async ({ window }) => {
+  await window.evaluate(async () => {
+    const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };
+    const u = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    window.__feeds = true;
+    window.__busyIcs = ['BEGIN:VCALENDAR', 'BEGIN:VEVENT', `DTSTART:${u(at(1, 10))}`, `DTEND:${u(at(1, 11))}`, 'SUMMARY:Private', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    window.Prefs.set('calendarView', 'week');
+    await window.CalendarView.refreshBusy();
+  });
+  await window.locator('#nav-calendar').click();
+  await expect(window.locator('.app')).toHaveAttribute('data-route', 'calendar');
+  await expect(window.locator('.cal3-sync')).toContainText('Checking 1 calendar');
+  await window.getByRole('button', { name: 'Plan an interview' }).click();
+  const dialog = window.locator('dialog.plan-dialog');
+  await expect(dialog).toBeVisible();
+  const day = await window.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await dialog.locator('#plan-date').fill(day);
+  await dialog.locator('#plan-time').fill('10:30');
+  await dialog.locator('#plan-title').fill('Interview, round 2');
+  await expect(dialog.locator('.plan-clash')).toContainText('Overlaps something on your calendar');
+  await dialog.getByRole('button', { name: 'Add to your calendar' }).click();
+  await expect(dialog).toBeHidden();
+  const plan = window.locator('.cal3-plan', { hasText: 'Interview, round 2' });
+  await expect(plan).toHaveClass(/clash/);
+  await plan.click();
+  await window.locator('dialog.plan-dialog').getByRole('button', { name: 'Calendar app' }).click();
+  const opened = await window.evaluate(() => window.__openedIcs);
+  expect(opened.text).toContain('BEGIN:VEVENT');
+  expect(opened.text).toContain('SUMMARY:Interview\\, round 2');
+  expect(opened.text).not.toContain('Private');
+});
+
+test('an available update is offered once, and can be put off or skipped', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  await window.evaluate(() => { window.api.app.checkForUpdates = async () => ({ status: 'available', latest: '9.9.9', current: '0.5.0', downloadable: true, url: 'x' }); });
+  await window.evaluate(() => { window.Settings.promptUpdate(); });
+  const dialog = window.locator('dialog.update-notice');
+  await expect(dialog).toContainText('9.9.9 is available');
+  await dialog.locator('#skip-update').check();
+  await dialog.getByRole('button', { name: 'Not now' }).click();
+  await expect(dialog).toBeHidden();
+  expect(await window.evaluate(() => window.Prefs.get('skippedUpdate'))).toBe('9.9.9');
+  await window.evaluate(() => window.Settings.promptUpdate());
+  await expect(window.locator('dialog.update-notice')).toHaveCount(0);
 });

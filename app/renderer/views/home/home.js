@@ -556,7 +556,7 @@
       const anything = cols.some(c => c.events.length);
       fill(parts.week,
         el("div", {class: "paper-head"}, el("h2", {id: "home-week-h", text: "Next 7 days"}),
-          el("a", {href: "#/tracker", text: "Open tracker"})),
+          el("a", {href: "#/calendar", text: "Open calendar"})),
         el("div", {class: "home3-days"}, cols.map(c => {
           const num = el("b", {class: "num", translate: "no", text: String(c.date.getDate())});
           const label = c.weekend ? "Sat · Sun" : c.today ? "Today"

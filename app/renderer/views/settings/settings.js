@@ -111,6 +111,13 @@ window.Settings = {
         january: "#0c1f38", february: "#360d24", march: "#0a2b1e", april: "#261838", may: "#113026", june: "#083344",
         july: "#111c4e", august: "#3b1230", september: "#122b36", october: "#1c1030", november: "#38121f", december: "#0a291c",
       };
+      //each theme's accent, so a swatch shows the mark colour that comes with it
+      const SWATCH_MARK = {
+        classic: "#f4b53f", bubblegum: "#ffd3e6", cyber: "#39ff88", techno: "#5fd8ff", retro: "#b8f28a", vaporwave: "#ff8ae0",
+        dracula: "#c4a1ff", matcha: "#bfe39a", "midnight-gold": "#e2bd5c", "ocean-abyss": "#63e6d3", arcade: "#ff84e2",
+        january: "#a9d9ff", february: "#ffa8c6", march: "#93e6ab", april: "#ffbbd6", may: "#d0ec8f", june: "#84e6f2",
+        july: "#ffa494", august: "#ffc283", september: "#ecc970", october: "#ffa95c", november: "#f4b53f", december: "#ff9b9b",
+      };
       const select = $("pref-theme");
       const gallery = document.createElement("div");
       gallery.className = "st3-swatches";
@@ -126,6 +133,7 @@ window.Settings = {
         const chip = document.createElement("span");
         chip.className = option.value === "auto-season" ? "st3-chip auto" : "st3-chip";
         if (SWATCH[option.value]) chip.style.setProperty("--chip", SWATCH[option.value]); //CSSOM, allowed by the CSP
+        if (SWATCH_MARK[option.value]) chip.style.setProperty("--chip-mark", SWATCH_MARK[option.value]);
         chip.append(Object.assign(document.createElement("i"), {}));
         const name = document.createElement("b");
         name.textContent = option.textContent.split(" \u2014 ")[0].replace(/^Auto$/, "This month");
@@ -187,32 +195,59 @@ window.Settings = {
       accentRow.append(accentText, accents);
       gallery.after(accentRow);
 
-      //Where the navigation bar sits: at the foot of the window (the default) or at the top.
-      const barRow = document.createElement("div");
-      barRow.className = "setting st3-bar-row";
-      const barText = document.createElement("div");
-      barText.className = "setting-text";
-      barText.innerHTML = '<span class="setting-label" id="bar-label">Navigation bar</span><p>Home, Jobs, Resume, Search and the search box, at the bottom of the window or at the top.</p>';
-      const barSeg = document.createElement("div");
-      barSeg.className = "st3-seg";
-      barSeg.setAttribute("role", "radiogroup");
-      barSeg.setAttribute("aria-labelledby", "bar-label");
-      const barButtons = [["bottom", "Bottom"], ["top", "Top"]].map(([value, name]) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.setAttribute("role", "radio");
-        b.dataset.bar = value;
-        b.textContent = name;
-        b.addEventListener("click", () => window.Prefs.set("barPosition", value));
-        barSeg.append(b);
-        return b;
-      });
-      const markBar = () => barButtons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.bar === window.Prefs.get("barPosition"))));
-      window.Prefs.onChange(key => { if (key === "barPosition") markBar(); });
-      markBar();
-      barRow.append(barText, barSeg);
-      accentRow.after(barRow);
+      //A row of choices drawn as one segmented control, for the look settings that mix and match.
+      const segRow = (key, label, text, options) => {
+        const row = document.createElement("div");
+        row.className = `setting st3-seg-row st3-${key}-row`;
+        const words = document.createElement("div");
+        words.className = "setting-text";
+        const name = document.createElement("span");
+        name.className = "setting-label";
+        name.id = `${key}-label`;
+        name.textContent = label;
+        const p = document.createElement("p");
+        p.textContent = text;
+        words.append(name, p);
+        const seg = document.createElement("div");
+        seg.className = "st3-seg";
+        seg.setAttribute("role", "radiogroup");
+        seg.setAttribute("aria-labelledby", name.id);
+        const buttons = options.map(([value, title]) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.setAttribute("role", "radio");
+          b.dataset.value = String(value);
+          b.textContent = title;
+          b.addEventListener("click", () => window.Prefs.set(key, value));
+          seg.append(b);
+          return b;
+        });
+        const markSeg = () => buttons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.value === String(window.Prefs.get(key)))));
+        window.Prefs.onChange(k => { if (k === key) markSeg(); });
+        markSeg();
+        row.append(words, seg);
+        return row;
+      };
+      const modeRow = segRow("mode", "Day or night", "Every theme comes in both, and in Darker: dark paper with light ink, for dark rooms. Match system switches with your computer\u2019s light and dark appearance.",
+        [["night", "Night"], ["darker", "Darker"], ["day", "Day"], ["system", "Match system"]]);
+      const paperRow = segRow("paper", "Paper", "What the panels are made of, on any theme.",
+        [["cream", "Cream"], ["white", "White"], ["tinted", "Tinted"]]);
+      const marksRow = segRow("inkMarks", "Ink marks", "The hand-drawn underlines, circles and stars. Checks that show progress always stay.",
+        [[true, "Drawn"], [false, "Off"]]);
+      const barRow = segRow("barPosition", "Navigation bar", "Home, Jobs, Resume, Search and the search box, at the bottom of the window or at the top.",
+        [["bottom", "Bottom"], ["top", "Top"]]);
+      gallery.after(modeRow);
+      accentRow.after(paperRow, marksRow, barRow);
+      //Calendar: where a plan goes, and which day a week starts on. The rest is in index.html.
+      const calendarCard = $("calendar-settings");
+      if (calendarCard) {
+        calendarCard.prepend(
+          segRow("calendarTarget", "Add plans to", "Where Add to calendar sends a plan. Calendar app is the one on this computer (Apple Calendar, Outlook).",
+            [["ask", "Ask each time"], ["ics", "Calendar app"], ["google", "Google"], ["outlook", "Outlook.com"]]),
+          segRow("weekStart", "Week starts on", "The first day of the week on the calendar.", [["monday", "Monday"], ["sunday", "Sunday"]]));
+      }
     }
+    $("report-issue")?.addEventListener("click", () => window.Report.open());
     bind("pref-language", "language");
     //the page changes language in place, crossfading from the old words to the new ones
     $("pref-language").addEventListener("change", () => {
@@ -226,6 +261,43 @@ window.Settings = {
     bind("pref-default-sort", "defaultSort");
     bind("pref-show-logos", "showLogos", ...checked);
     bind("pref-check-updates", "notifyUpdates", ...checked);
+    bind("pref-calendar-auto", "calendarAuto", ...checked);
+    // ---------- Calendar: busy times from the person's own calendars ----------
+    const feedStatus = text => { const p = $("calendar-feed-status"); if (p) p.textContent = text; };
+    const showFeeds = async () => {
+      try {
+        const {count} = await window.FistBumpAPI.calendar.feeds();
+        $("calendar-feed-clear").hidden = !count;
+        feedStatus(count ? (count === 1 ? "1 calendar connected." : `${count} calendars connected.`) : "");
+      } catch { /* no shell: nothing to show */ }
+    };
+    $("calendar-feed-add")?.addEventListener("click", async () => {
+      const input = $("calendar-feed");
+      const button = $("calendar-feed-add");
+      button.disabled = true;
+      button.textContent = "Checking…";
+      try {
+        const {count} = await window.FistBumpAPI.calendar.addFeed(input.value);
+        input.value = "";
+        $("calendar-feed-clear").hidden = false;
+        feedStatus(count === 1 ? "Connected. Busy times now show on the calendar." : `${count} calendars connected.`);
+        window.CalendarView?.refreshBusy();
+      } catch (err) {
+        feedStatus(err.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Connect";
+      }
+    });
+    $("calendar-feed-clear")?.addEventListener("click", async () => {
+      await window.FistBumpAPI.calendar.clearFeeds().catch(() => {});
+      $("calendar-feed-clear").hidden = true;
+      feedStatus("Forgotten. Fistbump no longer reads your calendar.");
+      window.CalendarView?.refreshBusy();
+    });
+    showFeeds();
+    bind("pref-community-use", "communityUse", ...checked);
+    bind("pref-community-share", "communityShare", ...checked);
     bind("pref-global-shortcut", "globalShortcut", ...checked);
     bind("pref-menu-bar", "menuBarItem", ...checked);
     bind("pref-notify-due", "notifyDue", ...checked);
@@ -332,6 +404,7 @@ window.Settings = {
         if (input) input.value = "";
         renderWatchlist();
         setStatus("watchlist-status", `Added ${parsed} to your watchlist.`);
+        window.Community?.share([parsed]);
       } catch (err) {
         setStatus("watchlist-status", err.message);
       }
@@ -929,6 +1002,7 @@ window.Settings = {
         done.focus();
       }});
       dialog.append(
+        window.UI.pico("06-open-link.png", "pico update-pico"),
         make("h2", {text: `Fistbump ${result.latest} is available`}),
         make("p", {text: result.downloadable
           ? `You have ${result.current}. Fistbump can download the new version, install it and open again.`
@@ -973,6 +1047,7 @@ window.Settings = {
     window.api?.onBackendRestarted?.(() => window.Settings.refresh());
 
     showAbout();
+    window.Settings.promptUpdate = notifyOnLaunch; //for tests and the menu: the same prompt as at launch
     if (window.Prefs.get("notifyUpdates")) setTimeout(notifyOnLaunch, 2500); //after the first view has settled
   },
   refresh() {},

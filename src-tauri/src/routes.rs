@@ -605,6 +605,23 @@ pub fn route_for_channel(
             _ => Err(bad("Invalid draft id")),
         },
 
+        "events:list" => {
+            let qs = build_query(a0, &["from", "to"]);
+            Ok((Method::GET, format!("/v1/events{qs}"), None))
+        }
+        "events:create" => match as_object(a0) {
+            Some(body) => Ok((Method::POST, "/v1/events".into(), Some(body.clone()))),
+            None => Err(bad("Invalid plan")),
+        },
+        "events:update" => match (as_id(a0), as_object(a1)) {
+            (Some(id), Some(body)) => Ok((Method::PUT, format!("/v1/events/{id}"), Some(body.clone()))),
+            _ => Err(bad("Invalid plan")),
+        },
+        "events:delete" => match as_id(a0) {
+            Some(id) => Ok((Method::DELETE, format!("/v1/events/{id}"), None)),
+            None => Err(bad("Invalid plan id")),
+        },
+
         _ => return None,
     };
 

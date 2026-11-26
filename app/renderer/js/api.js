@@ -140,5 +140,12 @@ window.FistBumpAPI = {
   //phase 6: show an exported file in its folder
   window.FistBumpAPI.shell = wrap("shell", ["showItem"]);
 
+  //the community relay: issue reports and shared job boards, only when the person asks (src-tauri/src/relay.rs)
+  window.FistBumpAPI.settings = wrap("settings", ["get", "put"]);
+  //the calendar: plans kept by the backend, and the person's own calendars for busy times (src-tauri/src/calendar.rs)
+  window.FistBumpAPI.events = wrap("events", ["list", "create", "update", "delete"]);
+  window.FistBumpAPI.calendar = wrap("calendar", ["feeds", "addFeed", "clearFeeds", "busy", "openIcs"]);
+  window.FistBumpAPI.community = wrap("community", ["similar", "report", "shareBoards", "boards"]);
+
   // The backend is back after a crash, so the notice at the bottom of the window goes away.
   window.api?.onBackendRestarted?.(() => document.getElementById("backend-notice")?.remove());

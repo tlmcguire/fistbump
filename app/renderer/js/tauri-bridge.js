@@ -173,12 +173,35 @@
     },
 
     //opt-in desktop integration (desktop.rs): global shortcut, menu-bar item, notifications, deep links
+    events: {
+      list: (q) => call('events:list', q || {}),
+      create: (b) => call('events:create', b),
+      update: (id, b) => call('events:update', id, b),
+      delete: (id) => call('events:delete', id),
+    },
+    calendar: {
+      feeds: () => call('calendar:feeds'),
+      addFeed: (url) => call('calendar:add-feed', url),
+      clearFeeds: () => call('calendar:clear-feeds'),
+      busy: () => call('calendar:busy'),
+      openIcs: (name, text) => call('calendar:open-ics', name, text),
+    },
+
+    community: {
+      similar: (words) => call('relay:similar', words),
+      report: (body) => call('relay:report', body),
+      shareBoards: (body) => call('relay:share-boards', body),
+      boards: () => call('relay:boards'),
+    },
+
     desktop: {
       setShortcut: (on) => call('app:setShortcut', Boolean(on)),
       setTray: (on, info) => call('app:setTray', Boolean(on), info || {}),
       notify: (title, body) => call('app:notify', title, body || ''),
       onFocusSearch: (cb) => { listen('app:focus-search', () => cb()); },
       onDeepLink: (cb) => { listen('app:deep-link', (event) => cb(String(event.payload || ''))); },
+      setMenuState: (state) => call('app:setMenuState', state || {}),
+      onMenu: (cb) => { listen('app:menu', (event) => cb(String(event.payload || ''))); },
     },
 
     jobs: {

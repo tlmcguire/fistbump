@@ -199,6 +199,7 @@
         const actions = [
           stage === "tailored" && !pending ? el("button", {type: "button", class: "btn", text: "Open tailored resume", onclick: () => window.Tailor.open(job.id)}) : null,
           app ? el("button", {type: "button", class: "btn", text: "Open in tracker", onclick: () => window.Tracker.open(app.id)}) : null,
+          el("button", {type: "button", class: "btn", text: "Plan an interview", onclick: () => window.CalendarView.plan({job_id: job.id, kind: "interview"})}),
           safeURL(job.listing_url || job.company_url) ? el("a", {class: "btn", href: safeURL(job.listing_url || job.company_url), target: "_blank", rel: "noopener noreferrer", text: "Open the listing"}) : null,
           job.trashed_at ? null : job.archived_at
             ? el("button", {type: "button", class: "btn", text: "Unarchive", onclick: () => act(() => api().jobs.unarchive(job.id))})

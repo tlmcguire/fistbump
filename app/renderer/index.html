@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="styles/themes.css" />
         <link rel="stylesheet" href="styles/motion.css" />
         <link rel="stylesheet" href="styles/v3.css" />
+        <link rel="stylesheet" href="styles/modes.css" />
     </head>
     <body spellcheck="false">
         <div class="app">
@@ -39,6 +40,7 @@
                     <button type="button" id="nav-jobs" class="bar-item">Jobs</button>
                     <button type="button" id="nav-resume" class="bar-item" data-route="resume">Resume</button>
                     <button type="button" id="nav-search" class="bar-item">Search</button>
+                    <button type="button" id="nav-calendar" class="bar-item" data-route="calendar">Calendar</button>
                 </div>
                 <form id="omnibox" class="omnibox" role="search" autocomplete="off">
                     <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
@@ -67,6 +69,9 @@
                 <symbol id="i-check" viewBox="0 0 24 24"><path class="tick" pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
                 <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
                 <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4.5 19.5.8-4L16.5 4.3a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.5 18.7z"/></symbol>
+                <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+                <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="4.5" rx="1"/><path d="M5 9v9.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
+                <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12a1 1 0 0 0 1 1h7.2a1 1 0 0 0 1-1l.9-12M10.5 11v5.5M13.5 11v5.5"/></symbol>
                 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path class="hand" d="M12 7.5V12l3 2"/></symbol>
                 <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6z"/><path class="tick" pathLength="1" d="m9 12 2.2 2.2L15.2 10"/></symbol>
                 <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10a3.8 3.8 0 0 0 .6-7.5A5.5 5.5 0 0 0 7 9.6 4.5 4.5 0 0 0 7 18.5z"/></symbol>
@@ -84,7 +89,7 @@
                 <symbol id="ink-leaf" viewBox="0 0 24 24"><path d="M4 20C4 9 11 4 21 3c0 10-6 17-17 17z" fill="currentColor" stroke="#151a4a" stroke-width="1.6"/></symbol>
             </svg>
 
-            <main id="main" class="main view-find">
+            <main id="main" class="main view-find v3 find3">
                 <!--Toolbar: the search bar for Find jobs (also accepts a pasted Greenhouse job link). It doubles as a drag region.-->
                 <header class="toolbar drag" data-tauri-drag-region>
                     <div id="settings-title" class="toolbar-title" hidden><h1>Settings</h1></div>
@@ -101,7 +106,7 @@
                         <button type="button" id="filters-toggle" aria-expanded="false" aria-controls="filters">Filters<span id="filters-count" class="badge" hidden></span></button>
                         <div class="history-menu">
                             <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
-                            <section id="history" class="history" role="dialog" aria-label="Saved and recent searches" hidden>
+                            <section id="history" class="history paper paper-adapt" role="dialog" aria-label="Saved and recent searches" hidden>
                                 <div class="history-head">
                                     <h2>Saved &amp; recent searches</h2>
                                     <button type="button" id="history-close" class="history-close">Close</button>
@@ -119,7 +124,7 @@
                         </div>
 
                         <!--Filters: a row under the toolbar, shown with the Filters button. Part of the same form.-->
-                        <div id="filters" class="filters" hidden>
+                        <div id="filters" class="filters paper paper-adapt" hidden>
                             <fieldset class="filter-group">
                                 <legend>Role</legend>
                                 <div class="filter-grid">
@@ -274,7 +279,7 @@
                     <header class="st3-head">
                         <h1 class="display-xl"><span class="underlined">Settings<svg class="ink ink-underline" aria-hidden="true"><use href="#ink-underline"/></svg></span></h1>
                         <nav class="st3-jump" aria-label="Settings sections">
-                            <a href="#set-appearance">Look and accessibility</a><a href="#set-ai">AI and privacy</a><a href="#set-search">Job search</a><a href="#set-storage">Your data</a><a href="#set-updates">Updates</a><a href="#set-keys">Shortcuts</a>
+                            <a href="#set-appearance">Look and accessibility</a><a href="#set-ai">AI and privacy</a><a href="#set-search">Job search</a><a href="#set-calendar">Calendar</a><a href="#set-storage">Your data</a><a href="#set-updates">Updates</a><a href="#set-keys">Shortcuts</a>
                         </nav>
                     </header>
                     <div class="settings">
@@ -344,13 +349,14 @@
                                 </div>
                                 <div class="setting">
                                     <div class="setting-text">
-                                        <label for="pref-reduce-motion">Reduce motion</label>
-                                        <p>Turns off screen transitions, entrances and spinning animations.</p>
+                                        <label for="pref-reduce-motion">Motion</label>
+                                        <p>Full motion draws ink in and lets screens flow into each other. Gentle keeps only short fades. None turns all of it off.</p>
                                     </div>
                                     <select id="pref-reduce-motion">
                                         <option value="system">Match system</option>
-                                        <option value="on">On</option>
-                                        <option value="off">Off</option>
+                                        <option value="off">Full</option>
+                                        <option value="gentle">Gentle</option>
+                                        <option value="on">None</option>
                                     </select>
                                 </div>
                                 <div class="setting">
@@ -376,6 +382,11 @@
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Jobs, Resume, Tracker, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Search, paste a link or a posting, from anywhere</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>K</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Search, on any view</span></div><span class="keys"><kbd>/</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">New search, with filters</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>N</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Paste a job posting</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>Shift</kbd> <kbd>N</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Import a resume</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>O</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Back and forward</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>[</kbd> <kbd>]</kbd></span></div>
+                                <div class="setting"><div class="setting-text"><span class="setting-label">Bigger, smaller, actual text size</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>+</kbd> <kbd>&minus;</kbd> <kbd>0</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Move, accept, reject, edit suggestions</span></div><span class="keys"><kbd>J</kbd> <kbd>K</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>E</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Open settings</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>,</kbd></span></div>
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Close dialogs and panels</span></div><span class="keys"><kbd>Esc</kbd></span></div>
@@ -422,6 +433,47 @@
                                     </div>
                                     <ul id="watchlist-list" class="chips"></ul>
                                     <p id="watchlist-status" class="setting-status" role="status"></p>
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-community-use">Use boards other people found</label>
+                                        <p>Adds job boards that other Fistbump users shared, and that were checked, to your searches. Fetched about once a day.</p>
+                                    </div>
+                                    <input id="pref-community-use" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-community-share">Share the boards I add</label>
+                                        <p>When you add a board to your watchlist, only its name (like lever:netflix) is sent, so others can search it too. Nothing about you goes with it.</p>
+                                    </div>
+                                    <input id="pref-community-share" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <p id="community-status" class="setting-status" role="status"></p>
+                            </div>
+                        </section>
+
+                        <section class="settings-group paper-adapt" aria-labelledby="set-calendar">
+                            <h2 id="set-calendar">Calendar</h2>
+                            <p class="group-note">Plans live in Fistbump. Adding one to your own calendar, or checking your calendar for clashes, happens only when you set it up here.</p>
+                            <div class="settings-card" id="calendar-settings">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-calendar-auto">Add new plans to my calendar</label>
+                                        <p>Each plan you save also opens in the calendar chosen above, ready to add.</p>
+                                    </div>
+                                    <input id="pref-calendar-auto" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting setting-stack">
+                                    <div class="setting-text">
+                                        <label for="calendar-feed">Check for clashes with my calendar</label>
+                                        <p>Paste your calendar's private address (in Google Calendar: Settings, your calendar, "Secret address in iCal format"; in Outlook: Publish calendar, ICS; in iCloud: Public calendar). Fistbump reads only when you are busy, keeps the address in your system keychain, and checks about every 15 minutes while the calendar is open.</p>
+                                    </div>
+                                    <div class="setting-actions">
+                                        <input id="calendar-feed" type="url" placeholder="https://… or webcal://…" autocomplete="off" spellcheck="false">
+                                        <button type="button" id="calendar-feed-add">Connect</button>
+                                    </div>
+                                    <p id="calendar-feed-status" class="setting-status" role="status"></p>
+                                    <button type="button" id="calendar-feed-clear" class="quiet" hidden>Forget my calendars</button>
                                 </div>
                             </div>
                         </section>
@@ -647,13 +699,14 @@
                                         <p id="about-details">A local-first job application assistant.</p>
                                     </div>
                                     <a class="button" href="https://github.com/tlmcguire/fistbump" target="_blank" rel="noopener noreferrer">GitHub</a>
+                                    <button type="button" id="report-issue">Report an issue</button>
                                 </div>
                             </div>
                         </section>
                     </div>
                 </section>
 
-                <section id="paste-pane" class="pane paste-pane" aria-label="Paste a job" hidden>
+                <section id="paste-pane" class="pane paste-pane paper paper-adapt" aria-label="Paste a job" hidden>
                     <textarea id="paste-text" rows="14" placeholder="Paste the full job posting here"></textarea>
                     <div class="job-actions">
                         <button id="paste-preview" type="button" class="primary">Preview</button>
@@ -663,7 +716,7 @@
 
                 <div class="content">
                     <!--Results pane: the search's states. Only one is shown at a time.-->
-                    <section id="results-pane" class="pane results-pane" aria-label="Search results">
+                    <section id="results-pane" class="pane results-pane paper paper-adapt" aria-label="Search results">
                         <div id="state-initial" class="state state-message">
                             <img id="initial-mascot" class="mascot" src="views/graphics/mascots/05-searching-wide.png" alt="">
                             <p id="initial-message"></p>
@@ -714,7 +767,7 @@
                     </section>
 
                     <!--Saved pane: showcases your saved jobs-->
-                    <section id="saved-pane" class="pane results-pane" aria-label="Saved jobs" hidden>
+                    <section id="saved-pane" class="pane results-pane paper paper-adapt" aria-label="Saved jobs" hidden>
                         <div id="saved-bulk" class="saved-bulk" hidden>
                             <label class="saved-select-all"><input id="saved-select-all" type="checkbox"> Select all</label>
                             <span id="saved-selected-count" class="hint" aria-live="polite"></span>
@@ -732,7 +785,7 @@
                     </section>
 
                     <!--Detail pane: the open listing, or a placeholder, its loading message or its error.-->
-                    <section id="detail-pane" class="pane detail-pane" aria-label="Job listing">
+                    <section id="detail-pane" class="pane detail-pane paper paper-adapt" aria-label="Job listing">
                         <div id="detail-empty" class="detail-state state-message">
                             <img id="detail-mascot" class="mascot" alt="" hidden>
                             <p id="detail-empty-message"></p>
@@ -793,6 +846,7 @@
                         <main id="view-tailor" class="main" hidden></main>
 
                         <main id="view-tracker" class="main" hidden></main>
+            <main id="view-calendar" class="main" hidden></main>
             <main id="view-job" class="main" hidden></main>
             <main id="view-list" class="main" hidden></main>
         </div>
@@ -820,7 +874,11 @@
         <script src="views/home/home.js" defer></script>
         <script src="views/job/job.js" defer></script>
         <script src="views/jobs-list/jobs-list.js" defer></script>
+        <script src="views/calendar/ics.js" defer></script>
+        <script src="views/calendar/calendar.js" defer></script>
         <script src="js/omnibox.js" defer></script>
+        <script src="js/report.js" defer></script>
+        <script src="js/community.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
         <script src="js/desktop.js" defer></script>

@@ -128,4 +128,57 @@
   });
 
   window.Desktop.openLink = openLink;
+
+  // ---------- the menu bar ----------
+  //Each item runs the same code as the button it stands for (src-tauri/src/menus.rs names them).
+  const SIZES = ["small", "default", "large", "larger"];
+  const step = by => {
+    const at = SIZES.indexOf(window.Prefs.get("textSize"));
+    window.Prefs.set("textSize", SIZES[Math.max(0, Math.min(SIZES.length - 1, at + by))]);
+  };
+  const openSettings = section => {
+    window.App.go("jobs");
+    window.App.openTab("tab-settings");
+    if (section) setTimeout(() => document.querySelector(`.st3-jump a[href="#${section}"]`)?.click(), 60);
+  };
+  const findHere = () => {
+    const view = document.querySelector(".app > .main:not([hidden])");
+    const box = view?.querySelector('input[type="search"]:not([hidden])');
+    if (box && box.offsetParent) { box.focus(); box.select(); } else window.Omnibox?.focus();
+  };
+  const MENU = {
+    "check-updates": () => { openSettings("set-updates"); setTimeout(() => document.getElementById("check-updates")?.click(), 120); },
+    "new-search": () => window.Omnibox?.openFind(),
+    "paste-job": () => { window.App.openTab("tab-paste"); document.getElementById("paste-text")?.focus(); },
+    "import-resume": () => { window.App.go("resume"); setTimeout(() => window.ResumeBuilder.openImport?.(), 0); },
+    "export-csv": () => { window.App.go("tracker"); setTimeout(() => window.Tracker.exportCsv?.(), 0); },
+    find: findHere,
+    search: () => window.Omnibox?.focus(),
+    "mode-night": () => window.Prefs.set("mode", "night"),
+    "mode-darker": () => window.Prefs.set("mode", "darker"),
+    "mode-day": () => window.Prefs.set("mode", "day"),
+    "mode-system": () => window.Prefs.set("mode", "system"),
+    "bar-top": () => window.Prefs.set("barPosition", window.Prefs.get("barPosition") === "top" ? "bottom" : "top"),
+    "text-bigger": () => step(1),
+    "text-smaller": () => step(-1),
+    "text-actual": () => window.Prefs.set("textSize", "default"),
+    back: () => history.back(),
+    forward: () => history.forward(),
+    "go-home": () => document.getElementById("nav-home").click(),
+    "go-jobs": () => document.getElementById("nav-jobs").click(),
+    "go-resume": () => document.getElementById("nav-resume").click(),
+    "go-tracker": () => document.getElementById("nav-tracker").click(),
+    "go-tailor": () => document.getElementById("nav-tailor").click(),
+    "go-calendar": () => document.getElementById("nav-calendar").click(),
+    shortcuts: () => openSettings("set-keys"),
+    report: () => window.Report?.open(),
+  };
+  window.Desktop.menu = action => MENU[action]?.();
+  if (desk?.onMenu) {
+    desk.onMenu(action => window.Desktop.menu(action));
+    //the ticks in View follow Settings
+    const tell = () => desk.setMenuState?.({mode: window.Prefs.get("mode"), barTop: window.Prefs.get("barPosition") === "top"}).catch(() => {});
+    tell();
+    window.Prefs.onChange(key => { if (key === "mode" || key === "barPosition") tell(); });
+  }
 })();

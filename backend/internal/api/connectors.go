@@ -396,6 +396,19 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 				addTarget(token, true)
 			}
 		}
+		// 1b. Boards other Fistbump users shared (connectors.community_boards), searched like the built-in list.
+		if shared, ok := vals["connectors.community_boards"].([]string); ok {
+			for _, entry := range shared {
+				src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
+				if !ok || strings.TrimSpace(src) != source {
+					continue
+				}
+				if wantCompany != "" && !strings.Contains(token, wantCompany) {
+					continue
+				}
+				addTarget(token, false)
+			}
+		}
 	}
 
 	// 2. Curated boards for this ATS (narrowed by q.Categories and/or q.Company).
@@ -771,7 +784,8 @@ func (s *Server) greenhouseJob(w http.ResponseWriter, r *http.Request) error {
 	return s.writePosting(w, r, board, jobID)
 }
 
-// chooseBoardsWithCustom merges user-watchlisted Greenhouse boards from connectors.custom_boards.
+// chooseBoardsWithCustom merges user-watchlisted Greenhouse boards from connectors.custom_boards, then the boards
+// other users shared (connectors.community_boards).
 func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query) []string {
 	boards := chooseBoards(q)
 	if len(q.Boards) > 0 || len(q.Categories) > 0 {
@@ -782,6 +796,8 @@ func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query)
 		return boards
 	}
 	custom, _ := vals["connectors.custom_boards"].([]string)
+	shared, _ := vals["connectors.community_boards"].([]string) //boards other users shared, after your own
+	custom = append(append([]string{}, custom...), shared...)
 	if len(custom) == 0 {
 		return boards
 	}

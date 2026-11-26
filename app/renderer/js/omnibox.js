@@ -165,6 +165,8 @@
   });
   input.addEventListener("input", draw);
   input.addEventListener("blur", close);
+  //closed with Esc while the box keeps focus: a click opens the suggestions again (the arrow keys do too, below)
+  input.addEventListener("click", () => { if (panel.hidden) draw(); });
 
   form.addEventListener("submit", event => {
     event.preventDefault();

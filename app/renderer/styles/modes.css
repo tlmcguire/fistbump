@@ -1,0 +1,202 @@
+/*
+ * Mix and match: day or night for every theme, the paper the panels are made of, and the ink marks.
+ * Each is its own preference (prefs.js), applied on <html>:
+ *   .day               the light version of the theme ("Paper on day")
+ *   [data-paper]       cream (default) | white | tinted
+ *   .no-marks          hand-drawn underlines, circles and stars hidden; status checks stay
+ *
+ * Day is derived, not hand-painted: each theme's night background (--night) and its accent (--mark) tint a warm
+ * off-white canvas, and the night colour, darkened, becomes the ink. So all 23 themes, and any accent picked in
+ * Settings, get a day version that still feels like the same theme. Loaded last, so these win over themes.css and
+ * v3.css at equal specificity.
+ */
+
+/* ==================== Each theme's night colour, the seed of its day version ==================== */
+
+:root { --night: #111851; }
+:root[data-theme="bubblegum"] { --night: #b8146b; }
+:root[data-theme="cyber"] { --night: #0a2e16; }
+:root[data-theme="techno"] { --night: #0f1d4a; }
+:root[data-theme="retro"] { --night: #1b48a1; }
+:root[data-theme="vaporwave"] { --night: #3a1670; }
+:root[data-theme="dracula"] { --night: #2c2546; }
+:root[data-theme="matcha"] { --night: #1f3a29; }
+:root[data-theme="midnight-gold"] { --night: #1f1d16; }
+:root[data-theme="ocean-abyss"] { --night: #073152; }
+:root[data-theme="arcade"] { --night: #1d1554; }
+:root[data-theme="january"] { --night: #0c1f38; }
+:root[data-theme="february"] { --night: #4a1231; }
+:root[data-theme="march"] { --night: #0a2b1e; }
+:root[data-theme="april"] { --night: #3a2354; }
+:root[data-theme="may"] { --night: #113026; }
+:root[data-theme="june"] { --night: #083344; }
+:root[data-theme="july"] { --night: #111c4e; }
+:root[data-theme="august"] { --night: #4c1740; }
+:root[data-theme="september"] { --night: #122b36; }
+:root[data-theme="october"] { --night: #2a1748; }
+:root[data-theme="november"] { --night: #4a1828; }
+:root[data-theme="december"] { --night: #0a291c; }
+
+/* ==================== Day ==================== */
+
+:root.day {
+  color-scheme: light;
+
+  /* the page */
+  --bg: color-mix(in oklab, var(--mark) 9%, color-mix(in oklab, var(--night) 7%, #fbf8f1));
+  --ink: color-mix(in oklab, var(--night) 64%, #05060f);
+  --ink-2: color-mix(in oklab, var(--ink) 74%, var(--paper));
+  --sidebar: color-mix(in oklab, var(--bg) 94%, var(--ink));
+  --sidebar-glass: var(--sidebar);
+  --surface: color-mix(in oklab, var(--bg) 96%, var(--ink));
+  --raised: color-mix(in oklab, var(--bg) 40%, #ffffff);
+  --panel: color-mix(in oklab, var(--bg) 45%, #ffffff);
+  --panel-hover: color-mix(in oklab, var(--bg) 85%, #ffffff);
+  --panel-line: color-mix(in srgb, var(--ink) 11%, transparent);
+  --line: color-mix(in srgb, var(--ink) 12%, transparent);
+  --line-strong: color-mix(in srgb, var(--ink) 22%, transparent);
+  --tint: 20 24 60;
+
+  /* words */
+  --text: var(--ink);
+  --muted: color-mix(in oklab, var(--ink) 84%, var(--bg));
+  --dim: color-mix(in oklab, var(--ink) 72%, var(--bg));
+  --faint: color-mix(in oklab, var(--ink) 66%, var(--bg));
+  --link: var(--ink);
+
+  /* controls */
+  --accent: var(--ink);
+  --accent-hover: color-mix(in oklab, var(--ink) 86%, #ffffff);
+  --accent-ink: #ffffff;
+  --select: color-mix(in srgb, var(--mark) 32%, transparent);
+  --select-strong: color-mix(in oklab, var(--mark) 55%, var(--ink));
+  --control: color-mix(in srgb, var(--ink) 6%, transparent);
+  --control-hover: color-mix(in srgb, var(--ink) 11%, transparent);
+  --note: color-mix(in srgb, var(--mark) 16%, transparent);
+  --note-line: color-mix(in srgb, var(--mark-deep) 45%, transparent);
+
+  /* states, dark enough to read on a light page */
+  --good: #1d6b4e;
+  --bad: #a5361a;
+  --due: #a5361a;
+  --danger-text: #a5261a;
+  --danger-line: #c0392b;
+  --urgent: #d9552f;
+
+  /* depth: soft, cool shadows instead of the deep night ones */
+  --lit: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --lift-1: 0 1px 2px rgba(20, 24, 60, 0.08), 0 6px 14px -8px rgba(20, 24, 60, 0.18);
+  --lift-2: 0 2px 4px rgba(20, 24, 60, 0.08), 0 18px 36px -14px rgba(20, 24, 60, 0.28);
+  --theme-bg-art: none;
+  --theme-hero-art: none;
+
+  /* the v3 planes */
+  --canvas: var(--bg);
+  --canvas-2: color-mix(in oklab, var(--bg) 55%, #ffffff);
+  --canvas-deep: color-mix(in oklab, var(--bg) 90%, var(--ink));
+  --canvas-dot: color-mix(in srgb, var(--ink) 8%, transparent);
+  --on-canvas: var(--ink);
+  --on-canvas-2: var(--muted);
+  --paper: #fffdf8;
+  --paper-2: color-mix(in oklab, var(--bg) 62%, #ffffff);
+  --rule: color-mix(in srgb, var(--ink) 14%, transparent);
+  --mark-text: color-mix(in oklab, var(--mark) 24%, var(--ink));
+  --mark-ink: color-mix(in oklab, var(--mark) 26%, var(--ink));
+  --shadow-paper: 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent), 0 14px 30px -20px rgba(20, 24, 60, 0.35), 0 1px 3px rgba(20, 24, 60, 0.1);
+  --shadow-control: 0 8px 18px -12px rgba(20, 24, 60, 0.35);
+}
+
+/* The bar is a slightly deeper band of the page by day, not a dark slab. */
+:root.day .bottombar { background: color-mix(in oklab, var(--bg) 92%, var(--ink)); }
+/* Marks drawn on the page, not on paper, take the deeper accent so gold still shows on cream. */
+:root.day .v3 .ink,
+:root.day .v3 .underlined > .ink-underline,
+:root.day .v3 .circled > .ink-circle { color: var(--mark-deep); }
+:root.day .v3 .bubble { box-shadow: 0 14px 26px -18px rgba(20, 24, 60, 0.45); }
+/* The few night-only details: the select arrow drawn in light ink, scrollbars. */
+:root.day ::-webkit-scrollbar-thumb { background-color: rgb(var(--tint) / 0.18); }
+:root.day ::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--tint) / 0.3); }
+
+/* Increase contrast by day: black ink, solid rules, no tinted greys. */
+:root.day.high-contrast,
+:root.day.high-contrast[data-theme] {
+  --text: #000000;
+  --muted: #1f1f1f;
+  --dim: #1f1f1f;
+  --faint: #333333;
+  --on-canvas: #000000;
+  --on-canvas-2: #1f1f1f;
+  --line: rgba(0, 0, 0, 0.45);
+  --line-strong: rgba(0, 0, 0, 0.65);
+}
+
+/* ==================== Paper ==================== */
+
+/* White: crisp, for people who find cream too warm. */
+:root[data-paper="white"] {
+  --paper: #ffffff;
+  --paper-2: color-mix(in oklab, var(--canvas) 7%, #f4f5f8);
+}
+/* Tinted: the paper takes a wash of the accent, so the whole theme reads as one colour story. */
+:root[data-paper="tinted"] {
+  --paper: color-mix(in oklab, var(--mark) 13%, #fffaf2);
+  --paper-2: color-mix(in oklab, var(--mark) 24%, #fbf3e4);
+}
+
+/* ==================== Ink marks off ==================== */
+
+/* The decorative marks go; the checks, halves and open circles that say where something stands stay. */
+:root.no-marks .v3 .ink-underline,
+:root.no-marks .v3 .ink-circle,
+:root.no-marks .v3 .ink-star { display: none; }
+
+/* ==================== Theme swatches follow the mode ==================== */
+
+/* Each swatch carries its accent as a stroke under its paper, and by day shows the day version of the theme. */
+:root .v3 .st3-chip i { box-shadow: inset 0 -3px 0 var(--chip-mark, var(--mark)); }
+:root.day .v3 .st3-chip { background: color-mix(in oklab, var(--chip-mark, var(--mark)) 12%, color-mix(in oklab, var(--chip) 12%, #fbf8f1)); box-shadow: inset 0 0 0 1px rgba(20, 24, 60, 0.14); }
+:root.day .v3 .st3-chip.auto { background: linear-gradient(135deg, #e4ecf4, #f5e3e6 50%, #e2efe6); }
+:root.day .v3 .st3-chip i { background: #ffffff; opacity: 1; }
+
+/* The wordmark's letters are drawn in ink by day (the same art, recoloured). */
+:root.day .bottombar .wordmark { content: url("../views/graphics/logo-day.png"); }
+
+/* ==================== Darker ==================== */
+/* Night with the paper turned down: the panels become dark sheets (a lifted shade of the theme's own night) with
+   cream ink, for dark rooms and dark-mode habits. The page behind keeps the theme. Gold surfaces (Pico's bubble,
+   gold buttons, plan tiles, the current note) keep their dark ink on gold, so they read the same in every mode. */
+:root.darker {
+  --paper: color-mix(in oklab, var(--night) 42%, #1e2131);
+  --paper-2: color-mix(in oklab, var(--night) 38%, #2b2f42);
+  --ink: #f3ecdd;
+  --ink-2: color-mix(in oklab, #f3ecdd 80%, var(--paper));
+  --rule: rgba(243, 236, 221, 0.16);
+  --mark-ink: color-mix(in oklab, var(--mark) 72%, #ffffff);
+  --mark-deep: color-mix(in oklab, var(--mark) 88%, #ffffff);
+  --urgent-ink: #ffb4a0;
+  --success-ink: #93e6bd;
+  --shadow-paper: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 36px -18px rgba(0, 0, 0, 0.85), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-control: 0 10px 20px -10px rgba(0, 0, 0, 0.7);
+}
+/* old components inside paper read their faint overlays as light again */
+:root.darker .v3 .paper-adapt,
+:root.darker dialog.ask { --tint: 255 255 255; --field: var(--paper-2); --field-ink: var(--ink); --field-placeholder: var(--ink-2); }
+:root.darker[data-paper="white"] { --paper: color-mix(in oklab, var(--night) 40%, #2b2d33); --paper-2: color-mix(in oklab, var(--night) 32%, #3a3d45); }
+:root.darker[data-paper="tinted"] { --paper: color-mix(in oklab, var(--mark) 10%, color-mix(in oklab, var(--night) 42%, #1e2131)); --paper-2: color-mix(in oklab, var(--mark) 14%, color-mix(in oklab, var(--night) 38%, #2b2f42)); }
+:root.darker .omnibox-panel { background: color-mix(in oklab, var(--paper) 88%, #ffffff); }
+:root.darker :is(input[type="date"], input[type="time"]) { color-scheme: dark; }
+:root.darker .v3 .tr3-date input { color-scheme: dark; }
+
+/* gold surfaces keep the light pair */
+:root.darker :is(.btn-mark, .bubble, .tile-mark, .t3-note.current, .cal3-plan:not(.kind-other), .rs3-head button.primary, #search-form > button.primary, #search-form .badge, .st3-swatch .st3-chip) {
+  --ink: #151a4a;
+  --ink-2: #575c86;
+  --paper: #fff8ea;
+  --paper-2: #f6ecd6;
+  --rule: rgba(21, 26, 74, 0.13);
+}
+:root.darker .v3 ::selection { background: var(--mark); color: #151a4a; }
+/* the logo and Pico are drawn for night already; the stage pills on dark paper */
+:root.darker .v3 .tr3-stage-select { background-image: radial-gradient(circle at 12px 50%, var(--stage) 0 4px, transparent 4.5px),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23cfc6b6' stroke-width='1.6'%3E%3Cpath d='m1 1 4 4 4-4'/%3E%3C/svg%3E"); }
+:root.darker .v3 .tr3-stage-select[data-stage="Applied"] { --stage: #8cc2ff; }

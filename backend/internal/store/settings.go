@@ -37,6 +37,7 @@ var knownSettings = map[string]settingDef{
 	"connectors.greenhouse.boards":     {kind: kindStrings, def: []string{}},
 	"connectors.greenhouse.categories": {kind: kindStrings, def: []string{}},
 	"connectors.custom_boards":         {kind: kindStrings, def: []string{}},
+	"connectors.community_boards":      {kind: kindStrings, def: []string{}},
 	"resume.section_order":             {kind: kindStrings, def: []string{"summary", "experience", "education", "skills", "custom"}},
 	"resume.custom_sections":           {kind: kindString, def: "[]"},
 }
