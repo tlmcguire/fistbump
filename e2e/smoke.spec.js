@@ -434,3 +434,30 @@ test('the search box suggests before anything is typed, and the Search button op
   await expect(window.locator('#search-form')).toBeVisible();
   await expect(window.locator('#nav-search')).toHaveAttribute('aria-current', 'page');
 });
+
+test('themes bring their own accent, and Settings can pick another for every theme', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  await window.locator('.st3-swatch[data-theme="bubblegum"]').click();
+  const mark = () => window.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mark').trim());
+  expect(await mark()).toBe('#ffd3e6');
+  await window.locator('.st3-accent[data-accent="mint"]').click();
+  await expect(window.locator('html')).toHaveAttribute('data-accent', 'mint');
+  expect(await mark()).toBe('#6fdcac');
+  await expect(window.locator('.st3-accent[data-accent="mint"]')).toHaveAttribute('aria-checked', 'true');
+  await window.locator('.st3-accent[data-accent="theme"]').click();
+  await expect(window.locator('html')).not.toHaveAttribute('data-accent', /.+/);
+  await window.locator('.st3-swatch[data-theme="classic"]').click();
+});
+
+test('the resume target length sets what the page-count badge checks', async ({ window }) => {
+  await window.evaluate(async () => {
+    await window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com', summary: 'Analyst.' });
+  });
+  await window.locator('#nav-resume').click();
+  await expect(window.locator('.rs3-target [aria-checked="true"]')).toHaveText('1 page');
+  await expect(window.locator('.fit-pill')).toContainText('1 page');
+  await window.locator('.rs3-target button', { hasText: '2 pages' }).click();
+  await expect(window.locator('.rs3-target [aria-checked="true"]')).toHaveText('2 pages');
+  expect(await window.evaluate(() => window.Prefs.get('resumePages'))).toBe(2);
+  await window.locator('.rs3-target button', { hasText: '1 page' }).click();
+});

@@ -4,6 +4,7 @@ window.Prefs = (() => {
   const KEY = "fistbump.prefs";
   const DEFAULTS = {
     theme: "classic",        // classic | bubblegum | techno | cyber | retro | auto-season | january..december
+    accent: "theme",         // theme (the theme's own) | gold | coral | mint | sky | violet | rose
     language: "system",      // system | en | es | fr | de
     textSize: "default",     // small | default | large | larger
     reduceMotion: "system",  // system | on | off
@@ -13,6 +14,7 @@ window.Prefs = (() => {
     defaultSort: "relevance",
     showLogos: true,
     pdfStyle: "classic",     // classic | modern | minimal | compact | executive
+    resumePages: 1,          // the length the resume should fit: 1 | 2 | 3 pages
     notifyUpdates: true,     // look for a new version when Fistbump opens, and say so
     skippedUpdate: "",       // a version the user chose not to hear about again
   };
@@ -27,12 +29,14 @@ window.Prefs = (() => {
   ];
   const ALLOWED = {
     theme: [...STYLE_THEMES, "auto-season", ...SEASONAL_THEMES],
+    accent: ["theme", "gold", "coral", "mint", "sky", "violet", "rose"],
     language: ["system", "en", "es", "fr", "de"],
     textSize: Object.keys(ZOOM),
     reduceMotion: ["system", "on", "off"],
     pageSize: [20, 30, 50],
     defaultSort: ["relevance", "newest"],
     pdfStyle: ["classic", "modern", "minimal", "compact", "executive"],
+    resumePages: [1, 2, 3],
   };
 
   let values = {...DEFAULTS};
@@ -56,6 +60,10 @@ window.Prefs = (() => {
     root.classList.toggle("reduce-motion", reduce);
     root.classList.toggle("high-contrast", values.highContrast);
     root.classList.toggle("underline-links", values.underlineLinks);
+    if (root.dataset) {
+      if (values.accent && values.accent !== "theme") root.dataset.accent = values.accent;
+      else delete root.dataset.accent;
+    }
     const resolvedTheme = values.theme === "auto-season"
       ? SEASONAL_THEMES[new Date().getMonth()]
       : values.theme;

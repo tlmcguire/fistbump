@@ -91,6 +91,18 @@ window.Settings = {
       groups.forEach(g => watch.observe(g));
       watch.observe(holder);
     }
+    //The jump links scroll the page to their section. Left alone they would change the address, which the router
+    //reads as an unknown page and drops.
+    document.querySelectorAll(".st3-jump a").forEach(link => link.addEventListener("click", event => {
+      event.preventDefault();
+      const target = document.getElementById(link.getAttribute("href").slice(1))?.closest(".settings-group");
+      if (!target) return;
+      const motion = !document.documentElement.classList.contains("reduce-motion");
+      target.scrollIntoView({behavior: motion ? "smooth" : "auto", block: "start"});
+      target.setAttribute("tabindex", "-1");
+      target.focus({preventScroll: true});
+      window.UI?.play?.(target, "enter", 400);
+    }));
     //v3: the themes as swatches. The select stays as the source of truth (and for the language files), hidden.
     {
       const SWATCH = {
@@ -129,11 +141,51 @@ window.Settings = {
       }
       const mark = () => buttons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.theme === select.value)));
       select.addEventListener("change", mark);
+      //a theme changed from anywhere else (another window, the menu) moves the selection too
+      window.Prefs.onChange((key, value) => {
+        if (key !== "theme") return;
+        select.value = value;
+        mark();
+      });
       mark();
       const row = select.closest(".setting");
       select.hidden = true;
       row.classList.add("st3-theme-row");
       row.after(gallery);
+
+      //Accent: the theme's own colour for marks and highlights, or one picked here for any theme.
+      const ACCENTS = [["theme", "Theme's own"], ["gold", "Gold"], ["coral", "Coral"], ["mint", "Mint"], ["sky", "Sky"], ["violet", "Violet"], ["rose", "Rose"]];
+      const ACCENT_SWATCH = {gold: "#f4b53f", coral: "#ff9474", mint: "#6fdcac", sky: "#8cc2ff", violet: "#bea6ff", rose: "#ff9cc2"};
+      const accentRow = document.createElement("div");
+      accentRow.className = "setting st3-accent-row";
+      const accentText = document.createElement("div");
+      accentText.className = "setting-text";
+      accentText.innerHTML = '<span class="setting-label" id="accent-label">Accent color</span><p>Underlines, circles, highlights and Pico\u2019s bubble. Each theme has its own; pick one here to use it on every theme.</p>';
+      const accents = document.createElement("div");
+      accents.className = "st3-accents";
+      accents.setAttribute("role", "radiogroup");
+      accents.setAttribute("aria-labelledby", "accent-label");
+      const accentButtons = ACCENTS.map(([value, name]) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "st3-accent";
+        b.dataset.accent = value;
+        b.setAttribute("role", "radio");
+        b.title = name;
+        b.setAttribute("aria-label", name);
+        const dot = document.createElement("span");
+        dot.className = value === "theme" ? "st3-dot theme" : "st3-dot";
+        if (ACCENT_SWATCH[value]) dot.style.setProperty("--dot", ACCENT_SWATCH[value]); //CSSOM, allowed by the CSP
+        b.append(dot);
+        b.addEventListener("click", () => { window.Prefs.set("accent", value); markAccent(); });
+        accents.append(b);
+        return b;
+      });
+      const markAccent = () => accentButtons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.accent === window.Prefs.get("accent"))));
+      window.Prefs.onChange(key => { if (key === "accent") markAccent(); });
+      markAccent();
+      accentRow.append(accentText, accents);
+      gallery.after(accentRow);
     }
     bind("pref-language", "language");
     //the page changes language in place, crossfading from the old words to the new ones

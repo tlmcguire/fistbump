@@ -412,13 +412,31 @@
     const versionsList = el("ul", {class: "versions"});
     const versionForm = el("form", {class: "version-form", hidden: true});
 
+    //How long the resume should be: 1, 2 or 3 pages. The badge says whether it fits.
+    const target = () => window.Prefs?.get("resumePages") || 1;
+    const targetPicker = el("div", {class: "rs3-target", role: "radiogroup", "aria-label": "Target length"},
+      el("span", {class: "rs3-target-label", text: "Target length"}),
+      [1, 2, 3].map(n => el("button", {type: "button", role: "radio", "data-pages": String(n),
+        onclick: () => { window.Prefs.set("resumePages", n); markTarget(); refreshAudit(); }}, n === 1 ? "1 page" : `${n} pages`)));
+    const markTarget = () => targetPicker.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(Number(b.dataset.pages) === target())));
+    markTarget();
+
     const refreshAudit = () => {
       if (!window.api?.resume?.audit) return;
       api().resume.audit(styleSelect.value).then(a => {
         if (disposed || !a || !a.word_count) { fitBadge.textContent = ""; fitBadge.hidden = true; return; }
         const pages = a.page_count === 1 ? "1 page" : `${a.page_count} pages`;
+        const goal = target();
+        const over = a.page_count - goal;
         const hasWarnings = Boolean(a.warnings?.length);
-        fitBadge.textContent = hasWarnings ? `${pages} · ${a.warnings.length} tip${a.warnings.length === 1 ? "" : "s"}` : `${pages} · Ready`;
+        if (over > 0) {
+          fitBadge.textContent = `${pages} · ${over === 1 ? "1 over" : `${over} over`} your ${goal === 1 ? "1-page" : `${goal}-page`} target`;
+          fitBadge.dataset.state = "warn";
+          fitBadge.title = `Trim the resume, or choose the Compact style, to fit ${goal === 1 ? "1 page" : `${goal} pages`}.${hasWarnings ? "\n" + a.warnings.join("\n") : ""}`;
+          fitBadge.hidden = false;
+          return;
+        }
+        fitBadge.textContent = hasWarnings ? `${pages} · ${a.warnings.length} tip${a.warnings.length === 1 ? "" : "s"}` : `${pages} · Fits your target`;
         fitBadge.dataset.state = hasWarnings ? "warn" : "good";
         fitBadge.title = hasWarnings ? a.warnings.join("\n") : `${a.word_count} words, ${a.quantified_count}/${a.bullet_count} quantified bullets`;
         fitBadge.hidden = false;
@@ -492,6 +510,7 @@
       readySection,
       el("section", {class: "resume-section paper paper-adapt"},
         el("div", {class: "section-head preview-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, styleSelect, exportButton, exportDocxButton)),
+        targetPicker,
         el("div", {class: "preview-bar"},
           el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
           fitBadge),
