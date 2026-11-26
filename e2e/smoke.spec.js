@@ -459,7 +459,14 @@ test('the resume target length sets what the page-count badge checks', async ({ 
   await window.locator('.rs3-target button', { hasText: '2 pages' }).click();
   await expect(window.locator('.rs3-target [aria-checked="true"]')).toHaveText('2 pages');
   expect(await window.evaluate(() => window.Prefs.get('resumePages'))).toBe(2);
+  await window.locator('.rs3-target button', { hasText: 'Custom' }).click();
+  await expect(window.locator('.rs3-target [aria-checked="true"]')).toHaveText('Custom');
+  await window.locator('.rs3-target-custom input').fill('4');
+  await window.locator('.rs3-target-custom input').press('Enter');
+  await window.locator('.rs3-target-custom input').blur();
+  await expect.poll(() => window.evaluate(() => window.Prefs.get('resumePages'))).toBe(4);
   await window.locator('.rs3-target button', { hasText: '1 page' }).click();
+  await expect(window.locator('.rs3-target-custom')).toBeHidden();
 });
 
 test('the navigation bar can move to the top, where it is also the drag area', async ({ window }) => {
@@ -478,4 +485,40 @@ test('the navigation bar can move to the top, where it is also the drag area', a
   await window.locator('.st3-seg button[data-bar="bottom"]').click();
   await expect(window.locator('html')).not.toHaveClass(/bar-top/);
   await expect(window.locator('.bottombar')).not.toHaveAttribute('data-tauri-drag-region', '');
+});
+
+test('fistbump:// links open a saved job or run a search', async ({ window }) => {
+  const id = await window.evaluate(async () => {
+    await window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+    const job = await window.api.jobs.create({ source: 'pasted', position_title: 'Data Analyst', company_name: 'Tidewater Logistics',
+      raw_text: 'Data Analyst\nTidewater Logistics\n\nRequirements:\n- sql' });
+    return job.id;
+  });
+  await window.evaluate(jobId => window.Desktop.openLink(`fistbump://job/${jobId}`), id);
+  await expect(window).toHaveURL(new RegExp(`#/job/${id}$`));
+  await window.evaluate(() => window.Desktop.openLink('fistbump://search?q=data%20analyst'));
+  await expect(window.locator('#search-keywords')).toHaveValue('data analyst');
+  await window.evaluate(() => window.Desktop.openLink('https://example.com/not-ours'));
+  await expect(window.locator('#search-keywords')).toHaveValue('data analyst');
+});
+
+test('a posting file dropped on the window opens in Paste a job', async ({ window }) => {
+  await window.evaluate(() => {
+    const file = new File(['Data Analyst\nTidewater Logistics\n\nRequirements:\n- SQL'], 'posting.txt', { type: 'text/plain' });
+    const data = new DataTransfer();
+    data.items.add(file);
+    document.querySelector('#view-home').dispatchEvent(new DragEvent('drop', { dataTransfer: data, bubbles: true, cancelable: true }));
+  });
+  await expect(window.locator('#paste-pane')).toBeVisible();
+  await expect(window.locator('#paste-text')).toHaveValue(/Tidewater Logistics/);
+});
+
+test('the desktop switches in Settings are off until turned on, and are remembered', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  for (const [id, key] of [['#pref-global-shortcut', 'globalShortcut'], ['#pref-menu-bar', 'menuBarItem'], ['#pref-notify-due', 'notifyDue']]) {
+    await expect(window.locator(id)).not.toBeChecked();
+    await window.locator(id).check();
+    expect(await window.evaluate(k => window.Prefs.get(k), key)).toBe(true);
+    await window.locator(id).uncheck();
+  }
 });

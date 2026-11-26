@@ -414,11 +414,35 @@
 
     //How long the resume should be: 1, 2 or 3 pages. The badge says whether it fits.
     const target = () => window.Prefs?.get("resumePages") || 1;
+    //1 page, 2 pages, or Custom with a number field (up to 10)
+    const customPages = el("input", {type: "number", min: "1", max: "10", step: "1", "aria-label": "Custom number of pages"});
+    const customBox = el("label", {class: "rs3-target-custom"}, customPages, el("span", {text: "pages"}));
+    const setTarget = n => { window.Prefs.set("resumePages", n); markTarget(); refreshAudit(); };
+    customPages.addEventListener("change", () => {
+      const n = Math.max(1, Math.min(10, Math.round(Number(customPages.value) || 1)));
+      customPages.value = String(n);
+      setTarget(n);
+    });
+    let customOpen = false;
     const targetPicker = el("div", {class: "rs3-target", role: "radiogroup", "aria-label": "Target length"},
       el("span", {class: "rs3-target-label", text: "Target length"}),
-      [1, 2, 3].map(n => el("button", {type: "button", role: "radio", "data-pages": String(n),
-        onclick: () => { window.Prefs.set("resumePages", n); markTarget(); refreshAudit(); }}, n === 1 ? "1 page" : `${n} pages`)));
-    const markTarget = () => targetPicker.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(Number(b.dataset.pages) === target())));
+      el("button", {type: "button", role: "radio", "data-pages": "1", onclick: () => { customOpen = false; setTarget(1); }}, "1 page"),
+      el("button", {type: "button", role: "radio", "data-pages": "2", onclick: () => { customOpen = false; setTarget(2); }}, "2 pages"),
+      el("button", {type: "button", role: "radio", "data-pages": "custom", onclick: () => {
+        customOpen = true;
+        if (target() <= 2) setTarget(3); else markTarget();
+        customPages.focus();
+        customPages.select();
+      }}, "Custom"),
+      customBox);
+    const markTarget = () => {
+      const n = target();
+      const custom = customOpen || n > 2;
+      targetPicker.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked",
+        String(b.dataset.pages === "custom" ? custom : !custom && Number(b.dataset.pages) === n)));
+      customBox.hidden = !custom;
+      customPages.value = String(n);
+    };
     markTarget();
 
     const refreshAudit = () => {
@@ -1062,6 +1086,15 @@
       const bytes = await file.arrayBuffer();
       runImport(() => api().resume.importData(file.name, bytes), file.name);
     });
+    //A resume dropped anywhere else in the window comes here (see js/desktop.js).
+    window.ResumeBuilder.importFile = async file => {
+      if (importing) return;
+      const ext = (/\.([^.]+)$/.exec(file.name) || [])[1]?.toLowerCase();
+      if (!IMPORT_EXTENSIONS.includes(ext)) return say(`${file.name} is not a PDF, .docx, .odt, .txt or .md file.`, true);
+      if (file.size > MAX_IMPORT_BYTES) return say("The file is larger than 5 MB. Export it again without images, or paste the text instead.", true);
+      const bytes = await file.arrayBuffer();
+      runImport(() => api().resume.importData(file.name, bytes), file.name);
+    };
 
     // --- Custom sections & section ordering ---
     const DEFAULT_ORDER = ["summary", "experience", "education", "skills", "custom"];

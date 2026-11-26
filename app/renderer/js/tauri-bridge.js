@@ -172,6 +172,15 @@
       },
     },
 
+    //opt-in desktop integration (desktop.rs): global shortcut, menu-bar item, notifications, deep links
+    desktop: {
+      setShortcut: (on) => call('app:setShortcut', Boolean(on)),
+      setTray: (on, info) => call('app:setTray', Boolean(on), info || {}),
+      notify: (title, body) => call('app:notify', title, body || ''),
+      onFocusSearch: (cb) => { listen('app:focus-search', () => cb()); },
+      onDeepLink: (cb) => { listen('app:deep-link', (event) => cb(String(event.payload || ''))); },
+    },
+
     jobs: {
       parse: (t) => call('jobs:parse', t),
       create: (b) => call('jobs:create', b),

@@ -1,5 +1,6 @@
 pub mod backend;
 pub mod commands;
+pub mod desktop;
 pub mod menus;
 pub mod routes;
 pub mod secrets;
@@ -182,7 +183,11 @@ pub fn run() {
                 }
             }))
             .plugin(tauri_plugin_window_state::Builder::default().build())
-            .plugin(tauri_plugin_updater::Builder::new().build());
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .plugin(desktop::shortcut_plugin())
+            .plugin(tauri_plugin_notification::init())
+            .plugin(tauri_plugin_deep_link::init())
+            .manage(desktop::DesktopState::default());
     }
 
     let app = builder
@@ -202,6 +207,8 @@ pub fn run() {
             if let Ok(menu) = build_app_menu(app.handle()) {
                 let _ = app.set_menu(menu);
             }
+            #[cfg(desktop)]
+            desktop::setup_deep_links(app);
 
             let handle_for_cb = app.handle().clone();
             let backend_for_cb = Arc::clone(&backend);

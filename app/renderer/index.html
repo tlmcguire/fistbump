@@ -585,6 +585,34 @@
                             <p class="group-note">Models you are not using means every downloaded model except the one in use. If no model is selected, they are all removed.</p>
                         </section>
 
+                        <section class="settings-group paper-adapt" aria-labelledby="set-desktop">
+                            <h2 id="set-desktop">Desktop</h2>
+                            <div class="settings-card">
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-global-shortcut">Shortcut from any app</label>
+                                        <p>Press <span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd class="alt-key">Option</kbd> <kbd>Space</kbd></span> anywhere to bring Fistbump forward with the search box ready.</p>
+                                        <p id="desktop-shortcut-problem" class="desktop-problem" hidden></p>
+                                    </div>
+                                    <input id="pref-global-shortcut" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-menu-bar">Show what is due in the menu bar</label>
+                                        <p>A small Fistbump item that counts follow-ups and interviews due, and opens the app or the search box.</p>
+                                    </div>
+                                    <input id="pref-menu-bar" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <label for="pref-notify-due">Notify me about follow-ups and interviews</label>
+                                        <p>Once for each follow-up due and each interview today or tomorrow. Nothing leaves this computer.</p>
+                                    </div>
+                                    <input id="pref-notify-due" type="checkbox" class="switch" role="switch">
+                                </div>
+                            </div>
+                        </section>
+
                         <section class="settings-group paper-adapt" aria-labelledby="set-updates">
                             <h2 id="set-updates">Updates</h2>
                             <div class="settings-card">
@@ -795,5 +823,6 @@
         <script src="js/omnibox.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
+        <script src="js/desktop.js" defer></script>
     </body>
 </html>

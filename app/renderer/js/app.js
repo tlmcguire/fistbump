@@ -177,7 +177,8 @@ function openJobsTab(tab) {
   const firstMount = !jobsMounted();
   location.hash = "#/jobs";
   show("jobs");
-  if (firstMount) tab.click();
+  //A click() inside the click that got us here is ignored by the browser, so a first visit selects the tab directly.
+  if (firstMount) window.JobParser?.selectTab?.(tab.id.replace(/^tab-/, ""));
 }
 //Saved jobs live in the Jobs list now, so anything that opens the Saved tab lands on the list.
 document.getElementById("tab-saved").addEventListener("click", () => { location.hash = "#/list"; });
