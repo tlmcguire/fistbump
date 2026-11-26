@@ -466,18 +466,18 @@
       else if (waiting) add(el("b", {text: waiting === 1 ? "1 thing" : `${waiting} things`}), " need you today");
       else add("Nothing is due today");
       if (gaps.length) {
-        add("resume: ", el("a", {href: "#", text: gaps[0].title.charAt(0).toLowerCase() + gaps[0].title.slice(1),
+        add("resume: ", el("a", {href: "#", text: gaps[0].title,
           onclick: event => { event.preventDefault(); openResume(gaps[0].target); }}));
       } else add("resume ready to tailor");
 
       const next = needs[0];
       const card = listing && !next ? upNext({
-        kicker: "Keep reading", title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(" at "),
+        kicker: "Keep reading", own: true, title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(" at "),
         detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "), action: "Open",
         onclick: () => { openJobs(); window.JobParser.openListing(listing); },
       }) : next ? upNext({
         kicker: next.kind === "due" ? "Due now" : next.kind === "review" ? "Ready for your review" : "Up next",
-        urgent: next.kind === "due",
+        urgent: next.kind === "due", own: true,
         title: next.title, detail: next.detail,
         action: next.kind === "review" ? "Review changes" : next.kind === "tailor" ? "Tailor resume" : "Open",
         onclick: next.onclick,
@@ -487,7 +487,7 @@
       });
 
       fill(parts.hero,
-        el("h1", {id: "home-greeting", class: "display-xl"}, `${hello}, `,
+        el("h1", {id: "home-greeting", class: "display-xl"}, hello, ", ", //the greeting alone, so it matches its translation
           el("span", {class: "underlined", translate: "no"}, firstName ? `${firstName}.` : "friend.", ink("underline"))),
         sub, card);
     }
@@ -505,11 +505,11 @@
           el("span", {class: "num-mark", text: String(i + 1)}), el("b", {text: title}), el("p", {text})))));
     }
 
-    function upNext({kicker, title, detail, action, onclick, urgent = false}) {
+    function upNext({kicker, title, detail, action, onclick, urgent = false, own = false}) {
       return el("div", {class: "paper home3-next"},
         el("div", {class: "home3-next-text"},
           el("span", {class: urgent ? "home3-kicker urgent" : "home3-kicker", text: kicker}),
-          el("h2", {class: "display-l", text: title}),
+          el("h2", {class: "display-l", translate: own ? "no" : undefined, text: title}), //a job's name is not translated
           detail ? el("p", {class: "ink-2", text: detail}) : null),
         el("button", {type: "button", class: "btn btn-primary", text: action, onclick}));
     }
@@ -539,7 +539,7 @@
       } else if (interview) {
         const when = new Date(`${interview.next_step_date}T12:00`).toLocaleDateString(locale(), {weekday: "long"});
         bubble = el("div", {class: "bubble tail-right"},
-          el("h2", {class: "display-m"}, `Interview ${when}`, el("span", {translate: "no", text: interview.company_name ? ` with ${interview.company_name}` : ""}), "."),
+          el("h2", {class: "display-m"}, `Interview ${when}`, el("span", {translate: "no", text: interview.company_name ? ` with ${interview.company_name.replace(/\.$/, "")}` : ""}), "."), //"Corp." does not end in two dots
           el("p", {text: "Want to prep? The tracker has practice questions for it."}),
           el("div", {class: "home3-bubble-acts"},
             el("button", {type: "button", class: "btn btn-primary", text: "Prep", onclick: () => window.Tracker.open(interview.id)})));

@@ -182,6 +182,24 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 
 ---
 
+**Phase 6 as built:**
+- **Contrast:** A sweep of every theme plus High Contrast covers text on the canvas, secondary text at the lightest point of the gradient, gold links, the bottom bar, and every paper pairing.
+  - Bubblegum and Retro failed: gold links at 2.5 and 3.2 to 1.
+  - Their canvas no longer lightens toward the top, and their gold is lifted. Every pairing in every theme is now at least 5.0 to 1.
+  - Bubblegum's tinted button shadow is now neutral.
+- **Narrow windows:** All v3 screens were checked at 1024 and 820 px. Home's week wraps to four days a row below 1200 px, and event text truncates instead of running into its action.
+- **Reduce Motion:** Every v3 animation goes through `UI.play`, `UI.stagger` and `UI.countTo`, which check it, and v3.css turns off its own transitions under it.
+- **Translations:** About 170 new strings were added to es, fr and de. Text that should not be translated (resume lines on the Tailor sheet, posting text, job names) is marked `translate="no"`. Sentences written by the backend, such as cost summaries, stay in English as before.
+- **Settings layout:** Two flex columns replace CSS multi-column, which painted a lighter band down a panel in WebKit. Model rows are ruled rows, not cards inside the paper.
+- **Docs:** DESIGN.md now matches the shipped type ramp and radii, and documents the bright-theme overrides and the paper adapter. README screenshots are regenerated (`scripts/screenshots.js` updated for the new screens), and the user guide describes the bottom bar, omnibox, Jobs list, Job page and Tailor desk.
+- **Harness:** It now routes `connectors:suggest`, so Home's matches panel shows its real empty state in tests and screenshots.
+
+**Still open:**
+- The List/Board toggle on the Jobs list.
+- Inline editing on the resume sheet.
+- The v3 restyle of Tailor's toolbar, side panel, drafts and built-resume view.
+- A check in the real Tauri window on macOS and Windows.
+
 ## 5. Risks
 
 - **23 themes:** Paper and ink on every theme is the largest unknown. Plan option (b) contains it.

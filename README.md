@@ -10,12 +10,12 @@ Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
 | | |
 |---|---|
-| ![Home: what needs you today](docs/images/home.png) | ![Master resume](docs/images/resume.png) |
-| **Home.** Follow-ups that are due, suggestions to decide, and jobs to tailor. | **Master resume.** Your one source of truth, with a live PDF preview. |
-| ![Saved jobs with the full posting](docs/images/jobs.png) | ![Tailoring a resume: suggestions with the skill gap beside them](docs/images/tailor.png) |
-| **Saved jobs.** Search Greenhouse, Lever, and Ashby boards, open a link, or paste a posting. | **Tailor.** Every change is a suggestion you accept, reject, or edit; the skill gap sits beside it. |
-| ![Tracker](docs/images/tracker.png) | ![Settings, with the AI engine and storage](docs/images/settings.png) |
-| **Tracker.** Each application, its stage, bulk actions, offer comparison, and next step. | **Settings.** 23 themes, accessibility controls, AI engine, company watchlist, backup/restore, and storage. |
+| ![Home: what needs you today, the next seven days, and every job by stage](docs/images/home.png) | ![Your jobs: everything in one list, what needs you first](docs/images/jobs.png) |
+| **Home.** The one thing to do next, the next seven days, your jobs by stage, Pico's tip, and new matches. | **Your jobs.** Every job in one list, grouped by what needs you, filtered by stage, with bulk actions. |
+| ![A job's page: where it stands, fit, and what the posting asks for](docs/images/job.png) | ![Tailoring a resume: each suggestion in place on the page, with a note in the margin](docs/images/tailor.png) |
+| **A job.** Where it stands, one next step, each required skill against your resume, pay and place, notes. | **Tailor.** Your resume as a page with every suggestion in place; accept, reject, or edit each one. |
+| ![Your resume, with how ready it is to tailor](docs/images/resume.png) | ![Settings, with the theme swatches](docs/images/settings.png) |
+| **Your resume.** Your one source of truth, how ready it is, and a live PDF preview. | **Settings.** 23 themes, accessibility controls, AI engine, company watchlist, backup/restore, and storage. |
 
 ### Themes
 

@@ -57,6 +57,18 @@ window.Settings = {
     //the shortcut list names this computer's modifier key
     if (api?.platform !== "darwin") document.querySelectorAll(".mod-key").forEach(k => { k.textContent = "Ctrl"; });
     bind("pref-theme", "theme");
+    //v3: the panels sit in two plain columns. CSS multi-column paints paper shadows unevenly in WebKit (a lighter
+    //band down a panel's side), so the groups are split into two flex columns instead.
+    {
+      const holder = document.querySelector("#settings-pane .settings");
+      const groups = [...holder.querySelectorAll(":scope > .settings-group")];
+      const LEFT = new Set(["set-appearance", "set-keys", "set-search"]);
+      const left = document.createElement("div");
+      const right = document.createElement("div");
+      left.className = right.className = "st3-col";
+      for (const g of groups) (LEFT.has(g.getAttribute("aria-labelledby")) ? left : right).append(g);
+      holder.append(left, right);
+    }
     //v3: the themes as swatches. The select stays as the source of truth (and for the language files), hidden.
     {
       const SWATCH = {

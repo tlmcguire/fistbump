@@ -25,10 +25,22 @@ typography:
     fontWeight: 800
     lineHeight: 1.08
     letterSpacing: "-0.02em"
+  page-title:
+    fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
+    fontSize: "44px"
+    fontWeight: 800
+    lineHeight: 1.08
+    letterSpacing: "-0.02em"
   display-l:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
     fontSize: "30px"
     fontWeight: 780
+    lineHeight: 1.15
+    letterSpacing: "-0.02em"
+  card-title:
+    fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
+    fontSize: "26px"
+    fontWeight: 760
     lineHeight: 1.15
     letterSpacing: "-0.02em"
   display-m:
@@ -37,6 +49,11 @@ typography:
     fontWeight: 760
     lineHeight: 1.2
     letterSpacing: "-0.02em"
+  bubble-title:
+    fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
+    fontSize: "19px"
+    fontWeight: 780
+    lineHeight: 1.2
   panel-title:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
     fontSize: "17px"
@@ -47,14 +64,32 @@ typography:
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.5
+  document:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
+    fontSize: "14.5px"
+    fontWeight: 400
+    lineHeight: 1.6
+  row:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 650
+    lineHeight: 1.4
   meta:
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
     fontSize: "13px"
     fontWeight: 500
     lineHeight: 1.4
+  small:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 650
+    lineHeight: 1.3
 rounded:
+  tag: "8px"
+  segment: "9px"
   tile: "10px"
   control: "12px"
+  note: "14px"
   bubble: "22px"
   paper: "20px"
   pill: "999px"
@@ -138,20 +173,38 @@ Accents come from Pico's art:
 - Every tag's text on its tint is at least 4.8:1.
 - The bubble text is at least 6.2:1.
 
+**Bright themes.** Bubblegum and Retro have bright backgrounds. In those two, the canvas does not lighten toward the top, and `mark` is lifted (`#ffe58a`, `#ffd86e`) so gold links and marks on the canvas stay at 5:1 or more.
+
+**Older components.** A `.paper-adapt` panel re-points the original tokens (`--text`, `--muted`, `--line`, `--control`, `--field` and the rest) at ink and paper. Older components inside it, such as Settings rows, storage tables, model lists and resume forms, then read correctly without being rewritten. New components use the v3 tokens directly.
+
 Stage is never shown by hue alone. A stage is a word, and color only reinforces it.
 
 ## Typography
 
 Bricolage Grotesque (self-hosted, variable) is the display voice: the greeting, titles, panel titles, big numbers and tile letters. Body text, meta text and controls use the platform UI font. Numbers that change or line up use `font-variant-numeric: tabular-nums` (`.num`).
 
-Scale: 48 (greeting, job title), 30 (screen title), 22 (card title, Pico's bubble), 17 (panel title), 15 (body), 13 (meta). Keep a clear step between levels. A panel title must never be the same size as a card title. Themes with `--theme-font-display` (for example Cyber's monospace) replace the display face. That is intended.
+Scale:
+- 48: greeting and job title
+- 44: page titles (Your jobs, Your resume, Settings)
+- 30: the name on a resume sheet
+- 26: Up next card title
+- 22 and 19: Pico's bubble
+- 17: panel title
+- 15: body
+- 14.5: resume and posting text
+- 14: row labels
+- 13: meta
+- 12: small uppercase labels Keep a clear step between levels. A panel title must never be the same size as a card title. Themes with `--theme-font-display` (for example Cyber's monospace) replace the display face. That is intended.
 
 ## Layout
 
 - A 12-column grid with an 18px gutter and 44px page padding. Panels span columns; each row has one dominant panel.
 - **Home:** greeting and Up next (8 columns) beside Pico's corner (4); the next 7 days at full width; pipeline (6) beside new matches (6).
 - **Job:** title and facts (8) beside the decision card (4); the stage path at full width; requirements (7) beside pay and notes (5).
-- **Tailor:** the resume sheet (8) beside margin notes (4).
+- **Jobs list:** one full-width paper list under the title, stage tabs and filters; "Needs you" first.
+- **Tailor:** the resume sheet, with each margin note in the sheet's right column on the same row as its change.
+- **Settings:** paper panels in two balanced columns under the title and jump links.
+- **Resume:** sections on paper (wide column) beside readiness, preview and versions (narrow column).
 - The bottom bar is 56–60px, solid `canvas-deep` with a hairline top border. Content scrolls under nothing.
 - Below 1024px wide, the grid collapses to one column in reading order.
 

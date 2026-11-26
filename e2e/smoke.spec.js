@@ -257,7 +257,7 @@ test('a saved job opens on its own page with its stage, fit, notes and next step
   await expect(window.locator('.job3-go')).toHaveText('Tailor resume');
   await expect(window.locator('.job3-stop.now b')).toHaveText('Saved');
   await expect(window.locator('.job3-ri .ink-open').first()).toBeVisible();
-  await expect(window.locator('.job3-req .aside')).toHaveText('1 of 2 on your resume');
+  await expect(window.locator('.job3-req .aside')).toHaveText('1 of 2 skills on your resume');
   await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
 
   await window.locator('.job3-notes-area').fill('Recruiter is Dana Ruiz.');
