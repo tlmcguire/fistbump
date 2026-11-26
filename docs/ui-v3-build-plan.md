@@ -106,6 +106,16 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 - Empty states use existing art: `33-empty-tracker.png` (no jobs), `08-no-results.png` (no matches), `10-cant-connect.png` (search offline).
 - Backend: `next_step_label`/`next_step_time` migration, `jobs:gapSummary`, `with_stage`.
 
+**Phase 2 as built:** renderer only, no backend changes.
+- **Next steps:** Labels come from the application's stage. Applied is "Follow up," Interviewing is "Interview," Offered is "Reply to the offer."
+- **Pipeline stages:** Computed in the renderer, capped at 60 jobs.
+- **Pico's tip:** Runs `jobs:analyze` over up to 25 active jobs and names the most common missing required skill, if at least two jobs share it. "Not now" dismisses that skill on this computer.
+- **Holidays:** A bundled US list.
+- **New users:** They see how it works in three steps, and Pico greets them with this month's art.
+- **Saved versions:** They left Home and live in the Resume view. Recent searches show in the matches panel when the profile has no target roles.
+- **Deferred:** The `next_step_label`/`next_step_time` columns, `with_stage` and `jobs:gapSummary` wait until the Jobs list (Phase 5) needs them or Home gets slow.
+- **Still to do:** Translations for the new Home strings are deferred to Phase 6.
+
 ### Phase 3: Job page (new `views/job/job.js`)
 - Pull the detail pane out of `job-parser.js` and the per-job row out of `tracker.js` into one page: header and facts, decision card, stage path, requirements, pay and place, notes.
 - The stage path replaces the tracker's per-row stage select. "Change stage" opens a small menu, and "More actions" holds archive, trash, reload and open listing.

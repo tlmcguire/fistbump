@@ -93,6 +93,8 @@ function routeRequest(channel, args) {
     'jobs:create': () => ['POST', '/v1/jobs', a0],
     'jobs:list': () => ['GET', `/v1/jobs${qs({ ...(a1 || {}), q: a0 || '' }, ['q', 'archived', 'trashed'])}`],
     'jobs:get': () => ['GET', `/v1/jobs/${a0}`],
+    'jobs:analyze': () => ['POST', `/v1/jobs/${a0}/analyze`],
+    'applications:update': () => ['PUT', `/v1/applications/${a0}`, a1],
     'revisions:create': () => ['POST', '/v1/revisions', a0],
     'revisions:list': () => ['GET', a0 ? `/v1/revisions?job_id=${a0}` : '/v1/revisions'],
     'revisions:get': () => ['GET', `/v1/revisions/${a0}`],
