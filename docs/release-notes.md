@@ -42,21 +42,6 @@ Every theme comes in all three, or follows your system.
 | ![Home by day](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/home-day.png) | ![Home in Darker](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/home-darker.png) |
 | **Day.** The theme's light version, made from its own colors. | **Darker.** Dark paper with light ink, for dark rooms. |
 
-## Style themes
-
-| | |
-|---|---|
-| ![Bubblegum](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/bubblegum.png) | ![Cyber](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/cyber.png) |
-| **Bubblegum** | **Cyber** |
-| ![Techno](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/techno.png) | ![Retro](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/retro.png) |
-| **Techno** | **Retro** |
-| ![Vaporwave](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/vaporwave.png) | ![Midnight Violet](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/dracula.png) |
-| **Vaporwave** | **Midnight Violet** |
-| ![Matcha Latte](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/matcha.png) | ![Art Deco Gold](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/midnight-gold.png) |
-| **Matcha Latte** | **Art Deco Gold** |
-| ![Ocean Abyss](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/ocean-abyss.png) | ![8-Bit Arcade](https://raw.githubusercontent.com/tlmcguire/fistbump/main/docs/images/themes/arcade.png) |
-| **Ocean Abyss** | **8-Bit Arcade** |
-
 ## Style themes by day
 
 | | |
