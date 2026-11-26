@@ -1100,3 +1100,82 @@
 }
 /* Model rows in Settings: ruled rows on the paper, not cards inside it. */
 :root .v3 .paper-adapt .model-row, :root .v3 .paper-adapt .model-row:hover { margin: 0; padding: 11px 0; border: 0; border-top: 1.5px dashed var(--rule); border-radius: 0; background: none; box-shadow: none; }
+
+/* Jobs list: List / Board switch and the board. */
+:root .v3 .jl3-view { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: color-mix(in srgb, var(--on-canvas) 9%, transparent); }
+:root .v3 .jl3-view button { height: 30px; padding: 0 12px; border-radius: 8px; background: transparent; color: var(--on-canvas-2); font-size: 13px; font-weight: 650; }
+:root .v3 .jl3-view button:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 10%, transparent); color: var(--on-canvas); }
+:root .v3 .jl3-view button[aria-checked="true"] { background: var(--paper); color: var(--ink); }
+:root .v3 .jl3-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; align-items: start; }
+:root .v3 .jl3-col { display: flex; flex-direction: column; gap: 10px; min-height: 160px; padding: 12px; border-radius: 18px; background: color-mix(in srgb, var(--on-canvas) 6%, transparent); border: 1.5px dashed color-mix(in srgb, var(--on-canvas) 16%, transparent); }
+:root .v3 .jl3-col-head { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px; color: var(--on-canvas); }
+:root .v3 .jl3-col-head h2 { font-size: 15px; font-weight: 720; }
+:root .v3 .jl3-col-head .num { color: var(--on-canvas-2); font-weight: 650; }
+:root .v3 .jl3-col-empty { padding: 8px 4px; font-size: 13px; color: var(--on-canvas-2); }
+:root .v3 .jl3-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--paper); color: var(--ink); box-shadow: 0 10px 20px -16px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.18); }
+:root .v3 .jl3-card-open { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; height: auto; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--ink); text-align: left; font-weight: 500; }
+:root .v3 .jl3-card-open:hover:not(:disabled) { background: transparent; }
+:root .v3 .jl3-card-open:hover .jl3-main b { text-decoration: underline; text-underline-offset: 3px; }
+:root .v3 .jl3-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+:root .v3 .jl3-card .jl3-next { justify-self: start; min-width: 0; font-size: 12.5px; padding: 4px 8px; }
+:root .v3 .jl3-moves { display: flex; gap: 2px; flex: none; }
+:root .v3 .jl3-moves .btn { min-height: 30px; width: 32px; padding: 0; display: grid; place-items: center; color: var(--ink-2); }
+:root .v3 .jl3-moves .btn:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+:root .v3 .jl3-moves .icon { width: 16px; height: 16px; transform: rotate(90deg); }
+:root .v3 .jl3-moves .btn:last-child .icon { transform: rotate(-90deg); }
+:root .v3 .jl3-moves .btn:only-child[aria-label^="Move back"] .icon { transform: rotate(90deg); }
+:root .v3 .jl3-card .jl3-main b, :root .v3 .jl3-card .jl3-main span { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+:root .v3 .jl3-card-open { align-items: start; }
+
+/* ==================== Reorderable list ==================== */
+
+.sortlist { margin: 8px 0 14px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.sortlist-row {
+  display: grid;
+  grid-template-columns: 28px 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 12px;
+  background: var(--paper-2, rgba(255, 255, 255, 0.06));
+  color: var(--ink, var(--text));
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.sortlist-row:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+.sortlist-grip { display: grid; place-items: center; width: 28px; height: 36px; border-radius: 8px; color: var(--ink-2, var(--muted)); }
+.sortlist-grip .icon { width: 18px; height: 18px; }
+.sortlist-row:hover .sortlist-grip { background: color-mix(in srgb, currentColor 10%, transparent); color: var(--ink, var(--text)); }
+.sortlist-n { font: 760 14px var(--display); color: var(--ink-2, var(--muted)); text-align: center; font-variant-numeric: tabular-nums; }
+.sortlist-label { font-weight: 650; font-size: 14px; }
+.sortlist-moves { display: flex; gap: 4px; }
+:root .sortlist-moves button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--paper, rgba(255, 255, 255, 0.1));
+  color: var(--ink, var(--text));
+  cursor: pointer;
+}
+:root .sortlist-moves button:hover:not(:disabled) { background: var(--ink, var(--accent)); color: var(--paper, var(--accent-ink)); }
+:root .sortlist-moves button:disabled { opacity: 0.35; cursor: default; }
+.sortlist-moves .icon { width: 18px; height: 18px; }
+.sortlist-up .icon { transform: rotate(180deg); }
+/* The row being dragged lifts off the list; the rest make room for it. */
+.sortlist.sorting .sortlist-row { cursor: grabbing; }
+.sortlist-row.dragging {
+  position: relative;
+  z-index: 2;
+  cursor: grabbing;
+  background: var(--paper, #fff);
+  box-shadow: 0 14px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--mark);
+}
+.sortlist-hint { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-2, var(--muted)); }

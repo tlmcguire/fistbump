@@ -347,3 +347,47 @@ test('Resume shows how ready it is, and each gap opens its field', async ({ wind
   await expect(window.locator('.rs3-check', { hasText: 'Write a short summary' })).toBeVisible();
   await expect(window.locator('.rs3-big b')).not.toHaveText('100%');
 });
+
+test('the Jobs board shows a column per stage and moves a job with buttons, no dragging', async ({ window }) => {
+  await window.evaluate(async () => {
+    const api = window.api;
+    await api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+    await api.jobs.create({ source: 'pasted', position_title: 'Product Analyst', company_name: 'Fernway Health',
+      raw_text: 'Product Analyst\nFernway Health\n\nRequirements:\n- Experience with sql' });
+  });
+  await window.locator('#nav-jobs').click();
+  await window.locator('.jl3-view button', { hasText: 'Board' }).click();
+  await expect(window.locator('.jl3-col')).toHaveCount(5);
+  await expect(window.locator('.jl3-col').nth(0).locator('.jl3-card')).toHaveCount(1);
+  await window.locator('.jl3-col').nth(0).getByRole('button', { name: 'Move on to Applied' }).click();
+  await expect(window.locator('.jl3-col').nth(2).locator('.jl3-card')).toHaveCount(1);
+  await expect(window.locator('.jl3-col').nth(0).locator('.jl3-card')).toHaveCount(0);
+  await window.locator('.jl3-col').nth(2).getByRole('button', { name: 'Move back to Saved' }).click();
+  await expect(window.locator('.jl3-col').nth(0).locator('.jl3-card')).toHaveCount(1);
+});
+
+test('resume sections reorder by dragging, by the arrows, and by Alt+arrow keys', async ({ window }) => {
+  await window.evaluate(async () => { await window.api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' }); });
+  await window.locator('#nav-resume').click();
+  const labels = window.locator('.sortlist-label');
+  await expect(labels).toHaveText(['Summary', 'Experience', 'Education', 'Skills', 'Custom sections']);
+
+  const rows = window.locator('.sortlist-row');
+  await rows.nth(3).scrollIntoViewIfNeeded();
+  const from = await rows.nth(3).locator('.sortlist-grip').boundingBox();
+  const to = await rows.nth(0).boundingBox();
+  await window.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await window.mouse.down();
+  for (let i = 1; i <= 10; i++) await window.mouse.move(from.x + from.width / 2, from.y + from.height / 2 - (from.y - to.y + 5) * i / 10);
+  await window.mouse.up();
+  await expect(labels).toHaveText(['Skills', 'Summary', 'Experience', 'Education', 'Custom sections']);
+
+  await rows.nth(0).focus();
+  await window.keyboard.press('Alt+ArrowDown');
+  await expect(labels.nth(1)).toHaveText('Skills');
+
+  await window.getByRole('button', { name: 'Move Education up' }).click();
+  await expect(labels).toHaveText(['Summary', 'Skills', 'Education', 'Experience', 'Custom sections']);
+  await expect.poll(async () => (await window.evaluate(() => window.api.settings.get()))['resume.section_order'])
+    .toEqual(['summary', 'skills', 'education', 'experience', 'custom']);
+});

@@ -38,7 +38,7 @@
       const scroll = el("div", {class: "jl3-scroll"});
       container.replaceChildren(scroll);
 
-      const prefs = Object.assign({stage: "all", remote: false, pay: false, fit: false}, readPrefs());
+      const prefs = Object.assign({stage: "all", remote: false, pay: false, fit: false, view: "list"}, readPrefs());
       let query = "";
       let entries = [];      //[{job, app, stage, pending, closed, fit}]
       const picked = new Set();
@@ -119,7 +119,7 @@
       function visible() {
         const q = query.trim().toLowerCase();
         return entries.filter(e => {
-          if (prefs.stage === "all" ? e.closed : e.stage !== prefs.stage) return false;
+          if (prefs.view === "board" ? e.closed : prefs.stage === "all" ? e.closed : e.stage !== prefs.stage) return false;
           if (prefs.remote && !remote(e.job)) return false;
           if (prefs.pay && !(e.job.pay_min || e.job.pay_max)) return false;
           if (prefs.fit && !(e.fit !== null && e.fit >= 70)) return false;
@@ -176,17 +176,56 @@
           if (rest.length) groups.push(group(needs.length && prefs.stage !== "closed" ? "Everything else" : STAGES.find(s => s.key === prefs.stage).label, "", rest));
         }
 
+        const viewSwitch = el("div", {class: "jl3-view", role: "radiogroup", "aria-label": "View"}, [["list", "List"], ["board", "Board"]].map(([v, label]) =>
+          el("button", {type: "button", role: "radio", "aria-checked": String(prefs.view === v),
+            onclick: () => { prefs.view = v; picked.clear(); writePrefs(prefs); draw(); }}, label)));
+        const board = prefs.view === "board";
+
         fill(scroll, el("div", {class: "jl3-grid"},
           el("header", {class: "jl3-head"},
             el("h1", {class: "display-xl"}, "Your ", el("span", {class: "underlined"}, "jobs", ink("underline"))),
             summary),
-          el("div", {class: "jl3-tools"}, stageTabs,
+          el("div", {class: "jl3-tools"}, board ? null : stageTabs,
             el("div", {class: "jl3-quicks"}, quick("remote", "Remote"), quick("pay", "Has pay"), quick("fit", "70%+ fit")),
-            el("label", {class: "jl3-search"}, icon("search"), filter)),
-          el("section", {class: "paper jl3-list", "aria-label": "Jobs"}, groups,
+            el("label", {class: "jl3-search"}, icon("search"), filter),
+            viewSwitch),
+          board ? boardView(withNext) : el("section", {class: "paper jl3-list", "aria-label": "Jobs"}, groups,
             el("div", {class: "jl3-foot ruled-top"},
               el("span", {class: "ink-2", text: "Archived jobs, the Trash and jobs that did not move forward are under Closed."}),
               el("span", {}, el("a", {href: "#/tracker", text: "Tracker table, export and offer comparison"}))))));
+      }
+
+      // ---------- Board: one column per stage, moved with buttons, never by dragging ----------
+      //Moving a card changes the tracker status. Tailored is not a status, so it moves on to Applied.
+      const MOVES = {
+        saved: {next: "Applied"}, tailored: {next: "Applied"},
+        applied: {prev: "Saved", next: "Interviewing"}, interview: {prev: "Applied", next: "Offered"}, offer: {prev: "Interviewing"},
+      };
+      const STAGE_OF_STATUS = {Saved: "Saved", Applied: "Applied", Interviewing: "Interview", Offered: "Offer"};
+      function boardView(list) {
+        const cols = STAGES.filter(s => !["all", "closed"].includes(s.key));
+        return el("section", {class: "jl3-board", "aria-label": "Jobs by stage"}, cols.map(s => {
+          const cards = list.filter(e => e.stage === s.key);
+          return el("div", {class: "jl3-col", "aria-labelledby": `jl3-col-${s.key}`},
+            el("div", {class: "jl3-col-head"}, el("h2", {id: `jl3-col-${s.key}`, text: s.label}), el("span", {class: "num ink-2", text: String(cards.length)})),
+            cards.length ? cards.map(card) : el("p", {class: "jl3-col-empty ink-2", text: s.key === "offer" ? "Your first offer goes here" : "Nothing here yet"}));
+        }));
+      }
+      function card(e) {
+        const {job, next} = e;
+        const move = MOVES[e.stage] || {};
+        const go = status => run([e], x => x.app ? api().applications.update(x.app.id, {status}) : api().applications.create({job_id: x.job.id, status}));
+        return el("article", {class: "jl3-card"},
+          el("button", {type: "button", class: "jl3-card-open", onclick: () => window.JobPage.open(job.id), "aria-label": `${job.position_title} at ${job.company_name}`},
+            el("span", {class: e.stage === "interview" ? "tile tile-mark" : "tile", "aria-hidden": "true", text: (job.company_name || job.position_title || "?").trim().charAt(0).toUpperCase()}),
+            el("span", {class: "jl3-main"}, el("b", {translate: "no", text: job.position_title || "Untitled job"}),
+              el("span", {class: "ink-2", translate: "no", text: job.company_name || ""})),
+            el("span", {class: "jl3-fit num", "data-fit": job.id, text: e.fit === null ? "" : `${e.fit}%`})),
+          el("div", {class: "jl3-card-foot"},
+            el("span", {class: `jl3-next ${next.tone}`.trim(), text: next.text}),
+            el("span", {class: "jl3-moves"},
+              move.prev ? el("button", {type: "button", class: "btn btn-text", "aria-label": `Move back to ${STAGE_OF_STATUS[move.prev]}`, title: `Move back to ${STAGE_OF_STATUS[move.prev]}`, onclick: () => go(move.prev)}, icon("chevron")) : null,
+              move.next ? el("button", {type: "button", class: "btn btn-text", "aria-label": `Move on to ${STAGE_OF_STATUS[move.next]}`, title: `Move on to ${STAGE_OF_STATUS[move.next]}`, onclick: () => go(move.next)}, icon("chevron")) : null)));
       }
 
       function group(title, aside, list) {
