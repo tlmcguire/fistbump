@@ -1,0 +1,289 @@
+/*
+ * UI v3, "Paper on Night": tokens and shared primitives.
+ *
+ * A view opts in by adding the `v3` class to its container. Everything below the token blocks is
+ * scoped to `.v3`, so the views that have not moved yet keep their current look.
+ *
+ * Planes: a night canvas (the theme's own background) holds cream paper panels. Ink on paper is a
+ * darkened tint of the canvas, so every theme gets its own paper and ink without hand tuning.
+ * Gold marks (underlines, circles, checks) and Pico's speech bubbles come from Pico's palette.
+ *
+ * Selectors start with `:root .v3` so they outrank `:root[data-theme] button` in themes.css.
+ * See DESIGN.md for the rules behind these values.
+ */
+
+/* ==================== Tokens ==================== */
+
+/* Classic (no data-theme), tuned by hand. */
+:root {
+  --canvas: #111851;
+  --canvas-2: #1c2668;
+  --canvas-deep: #0b113b;
+  --canvas-dot: rgba(255, 255, 255, 0.063);
+  --on-canvas: #eef0ff;
+  --on-canvas-2: #c9cff2;
+  --paper: #fff8ea;
+  --paper-2: #f6ecd6;
+  --ink: #151a4a;
+  --ink-2: #575c86;
+  --rule: rgba(21, 26, 74, 0.13);
+  --mark: #f4b53f;
+  --mark-ink: #7a4d00;
+  --urgent: #ef6b4a;
+  --urgent-ink: #a5361a;
+  --success: #4fc79a;
+  --success-ink: #1d6b4e;
+  --radius-paper: 20px;
+  --radius-control: 12px;
+  --radius-tile: 10px;
+  --shadow-paper: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 36px -18px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --shadow-control: 0 10px 20px -10px rgba(0, 0, 0, 0.55);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* Every other theme: derived from its own --bg, --text and --muted (all 22 are dark themes). */
+:root[data-theme] {
+  --canvas: var(--bg);
+  --canvas-2: color-mix(in oklab, var(--bg) 86%, #ffffff);
+  --canvas-deep: color-mix(in oklab, var(--bg) 72%, #000000);
+  --on-canvas: var(--text);
+  --on-canvas-2: var(--muted);
+  --paper: color-mix(in oklab, #fffaf2 93%, var(--bg));
+  --paper-2: color-mix(in oklab, #fffaf2 84%, var(--bg));
+  --ink: color-mix(in oklab, var(--bg) 72%, #000000);
+  --ink-2: color-mix(in oklab, var(--ink) 76%, var(--paper));
+  --rule: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+/* High Contrast wins over every theme: white paper, black ink, solid rules, darker marks. */
+:root.high-contrast,
+:root.high-contrast[data-theme] {
+  --on-canvas-2: var(--text);
+  --paper: #ffffff;
+  --paper-2: #eeeeee;
+  --ink: #000000;
+  --ink-2: #1f1f1f;
+  --rule: rgba(0, 0, 0, 0.55);
+  --mark-ink: #5c3b00;
+  --urgent-ink: #8f2b10;
+  --success-ink: #145238;
+}
+
+/* ==================== Canvas ==================== */
+
+:root .v3 {
+  color: var(--on-canvas);
+  background:
+    radial-gradient(var(--canvas-dot) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    linear-gradient(var(--canvas-2), var(--canvas) 420px);
+  background-color: var(--canvas);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-user-select: text;
+  user-select: text;
+}
+:root .v3 ::selection { background: var(--mark); color: var(--ink); }
+:root .v3 :focus-visible { outline: 3px solid var(--mark); outline-offset: 3px; }
+
+:root .v3 .display,
+:root .v3 h1,
+:root .v3 h2,
+:root .v3 h3 {
+  font-family: var(--theme-font-display, var(--display));
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0;
+}
+:root .v3 .display-xl { font-size: 48px; line-height: 1.08; font-weight: 800; }
+:root .v3 .display-l { font-size: 30px; line-height: 1.15; font-weight: 780; }
+:root .v3 .display-m { font-size: 22px; line-height: 1.2; font-weight: 760; }
+:root .v3 .on-canvas-2 { color: var(--on-canvas-2); }
+:root .v3 .num { font-variant-numeric: tabular-nums; }
+
+/* ==================== Paper ==================== */
+
+:root .v3 .paper {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--shadow-paper);
+  padding: 18px 22px;
+}
+:root .v3 .paper ::selection { background: color-mix(in srgb, var(--mark) 70%, transparent); color: var(--ink); }
+:root .v3 .paper-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+:root .v3 .paper-head h2 { font-size: 17px; font-weight: 720; }
+:root .v3 .paper-head a,
+:root .v3 .paper-head .aside { color: var(--ink-2); font-size: 13px; font-weight: 600; }
+:root .v3 .ink-2 { color: var(--ink-2); }
+
+/* Rows separated by a dashed rule, the "ruled notebook" divider used across paper panels. */
+:root .v3 .ruled > * + *,
+:root .v3 .ruled-top { border-top: 1.5px dashed var(--rule); }
+
+/* ==================== Buttons ==================== */
+
+:root .v3 .btn {
+  height: auto;
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font-weight: 650;
+  font-size: 14px;
+  background: var(--paper-2);
+  color: var(--ink);
+  transition: transform 120ms var(--ease-spring), background-color 120ms ease, color 120ms ease;
+}
+:root .v3 .btn:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+:root .v3 .btn:active:not(:disabled) { transform: scale(0.97); filter: none; }
+
+/* One per screen: the next step. Ink on paper, gold on the canvas. */
+:root .v3 .btn-primary {
+  min-height: 44px;
+  padding: 12px 22px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-control);
+}
+:root .v3 .btn-primary:hover:not(:disabled) { background: var(--ink); color: var(--paper); transform: scale(1.03); }
+:root .v3 .btn-mark,
+:root .v3 .btn-mark:hover:not(:disabled) { background: var(--mark); color: var(--ink); }
+:root .v3 .btn-mark:hover:not(:disabled) { transform: scale(1.03); }
+:root .v3 .btn:disabled {
+  background: color-mix(in srgb, var(--on-canvas) 12%, transparent);
+  color: var(--on-canvas-2);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+/* Disabled reads as an empty outline, so it never looks like a quiet button that works. */
+:root .v3 .paper .btn:disabled { background: transparent; color: var(--ink-2); outline: 1.5px dashed var(--rule); outline-offset: -1.5px; }
+
+/* Text actions on the canvas or on paper. */
+:root .v3 .btn-text {
+  min-height: 32px;
+  padding: 6px 10px;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+:root .v3 .btn-text:hover:not(:disabled) { background: color-mix(in srgb, currentColor 10%, transparent); color: inherit; }
+
+:root .v3 .btn kbd {
+  font: 600 10.5px system-ui, sans-serif;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* ==================== Chips, tags and tiles ==================== */
+
+:root .v3 .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 650;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+:root .v3 .tag-urgent { background: color-mix(in srgb, var(--urgent) 12%, var(--paper)); color: var(--urgent-ink); }
+:root .v3 .tag-good { background: color-mix(in srgb, var(--success) 16%, var(--paper)); color: var(--success-ink); }
+:root .v3 .tag-mark { background: color-mix(in srgb, var(--mark) 24%, var(--paper)); color: var(--mark-ink); }
+
+/* Facts on the canvas: company, place, pay. */
+:root .v3 .fact {
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  background: color-mix(in srgb, var(--on-canvas) 9%, transparent);
+  color: var(--on-canvas);
+}
+
+/* A company's initial: the unit of the pipeline and of job lists. */
+:root .v3 .tile {
+  width: 38px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-tile);
+  font: 760 15px var(--display);
+  background: var(--ink);
+  color: var(--paper);
+}
+:root .v3 .tile-mark { background: var(--mark); color: var(--ink); }
+:root .v3 .tile-slot { background: transparent; border: 2px dashed var(--rule); color: var(--mark-ink); }
+
+/* ==================== Ink marks ==================== */
+
+/* Hand-drawn SVGs from the sprite (#ink-*). They inherit currentColor, gold by default. */
+:root .v3 .ink { color: var(--mark); overflow: visible; }
+:root .v3 .ink-check { width: 24px; height: 24px; color: var(--success-ink); }
+:root .v3 .ink-open { width: 24px; height: 24px; color: var(--urgent-ink); }
+:root .v3 .ink-half { width: 24px; height: 24px; color: var(--mark-ink); }
+
+/* A gold underline under the last words of a heading: wrap them in .underlined. */
+:root .v3 .underlined { position: relative; display: inline-block; }
+:root .v3 .underlined > .ink-underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.22em;
+  width: 100%;
+  height: 0.32em;
+  color: var(--mark);
+  pointer-events: none;
+}
+/* A hand-drawn circle around a short label, such as today's date. */
+:root .v3 .circled { position: relative; display: inline-block; }
+:root .v3 .circled > .ink-circle {
+  position: absolute;
+  inset: -0.45em -0.5em;
+  width: calc(100% + 1em);
+  height: calc(100% + 0.9em);
+  color: var(--mark);
+  pointer-events: none;
+}
+
+/* ==================== Pico's speech bubble ==================== */
+
+:root .v3 .bubble {
+  position: relative;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: var(--mark);
+  color: var(--ink);
+  box-shadow: 0 16px 28px -16px rgba(0, 0, 0, 0.7);
+}
+:root .v3 .bubble p { color: color-mix(in oklab, var(--ink) 80%, var(--mark)); }
+:root .v3 .bubble::after {
+  content: "";
+  position: absolute;
+  border: 12px solid transparent;
+}
+:root .v3 .bubble.tail-right::after { right: -12px; top: 58%; border-left-color: var(--mark); border-right: 0; }
+:root .v3 .bubble.tail-down::after { left: 44px; bottom: -12px; border-top-color: var(--mark); border-bottom: 0; }
+:root .v3 .bubble .btn { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+:root .v3 .bubble .btn-primary { background: var(--ink); color: var(--paper); min-height: 36px; padding: 7px 13px; }
+
+:root .v3 .pico { display: block; filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.45)); -webkit-user-drag: none; }
+
+/* ==================== Motion ==================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(.reduce-motion) .v3 .enter { animation: v3-enter 420ms var(--ease-spring) both; }
+}
+@keyframes v3-enter { from { opacity: 0; transform: translateY(8px); } }
+:root.reduce-motion .v3 *,
+:root.reduce-motion .v3 *::before,
+:root.reduce-motion .v3 *::after { animation: none !important; transition: none !important; }

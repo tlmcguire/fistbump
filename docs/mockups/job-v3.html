@@ -1,0 +1,195 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fistbump – Job</title><style>
+@font-face{font-family:Bricolage;src:url(../../app/renderer/fonts/bricolage-grotesque-latin.woff2);font-weight:200 800}
+:root{--night:#17205c;--night2:#111851;--deep:#0c1240;--paper:#fff8ea;--paper2:#f6ecd6;--ink:#151a4a;--ink2:#575c86;--gold:#f4b53f;--coral:#ef6b4a;--sky:#7fa8ff;--mint:#4fc79a;--line:#151a4a1f}
+*{box-sizing:border-box;margin:0}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:8px}
+::selection{background:var(--gold);color:var(--ink)}
+body{color:#eef0ff;font:15px/1.5 system-ui,-apple-system,sans-serif;min-height:100vh;padding-bottom:64px;
+ background:radial-gradient(#ffffff10 1px,transparent 1.4px) 0 0/22px 22px,linear-gradient(#1c2668,var(--night2) 420px)}
+h1,h2,h3{font-family:Bricolage,system-ui;letter-spacing:-.02em}
+main{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;padding:26px 44px 20px;max-width:1500px;margin:0 auto}
+.paper{background:var(--paper);color:var(--ink);border-radius:20px;box-shadow:0 1px 0 #fff inset,0 18px 36px -18px #000a,0 2px 6px #0003}
+.lbl{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.lbl h2{font-size:17px;font-weight:720}
+.lbl a{color:var(--ink2);font-size:13px;font-weight:600;text-decoration:none}
+/* hero */
+.hero{grid-column:1/9;padding:8px 0 0}
+.hero h1{font-size:48px;line-height:1.08;font-weight:800;position:relative;display:inline-block}
+.hero h1 svg{position:absolute;right:-6px;bottom:-12px;width:34%;height:18px}
+.hero .sub{color:#c9cff2;font-size:17px;margin:16px 0 16px}
+.hero .sub b{color:#fff}.hero .sub a{color:var(--gold);font-weight:650;text-underline-offset:3px}
+.up{display:grid;grid-template-columns:1fr auto auto;gap:26px;align-items:center;padding:18px 24px}
+.up .k{display:inline-flex;gap:8px;align-items:center;font-weight:650;font-size:13px;color:#b8401f}
+.up .k:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--coral)}
+.up h2{font-size:26px;line-height:1.15;font-weight:760;margin:4px 0 2px}
+.up p{color:var(--ink2)}
+.fit{text-align:right}.fit em{font-style:normal;color:#237a5b;font-weight:700}.fit b{display:block;font:800 34px/1 Bricolage;font-variant-numeric:tabular-nums}.fit span{font-size:12px;color:var(--ink2)}
+.go{background:var(--ink);color:#fff;font-weight:680;padding:14px 22px;border-radius:14px;box-shadow:0 10px 20px -10px #151a4aaa;transition:transform .15s}
+.go:hover{transform:scale(1.03)}.go:active{transform:scale(.98)}
+.scene{grid-column:9/13;position:relative;min-height:236px;overflow:hidden;display:flex;align-items:flex-end;gap:0}
+.scene .sun{display:none}
+.scene img{width:176px;flex:none;margin-left:-8px;filter:drop-shadow(0 18px 18px #0007)}
+
+.leaf{position:absolute;width:22px;height:22px;opacity:.9}
+@media(prefers-reduced-motion:no-preference){.leaf{animation:fall 7s linear infinite}.l2{animation-delay:-2.5s}.l3{animation-delay:-4.8s}
+@keyframes fall{0%{transform:translate(0,-30px) rotate(0)}50%{transform:translate(26px,120px) rotate(160deg)}100%{transform:translate(-10px,270px) rotate(320deg);opacity:0}}
+.bar i{animation:grow .9s cubic-bezier(.2,.9,.2,1) both}.bar:nth-child(2) i{animation-delay:.08s}.bar:nth-child(3) i{animation-delay:.16s}.bar:nth-child(4) i{animation-delay:.24s}.bar:nth-child(5) i{animation-delay:.32s}
+@keyframes grow{from{transform:scaleY(.05)}}}
+
+.bubble{flex:1;align-self:center;background:var(--gold);color:var(--ink);border-radius:22px;padding:16px 18px;position:relative;box-shadow:0 16px 28px -16px #000b;margin-bottom:40px}
+.bubble:after{content:"";position:absolute;right:-12px;top:58%;border:12px solid transparent;border-left-color:var(--gold);border-right:0}
+.bubble h2{font-size:19px;line-height:1.2;font-weight:780;margin-bottom:4px}
+.bubble p{font-size:13.5px;color:#3b2c06;line-height:1.4}
+.bubble .acts{display:flex;gap:8px;margin-top:10px}
+.bubble .acts button{background:var(--ink);color:#fff;font-weight:650;padding:7px 12px;border-radius:10px;font-size:13.5px}
+.bubble .acts button+button{background:#151a4a1a;color:var(--ink)}
+.week{grid-column:1/-1;padding:16px 22px 14px}
+.days{display:grid;grid-template-columns:1.35fr .75fr 1.25fr .9fr 1.35fr 1.2fr;border-top:1.5px dashed var(--line)}
+.day{padding:12px 12px 6px;min-height:84px;border-left:1.5px dashed var(--line)}
+.day:first-child{border-left:0}
+.day .d{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;position:relative}
+.day .d b{font:780 26px/1 Bricolage;font-variant-numeric:tabular-nums}
+.day .d span{font-size:12px;font-weight:650;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+.day.today .d span{color:#b8401f}
+.day.today .d svg{position:absolute;left:-12px;top:-10px;width:48px;height:44px}
+.day.off{background:#151a4a0b}
+.ev{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;font-size:13px;line-height:1.3;padding:7px 8px 7px 10px;border-radius:10px;margin-bottom:6px;background:var(--paper2);color:var(--ink)}
+.ev b{display:block;font-weight:680}
+.ev .v{flex:none;font-weight:700;font-size:12px;padding:5px 9px;border-radius:8px;background:var(--ink);color:#fff}
+.ev.int{background:#4fc79a33}.ev.due{background:#ef6b4a26}.ev.close{background:#f4b53f40}
+.free{display:block;margin-top:8px;border-top:1.5px dashed var(--line);padding-top:6px;color:var(--ink2);font-size:12px}
+.muted{color:var(--ink2);font-size:13px}
+.pipe{grid-column:1/7;padding:16px 22px}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;min-height:168px;margin-top:2px}
+.stg{display:flex;flex-direction:column;align-items:center;gap:6px}
+.stack{display:flex;flex-direction:column-reverse;gap:5px}
+.tile{width:38px;height:34px;border-radius:9px;display:grid;place-items:center;font:760 15px Bricolage;background:var(--ink);color:var(--paper)}
+.tile.g{background:var(--gold);color:var(--ink)}
+.slot{width:38px;height:34px;border-radius:9px;border:2px dashed #151a4a40;display:grid;place-items:center}
+.stg b{font:800 20px/1 Bricolage}.stg>span{font-size:12px;color:var(--ink2);font-weight:600}
+.pipe .foot{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--line);display:flex;justify-content:space-between}
+.match{grid-column:7/13;padding:16px 22px}
+.m{display:grid;grid-template-columns:38px 1fr auto 34px;gap:12px;align-items:center;padding:9px 0;border-top:1.5px dashed var(--line)}
+.m .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font:760 16px Bricolage;background:var(--ink);color:var(--paper)}
+.m b{display:inline;font-weight:650;line-height:1.25}.m span{font-size:13px;color:var(--ink2)}
+.m .gap{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:650;color:#9a3a1d;background:#ef6b4a1f;border-radius:6px;padding:1px 7px;vertical-align:2px}
+.m .pc{font:780 18px Bricolage;font-variant-numeric:tabular-nums}
+.m .add{width:34px;height:34px;border-radius:10px;background:var(--paper2);display:grid;place-items:center;color:var(--ink)}
+.m .add svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.m .add:hover{background:var(--ink);color:#fff}
+.lbl .ss{color:var(--ink2);font-size:13px;font-weight:600}
+/* bottom bar */
+.bottom{position:fixed;left:0;right:0;bottom:0;height:60px;background:#0b113bf2;border-top:1px solid #ffffff1a;display:flex;align-items:center;gap:4px;padding:0 44px}
+.bottom img{height:25px;margin-right:18px}
+.nav{position:relative;padding:9px 14px;font-weight:650;color:#aeb5de}
+.nav:hover{color:#fff}
+.nav.on{color:#fff}.nav.on:after{content:"";position:absolute;left:50%;bottom:1px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--gold)}
+.q{flex:1;max-width:560px;margin:0 auto;display:flex;gap:10px;align-items:center;background:#1a2365;border-radius:12px;padding:10px 14px;color:#b9c0e6;box-shadow:0 1px 0 #ffffff14 inset}
+.q kbd{margin-left:auto;font:600 11px system-ui;border:1px solid #ffffff2a;border-radius:5px;padding:0 5px}
+.q svg,.gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.gear{padding:8px;color:#aeb5de}.gear svg{width:20px;height:20px}
+
+.back{display:flex;align-items:center;gap:6px;color:#c9cff2;font-weight:600;padding:6px 10px 6px 0}
+.back:hover{color:#fff}
+.jhero{grid-column:1/9;padding-top:2px}
+.jhero h1{font-size:50px;line-height:1.05;font-weight:800;margin-top:6px;position:relative;display:inline-block}
+.jhero h1 svg{position:absolute;left:2px;right:2px;bottom:-10px;width:100%;height:14px}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.facts span{background:#ffffff14;border-radius:99px;padding:5px 12px;font-size:14px;color:#dfe3fb}
+.facts span b{color:#fff}
+.decide{grid-column:9/13;align-self:end;padding:18px 22px}
+.decide .row{display:flex;align-items:baseline;gap:10px}
+.decide .big{font:800 46px/1 Bricolage;font-variant-numeric:tabular-nums}
+.decide .to{font:760 22px Bricolage;color:#237a5b}
+.decide p{color:var(--ink2);font-size:14px;margin:4px 0 14px}
+.decide .go{width:100%}
+.decide .more{display:block;margin:10px auto 0;color:var(--ink2);font-weight:600;font-size:14px}
+.journey{grid-column:1/-1;padding:16px 26px 18px}
+.path{display:grid;grid-template-columns:repeat(5,1fr);position:relative;margin-top:6px}
+.path:before{content:"";position:absolute;left:10%;right:10%;top:19px;border-top:2.5px dashed #151a4a40}
+.path .done-line{position:absolute;left:10%;width:20%;top:18px;border-top:4px solid var(--ink);border-radius:4px}
+.stop{text-align:center;position:relative}
+.dot{width:40px;height:40px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:var(--paper);border:2.5px dashed #151a4a55;position:relative}
+.stop.done .dot{background:var(--ink);border:0}
+.stop.done .dot svg{width:20px;height:20px}
+.stop.now .dot{background:var(--gold);border:0}
+.stop.now .dot:after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2.5px solid var(--gold);border-color:var(--gold) transparent var(--gold) var(--gold);transform:rotate(-20deg)}
+.stop b{display:block;font:720 16px Bricolage}.stop span{font-size:13px;color:var(--ink2)}
+.stop.now span{color:#8a5a00;font-weight:650}
+.req{grid-column:1/8;padding:18px 24px}
+.ri{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:11px 0;border-top:1.5px dashed var(--line)}
+.ck{width:24px;height:24px;margin-top:1px}
+.ri b{font-weight:650;display:block}.ri span{font-size:13.5px;color:var(--ink2)}
+.ri .fix{font-size:13px;font-weight:700;color:var(--ink);background:var(--paper2);padding:6px 10px;border-radius:9px;white-space:nowrap}
+.ri .fix:hover{background:var(--ink);color:#fff}
+.sub2{font:700 13px system-ui;color:var(--ink2);margin:14px 0 2px}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--ink2)}
+.side{grid-column:8/13;display:flex;flex-direction:column;gap:18px}
+.pay{padding:18px 22px}
+.pay .amt{font:800 34px/1.05 Bricolage;margin:2px 0 6px}
+.scale{position:relative;height:10px;border-radius:6px;background:var(--paper2);margin:16px 0 8px}
+.scale i{position:absolute;top:0;bottom:0;left:38%;width:30%;background:var(--ink);border-radius:6px}
+.scale em{position:absolute;top:-7px;left:52%;width:4px;height:24px;border-radius:3px;background:var(--gold)}
+.scale-l{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2)}
+.pay p{font-size:14px;color:var(--ink2);margin-top:10px}.pay p b{color:var(--ink)}
+.notes{padding:18px 22px;flex:1}
+.note{padding:9px 0;border-top:1.5px dashed var(--line);font-size:14px}
+.note small{display:block;color:var(--ink2);font-size:12px}
+.addnote{margin-top:6px;color:var(--ink2);font-size:14px;font-weight:600}
+.posting{grid-column:1/-1;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.posting p{color:var(--ink2);max-width:90ch}
+</style></head><body><main>
+ <section class="jhero"><button class="back">← Home</button>
+  <h1>Data Analyst<svg viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9 C 70 3, 140 12, 200 6 S 270 5, 297 8" fill="none" stroke="#f4b53f" stroke-width="4" stroke-linecap="round"/></svg></h1>
+  <div class="facts"><span><b>Tidewater Logistics</b></span><span>Savannah, GA · On-site</span><span><b>$78–92k</b></span><span>Posted 6 days ago</span><span>Closes Fri, Dec 4</span></div>
+ </section>
+ <section class="paper decide" aria-label="Next step">
+  <div class="row"><span class="big">76%</span><span class="to">→ 84%</span></div>
+  <p>Your fit now, and after 2 suggested changes</p>
+  <button class="go">Review 2 changes</button><button class="more">More actions</button>
+ </section>
+
+ <section class="paper journey" aria-label="Progress">
+  <div class="lbl"><h2>Where this job stands</h2><a href="#">Change stage</a></div>
+  <div class="path"><span class="done-line"></span>
+   <div class="stop done"><div class="dot"><svg viewBox="0 0 24 24"><path d="M5 13c2 1.4 3 2.8 4.2 5 3-6 6-9.5 9.8-12" fill="none" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><b>Saved</b><span>Nov 18</span></div>
+   <div class="stop now"><div class="dot"></div><b>Tailored</b><span>2 changes to decide</span></div>
+   <div class="stop"><div class="dot"></div><b>Applied</b><span>After you export</span></div>
+   <div class="stop"><div class="dot"></div><b>Interview</b><span>—</span></div>
+   <div class="stop"><div class="dot"></div><b>Offer</b><span>—</span></div>
+  </div>
+ </section>
+
+ <section class="paper req" aria-label="Requirements">
+  <div class="lbl"><h2>What they're asking for</h2><span class="legend"><span>4 of 6 on your resume</span></span></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="#237a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Dashboards in Tableau</b><span>Built 3 Tableau dashboards · Research Assistant, Coastal University</span></div></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="#237a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>2+ years of SQL</b><span>3 years · Data Analyst Intern and Research Assistant</span></div></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="#237a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Advanced Excel, including pivot tables</b><span>Listed in Skills</span></div></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="#c99318" stroke-width="2.4"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="#f4b53f"/></svg><div><b>Present findings to leaders monthly</b><span>Close match: “presented weekly results to the lab’s PI”</span></div><button class="fix">Strengthen</button></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="#c4442a" stroke-width="2.4" stroke-dasharray="3 3"/></svg><div><b>Power BI</b><span>Not on your resume</span></div><button class="fix">I’ve used it</button></div>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="#c4442a" stroke-width="2.4" stroke-dasharray="3 3"/></svg><div><b>Attention to detail, time management</b><span>Soft skills. Show them through results, not a list</span></div><button class="fix">See how</button></div>
+  <p class="sub2">Nice to have</p>
+  <div class="ri"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="#237a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Python or R</b><span>Python and R in Skills</span></div></div>
+ </section>
+
+ <div class="side">
+  <section class="paper pay" aria-label="Pay">
+   <div class="lbl"><h2>Pay and place</h2></div>
+   <div class="amt">$78–92k</div>
+   <div class="scale" aria-hidden="true"><i></i><em></em></div>
+   <div class="scale-l"><span>$60k</span><span>Typical for this role in Savannah</span><span>$110k</span></div>
+   <p>Rent in Savannah runs about <b>12% below</b> Austin, so the midpoint feels like roughly <b>$96k</b> there.</p>
+  </section>
+  <section class="paper notes" aria-label="Notes">
+   <div class="lbl"><h2>Notes</h2></div>
+   <div class="note">Recruiter is Dana Ruiz. Said the team ships a weekly ops report.<small>Nov 19</small></div>
+   <div class="note">Ask about Snowflake migration timeline.<small>Nov 20</small></div>
+   <button class="addnote">+ Add a note</button>
+  </section>
+ </div>
+</main>
+<nav class="bottom" aria-label="App"><img src="../../app/renderer/views/graphics/logo.png" alt="fistbump">
+ <button class="nav">Home</button><button class="nav on">Jobs</button><button class="nav">Resume</button>
+ <div class="q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Search jobs, paste a link, or drop in a posting<kbd>⌘K</kbd></div>
+ <button class="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></nav></body></html>
