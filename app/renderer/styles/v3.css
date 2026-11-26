@@ -2026,3 +2026,29 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3.tl3:has(.t3-desk) .tailor-aside .score { display: none; }
 /* The gear looks chosen only while Settings is open, not after you leave it for another place. */
 :root .app:not(.settings-open) .bottombar .bar-icon[aria-selected="true"] { color: var(--muted); background: transparent; }
+
+/* ==================== Tailor desk header, consolidated ==================== */
+/* While a round's suggestions are on the desk: the round tab names the round and carries its delete, so the old
+   round heading, its meta line and "Delete round" step aside (a "View tailored resume" button stays). The engine
+   chip in the title row already says who wrote the suggestions, so the bar does not say it again. What is left —
+   how many are decided, the fit, and the build step — sits on one paper strip above the sheet. */
+:root .v3.tl3 .tailor-stage:has(.t3-desk) > .round-head > h2,
+:root .v3.tl3 .tailor-stage:has(.t3-desk) > .round-head > .round-meta,
+:root .v3.tl3 .tailor-stage:has(.t3-desk) > .round-head .round-actions > .quiet { display: none; }
+:root .v3.tl3 .tailor-stage:has(.t3-desk) > .round-head:not(:has(button.primary)) { display: none; }
+:root .v3.tl3 .tailor-stage:has(.t3-desk) > .round-head { justify-content: flex-end; margin-bottom: 8px; }
+:root .v3.tl3 .round-head button.primary { min-height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--mark); color: var(--ink); font-weight: 700; box-shadow: var(--shadow-control); }
+:root .v3.tl3 .t3-priv { display: none; }
+
+:root .v3.tl3 .t3-bar { gap: 12px 20px; margin-bottom: 14px; padding: 12px 14px 12px 20px; border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: var(--shadow-paper); }
+:root .v3.tl3 .t3-count { color: var(--ink); font-size: 14px; font-weight: 700; }
+:root .v3.tl3 .t3-meter { padding: 6px 14px; background: var(--paper-2); color: var(--ink); }
+:root .v3.tl3 .t3-meter .t3-fit-n, :root .v3.tl3 .t3-meter .t3-fit-pc { color: var(--ink); }
+:root .v3.tl3 .t3-meter .t3-fit-note { color: var(--ink-2); }
+:root .v3.tl3 .t3-track { background: var(--rule); }
+:root .v3.tl3 .t3-track i { background: var(--mark-deep); }
+:root .v3.tl3 .t3-bar-acts .btn-text { color: var(--ink); }
+:root .v3.tl3 .t3-bar-acts .btn-text:hover:not(:disabled) { background: var(--paper-2); }
+:root .v3.tl3 .t3-bar-acts .btn-mark:disabled { background: var(--paper-2); color: var(--ink-2); outline: 1.5px dashed var(--rule); outline-offset: -1.5px; box-shadow: none; }
+/* the hint sits under the strip, quiet, on the canvas */
+:root .v3.tl3 .t3-hint { margin: -6px 6px 14px; }
