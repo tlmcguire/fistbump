@@ -1,6 +1,10 @@
 // German. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("de", {
   // v3 screens: Home, Jobs list, Job page, Tailor desk, Settings, Resume
+  "Navigation bar": "Navigationsleiste",
+  "Bottom": "Unten",
+  "Top": "Oben",
+  "Home, Jobs, Resume, Search and the search box, at the bottom of the window or at the top.": "Start, Stellen, Lebenslauf, Suche und das Suchfeld, unten oder oben im Fenster.",
   "Target length": "Ziellänge",
   "1 page": "1 Seite",
   "{0} pages": "{0} Seiten",

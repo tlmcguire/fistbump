@@ -1226,7 +1226,7 @@
   transform-origin: bottom center;
 }
 .omnibox-panel[hidden] { display: none; }
-.app.bar-top .omnibox-panel { top: calc(100% + 12px); bottom: auto; transform-origin: top center; }
+:root.bar-top .omnibox-panel { top: calc(100% + 12px); bottom: auto; transform-origin: top center; }
 @media (prefers-reduced-motion: no-preference) {
   :root:not(.reduce-motion) .omnibox-panel:not([hidden]) { animation: omnibox-open 180ms var(--ease-settle); }
 }
@@ -1335,3 +1335,30 @@
 :root .v3 .rs3-target button { height: 30px; min-height: 0; padding: 0 12px; border: 0; border-radius: 999px; background: var(--paper-2); color: var(--ink); font-size: 13px; font-weight: 650; }
 :root .v3 .rs3-target button:hover:not(:disabled) { background: color-mix(in oklab, var(--paper-2) 80%, var(--ink)); color: var(--ink); }
 :root .v3 .rs3-target button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+
+/* ==================== Navigation bar at the top ==================== */
+
+/* The bar takes the window strip's place: one row that is also the drag area, so the window never has two bars. */
+:root.bar-top .app { grid-template-rows: auto minmax(0, 1fr); }
+:root.bar-top .titlebar { display: none; }
+:root.bar-top .app > .main { grid-row: 2; }
+:root.bar-top .bottombar {
+  grid-row: 1;
+  height: 56px;
+  border-top: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #000 30%, transparent);
+}
+/* room for the system's window buttons: on the left on macOS, on the right on Windows */
+:root.bar-top.platform-darwin .bottombar { padding-left: 88px; }
+:root.bar-top.platform-win32 .bottombar { padding-right: 150px; }
+:root.bar-top.platform-win32 .win-controls { height: 56px; }
+/* the current place is marked from above, as the bar now hangs from the top edge */
+:root.bar-top .bottombar .bar-item[aria-current="page"]::after { bottom: auto; top: 3px; }
+/* the first view row needs no extra top space now that the strip is gone */
+:root.bar-top .home3-grid, :root.bar-top .jl3-grid, :root.bar-top .job3-grid { padding-top: 22px; }
+
+:root .v3 .st3-seg { display: inline-flex; flex: none; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
+:root .v3 .st3-seg button { height: 30px; min-height: 0; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 650; }
+:root .v3 .st3-seg button:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+:root .v3 .st3-seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
