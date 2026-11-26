@@ -8,18 +8,44 @@ window.JobParser = {
       const tabs = {find: $("tab-find"), paste: $("tab-paste"), saved: $("tab-saved"), settings: $("tab-settings")};
       const forms = {find: searchForm, paste: $("paste-title"), saved: $("saved-form"), settings: $("settings-title")};
 
-      // Detects a pasted job URL (Greenhouse, Lever, or Ashby) in the search box.
+      // Detects a direct-fetch ATS link (Greenhouse, Lever, Ashby) vs any external job link (LinkedIn, Indeed, etc.).
+      const isDirectATSLink = value => {
+        const t = String(value || "").trim();
+        if (!t || /\s/.test(t)) return false;
+        return /^(?:https?:\/\/)?(?:(?:job-)?boards\.greenhouse\.io\/|grnh\.se\/|jobs\.(?:eu\.)?lever\.co\/|jobs\.ashbyhq\.com\/)/i.test(t);
+      };
       const looksLikeJobLink = value => {
         const t = String(value || "").trim();
         if (!t || /\s/.test(t)) return false;
-        return /^https?:\/\//i.test(t) || /^(?:job-)?boards\.greenhouse\.io\//i.test(t) || /^grnh\.se\//i.test(t) || /^jobs\.(?:eu\.)?lever\.co\//i.test(t) || /^jobs\.ashbyhq\.com\//i.test(t);
+        return /^https?:\/\//i.test(t) || isDirectATSLink(t)
+          || /^(?:www\.)?(?:linkedin\.com|indeed\.com|glassdoor\.com|wellfound\.com|ziprecruiter\.com)\//i.test(t);
       };
       const normalizeJobLink = value => {
         const t = String(value || "").trim();
         return /^https?:\/\//i.test(t) ? t : `https://${t}`;
       };
+      const siteNameFromURL = value => {
+        const t = String(value || "").trim();
+        if (!t) return "";
+        try {
+          const host = new URL(normalizeJobLink(t)).hostname.replace(/^www\./i, "").toLowerCase();
+          if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
+          if (host === "indeed.com" || host.endsWith(".indeed.com")) return "Indeed";
+          if (host === "glassdoor.com" || host.endsWith(".glassdoor.com")) return "Glassdoor";
+          if (host.includes("workday")) return "Workday";
+          if (host === "wellfound.com" || host === "angel.co") return "Wellfound";
+          if (host === "ziprecruiter.com" || host.endsWith(".ziprecruiter.com")) return "ZipRecruiter";
+          if (host.includes("smartrecruiters")) return "SmartRecruiters";
+          if (host.includes("icims")) return "iCIMS";
+          if (host.includes("jobvite")) return "Jobvite";
+          return host;
+        } catch {
+          return "";
+        }
+      };
       const syncSearchButton = () => {
-        searchButton.textContent = looksLikeJobLink($("search-keywords").value) ? "Open link" : "Search";
+        const val = $("search-keywords").value;
+        searchButton.textContent = looksLikeJobLink(val) ? (isDirectATSLink(val) ? "Open link" : "Add listing") : "Search";
       };
 
       //The results pane and the detail pane each show one state at a time.
@@ -152,13 +178,17 @@ window.JobParser = {
       };
 
       //Puts a listing error in the detail pane.
-      const showDetailError = error => {
+      let failedLinkUrl = "";
+      const showDetailError = (error, linkUrl = "") => {
+        failedLinkUrl = linkUrl || "";
         $("detail-error-message").textContent = error.message || "An unknown error has occurred";
+        const pasteBtn = $("detail-paste-instead");
+        if (pasteBtn) pasteBtn.hidden = !failedLinkUrl;
         main.classList.add("has-detail");
         showDetail("detail-error");
       };
 
-      const keyOf = result => result.id ? `job/${result.id}` : `${result.board}/${result.external_id}`;
+      const keyOf = result => result._community ? `community/${result.community_id}` : result.id ? `job/${result.id}` : `${result.board}/${result.external_id}`;
 
       //Saved jobs by their Greenhouse listing, so a listing shown again still reads as saved. Kept for every
       //saved job, archived ones included, and read when the view starts so search results know from the first
@@ -230,14 +260,22 @@ window.JobParser = {
         }
       };
   
-      const SOURCE_NAMES = {greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", pasted: "Pasted", manual: "Manual"};
+      const SOURCE_NAMES = {greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", community: "Community", pasted: "Pasted", manual: "Manual"};
       const sourceLabel = data => {
         const key = String(data?.source || "").toLowerCase();
-        if (SOURCE_NAMES[key]) return SOURCE_NAMES[key];
         const url = String(data?.listing_url || "").toLowerCase();
+        if (data?._community) {
+          const site = siteNameFromURL(data?.listing_url) || (data?.source && key !== "community" ? data.source : "");
+          return site ? `Community \u00b7 ${site}` : "Community";
+        }
         if (url.includes("greenhouse.io") || url.includes("grnh.se")) return "Greenhouse";
         if (url.includes("lever.co")) return "Lever";
         if (url.includes("ashbyhq.com")) return "Ashby";
+        if (key === "pasted" || key === "manual" || !key) {
+          const site = siteNameFromURL(data?.listing_url);
+          if (site) return site;
+        }
+        if (SOURCE_NAMES[key]) return SOURCE_NAMES[key];
         return data?.board ? "Greenhouse" : "";
       };
 
@@ -274,10 +312,10 @@ window.JobParser = {
         rememberListing(data);
 
         const saved = Boolean(data.id);
-        //A job that is already saved is never offered for saving again. From search or a link it offers to open the
+        //A job that is already saved is never offered for saving again. From search, a link, or Community it offers to open the
         //saved copy; the archive, trash and delete controls belong to the Saved tab.
         const viewSaved = saved && activeTab !== "saved";
-        $("save-listing").hidden = saved || !data.board;
+        $("save-listing").hidden = saved || (!data.board && !data._community);
         $("save-listing").textContent = "Save job";
         $("save-listing").disabled = false;
         $("view-saved").hidden = !viewSaved;
@@ -344,9 +382,33 @@ window.JobParser = {
         showDetail("detail-loading");
       };
 
+      const DEFAULT_PASTE_HINT = "Submit a job listing from LinkedIn, Indeed, Workday, or any other site. Add the link if you have it, then paste the job content below.";
+      const openPasteWithLink = (url = "", customHint = "") => {
+        selectTab("paste");
+        const normalized = url ? normalizeJobLink(url) : "";
+        const urlInput = $("paste-url");
+        const hint = $("paste-hint");
+        if (urlInput) urlInput.value = normalized;
+        if (hint) {
+          const site = siteNameFromURL(normalized);
+          const text = customHint || (normalized
+            ? `${site || "This site"} doesn't allow direct fetching — paste the job listing content below and click Preview to save it.`
+            : DEFAULT_PASTE_HINT);
+          hint.textContent = text;
+          hint.classList.toggle("site-note", Boolean(normalized));
+        }
+        $("paste-result").replaceChildren();
+        if (normalized) $("paste-text").focus();
+        else (urlInput || $("paste-text")).focus();
+      };
+
       //opens a pasted job link directly from the search bar
       const loadPosting = async url => {
         const normalized = normalizeJobLink(url);
+        if (!isDirectATSLink(normalized)) {
+          openPasteWithLink(normalized);
+          return;
+        }
         detailRetry = () => loadPosting(normalized);
         setSearchBusy(true);
         showDetailLoading("Opening the listing\u2026");
@@ -355,7 +417,7 @@ window.JobParser = {
           const data = await window.FistBumpAPI.link(normalized);
           if (mine === detailSeq) displayPosting(data);
         } catch (error) {
-          if (mine === detailSeq) showDetailError(error);
+          if (mine === detailSeq) showDetailError(error, normalized);
         } finally {
           setSearchBusy(false);
         }
@@ -501,7 +563,7 @@ window.JobParser = {
       //applied at once to the results already on screen. The defaults are the quiet set; the rest are opt-in.
       const SHOW_KEY = "fistbump.result-show";
       const SHOW_DEFAULTS = {fit: true, missing: true, pay_range: true, ratings: true,
-        benefits_list: false, left_over: false, preview: false, posted: true, locations: true, company_site: true};
+        benefits_list: false, left_over: false, preview: false, posted: true, locations: true, company_site: true, source: true};
       const readShow = () => {
         try {
           const kept = JSON.parse(localStorage.getItem(SHOW_KEY) || "{}");
@@ -664,12 +726,17 @@ window.JobParser = {
           open.addEventListener("click", () => onOpen(result));
           body.append(open);
 
-          // Subtle ATS source badge and "New" pill for saved searches.
-          const srcLabel = sourceLabel(result);
+          // Subtle ATS / Community source badge and "New" / "Pending review" pills.
+          const srcLabel = show.source ? sourceLabel(result) : "";
           if (srcLabel) {
             const badge = el("small", srcLabel);
             badge.className = "result-state result-source";
             body.append(badge);
+          }
+          if (result._pending) {
+            const pend = el("small", "Pending review");
+            pend.className = "result-state result-pending";
+            body.append(pend);
           }
           if (activePinnedSeen && !activePinnedSeen.has(keyOf(result))) {
             const fresh = el("small", "New");
@@ -824,7 +891,8 @@ window.JobParser = {
         const optionName = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(String(value))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim();
         if (q.location) add(`In ${q.location}`, ["search-location"]);
         if (q.company) add(`At ${q.company}`, ["search-company"]);
-        if (q.source) add(`ATS: ${SOURCE_NAMES[q.source] || q.source}`, ["search-source"]);
+        if (q.source) add(`Source: ${SOURCE_NAMES[q.source] || q.source}`, ["search-source"]);
+        if (q.include_community && !q.source) add("Including community listings", ["search-include-community"]);
         if (q.categories?.length) add(optionName("search-industry", q.categories[0]) || q.categories[0], ["search-industry"]);
         if (q.work_mode && q.work_mode !== "Any") add(`${q.work_mode} only`, ["search-work-mode"]);
         if (q.posted_within) add(optionName("search-posted", q.posted_within).replace(/^Last/, "Posted in the last") || `Posted within ${q.posted_within} days`, ["search-posted"]);
@@ -912,6 +980,40 @@ window.JobParser = {
       let searchSeq = 0; //counts searches, so an older one that finishes late is ignored
       let pageSeq = 0; //counts page changes and searches, so a slow page cannot land after either
 
+      // Filters crowdsourced community listings (published + local pending) using the active search criteria.
+      const searchCommunityListings = async query => {
+        if (!window.Community?.loadResources) return {postings: [], scanned: 0};
+        const res = await window.Community.loadResources(false).catch(() => ({listings: [], pending: []}));
+        const all = [
+          ...(res.pending || []).map(x => ({...x, _community: true, community_id: x.id, id: undefined, _pending: true, updated_at: x.added})),
+          ...(res.listings || []).map(x => ({...x, _community: true, community_id: x.id, id: undefined, _pending: false, updated_at: x.added})),
+        ];
+        const kws = (query.keywords || []).map(k => k.toLowerCase()).filter(Boolean);
+        const exs = (query.exclude || []).map(e => e.toLowerCase()).filter(Boolean);
+        const co = String(query.company || "").trim().toLowerCase();
+        const loc = String(query.location || "").trim().toLowerCase();
+        const mode = query.work_mode && query.work_mode !== "Any" ? query.work_mode.toLowerCase() : "";
+        const cutoff = query.posted_within > 0 ? Date.now() - query.posted_within * 86400000 : 0;
+        const matched = all.filter(item => {
+          const title = String(item.position_title || "").toLowerCase();
+          const company = String(item.company_name || "").toLowerCase();
+          const text = String(item.raw_text || "").toLowerCase();
+          const place = String(item.location || "").toLowerCase();
+          const itemMode = String(item.work_mode || "").toLowerCase();
+          if (co && !company.includes(co)) return false;
+          if (mode && itemMode !== mode) return false;
+          if (loc && !place.includes(loc) && itemMode !== "remote") return false;
+          if (cutoff && item.updated_at) {
+            const ts = Date.parse(item.updated_at);
+            if (!Number.isNaN(ts) && ts < cutoff) return false;
+          }
+          if (exs.some(e => title.includes(e))) return false;
+          if (kws.length && !kws.some(k => title.includes(k) || company.includes(k) || text.includes(k) || String(item.source || "").toLowerCase().includes(k))) return false;
+          return true;
+        });
+        return {postings: matched, scanned: all.length};
+      };
+
       //main function to run the search
       const runSearch = async query => {
         searchRetry = () => runSearch(query);
@@ -922,13 +1024,41 @@ window.JobParser = {
         searchedQuery = query;
         results = null;
         setSearchBusy(true);
+        const {include_community, ...backendQuery} = query;
         const wide = !query.company && !query.categories.length && boardTotal;
-        showLoading(wide
-          ? `Searching ${boardTotal.toLocaleString()} boards\u2026 Boards read in the last 6 hours load from this computer; the rest are fetched from Greenhouse, Lever, and Ashby, which takes longer.`
-          : "Searching Greenhouse, Lever, and Ashby boards\u2026 Boards read in the last 6 hours load from this computer.", true);
+        showLoading(query.source === "community"
+          ? "Searching community listings\u2026"
+          : wide
+            ? `Searching ${boardTotal.toLocaleString()} boards\u2026 Boards read in the last 6 hours load from this computer; the rest are fetched from Greenhouse, Lever, and Ashby, which takes longer.`
+            : "Searching Greenhouse, Lever, and Ashby boards\u2026 Boards read in the last 6 hours load from this computer.", true);
 
         try {
-          const data = await window.FistBumpAPI.search({...query, offset: 0});
+          let data;
+          if (query.source === "community") {
+            const c = await searchCommunityListings(query);
+            data = {
+              postings: c.postings,
+              matched: c.postings.length,
+              boards_searched: 1,
+              boards_total: 1,
+              postings_scanned: c.scanned,
+              errors: [],
+            };
+          } else {
+            const [atsData, commData] = await Promise.all([
+              window.FistBumpAPI.search({...backendQuery, offset: 0}),
+              !query.source && include_community ? searchCommunityListings(query) : Promise.resolve(null),
+            ]);
+            data = atsData;
+            if (commData?.postings?.length) {
+              data = {
+                ...atsData,
+                postings: [...commData.postings.slice(0, 10), ...(atsData.postings || [])],
+                matched: (atsData.matched || 0) + commData.postings.length,
+                postings_scanned: (atsData.postings_scanned || 0) + commData.scanned,
+              };
+            }
+          }
           if (mine !== searchSeq) return; //a newer search owns the page now
           await preloadLogos(data.postings);
           if (mine !== searchSeq) return;
@@ -1007,7 +1137,8 @@ window.JobParser = {
           setSearchBusy(true);
           $("pager").querySelectorAll("button").forEach(node => { node.disabled = true; });
           try {
-            data = await window.FistBumpAPI.search({...searchedQuery, offset: (page - 1) * pageSize()});
+            const {include_community: _ic, ...backendQuery} = searchedQuery;
+            data = await window.FistBumpAPI.search({...backendQuery, offset: (page - 1) * pageSize()});
           } catch (error) {
             if (mine !== pageSeq) return;
             if (error.message === "Search canceled") renderPager(); //re-enable the page buttons
@@ -1058,6 +1189,7 @@ window.JobParser = {
         $("search-keywords").value = words("search-keywords").join(", ");
         const query = {
           source: $("search-source")?.value || "",
+          include_community: Boolean($("search-include-community")?.checked),
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
           work_mode: $("search-work-mode").value,
@@ -1106,15 +1238,38 @@ window.JobParser = {
       $("reload-listing").addEventListener("click", reloadPosting);
       $("try-again").addEventListener("click", () => searchRetry ? searchRetry() : selectTab("find"));
       $("detail-try-again").addEventListener("click", () => detailRetry ? detailRetry() : showDetailEmpty());
+      $("detail-paste-instead")?.addEventListener("click", () => openPasteWithLink(failedLinkUrl));
+      $("open-paste")?.addEventListener("click", () => openPasteWithLink(""));
+      $("submit-listing")?.addEventListener("click", () => window.SubmitListing?.open());
 
       const jobsApi = window.FistBumpAPI.jobs;
 
-      // ---- Save from Greenhouse (Open a link and search results both go through displayPosting) ----
+      // ---- Save from ATS search or Community resources (both go through displayPosting) ----
       $("save-listing").addEventListener("click", async () => {
         const btn = $("save-listing");
         const current = posting;
         btn.disabled = true;
         try {
+          if (current._community) {
+            const payload = {
+              company_name: current.company_name,
+              position_title: current.position_title,
+              source: "pasted",
+              raw_text: current.raw_text,
+            };
+            if (current.location) payload.location = current.location;
+            if (current.work_mode) payload.work_mode = current.work_mode;
+            if (current.listing_url) payload.listing_url = current.listing_url;
+            if (current.company_url) payload.company_url = current.company_url;
+            const job = await jobsApi.create(payload);
+            if (job) {
+              savedByListing.set(`community/${current.community_id}`, job.id);
+              if (posting === current) displayPosting({...current, ...job}, fromResults);
+              loadSaved();
+              notifyJobsChanged();
+            }
+            return;
+          }
           const {imported, refreshed} = await window.FistBumpAPI.importJobs([{source: current.source || "greenhouse", board: current.board, external_id: current.external_id}]);
           const job = imported[0] || refreshed[0];
           if (job) {
@@ -1129,6 +1284,8 @@ window.JobParser = {
           window.UI.alert(error.message); // for example, the posting has closed (404)
         }
       });
+
+
 
       //A job already saved opens in Saved jobs, where it can be tailored, tracked or archived.
       $("view-saved").addEventListener("click", () => {
@@ -1516,8 +1673,8 @@ window.JobParser = {
         benefits: {strong: "Strong", decent: "Decent", basic: "Limited", unclear: "Unclear", unlisted: "Not listed"},
         life: {comfortable: "Comfortable", okay: "Workable", tight: "Tight", short: "Short"},
       };
-      const TONE = {well_above: "good", above: "good", in_line: "ok", below: "warn", well_below: "bad", unknown: "ok",
-        comfortable: "good", okay: "ok", tight: "warn", short: "bad", strong: "good", decent: "ok", basic: "warn", unclear: "ok", unlisted: "ok"};
+      const TONE = {well_above: "good", above: "good", in_line: "warn", below: "bad", well_below: "bad", unknown: "ok",
+        comfortable: "good", okay: "warn", tight: "bad", short: "bad", strong: "good", decent: "warn", basic: "bad", unclear: "ok", unlisted: "ok"};
       const renderCost = async data => {
         const {el, fill, chips} = window.ResumeBuilder;
         const box = $("cost");
@@ -1603,19 +1760,32 @@ window.JobParser = {
       $("paste-preview").addEventListener("click", async () => {
         const {el, fill, chips, makeForm} = window.ResumeBuilder;
         const text = $("paste-text").value;
+        const rawLink = ($("paste-url")?.value || "").trim();
+        const listingUrl = rawLink ? normalizeJobLink(rawLink) : "";
         try {
           const parsed = await jobsApi.parse(text);
-          const form = makeForm(PASTE_SPEC, parsed.inferred, {idPrefix: "paste"});
+          const initial = {...parsed.inferred, ...(listingUrl ? {listing_url: listingUrl} : {})};
+          const form = makeForm(PASTE_SPEC, initial, {idPrefix: "paste"});
           const skills = (label, list) => list.length ? [el("p", {text: label}), chips(list)] : null;
+
+          const shareBox = el("input", {type: "checkbox", checked: Boolean(window.Prefs?.get("communityShare"))});
+          const shareRow = el("div", {class: "paste-share-row"},
+            el("label", {}, shareBox, "Share with the Fistbump community"),
+            el("p", {class: "hint", text: "Contributes this listing (link, company, title, location, and scrubbed text) to Community resources once reviewed. Nothing personal is sent."}));
 
           const save = el("button", {class: "primary", type: "button", text: "Save job", onclick: async () => {
             // drop blank fields (read() turns them into null)
             const body = Object.fromEntries(Object.entries(form.read()).filter(([, value]) => value !== null));
             try {
               const job = await jobsApi.create({...body, source: "pasted", raw_text: text});
+              if (shareBox.checked && window.Community?.shareListing) {
+                window.Community.shareListing({...body, raw_text: text}).catch(() => {});
+              }
               //saved once: the button says so instead of offering to save the same posting again
               save.disabled = true;
               save.textContent = "Saved";
+              if ($("paste-url")) $("paste-url").value = "";
+              $("paste-text").value = "";
               notifyJobsChanged();
               window.JobPage.open(job.id);
             } catch (error) {
@@ -1628,6 +1798,7 @@ window.JobParser = {
             form.el,
             skills("Required skills", [...parsed.req_tech_skills, ...parsed.req_soft_skills]),
             skills("Preferred skills", [...parsed.pref_tech_skills, ...parsed.pref_soft_skills]),
+            shareRow,
             el("div", {class: "job-actions paste-save-actions"}, save));
         } catch (error) {
           const {el, fill} = window.ResumeBuilder;
@@ -1636,7 +1807,7 @@ window.JobParser = {
       });
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
-      const FILTER_IDS = ["search-company", "search-source", "search-industry", "search-work-mode", "search-posted",
+      const FILTER_IDS = ["search-company", "search-source", "search-include-community", "search-industry", "search-work-mode", "search-posted",
         "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing",
         "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const filterInUse = id => {
@@ -1699,7 +1870,7 @@ window.JobParser = {
       }).catch(() => {});
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
-      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-source", "search-work-mode", "search-industry",
+      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-source", "search-include-community", "search-work-mode", "search-industry",
         "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-use-resume",
         "search-min-fit", "search-max-missing", "search-use-ratings", "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const FORM_KEY = "fistbump.search-form";

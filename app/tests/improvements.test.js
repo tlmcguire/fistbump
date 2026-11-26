@@ -236,6 +236,45 @@ test('Home refreshes and clears stale listings/cache when history, jobs, or stor
     'tracker.js should compute scope-accurate stats and hide the summary when empty');
 });
 
+test('Skills & benefits colors, ATS result toggle, and external listing submission with content are wired', () => {
+  const v3 = read('styles/v3.css');
+  assert.ok(v3.includes('--warn:') && v3.includes('--warn-ink:'), 'v3.css should define semantic yellow/warn tokens');
+  assert.ok(v3.includes('.v3.find3 .signal[data-level="good"]') && v3.includes('.v3.find3 .signal[data-level="fair"]') && v3.includes('.v3.find3 .signal[data-level="bad"]'),
+    'v3.css should style search result signals in green, yellow, and red');
+  assert.ok(v3.includes('.v3.find3 .detail-pane .cost-pill.good') && v3.includes('.v3.find3 .detail-pane .cost-pill.warn') && v3.includes('.v3.find3 .detail-pane .cost-pill.bad'),
+    'v3.css should style listing pay/benefits/living pills in green, yellow, and red');
+  assert.ok(v3.includes('.v3.find3 .detail-pane .chip.skill-have') && v3.includes('.v3.find3 .detail-pane .chip.skill-likely') && v3.includes('.v3.find3 .detail-pane .chip.skill-gap'),
+    'v3.css should style listing skill chips in green, yellow, and red');
+
+  const modes = read('styles/modes.css');
+  assert.ok(modes.includes('--warn-ink:'), 'modes.css should define darker-mode --warn-ink');
+
+  const html = read('index.html');
+  assert.ok(html.includes('data-show="source"'), 'index.html should include ATS source result-card toggle');
+  assert.ok(html.includes('id="paste-url"'), 'index.html paste pane should include listing URL input');
+  assert.ok(html.includes('id="open-paste"'), 'index.html toolbar should include Add listing button');
+  assert.ok(html.includes('id="detail-paste-instead"'), 'index.html detail error should offer paste fallback');
+
+  const jp = read('views/job-parser/job-parser.js');
+  assert.ok(jp.includes('source: true') && jp.includes('show.source ? sourceLabel(result)'), 'job-parser.js should toggle ATS source display under search results');
+  assert.ok(jp.includes('openPasteWithLink') && jp.includes('linkedin.com') && jp.includes('isDirectATSLink'), 'job-parser.js should route LinkedIn/external links to paste with URL prefilled');
+
+  const jobPage = read('views/job/job.js');
+  assert.ok(jobPage.includes('BENEFITS') && jobPage.includes('decent: "warn"'), 'job.js should display color-coded benefits and yellow warn tags');
+
+  const community = read('js/community.js');
+  assert.ok(community.includes('shareListing') && community.includes('loadResources'), 'community.js should support sharing and loading community listings');
+  assert.ok(!html.includes('id="community-pane"') && !html.includes('id="tab-community"'), 'community listings should live in Search, not a separate page');
+  assert.ok(html.includes('value="community"') && html.includes('id="search-include-community"'), 'index.html should include community source option and include-community toggle');
+  assert.ok(jp.includes('searchCommunityListings') && jp.includes('Community \\u00b7'), 'job-parser.js should search community listings and flag them with the source badge');
+
+  const sl = read('js/submit-listing.js');
+  assert.ok(sl.includes('isDirectATSLink') && sl.includes('FistBumpAPI.link') && sl.includes('Community.shareListing'),
+    'submit-listing.js should use ATS connectors for Greenhouse/Lever/Ashby and ask for pasted content for other sites');
+  assert.ok(read('views/jobs-list/jobs-list.js').includes('SubmitListing?.open') && read('views/tracker/tracker.js').includes('SubmitListing?.open'),
+    'Jobs list and Tracker Add listing buttons should open the SubmitListing dialog');
+});
+
 test('App version stays in sync across package.json, tauri.conf.json, and Cargo.toml', () => {
   const root = path.join(__dirname, '..', '..');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;

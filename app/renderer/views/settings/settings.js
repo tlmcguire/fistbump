@@ -298,6 +298,7 @@ window.Settings = {
     showFeeds();
     bind("pref-community-use", "communityUse", ...checked);
     bind("pref-community-share", "communityShare", ...checked);
+    document.getElementById("settings-submit-listing")?.addEventListener("click", () => window.SubmitListing?.open());
     bind("pref-global-shortcut", "globalShortcut", ...checked);
     bind("pref-menu-bar", "menuBarItem", ...checked);
     bind("pref-notify-due", "notifyDue", ...checked);

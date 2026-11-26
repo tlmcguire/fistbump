@@ -295,8 +295,10 @@
 
       // ---------- Pay and place ----------
       const PAY = {well_above: "Well above market", above: "Above market", in_line: "At market", below: "Below market", well_below: "Well below market"};
-      const TONE = {well_above: "good", above: "good", in_line: "mark", below: "urgent", well_below: "urgent",
-        comfortable: "good", okay: "mark", tight: "urgent", short: "urgent"};
+      const BENEFITS = {strong: "Strong", decent: "Decent", basic: "Limited", unclear: "Unclear", unlisted: "Not listed"};
+      const TONE = {well_above: "good", above: "good", in_line: "warn", below: "urgent", well_below: "urgent",
+        comfortable: "good", okay: "warn", tight: "urgent", short: "urgent",
+        strong: "good", decent: "warn", basic: "urgent"};
       const LIFE = {comfortable: "Comfortable", okay: "Workable", tight: "Tight", short: "Short"};
       async function loadCost(mine) {
         const {job} = current;
@@ -318,14 +320,20 @@
               el("p", {class: "ink-2 job3-scale-l"}, `Typical here: ${money(p.market_low)} to ${money(p.market_high)}`,
                 p.listed ? [" · ", el("span", {text: "posted midpoint in gold"})] : null));
           }
+          const b = c.benefits;
+          const bTag = b?.rating && BENEFITS[b.rating]
+            ? el("span", {class: `tag${TONE[b.rating] ? ` tag-${TONE[b.rating]}` : ""}`, text: BENEFITS[b.rating]})
+            : null;
           fill(parts.pay,
             el("div", {class: "paper-head"}, el("h2", {id: "job3-pay-h", text: "Pay and place"}),
               p?.verdict && PAY[p.verdict] ? el("span", {class: `tag tag-${TONE[p.verdict]}`, text: PAY[p.verdict]}) : null),
             payLine(job) ? el("div", {class: "job3-amt display", text: payLine(job)}) : null,
             scale,
             el("p", {class: "job3-pay-sum", text: c.summary}),
+            bTag ? el("p", {class: "ink-2 job3-life"}, "Benefits: ", bTag,
+              b.found?.length ? ` ${b.found.slice(0, 4).join(", ")}${b.found.length > 4 ? ` +${b.found.length - 4}` : ""}` : "") : null,
             c.lifestyle ? el("p", {class: "ink-2 job3-life"}, `Living in ${c.location?.label || "this area"}: `,
-              el("span", {class: `tag tag-${TONE[c.lifestyle.verdict] || "mark"}`, text: LIFE[c.lifestyle.verdict] || c.lifestyle.verdict}),
+              el("span", {class: `tag tag-${TONE[c.lifestyle.verdict] || "warn"}`, text: LIFE[c.lifestyle.verdict] || c.lifestyle.verdict}),
               ` ${(c.lifestyle.headline || "").replace(/^[A-Za-z]+:\s*/, "")}`) : null, //the tag already says the verdict
             el("p", {class: "ink-2 job3-est", text: "Estimates from average figures, not live prices."}));
           parts.pay.hidden = false;

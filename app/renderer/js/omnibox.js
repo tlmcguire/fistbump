@@ -13,11 +13,31 @@
   const isMac = window.api?.platform === "darwin";
   $("omnibox-key").textContent = isMac ? "⌘K" : "Ctrl K";
 
+  const isDirectATSLink = text => {
+    const t = text.trim();
+    if (!t || /\s/.test(t)) return false;
+    return /^(?:https?:\/\/)?(?:(?:job-)?boards\.greenhouse\.io\/|grnh\.se\/|jobs\.(?:eu\.)?lever\.co\/|jobs\.ashbyhq\.com\/)/i.test(t);
+  };
   const looksLikeLink = text => {
     const t = text.trim();
     if (!t || /\s/.test(t)) return false;
-    return /^https?:\/\//i.test(t) || /^(?:job-)?boards\.greenhouse\.io\//i.test(t) || /^grnh\.se\//i.test(t)
-      || /^jobs\.(?:eu\.)?lever\.co\//i.test(t) || /^jobs\.ashbyhq\.com\//i.test(t);
+    return /^https?:\/\//i.test(t) || isDirectATSLink(t)
+      || /^(?:www\.)?(?:linkedin\.com|indeed\.com|glassdoor\.com|wellfound\.com|ziprecruiter\.com)\//i.test(t);
+  };
+  const siteNameFromURL = text => {
+    const t = text.trim();
+    try {
+      const host = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`).hostname.replace(/^www\./i, "").toLowerCase();
+      if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
+      if (host === "indeed.com" || host.endsWith(".indeed.com")) return "Indeed";
+      if (host === "glassdoor.com" || host.endsWith(".glassdoor.com")) return "Glassdoor";
+      if (host.includes("workday")) return "Workday";
+      if (host === "wellfound.com" || host === "angel.co") return "Wellfound";
+      if (host === "ziprecruiter.com" || host.endsWith(".ziprecruiter.com")) return "ZipRecruiter";
+      return host;
+    } catch {
+      return "this site";
+    }
   };
   //A posting is long or spans lines; a search is a few words.
   const looksLikePosting = text => /\n/.test(text.trim()) || text.trim().length > 200;
@@ -36,6 +56,8 @@
 
   function openPosting(text) {
     $("tab-paste").click();
+    const urlInput = $("paste-url");
+    if (urlInput) fill(urlInput, "");
     const area = $("paste-text");
     fill(area, text);
     area.focus();
@@ -83,7 +105,9 @@
     const groups = [];
     if (q) {
       groups.push({title: "", rows: [looksLikeLink(q)
-        ? {icon: "link", label: "Open this job link", detail: q, run: () => route(q)}
+        ? (isDirectATSLink(q)
+          ? {icon: "link", label: "Open this job link", detail: q, run: () => route(q)}
+          : {icon: "paste", label: `Add listing from ${siteNameFromURL(q)}`, detail: "Paste its content to save and analyze", run: () => route(q)})
         : {icon: "search", label: `Search job boards for \u201c${q}\u201d`, detail: "Greenhouse, Lever and Ashby", run: () => route(q)}]});
       const jobs = (saved || []).filter(j => `${j.position_title} ${j.company_name}`.toLowerCase().includes(low)).slice(0, 5);
       if (jobs.length) groups.push({title: "Your jobs", rows: jobs.map(j => ({icon: "bookmark", label: j.position_title, detail: j.company_name, own: true,
@@ -93,7 +117,8 @@
     if (recent.length) groups.push({title: "Recent searches", rows: recent.map(r => ({icon: "clock", label: r.title, detail: r.detail, run: go(r.onclick)}))});
     if (!q) groups.push({title: "Go to", rows: [
       {icon: "search", label: "Browse job boards", detail: "Search with filters for place, pay and fit", run: go(() => openFind())},
-      {icon: "paste", label: "Paste a job posting", detail: "From any site", run: go(() => window.App.openTab("tab-paste"))},
+      {icon: "paste", label: "Paste a job posting", detail: "Save a posting to your jobs", run: go(() => window.App.openTab("tab-paste"))},
+      {icon: "cloud", label: "Submit a job listing", detail: "Share a LinkedIn, Indeed, or Workday listing with the community", run: go(() => window.SubmitListing?.open())},
       {icon: "list", label: "Your jobs", detail: "Everything you have saved", run: go(() => { location.hash = "#/list"; })},
     ]});
     return groups;

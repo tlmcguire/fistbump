@@ -670,7 +670,7 @@ pub async fn ipc_call(
         "calendar:clear-feeds" => crate::calendar::clear(),
         "calendar:busy" => crate::calendar::busy().await,
         "calendar:open-ics" => crate::calendar::open_ics(&app, a0, args.get(1)),
-        "relay:similar" | "relay:report" | "relay:share-boards" | "relay:boards" => crate::relay::call(channel.as_str(), a0).await,
+        "relay:similar" | "relay:report" | "relay:share-boards" | "relay:boards" | "relay:share-listing" | "relay:listings" => crate::relay::call(channel.as_str(), a0).await,
         "app:setMenuState" => match a0 {
             Some(v) if v.is_object() => crate::menus::set_menu_state(&app, v),
             _ => bad("The menu state must be an object"),

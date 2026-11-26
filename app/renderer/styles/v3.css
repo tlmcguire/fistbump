@@ -29,6 +29,8 @@
   --rule: rgba(21, 26, 74, 0.13);
   --mark: #f4b53f;
   --mark-ink: #7a4d00;
+  --warn: #e2a829;
+  --warn-ink: #7d5300;
   --urgent: #ef6b4a;
   --urgent-ink: #a5361a;
   --success: #4fc79a;
@@ -100,6 +102,7 @@
   --ink-2: #1f1f1f;
   --rule: rgba(0, 0, 0, 0.55);
   --mark-ink: #5c3b00;
+  --warn-ink: #5c3b00;
   --urgent-ink: #8f2b10;
   --success-ink: #145238;
 }
@@ -230,8 +233,9 @@
   background: var(--paper-2);
   color: var(--ink);
 }
-:root .v3 .tag-urgent { background: color-mix(in srgb, var(--urgent) 12%, var(--paper)); color: var(--urgent-ink); }
-:root .v3 .tag-good { background: color-mix(in srgb, var(--success) 16%, var(--paper)); color: var(--success-ink); }
+:root .v3 .tag-urgent { background: color-mix(in srgb, var(--urgent) 16%, var(--paper)); color: var(--urgent-ink); }
+:root .v3 .tag-good { background: color-mix(in srgb, var(--success) 18%, var(--paper)); color: var(--success-ink); }
+:root .v3 .tag-warn { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); }
 :root .v3 .tag-mark { background: color-mix(in srgb, var(--mark) 24%, var(--paper)); color: var(--mark-ink); }
 
 /* Facts on the canvas: company, place, pay. */
@@ -268,7 +272,7 @@
 :root .v3 .ink { color: var(--mark); overflow: visible; }
 :root .v3 .ink-check { width: 24px; height: 24px; color: var(--success-ink); }
 :root .v3 .ink-open { width: 24px; height: 24px; color: var(--urgent-ink); }
-:root .v3 .ink-half { width: 24px; height: 24px; color: var(--mark-ink); }
+:root .v3 .ink-half { width: 24px; height: 24px; color: var(--warn-ink); }
 
 /* A gold underline under the last words of a heading: wrap them in .underlined. */
 :root .v3 .underlined { position: relative; display: inline-block; }
@@ -717,7 +721,7 @@
 :root .v3 .job3-ri { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 11px 0; }
 :root .v3 .job3-ri .ink { width: 24px; height: 24px; margin-top: 1px; }
 :root .v3 .job3-ri .ink-check { color: var(--success-ink); }
-:root .v3 .job3-ri .ink-half { color: var(--mark-ink); }
+:root .v3 .job3-ri .ink-half { color: var(--warn-ink); }
 :root .v3 .job3-ri .ink-open { color: var(--urgent-ink); }
 :root .v3 .job3-ri b { display: block; font-weight: 650; }
 :root .v3 .job3-ri .ink-2 { font-size: 13.5px; }
@@ -1607,13 +1611,39 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3.find3 .detail-pane .writing { background: var(--paper-2); border: 0; border-radius: 14px; box-shadow: none; }
 :root .v3.find3 .detail-pane h3, :root .v3.find3 .detail-pane h4 { color: var(--ink); }
 :root .v3.find3 .detail-pane .cost-pill { border-color: var(--rule); background: var(--paper); color: var(--ink); }
+:root .v3.find3 .detail-pane .cost-pill.good { background: color-mix(in srgb, var(--success) 20%, var(--paper)); border-color: color-mix(in srgb, var(--success) 52%, transparent); color: var(--success-ink); }
+:root .v3.find3 .detail-pane .cost-pill.warn { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); border-color: color-mix(in srgb, var(--warn) 55%, transparent); color: var(--warn-ink); }
+:root .v3.find3 .detail-pane .cost-pill.bad { background: color-mix(in srgb, var(--urgent) 18%, var(--paper)); border-color: color-mix(in srgb, var(--urgent) 48%, transparent); color: var(--urgent-ink); }
 :root .v3.find3 .detail-pane .chip { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+:root .v3.find3 .detail-pane .chip.skill-have,
+:root .v3 .paper-adapt .chip.skill-have { background: color-mix(in srgb, var(--success) 20%, var(--paper)); color: var(--success-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 48%, transparent); }
+:root .v3.find3 .detail-pane .chip.skill-likely,
+:root .v3 .paper-adapt .chip.skill-likely { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 50%, transparent); }
+:root .v3.find3 .detail-pane .chip.skill-gap,
+:root .v3 .paper-adapt .chip.skill-gap { background: color-mix(in srgb, var(--urgent) 18%, var(--paper)); color: var(--urgent-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--urgent) 45%, transparent); }
+:root .v3.find3 .detail-pane .chip.skill-soft,
+:root .v3 .paper-adapt .chip.skill-soft { background: var(--paper-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule); }
+:root .v3 .paper-adapt .skill-key-have::before { background: var(--success-ink); }
+:root .v3 .paper-adapt .skill-key-likely::before { background: var(--warn-ink); }
+:root .v3 .paper-adapt .skill-key-gap::before { background: var(--urgent-ink); }
 
 /* Paste: one sheet to paste into, with room to see the posting whole. */
 :root .v3.find3 .paste-pane.paper { align-self: start; width: min(1100px, calc(100% - 48px)); margin: 6px auto 22px; padding: 22px 24px; overflow: visible; }
-:root .v3.find3 #paste-text { min-height: 46vh; padding: 16px 18px; border: 1.5px dashed var(--rule); border-radius: 14px; background: var(--paper); font: 15px/1.6 system-ui, sans-serif; resize: vertical; }
+:root .v3.find3 .paste-hint { margin: 0 0 14px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+:root .v3.find3 .paste-hint.site-note { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--mark) 18%, var(--paper)); color: var(--ink); }
+:root .v3.find3 .paste-url-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+:root .v3.find3 .paste-url-row label { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+:root .v3.find3 .paste-url-row label .hint { font-weight: 450; color: var(--ink-2); }
+:root .v3.find3 #paste-url { width: 100%; height: 40px; padding: 0 14px; border: 1.5px solid var(--rule); border-radius: 11px; background: var(--paper); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+:root .v3.find3 #paste-url:focus { border-color: var(--mark-deep); outline: none; }
+:root .v3.find3 #paste-text { min-height: 40vh; padding: 16px 18px; border: 1.5px dashed var(--rule); border-radius: 14px; background: var(--paper); font: 15px/1.6 system-ui, sans-serif; resize: vertical; }
 :root .v3.find3 #paste-text:focus { border-style: solid; border-color: var(--mark-deep); outline: none; }
 :root .v3.find3 #paste-preview { min-height: 44px; padding: 0 22px; border-radius: 12px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-control); }
+:root .v3.find3 .paste-share-row { display: flex; flex-direction: column; gap: 3px; margin: 12px 0 4px; padding: 10px 14px; border-radius: 12px; background: var(--paper-2); }
+:root .v3.find3 .paste-share-row label { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+:root .v3.find3 .paste-share-row .hint { margin: 0 0 0 25px; font-size: 12.5px; color: var(--ink-2); }
+:root .v3.find3 .detail-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
+:root .v3.find3 .result-pending { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); }
 
 /* Saved jobs list (reached from older links): the same sheet as results. */
 :root .v3.find3 .saved-bulk { padding: 12px 18px; }
@@ -1623,6 +1653,14 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3.find3 .result-open span { color: var(--ink-2); font-weight: 500; }
 :root .v3.find3 .result:hover .result-open strong { text-decoration: underline; text-decoration-color: var(--mark-deep); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 :root .v3.find3 .signal { background: var(--paper-2); color: var(--ink); }
+:root .v3.find3 .signal .signal-label { color: inherit; opacity: 0.78; }
+:root .v3.find3 .signal[data-level="good"],
+:root .v3.find3 .signal[data-level="high"] { background: color-mix(in srgb, var(--success) 20%, var(--paper)); color: var(--success-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 45%, transparent); }
+:root .v3.find3 .signal[data-level="fair"],
+:root .v3.find3 .signal[data-level="mid"] { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 48%, transparent); }
+:root .v3.find3 .signal[data-level="bad"],
+:root .v3.find3 .signal[data-level="low"] { background: color-mix(in srgb, var(--urgent) 18%, var(--paper)); color: var(--urgent-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--urgent) 42%, transparent); }
+:root .v3.find3 .signal[data-level="none"] { background: var(--paper-2); color: var(--ink-2); }
 :root .v3.find3 .result-link { color: var(--ink-2); }
 
 /* ==================== Tailor: the rest of the desk (tl3) ==================== */
@@ -1859,6 +1897,15 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root dialog.report-dialog .report-done .pico { width: 120px; height: auto; }
 :root dialog.report-dialog .report-done p { max-width: 42ch; color: var(--ink-2); }
 :root dialog.report-dialog .report-done a { color: var(--ink); font-weight: 650; }
+:root dialog.submit-listing-dialog { width: min(620px, calc(100vw - 48px)); }
+:root dialog.submit-listing-dialog .sl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+:root dialog.submit-listing-dialog select { width: 100%; height: 40px; padding: 0 12px; font: 14.5px/1.4 system-ui, sans-serif; }
+:root dialog.submit-listing-dialog .sl-ats-note { margin: -4px 0 12px; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--success) 18%, var(--paper)); color: var(--success-ink); font-size: 13.5px; font-weight: 600; line-height: 1.45; }
+:root dialog.submit-listing-dialog .sl-ats-note[hidden],
+:root dialog.submit-listing-dialog .sl-manual[hidden] { display: none; }
+:root dialog.submit-listing-dialog .sl-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 10px; }
+:root dialog.submit-listing-dialog .sl-local-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
+@media (max-width: 520px) { :root dialog.submit-listing-dialog .sl-grid { grid-template-columns: 1fr; } }
 :root dialog.report-dialog .st3-seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
 :root dialog.report-dialog .st3-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
 :root dialog.report-dialog .st3-seg button { height: 32px; min-height: 0; padding: 0 14px; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; }
@@ -1886,7 +1933,7 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 /* Checkboxes in dialogs match the ones on paper: ink when on, a drawn tick. */
 :root dialog.ask input[type="checkbox"]:not(.switch) {
   appearance: none; -webkit-appearance: none; display: inline-grid; place-items: center; flex: none;
-  width: 18px; height: 18px; margin: 0; border: 1.5px solid color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 5px; background: var(--paper);
+  width: 18px; height: 18px; padding: 0; margin: 0; border: 1.5px solid color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 5px; background: var(--paper);
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 :root dialog.ask input[type="checkbox"]:not(.switch):checked { background: var(--ink); border-color: var(--ink); }
@@ -2018,8 +2065,8 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
   :root .v3 .cal3-plan span:not(.cal3-clash-tag) { display: none; }
 }
 
-/* Skill chips on paper: "likely" in the deep accent ink, never pale gold on cream. */
-:root .v3 .paper-adapt .chip.skill-likely { background: color-mix(in srgb, var(--mark) 20%, var(--paper)); color: var(--mark-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mark-deep) 40%, transparent); }
+/* Skill chips on paper: "likely" uses semantic amber so it stays yellow across every theme. */
+:root .v3 .paper-adapt .chip.skill-likely { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 50%, transparent); }
 
 /* One fit number at a time: while a round is on the desk its meter shows the fit (and moves as you decide), so the
    side panel's ring steps aside. Before any round, the ring is the fit. */

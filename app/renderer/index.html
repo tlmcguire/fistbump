@@ -122,6 +122,8 @@
                                 </div>
                             </section>
                         </div>
+                        <button type="button" id="open-paste" title="Paste a job posting to save it to your jobs">Paste job</button>
+                        <button type="button" id="submit-listing" title="Submit a job listing from LinkedIn, Indeed, Workday, or another site for the Fistbump community">Submit listing</button>
 
                         <!--Filters: a row under the toolbar, shown with the Filters button. Part of the same form.-->
                         <div id="filters" class="filters paper paper-adapt" hidden>
@@ -131,12 +133,13 @@
                                     <label>Company
                                         <span class="field"><input id="search-company" type="text" placeholder="e.g. Stripe"></span>
                                     </label>
-                                    <label>ATS source
+                                    <label>Source
                                         <select id="search-source">
-                                            <option value="">Any ATS</option>
+                                            <option value="">Any source</option>
                                             <option value="greenhouse">Greenhouse</option>
                                             <option value="lever">Lever</option>
                                             <option value="ashby">Ashby</option>
+                                            <option value="community">Community listings</option>
                                         </select>
                                     </label>
                                     <label>Industry
@@ -164,6 +167,7 @@
                                     <label class="wide">Leave out titles with
                                         <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
                                     </label>
+                                    <label class="check wide"><input id="search-include-community" type="checkbox"> Include community listings (LinkedIn, Indeed, Workday, etc.)</label>
                                 </div>
                             </fieldset>
 
@@ -246,6 +250,7 @@
                                     <label class="check"><input type="checkbox" data-show="posted"> Posted date</label>
                                     <label class="check"><input type="checkbox" data-show="locations"> Other locations count</label>
                                     <label class="check"><input type="checkbox" data-show="company_site"> Company website link</label>
+                                    <label class="check"><input type="checkbox" data-show="source"> Source / ATS badge</label>
                                 </div>
                             </details>
 
@@ -443,10 +448,17 @@
                                 </div>
                                 <div class="setting">
                                     <div class="setting-text">
-                                        <label for="pref-community-share">Share the boards I add</label>
-                                        <p>When you add a board to your watchlist, only its name (like lever:netflix) is sent, so others can search it too. Nothing about you goes with it.</p>
+                                        <label for="pref-community-share">Share the boards and listings I add</label>
+                                        <p>Shares board names you add to your watchlist and pre-checks sharing when you submit external listings (LinkedIn, Indeed, etc.). Nothing personal goes with them.</p>
                                     </div>
                                     <input id="pref-community-share" type="checkbox" class="switch" role="switch">
+                                </div>
+                                <div class="setting">
+                                    <div class="setting-text">
+                                        <span class="setting-label">Submit a job listing</span>
+                                        <p>Contribute a listing from LinkedIn, Indeed, Workday, or another site that Fistbump cannot fetch automatically.</p>
+                                    </div>
+                                    <button type="button" id="settings-submit-listing">Submit a listing</button>
                                 </div>
                                 <p id="community-status" class="setting-status" role="status"></p>
                             </div>
@@ -707,7 +719,12 @@
                 </section>
 
                 <section id="paste-pane" class="pane paste-pane paper paper-adapt" aria-label="Paste a job" hidden>
-                    <textarea id="paste-text" rows="14" placeholder="Paste the full job posting here"></textarea>
+                    <p id="paste-hint" class="paste-hint">Submit a job listing from LinkedIn, Indeed, Workday, or any other site. Add the link if you have it, then paste the job content below.</p>
+                    <div class="paste-url-row">
+                        <label for="paste-url">Listing link <span class="hint">(optional — LinkedIn, Indeed, Workday, company careers page, etc.)</span></label>
+                        <input id="paste-url" type="url" placeholder="https://www.linkedin.com/jobs/view/..." autocomplete="off">
+                    </div>
+                    <textarea id="paste-text" rows="14" placeholder="Paste the full job posting content here"></textarea>
                     <div class="job-actions">
                         <button id="paste-preview" type="button" class="primary">Preview</button>
                     </div>
@@ -835,7 +852,10 @@
                             <img class="mascot" src="views/graphics/mascots/29-something-went-wrong.png" alt="">
                             <h2>Couldn't load the listing</h2>
                             <p id="detail-error-message"></p>
-                            <button id="detail-try-again" type="button">Try again</button>
+                            <div class="detail-error-actions">
+                                <button id="detail-paste-instead" type="button" class="primary" hidden>Paste listing content instead</button>
+                                <button id="detail-try-again" type="button">Try again</button>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -879,6 +899,7 @@
         <script src="js/omnibox.js" defer></script>
         <script src="js/report.js" defer></script>
         <script src="js/community.js" defer></script>
+        <script src="js/submit-listing.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
         <script src="js/desktop.js" defer></script>

@@ -4,7 +4,9 @@
 //   POST /v1/reports                   files a report as a GitHub issue, or adds it to the one it duplicates
 //   POST /v1/boards                    takes job boards people chose to share; checks each is real, queues the new ones
 //   GET  /v1/boards                    the shared boards, from data/community-boards.json in the repository
-//   (cron)                             once a day, opens or updates one pull request adding the queued boards
+//   POST /v1/listings                  takes scrubbed external job listings (LinkedIn, Indeed, etc.) people chose to share
+//   GET  /v1/listings                  the shared listings, from data/community-listings.json in the repository
+//   (cron)                             once a day, opens or updates pull requests adding queued boards and listings
 //
 // People do not need a GitHub account: the Worker files under a GitHub App installed on the repository (or a token).
 // Nothing personal is kept: no address, no account, only what the person read and sent. Requests are rate limited
@@ -18,9 +20,11 @@
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const BOARDS_FILE = "data/community-boards.json";
+const LISTINGS_FILE = "data/community-listings.json";
 const LABEL = "from-the-app";
 const KINDS = { bug: "Something is broken", idea: "An idea", question: "A question" };
 const ATS = ["greenhouse", "lever", "ashby"];
+const WORK_MODES = new Set(["Remote", "Hybrid", "On-site"]);
 const TOKEN = /^[a-z0-9][a-z0-9_.-]{0,63}$/;
 
 // ---------- small helpers ----------
@@ -293,6 +297,121 @@ export async function publishBoards(env) {
   await Promise.all(keys.map(k => env.RELAY.delete(k.name)));
 }
 
+// ---------- community listings ----------
+
+function safeHttpUrl(value, max, allowHttp = true) {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw.length > max) return "";
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "https:" || (allowHttp && u.protocol === "http:")) return u.href;
+  } catch {
+    // invalid URL
+  }
+  return "";
+}
+
+function siteFromUrl(value) {
+  if (!value) return "";
+  try {
+    const host = new URL(value).hostname.replace(/^www\./i, "").toLowerCase();
+    if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
+    if (host === "indeed.com" || host.endsWith(".indeed.com")) return "Indeed";
+    if (host === "glassdoor.com" || host.endsWith(".glassdoor.com")) return "Glassdoor";
+    if (host.includes("workday")) return "Workday";
+    if (host === "wellfound.com" || host === "angel.co") return "Wellfound";
+    if (host === "ziprecruiter.com" || host.endsWith(".ziprecruiter.com")) return "ZipRecruiter";
+    if (host.includes("smartrecruiters")) return "SmartRecruiters";
+    if (host.includes("icims")) return "iCIMS";
+    if (host.includes("jobvite")) return "Jobvite";
+    return host;
+  } catch {
+    return "";
+  }
+}
+
+export function readListing(body) {
+  const company_name = scrub(body?.company_name, 120);
+  const position_title = scrub(body?.position_title, 160);
+  const location = scrub(body?.location, 120);
+  const work_mode = WORK_MODES.has(body?.work_mode) ? body.work_mode : "";
+  const listing_url = safeHttpUrl(body?.listing_url, 500, true);
+  const company_url = safeHttpUrl(body?.company_url, 300, false);
+  const raw_text = scrub(body?.raw_text, 25000);
+  const source = siteFromUrl(listing_url) || scrub(body?.source, 40) || "Community";
+  return { source, company_name, position_title, location, work_mode, listing_url, company_url, raw_text };
+}
+
+async function readSharedListings(env) {
+  const { status, data } = await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}`);
+  if (status !== 200) return { file: { version: 1, listings: [] }, sha: null };
+  const text = new TextDecoder().decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  return { file: JSON.parse(text), sha: data.sha };
+}
+
+async function cachedSharedListings(env) {
+  const hit = env.RELAY && await env.RELAY.get("shared-listings", "json");
+  if (hit) return hit;
+  const { file } = await readSharedListings(env);
+  await env.RELAY?.put("shared-listings", JSON.stringify(file), { expirationTtl: 6 * 3600 });
+  return file;
+}
+
+async function shareListing(env, request) {
+  if (await limited(env, request, "listings", 20)) return problem(429, "rate_limited", "Too many listings shared in one hour. Please try again later.");
+  const l = readListing(await request.json().catch(() => null));
+  if (l.company_name.length < 2 || l.position_title.length < 2) return problem(400, "validation_failed", "A shared listing needs a company name and position title.");
+  if (l.raw_text.length < 40) return problem(400, "validation_failed", "Include the job listing content so others can read and match against it.");
+  const identity = l.listing_url
+    ? l.listing_url.toLowerCase()
+    : `${l.company_name.toLowerCase()}|${l.position_title.toLowerCase()}|${l.location.toLowerCase()}`;
+  const id = (await sha256(identity)).slice(0, 16);
+  const known = new Set(((await cachedSharedListings(env)).listings || []).map(x => x.id));
+  if (known.has(id) || (env.RELAY && await env.RELAY.get(`listing:${id}`))) {
+    return json({ status: "known", id });
+  }
+  const entry = { id, ...l, added: new Date().toISOString().slice(0, 10) };
+  await env.RELAY?.put(`listing:${id}`, JSON.stringify(entry));
+  return json({ status: "queued", id, listing: entry }, 201);
+}
+
+export async function publishListings(env) {
+  if (!env.RELAY) return;
+  const { keys } = await env.RELAY.list({ prefix: "listing:" });
+  if (!keys.length) return;
+  const queued = (await Promise.all(keys.map(k => env.RELAY.get(k.name, "json")))).filter(Boolean);
+  const branch = "community-listings";
+  const { data: repo } = await gh(env, `/repos/${env.REPO}`);
+  const base = repo.default_branch;
+  const { data: head } = await gh(env, `/repos/${env.REPO}/git/ref/heads/${base}`);
+  const existing = await gh(env, `/repos/${env.REPO}/git/ref/heads/${branch}`);
+  if (existing.status === 404) {
+    await gh(env, `/repos/${env.REPO}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: head.object.sha }) });
+  }
+  const { data: current } = await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}?ref=${branch}`);
+  const file = current?.content ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(current.content.replace(/\s/g, "")), c => c.charCodeAt(0)))) : { version: 1, listings: [] };
+  const have = new Set((file.listings || []).map(x => x.id));
+  const added = queued.filter(x => !have.has(x.id));
+  if (added.length) {
+    file.listings = [...added, ...(file.listings || [])].sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || a.company_name.localeCompare(b.company_name));
+    file.updated = new Date().toISOString().slice(0, 10);
+    const content = btoa(String.fromCharCode(...new TextEncoder().encode(`${JSON.stringify(file, null, 2)}\n`)));
+    await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}`, {
+      method: "PUT",
+      body: JSON.stringify({ message: `data: ${added.length} shared job listing${added.length === 1 ? "" : "s"}`, content, branch, ...(current?.sha ? { sha: current.sha } : {}) }),
+    });
+    const owner = env.REPO.split("/")[0];
+    const { data: open } = await gh(env, `/repos/${env.REPO}/pulls?state=open&head=${owner}:${branch}`);
+    if (!open?.length) {
+      await gh(env, `/repos/${env.REPO}/pulls`, {
+        method: "POST",
+        body: JSON.stringify({ title: "Job listings shared from the app", head: branch, base, body: "External job listings (LinkedIn, Indeed, Workday, etc.) people shared from Fistbump with scrubbed content. Merge to make them available in Community resources." }),
+      });
+    }
+  }
+  await Promise.all(keys.map(k => env.RELAY.delete(k.name)));
+}
+
 // ---------- routing ----------
 
 export default {
@@ -306,6 +425,8 @@ export default {
       if (request.method === "POST" && url.pathname === "/v1/reports") return await report(env, request);
       if (request.method === "POST" && url.pathname === "/v1/boards") return await shareBoards(env, request);
       if (request.method === "GET" && url.pathname === "/v1/boards") return json(await cachedShared(env), 200, { "cache-control": "public, max-age=3600" });
+      if (request.method === "POST" && url.pathname === "/v1/listings") return await shareListing(env, request);
+      if (request.method === "GET" && url.pathname === "/v1/listings") return json(await cachedSharedListings(env), 200, { "cache-control": "public, max-age=3600" });
       if (url.pathname === "/") return json({ service: "fistbump-relay", ok: true });
       return problem(404, "not_found", "Nothing here.");
     } catch (err) {
@@ -314,6 +435,6 @@ export default {
     }
   },
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(publishBoards(env));
+    ctx.waitUntil(Promise.all([publishBoards(env), publishListings(env)]));
   },
 };

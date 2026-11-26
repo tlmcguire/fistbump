@@ -636,6 +636,7 @@
             el("div", {class: "jl3-view", role: "radiogroup", "aria-label": "Show"}, scopeButtons),
             el("div", {class: "tr3-stages", role: "group", "aria-label": "Filter by stage"}, stageChips),
             el("label", {class: "jl3-search"}, icon("search"), search),
+            el("button", {type: "button", class: "tr3-tool", title: "Add a job listing from Greenhouse, Lever, Ashby, LinkedIn, Indeed, or any site", onclick: () => window.SubmitListing?.open()}, "Add listing"),
             el("button", {type: "button", class: "tr3-tool", title: "Interviews and follow-ups by week, with clashes flagged", onclick: () => window.App.go("calendar")}, "Calendar"),
             compareButton, exportCsvButton),
           status,

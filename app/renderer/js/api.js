@@ -145,7 +145,7 @@ window.FistBumpAPI = {
   //the calendar: plans kept by the backend, and the person's own calendars for busy times (src-tauri/src/calendar.rs)
   window.FistBumpAPI.events = wrap("events", ["list", "create", "update", "delete"]);
   window.FistBumpAPI.calendar = wrap("calendar", ["feeds", "addFeed", "clearFeeds", "busy", "openIcs"]);
-  window.FistBumpAPI.community = wrap("community", ["similar", "report", "shareBoards", "boards"]);
+  window.FistBumpAPI.community = wrap("community", ["similar", "report", "shareBoards", "boards", "shareListing", "listings"]);
 
   // The backend is back after a crash, so the notice at the bottom of the window goes away.
   window.api?.onBackendRestarted?.(() => document.getElementById("backend-notice")?.remove());
