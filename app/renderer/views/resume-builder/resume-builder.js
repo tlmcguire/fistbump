@@ -1062,18 +1062,15 @@
     };
 
     function renderCustomSections() {
-      const orderList = el("div", {class: "chips"}, sectionOrder.map((key, idx) => el("span", {class: "chip"},
-        ORDER_LABELS[key] || key, " ",
-        el("button", {type: "button", class: "link-button", disabled: idx === 0, "aria-label": `Move ${ORDER_LABELS[key]} up`, onclick: async () => {
-          [sectionOrder[idx - 1], sectionOrder[idx]] = [sectionOrder[idx], sectionOrder[idx - 1]];
-          renderCustomSections();
+      //drag a row, press its arrows, or Alt+Up / Alt+Down on a focused row
+      const orderList = window.Sortable.list(sectionOrder, {
+        name: "Section order",
+        label: key => ORDER_LABELS[key] || key,
+        onChange: async next => {
+          sectionOrder = [...next];
           await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
-        }}, "↑"), " ",
-        el("button", {type: "button", class: "link-button", disabled: idx === sectionOrder.length - 1, "aria-label": `Move ${ORDER_LABELS[key]} down`, onclick: async () => {
-          [sectionOrder[idx + 1], sectionOrder[idx]] = [sectionOrder[idx], sectionOrder[idx + 1]];
-          renderCustomSections();
-          await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
-        }}, "↓"))));
+        },
+      });
 
       const titleInput = el("input", {type: "text", placeholder: "e.g. Projects, Certifications, Awards"});
       const bodyInput = el("textarea", {rows: 3, placeholder: "- Built an open-source CLI tool in Go..."});
