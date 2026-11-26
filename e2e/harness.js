@@ -64,7 +64,7 @@ async function stopBackend(child) {
 }
 
 function routeRequest(channel, args) {
-  const [a0, a1] = args;
+  const [a0, a1, a2] = args;
   const qs = (obj, allowed) => {
     const p = new URLSearchParams();
     if (obj && typeof obj === 'object') {
@@ -98,6 +98,12 @@ function routeRequest(channel, args) {
     'revisions:create': () => ['POST', '/v1/revisions', a0],
     'revisions:list': () => ['GET', a0 ? `/v1/revisions?job_id=${a0}` : '/v1/revisions'],
     'revisions:get': () => ['GET', `/v1/revisions/${a0}`],
+    'revisions:cancel': () => ['POST', `/v1/revisions/${a0}/cancel`],
+    'revisions:delete': () => ['DELETE', `/v1/revisions/${a0}`],
+    'suggestions:accept': () => ['POST', `/v1/revisions/${a0}/suggestions/${a1}/accept`],
+    'suggestions:reject': () => ['POST', `/v1/revisions/${a0}/suggestions/${a1}/reject`],
+    'suggestions:edit': () => ['POST', `/v1/revisions/${a0}/suggestions/${a1}/edit`, { edited_text: a2 }],
+    'tailored:create': () => ['POST', '/v1/tailored-resumes', { revision_id: a0 }],
     'tailored:list': () => ['GET', a0 ? `/v1/tailored-resumes?job_id=${a0}` : '/v1/tailored-resumes'],
     'applications:list': () => ['GET', `/v1/applications${qs(a0, ['status', 'q', 'archived'])}`],
     'applications:create': () => ['POST', '/v1/applications', a0],

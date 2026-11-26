@@ -787,3 +787,106 @@
 /* Saved jobs: each opens on its own page now, so the list takes the whole width. */
 .main.view-saved .detail-pane { display: none; }
 .main.view-saved .content { grid-template-columns: minmax(0, 1fr); }
+
+/* ==================== Tailor: the proofing desk ==================== */
+
+/* The desk sits inside the Tailor view's own pane, so it keeps that pane's background. */
+:root .v3.t3-desk { background: none; color: var(--on-canvas); }
+:root .v3 .t3-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-bottom: 6px; }
+:root .v3 .t3-bar-meta { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+:root .v3 .t3-priv { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: color-mix(in oklab, var(--success) 60%, var(--on-canvas)); }
+:root .v3 .t3-priv.remote { color: var(--mark); }
+:root .v3 .t3-priv .icon { width: 15px; height: 15px; }
+:root .v3 .t3-count { font-size: 13px; color: var(--on-canvas-2); }
+:root .v3 .t3-meter { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--on-canvas) 8%, transparent); }
+:root .v3 .t3-fit { font: 800 30px/1 var(--theme-font-display, var(--display)); font-variant-numeric: tabular-nums; }
+:root .v3 .t3-track { position: relative; width: 140px; height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--on-canvas) 14%, transparent); overflow: hidden; }
+:root .v3 .t3-track i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 5px; background: var(--mark); transition: width 600ms var(--ease-settle); }
+:root .v3 .t3-fit-note { display: block; margin-top: 4px; font-size: 12.5px; color: var(--on-canvas-2); }
+:root .v3 .t3-bar-acts { display: flex; gap: 8px; align-items: center; }
+:root .v3 .t3-bar-acts .btn-text { color: var(--on-canvas); }
+:root .v3 .t3-hint { margin: 0 0 12px; font-size: 13px; color: var(--on-canvas-2); text-align: right; }
+
+/* The page: text on the left, its margin notes on the right of the same row. */
+:root .v3 .t3-sheet {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  column-gap: 28px;
+  padding: 36px 40px 40px;
+  border-radius: 8px;
+}
+:root .v3 .t3-sheet > * { grid-column: 1; }
+:root .v3 .t3-head { margin-bottom: 4px; }
+:root .v3 .t3-name { font-size: 28px; font-weight: 800; line-height: 1.1; }
+:root .v3 .t3-contact { margin-top: 6px; font-size: 13px; color: var(--ink-2); }
+:root .v3 .t3-h {
+  margin: 18px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid var(--rule);
+  font: 720 12px system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+:root .v3 .t3-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) 280px; column-gap: 28px; align-items: start; }
+:root .v3 .t3-text { grid-column: 1; font-size: 14.5px; line-height: 1.6; color: color-mix(in oklab, var(--ink) 90%, var(--paper)); padding: 2px 0; }
+:root .v3 .t3-line .t3-text { padding-left: 14px; position: relative; }
+:root .v3 .t3-line .t3-text::before { content: "\2022"; position: absolute; left: 2px; color: var(--ink-2); }
+:root .v3 .t3-role { margin-top: 8px; }
+:root .v3 .t3-role .t3-text { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); }
+:root .v3 .t3-role .t3-text span { color: var(--ink-2); }
+:root .v3 .t3-change { margin: 6px 0; cursor: pointer; }
+:root .v3 .t3-change .t3-text { margin: 0 -10px; padding: 6px 10px; border-radius: 8px; transition: background-color 200ms ease; }
+:root .v3 .t3-change.current .t3-text { background: color-mix(in srgb, var(--mark) 16%, transparent); }
+
+/* Proof marks: added words in highlighter, removed words struck in red ink; after a decision, the result. */
+:root .v3 .t3-text ins { text-decoration: none; padding: 1px 2px; border-radius: 3px; color: var(--ink); background: color-mix(in srgb, var(--mark) 55%, transparent); }
+:root .v3 .t3-text del { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--urgent-ink); text-decoration-thickness: 2px; }
+:root .v3 .t3-text mark { color: inherit; background: none; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--mark) 80%, transparent); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+
+/* Margin notes */
+:root .v3 .t3-note {
+  grid-column: 2;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 13.5px;
+  box-shadow: 0 10px 20px -16px rgba(0, 0, 0, 0.55);
+  transition: background-color 200ms ease;
+}
+:root .v3 .t3-note.current { background: var(--mark); }
+:root .v3 .t3-note-k { font: 700 12px system-ui, sans-serif; color: var(--ink-2); }
+:root .v3 .t3-note.current .t3-note-k { color: color-mix(in oklab, var(--ink) 75%, var(--mark)); }
+:root .v3 .t3-why { margin: 4px 0 0; line-height: 1.4; }
+:root .v3 .t3-brings { margin: 8px 0 0; }
+:root .v3 .t3-decided { margin: 8px 0 0; font-size: 13px; }
+:root .v3 .t3-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+:root .v3 .t3-acts .btn { min-height: 32px; padding: 6px 10px; font-size: 13px; }
+:root .v3 .t3-note.current .t3-acts .btn:not(.btn-primary) { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+:root .v3 .t3-note textarea { width: 100%; min-height: 110px; padding: 8px 10px; border: 1.5px solid var(--rule); border-radius: 10px; background: var(--paper); color: var(--ink); font: 13.5px/1.45 system-ui, sans-serif; }
+:root .v3 .t3-note h3 { font-size: 14px; margin-bottom: 6px; }
+:root .v3 .t3-note .tailor-actions button { min-height: 32px; height: auto; padding: 6px 10px; border-radius: 9px; font-size: 13px; }
+
+:root .v3 .t3-peek { position: absolute; right: -26px; bottom: -22px; width: 104px; transform: rotate(8deg); filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.4)); pointer-events: none; }
+:root .v3 .t3-finish { display: flex; align-items: center; gap: 14px; margin-top: 18px; color: var(--on-canvas); }
+:root .v3 .t3-finish[hidden] { display: none; }
+:root .v3 .t3-finish .mascot { width: 76px; height: auto; margin: 0; }
+:root .v3 .t3-finish b { display: block; font: 740 18px var(--theme-font-display, var(--display)); }
+
+@media (max-width: 1200px) {
+  :root .v3 .t3-sheet, :root .v3 .t3-row { grid-template-columns: minmax(0, 1fr) 230px; column-gap: 20px; }
+  :root .v3 .t3-sheet { padding: 28px 26px 32px; }
+}
+@media (max-width: 960px) {
+  :root .v3 .t3-sheet, :root .v3 .t3-row { grid-template-columns: minmax(0, 1fr); }
+  :root .v3 .t3-note { grid-column: 1; margin: 6px 0 10px; }
+}
+
+/* A decided note folds to a line: what was decided, and quiet ways to change it. */
+:root .v3 .t3-note[data-state]:not([data-state="pending"]):not(.current) { background: color-mix(in oklab, var(--paper-2) 60%, var(--paper)); box-shadow: none; }
+:root .v3 .t3-note:not([data-state="pending"]) .t3-acts { gap: 2px; margin-top: 4px; }
+:root .v3 .t3-note:not([data-state="pending"]) .t3-acts .btn-text { min-height: 28px; padding: 4px 8px; color: var(--ink-2); }
+:root .v3 .t3-note:not([data-state="pending"]) .t3-acts .btn-text:hover:not(:disabled) { color: var(--ink); }
+:root .v3 .t3-note:not([data-state="pending"]) .t3-acts kbd { display: none; }

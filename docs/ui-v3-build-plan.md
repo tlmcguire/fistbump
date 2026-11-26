@@ -142,6 +142,13 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 - Keep the engine badge ("Built-in rules · no AI" or the model name) always visible.
 - Replace native `confirm()`/`alert()` here with inline confirmations.
 
+**Phase 4 as built:**
+- **Proofing desk:** The review stage now shows the master resume on a paper sheet. Each suggestion sits where it applies: added words highlighted, removed words struck, and after a decision the result with a faint underline.
+- **Margin notes:** Each change gets a note in the sheet's right margin, on the same row, with its reason, the skills it brings in, Accept, Reject and Edit. Decided notes fold to a line. J/K/A/R/E still work, and focus moves on immediately so quick key presses land on the next change.
+- **Bar over the desk:** It shows where suggestions are written (rules, local or remote), the count decided, and a fit meter. The meter uses the same analysis score as the side panel, plus any required skill an accepted change brings in, and shows "if you accept the rest" only when that is higher. "Build tailored resume" stays disabled, with the reason written, until every change is decided; then Pico gives the finish line.
+- **Unchanged:** Rounds, cover letter and Q&A, the keyword bridge, editing by hand, the tailored resume view (changes, editor, PDF) and the side panel are as they were. Their v3 restyle moves to Phase 5 with the rest of the older surfaces.
+- **Placement limits:** Suggestions are placed by section and experience id, then by matching their original text to a line. Anything unmatched still appears in its section.
+
 ### Phase 5: Jobs list, Resume, Settings (after mockups)
 - **Jobs:** one list for all jobs, grouped "Needs you" then the rest, with filters (stage, remote, fit, has pay) and an optional board view. This absorbs the Tracker table, bulk actions, and Saved / Archived / Trash scopes.
 - **Resume:** master resume as a paper document with inline editing, plus saved versions.

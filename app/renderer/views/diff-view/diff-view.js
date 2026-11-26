@@ -59,6 +59,8 @@
       let nextTab = "changes"; //the tab a tailored resume opens on: the editor, when it was just started by hand
       let gaps = [];          //skills the job asks for that the master resume lacks
       let experienceTitles = {}; //experience id -> "Title, Company" for clear card headings
+      let masterData = null;  //the master resume, so the review can show each change in place on the page
+      let reqStats = null;    //{have, total, missing:Set} for required technical skills, for the fit meter
       let cards = [];         //the cards on screen, for the keyboard
       let current = 0;
       let pdf = null;         //the open PDF preview, so its blob is let go
@@ -268,6 +270,13 @@
         const preferredTotal = prefGroups.reduce((n, g) => n + g.matched.length + (g.likely || []).length + g.missing.length, 0);
         const titles = Object.fromEntries((master?.value?.experiences || []).map(x => [x.id, `${x.job_title}, ${x.company_name}`]));
         experienceTitles = titles;
+        masterData = master?.value || null;
+        reqStats = a ? {
+          score: a.score, //the same number the side panel shows, so the two never disagree
+          have: a.required.tech.matched.length,
+          total: a.required.tech.matched.length + (a.required.tech.likely || []).length + a.required.tech.missing.length,
+          missing: new Set(a.required.tech.missing.map(x => String(x).toLowerCase())),
+        } : null;
         const match = a ? window.ResumeBuilder.skillMatch(a, titles) : null;
         const score = a ? Math.round(a.score * 100) : null;
         const scoreNode = el("span", {class: "score-number", text: String(score ?? 0)});
@@ -1198,7 +1207,7 @@
             roundActions),
           rev.status === "failed" ? problemPanel(explain(rev.error)) : null,
           busy && writing(rev),
-          rev.status === "done" && suggestions(rev));
+          rev.status === "done" && proof(rev));
         if (!busy && (rev.status !== "done" || !rev.suggestions?.length)) play(stage, "enter", 220);
       };
 
@@ -1216,38 +1225,93 @@
           el("div", {class: "skeletons", "aria-hidden": "true"}, [0, 1, 2].map(() => el("div", {class: "skeleton"}))));
       };
 
-      const suggestions = rev => {
+      // ---------- the proofing desk (v3) ----------
+      //The review shows the resume as a page. Each suggestion sits where it applies, marked like a proof:
+      //added words highlighted, removed words struck through. Its note in the margin says why, and holds
+      //Accept, Reject and Edit. J/K/A/R/E work as before; the notes are the "cards" the keys act on.
+      const inline = (s, mode) => {
+        const final = s.state === "edited" ? s.edited_text : s.proposed_text;
+        const words = window.WordDiff.diff(s.original_text || "", final || "");
+        const frag = document.createDocumentFragment();
+        const put = (tag, text) => {
+          const parts = window.WordDiff.plain(text).split("\n");
+          parts.forEach((part, i) => {
+            if (i > 0) frag.append(el("br"));
+            if (!part) return;
+            frag.append(tag ? el(tag, {text: part}) : document.createTextNode(part));
+          });
+          frag.append(" ");
+        };
+        for (const w of words) {
+          if (w.op === "eq") put(null, w.text);
+          else if (w.op === "del" && mode === "proof") put("del", w.text);
+          else if (w.op === "del" && mode === "original") put(null, w.text);
+          else if (w.op === "add" && mode === "proof") put("ins", w.text);
+          else if (w.op === "add" && mode === "final") put("mark", w.text);
+        }
+        return frag;
+      };
+      const modeOf = s => s.state === "pending" ? "proof" : s.state === "rejected" ? "original" : "final";
+      const norm = t => window.WordDiff.plain(String(t || "")).replace(/\s+/g, " ").trim().toLowerCase();
+
+      const proof = rev => {
         const list = rev.suggestions;
         if (!list.length) {
           return el("div", {class: "stage-empty"}, pico("34-no-changes.png"),
             el("h2", {text: "Your resume already fits this job"}),
             el("p", {text: "No wording changes found. Try another round, or a different job."}));
         }
-        const pending = () => list.filter(s => s.state === "pending");
+        const pending = () => list.filter(x => x.state === "pending");
+        const m = masterData || {profile: null, experiences: [], education: []};
+        const p = m.profile || {};
 
-        const acceptAll = async () => {
-          for (const s of pending()) {
-            const r = await attempt(() => api.suggestions.accept(rev.id, s.id));
-            if (!r) break;
-            Object.assign(s, r.value);
-          }
-          show(rev);
+        // ---- the bar over the desk: progress, fit, privacy and the build step ----
+        const ENGINE_LINE = {rules: "Built-in rules · no AI · stays on this computer", local: "Local model · stays on this computer", remote: "Remote provider · your text goes to it"};
+        const fitN = el("span", {class: "t3-fit-n num"});
+        const fitNote = el("span", {class: "t3-fit-note"});
+        const track = el("div", {class: "t3-track", "aria-hidden": "true"}, el("i"));
+        const counter = el("span", {class: "t3-count"});
+        const acts = el("div", {class: "t3-bar-acts"});
+        const hint = el("p", {class: "t3-hint"});
+        const bar = el("div", {class: "t3-bar"},
+          el("div", {class: "t3-bar-meta"},
+            el("span", {class: rev.engine === "remote" ? "t3-priv remote" : "t3-priv"}, icon(rev.engine === "remote" ? "cloud" : "shield"), ENGINE_LINE[rev.engine] || ENGINE[rev.engine] || ""),
+            counter),
+          el("div", {class: "t3-meter", role: "status", "aria-live": "polite"}, el("span", {class: "t3-fit"}, fitN, el("span", {class: "t3-fit-pc", text: "%"})), el("div", {}, track, fitNote)),
+          acts);
+
+        const gained = which => {
+          if (!reqStats) return [];
+          const found = new Set();
+          for (const x of which) for (const g of bringsIn(x)) if (reqStats.missing.has(g.toLowerCase())) found.add(g.toLowerCase());
+          return [...found];
         };
-
-        const countText = el("strong");
-        const countBox = el("div", {class: "decide-count"}, countText, " decided");
-        const meter = el("div", {class: "meter", role: "progressbar", "aria-label": "Suggestions decided", "aria-valuemin": "0", "aria-valuemax": String(list.length)},
-          el("div", {class: "meter-fill"}));
-        const actionsSlot = el("div", {class: "round-actions"});
-        const bar = el("div", {class: "decide-bar"}, countBox, meter, actionsSlot);
+        //the analysis score, plus each required skill an accepted change brings in
+        const pct = gain => reqStats ? Math.min(100, Math.round((reqStats.score + (reqStats.total ? gain / reqStats.total : 0)) * 100)) : null;
+        let shownFit = null;
         const drawBar = () => {
           const left = pending().length;
           const done = list.length - left;
-          countText.textContent = `${done} of ${list.length}`;
-          meter.setAttribute("aria-valuenow", String(done));
-          meter.firstChild.style.width = `${(done / list.length) * 100}%`;
+          counter.textContent = `${done} of ${list.length} decided`;
+          const kept = list.filter(x => x.state === "accepted" || x.state === "edited");
+          const now = reqStats ? pct(gained(kept).length) : null;
+          const ifAll = reqStats ? pct(gained([...kept, ...pending()]).length) : null;
+          if (now === null) {
+            fitN.textContent = "\u2014";
+            fitN.nextSibling?.remove();
+            fitNote.textContent = "Fit appears once your master resume is saved";
+          } else {
+            if (shownFit !== null && shownFit !== now) countTo(fitN, now, 600);
+            else {
+              fitN.textContent = String(now);
+              fitN.dataset.value = String(now);
+            }
+            shownFit = now;
+            fitNote.textContent = ifAll > now ? `fit · ${ifAll}% if you accept the rest` : "fit · required skills on your resume";
+            track.firstChild.style.width = `${now}%`; //CSSOM, allowed by the page's CSP
+          }
           const build = el("button", {
-            type: "button", class: left ? "" : "primary ready", disabled: left > 0,
+            type: "button", class: "btn btn-mark", disabled: left > 0,
             onclick: async () => {
               const r = await attempt(() => api.tailored.create(rev.id));
               if (!r) return;
@@ -1256,88 +1320,178 @@
               await loadRounds();
               drawBody();
             },
-          }, left ? `Decide ${left} more to build` : "Build tailored resume");
-          const all = left > 1 ? confirmFirst(el("button", {type: "button", class: "quiet"}, `Accept the other ${left}`), `Accept all ${left}?`, acceptAll) : null;
-          fill(actionsSlot, all, build);
+          }, "Build tailored resume");
+          const rest = left > 1 ? confirmFirst(el("button", {type: "button", class: "btn btn-text"}, `Accept the other ${left}`), `Accept all ${left}?`, async () => {
+            for (const x of pending()) {
+              const r = await attempt(() => api.suggestions.accept(rev.id, x.id));
+              if (!r) break;
+              Object.assign(x, r.value);
+            }
+            show(rev);
+          }) : null;
+          fill(acts, rest, build);
+          hint.textContent = left ? (left === 1 ? "Decide 1 more change to build the tailored resume." : `Decide ${left} more changes to build the tailored resume.`) : "";
+          hint.hidden = !left;
+          finish.hidden = left > 0;
+          peek.hidden = left === 0;
+          if (!left && cards.length) { current = -1; markCurrent(false); } //nothing left to point at
           return left;
         };
 
-        const wrap = el("div", {class: "cards"});
-        cards = list.map(s => ({s, node: card(rev, s, () => { drawBar(); })}));
-        wrap.append(...cards.map(c => c.node));
+        // ---- the page ----
+        const rows = []; //[{s, row, note}]
+        const sheet = el("article", {class: "paper t3-sheet", "aria-label": "Your resume with the suggested changes"});
+        const finish = el("div", {class: "t3-finish", hidden: true}, pico("20-pdf-exported.png"),
+          el("div", {}, el("b", {text: "All decided."}), el("span", {text: "Build your tailored resume, then export it as a PDF from there."})));
+        const peek = el("img", {class: "t3-peek", src: "views/graphics/mascots/14-writing.png", alt: "", "aria-hidden": "true"});
+
+        const changeRow = s => {
+          const text = el("div", {class: "t3-text"});
+          const paintText = () => fill(text, inline(s, modeOf(s)));
+          const row = el("div", {class: "t3-row t3-change", "data-state": s.state}, text);
+          const note = noteFor(s, () => { paintText(); row.dataset.state = s.state; });
+          row.append(note);
+          paintText();
+          row.addEventListener("click", event => {
+            if (event.target.closest("button, textarea")) return;
+            current = cards.findIndex(c => c.s === s);
+            markCurrent(false);
+          });
+          rows.push({s, row, note});
+          return row;
+        };
+        const plainRow = (text, cls = "") => text ? el("div", {class: `t3-row ${cls}`.trim()}, el("div", {class: "t3-text", text: window.WordDiff.plain(text)})) : null;
+        const heading = text => el("h3", {class: "t3-h", text});
+        const by = (section, id = undefined) => list.filter(x => x.section === section && (id === undefined || x.target_id === id));
+        const placed = new Set();
+        const take = arr => arr.filter(x => !placed.has(x)).map(x => { placed.add(x); return x; });
+
+        sheet.append(el("header", {class: "t3-head"},
+          el("h2", {class: "t3-name", translate: "no", text: p.full_name || "Your name"}),
+          el("p", {class: "t3-contact", translate: "no", text: [p.home_location, p.email, p.phone].filter(Boolean).join(" · ")})));
+        for (const x of take(by("header"))) sheet.append(changeRow(x));
+
+        const summary = take(by("summary"));
+        if (p.summary || summary.length) {
+          sheet.append(heading("Summary"));
+          if (summary.length) summary.forEach(x => sheet.append(changeRow(x)));
+          else sheet.append(plainRow(p.summary));
+        }
+
+        const exps = m.experiences || [];
+        if (exps.length || by("experience").length) {
+          sheet.append(heading("Experience"));
+          for (const e of exps) {
+            const dates = [e.start_date, e.end_date || (e.date_na ? "" : "now")].filter(Boolean).map(d => String(d).slice(0, 4)).join(" – ");
+            sheet.append(el("div", {class: "t3-row t3-role"}, el("div", {class: "t3-text"},
+              el("b", {translate: "no", text: [e.job_title, e.company_name].filter(Boolean).join(", ")}), el("span", {text: dates}))));
+            const mine = take(by("experience", e.id));
+            //each line of the role's text, with any suggestion that rewrites it standing in its place
+            const lines = [e.description, e.impact].filter(Boolean).join("\n").split("\n").map(t => t.trim()).filter(Boolean);
+            const used = new Set();
+            const spots = new Map(); //line index -> suggestion
+            for (const x of mine) {
+              const orig = norm(x.original_text);
+              const hit = lines.findIndex((l, i) => !used.has(i) && orig && (orig.includes(norm(l)) || norm(l).includes(orig)));
+              if (hit >= 0) {
+                lines.forEach((l, i) => { if (!used.has(i) && orig.includes(norm(l))) used.add(i); });
+                used.add(hit);
+                spots.set(hit, x);
+              }
+            }
+            lines.forEach((l, i) => {
+              if (spots.has(i)) sheet.append(changeRow(spots.get(i)));
+              else if (!used.has(i)) sheet.append(plainRow(l, "t3-line"));
+            });
+            for (const x of mine.filter(x => ![...spots.values()].includes(x))) sheet.append(changeRow(x));
+          }
+          for (const x of take(by("experience"))) sheet.append(changeRow(x)); //a role the master no longer has
+        }
+
+        const edus = m.education || [];
+        if (edus.length || by("education").length) {
+          sheet.append(heading("Education"));
+          for (const ed of edus) {
+            sheet.append(plainRow([ed.degree, ed.field_of_study, ed.school_name || ed.institution].filter(Boolean).join(", ") || "", "t3-line"));
+            for (const x of take(by("education", ed.id))) sheet.append(changeRow(x));
+          }
+          for (const x of take(by("education"))) sheet.append(changeRow(x));
+        }
+
+        const skillChanges = take(by("skills"));
+        const allSkills = [...new Set([...(p.skills || []), ...exps.flatMap(e => e.skills || [])])];
+        if (allSkills.length || skillChanges.length) {
+          sheet.append(heading("Skills"));
+          if (skillChanges.length) skillChanges.forEach(x => sheet.append(changeRow(x)));
+          else sheet.append(plainRow(allSkills.join(", ")));
+        }
+        for (const x of take(list)) sheet.append(changeRow(x)); //anything the page had no place for
+        sheet.append(peek);
+
+        // the notes are the keyboard's cards, in page order
+        cards = rows.map(r => ({s: r.s, node: r.note, row: r.row}));
         drawBar();
-        stagger(wrap, 20, 6);
-        current = Math.min(current, cards.length - 1);
         const firstPending = cards.findIndex(c => c.s.state === "pending");
         current = firstPending >= 0 ? firstPending : 0;
         markCurrent(false);
         markGaps();
-        return [
-          el("p", {class: "key-hint hint"}, "Keys: ", el("kbd", {text: "J"}), " ", el("kbd", {text: "K"}), " move, ",
-            el("kbd", {text: "A"}), " accept, ", el("kbd", {text: "R"}), " reject, ", el("kbd", {text: "E"}), " edit"),
-          wrap,
-          bar,
-        ];
+
+        function noteFor(s, repaint) {
+          const roleTitle = s.target_id && experienceTitles[s.target_id] ? experienceTitles[s.target_id] : "";
+          const where = roleTitle ? `${SECTION[s.section] || s.section} · ${roleTitle}` : (SECTION[s.section] || s.section);
+          const node = el("aside", {class: "t3-note", "data-state": s.state, tabindex: "-1", "aria-label": `${where}: suggested change`});
+          const paint = () => {
+            node.dataset.state = s.state;
+            repaint();
+            const n = list.indexOf(s) + 1;
+            const decided = s.state !== "pending";
+            const act = (label, key, fn, primary) => el("button", {
+              type: "button", class: primary ? "btn btn-primary" : decided ? "btn btn-text" : "btn",
+              onclick: async () => {
+                if (node.dataset.busy) return; //a second press while this one is saving
+                node.dataset.busy = "1";
+                //move on at once, so a quick second A or R lands on the next change, not this one again
+                const at = cards.findIndex(c => c.s === s);
+                const next = cards.findIndex((c, i) => i > at && c.s.state === "pending");
+                if (next >= 0) { current = next; markCurrent(true); }
+                const r = await attempt(fn);
+                delete node.dataset.busy;
+                if (!r) return;
+                Object.assign(s, r.value);
+                paint();
+                play(node, "decided", 500);
+                drawBar();
+              },
+            }, label, el("kbd", {text: key}));
+            fill(node,
+              el("div", {class: "t3-note-k"}, el("span", {text: `Change ${n} of ${list.length} · ${where}`})),
+              s.reason && !decided ? el("p", {class: "t3-why", text: s.reason}) : null,
+              el("ul", {class: "chips brings-in t3-brings", "aria-label": "Skills this brings in that the job asks for"}),
+              decided ? el("p", {class: "t3-decided"}, el("b", {text: STATE[s.state]?.label || s.state}), el("span", {class: "ink-2", text: " · you can still change your mind"})) : null,
+              el("div", {class: "tailor-actions t3-acts"},
+                act("Accept", "A", () => api.suggestions.accept(rev.id, s.id), !decided),
+                act("Reject", "R", () => api.suggestions.reject(rev.id, s.id), false),
+                el("button", {type: "button", class: decided ? "btn btn-text" : "btn", onclick: () => edit(rev, s, node, paint, drawBar)}, "Edit", el("kbd", {text: "E"}))));
+            const chipList = node.querySelector(".brings-in");
+            chipList.replaceChildren(...bringsIn(s).map(g => el("li", {class: "chip gap", text: g})));
+            chipList.hidden = !chipList.children.length;
+          };
+          node.paint = paint;
+          paint();
+          return node;
+        }
+
+        const desk = el("div", {class: "v3 t3-desk"}, bar, hint, sheet, finish);
+        stagger(sheet, 14, 8);
+        return desk;
       };
 
       const markCurrent = scroll => {
-        cards.forEach((c, i) => c.node.classList.toggle("current", i === current));
+        cards.forEach((c, i) => {
+          c.node.classList.toggle("current", i === current);
+          c.row?.classList.toggle("current", i === current);
+        });
         if (scroll) cards[current]?.node.scrollIntoView({block: "nearest", behavior: motion() ? "smooth" : "auto"});
-      };
-
-      const card = (rev, s, onDecided) => {
-        const roleTitle = s.target_id && experienceTitles[s.target_id] ? experienceTitles[s.target_id] : "";
-        const heading = roleTitle ? `${SECTION[s.section] || s.section} — ${roleTitle}` : (SECTION[s.section] || s.section);
-        const node = el("section", {class: "tailor-card", "data-state": s.state, tabindex: "-1", "aria-label": `${heading} suggestion`});
-        const paint = () => {
-          const final = s.state === "edited" ? s.edited_text : s.proposed_text;
-          const words = window.WordDiff.diff(s.original_text, final);
-          node.dataset.state = s.state;
-          const st = STATE[s.state] || STATE.pending;
-          const act = (label, key, fn, on, primary) => el("button", {
-            type: "button", class: primary ? "primary" : "", "aria-pressed": on === null ? null : String(on),
-            title: label === "Accept" ? "Keep this change in the tailored resume" : "Keep your original text",
-            onclick: async () => {
-              const r = await attempt(fn);
-              if (r) {
-                Object.assign(s, r.value);
-                paint();
-                play(node, "decided", 700);
-                onDecided();
-                advance();
-              }
-            },
-          }, label, el("kbd", {text: key}));
-          fill(node,
-            el("div", {class: "card-head"},
-              el("h3", {text: heading}),
-              s.engine ? el("span", {class: "engine-badge", text: ENGINE[s.engine] || s.engine}) : null,
-              el("span", {class: "state-chip", "data-state": s.state}, icon(st.icon), st.label),
-              el("ul", {class: "chips brings-in", "aria-label": "Skills this brings in that the job asks for"})),
-            s.reason ? el("div", {class: "reason"}, el("span", {class: "reason-label", text: "Why this helps"}), el("p", {text: s.reason})) : null,
-            el("div", {class: "diff-cols"},
-              el("div", {class: "diff-col"}, el("h4", {text: "Current"}),
-                s.original_text ? window.WordDiff.render(words, "before") : el("span", {class: "hint", text: "Nothing yet (new text)"})),
-              el("div", {class: "diff-col"}, el("h4", {text: s.state === "edited" ? "Your edit" : "Suggested"}),
-                window.WordDiff.render(words, "after"))),
-            el("div", {class: "tailor-actions"},
-              act("Accept", "A", () => api.suggestions.accept(rev.id, s.id), s.state === "accepted", s.state === "pending"),
-              act("Reject", "R", () => api.suggestions.reject(rev.id, s.id), s.state === "rejected", false),
-              el("button", {type: "button", title: "Write your own version", onclick: () => edit(rev, s, node, paint, onDecided)}, "Edit", el("kbd", {text: "E"})),
-              s.state !== "pending" ? el("span", {class: "hint", text: "You can still change your mind."}) : null));
-          const list = node.querySelector(".brings-in");
-          if (list) list.replaceChildren(...bringsIn(s).map(g => el("li", {class: "chip gap", text: g})));
-        };
-        node.paint = paint;
-        node.addEventListener("click", () => { current = cards.findIndex(c => c.node === node); markCurrent(false); });
-        paint();
-        return node;
-      };
-
-      //after a decision, move to the next card that still needs one
-      const advance = () => {
-        const next = cards.findIndex((c, i) => i > current && c.s.state === "pending");
-        if (next >= 0) { current = next; markCurrent(true); }
       };
 
       const edit = (rev, s, node, paint, onDecided) => {
