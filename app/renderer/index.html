@@ -17,19 +17,18 @@
                 and on Windows the minimize, maximize and close buttons are drawn over its right end.-->
             <div class="titlebar drag" data-tauri-drag-region></div>
 
-            <!--Jobs sections: shown above the Jobs, Tracker and Tailor views. Tracker and Tailor move into the Job
-                page in later v3 phases; until then they stay one click away here.-->
-            <nav class="subnav" aria-label="Jobs sections">
-                <div class="seg" role="tablist" aria-label="Jobs">
-                    <button type="button" id="tab-saved" class="seg-item" role="tab" aria-selected="false">Saved</button>
-                    <button type="button" id="tab-find" class="seg-item" role="tab" aria-selected="true">Find</button>
-                    <button type="button" id="tab-paste" class="seg-item" role="tab" aria-selected="false">Paste</button>
+            <!--Section switches for the Jobs view, Tracker and Tailor. They are not shown: the bottom bar, the omnibox and
+                the Job page reach every one of these places. The view code and the shortcuts still click them.-->
+            <div class="section-switches" hidden>
+                <button type="button" id="nav-list" data-route="list">Your jobs</button>
+                <div role="tablist" aria-label="Jobs">
+                    <button type="button" id="tab-saved" role="tab" aria-selected="false">Saved</button>
+                    <button type="button" id="tab-find" role="tab" aria-selected="true">Find</button>
+                    <button type="button" id="tab-paste" role="tab" aria-selected="false">Paste</button>
                 </div>
-                <div class="seg" aria-label="Workflow">
-                    <button type="button" id="nav-tracker" class="seg-item" data-route="tracker">Tracker</button>
-                    <button type="button" id="nav-tailor" class="seg-item" data-route="tailor">Tailor</button>
-                </div>
-            </nav>
+                <button type="button" id="nav-tracker" data-route="tracker">Tracker</button>
+                <button type="button" id="nav-tailor" data-route="tailor">Tailor</button>
+            </div>
 
             <!--Bottom bar: the app's navigation, grounded at the foot of the window. The omnibox in the middle takes a
                 search, a job link, or a pasted posting.-->
@@ -268,9 +267,15 @@
                     </form>
                 </header>
 
-                <section id="settings-pane" class="pane settings-pane" aria-label="Settings" hidden>
+                <section id="settings-pane" class="pane settings-pane v3" aria-label="Settings" hidden>
+                    <header class="st3-head">
+                        <h1 class="display-xl"><span class="underlined">Settings<svg class="ink ink-underline" aria-hidden="true"><use href="#ink-underline"/></svg></span></h1>
+                        <nav class="st3-jump" aria-label="Settings sections">
+                            <a href="#set-appearance">Look and accessibility</a><a href="#set-ai">AI and privacy</a><a href="#set-search">Job search</a><a href="#set-storage">Your data</a><a href="#set-updates">Updates</a><a href="#set-keys">Shortcuts</a>
+                        </nav>
+                    </header>
                     <div class="settings">
-                        <section class="settings-group" aria-labelledby="set-appearance">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-appearance">
                             <h2 id="set-appearance">Appearance and accessibility</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -362,7 +367,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-keys">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-keys">
                             <h2 id="set-keys">Keyboard shortcuts</h2>
                             <div class="settings-card">
                                 <div class="setting"><div class="setting-text"><span class="setting-label">Go to Home, Jobs, Resume, Tracker, Tailor</span></div><span class="keys"><kbd class="mod-key">Cmd</kbd> <kbd>1</kbd>&ndash;<kbd>5</kbd></span></div>
@@ -374,7 +379,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-search">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-search">
                             <h2 id="set-search">Search</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -418,7 +423,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-ai">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-ai">
                             <h2 id="set-ai">AI suggestions</h2>
                             <p class="group-note">Resume suggestions are written on this computer unless you turn on a remote provider below. Skill matching never uses AI.</p>
                             <div class="settings-card">
@@ -466,7 +471,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-privacy">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-privacy">
                             <h2 id="set-privacy">History</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -487,7 +492,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-storage">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-storage">
                             <h2 id="set-storage">Storage</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -543,7 +548,7 @@
                             <p class="group-note">What leaves your computer: a job search asks public job boards for postings, a model is downloaded from the model library, and a remote provider only sees what you send it.</p>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-cleanup">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-cleanup">
                             <h2 id="set-cleanup">Clean up</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -577,7 +582,7 @@
                             <p class="group-note">Models you are not using means every downloaded model except the one in use. If no model is selected, they are all removed.</p>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-updates">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-updates">
                             <h2 id="set-updates">Updates</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -602,7 +607,7 @@
                             </div>
                         </section>
 
-                        <section class="settings-group" aria-labelledby="set-about">
+                        <section class="settings-group paper-adapt" aria-labelledby="set-about">
                             <h2 id="set-about">About</h2>
                             <div class="settings-card">
                                 <div class="setting">
@@ -758,6 +763,7 @@
 
                         <main id="view-tracker" class="main" hidden></main>
             <main id="view-job" class="main" hidden></main>
+            <main id="view-list" class="main" hidden></main>
         </div>
 
         <script src="js/tauri-bridge.js" defer></script>
@@ -781,6 +787,7 @@
         <script src="views/tracker/tracker.js" defer></script>
         <script src="views/home/home.js" defer></script>
         <script src="views/job/job.js" defer></script>
+        <script src="views/jobs-list/jobs-list.js" defer></script>
         <script src="js/omnibox.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>

@@ -370,17 +370,28 @@
     const importButton = el("button", {type: "button"}, "Import file");
     const pasteButton = el("button", {type: "button"}, "Paste text");
     const saveVersionButton = el("button", {type: "button", class: "primary"}, "Save as version");
-    const toolbar = el("header", {class: "toolbar drag", "data-tauri-drag-region": ""},
+    container.classList.add("v3", "rs3");
+    const inkMark = id => {
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("class", `ink ink-${id}`);
+      svg.setAttribute("aria-hidden", "true");
+      const use = document.createElementNS(ns, "use");
+      use.setAttribute("href", `#ink-${id}`);
+      svg.append(use);
+      return svg;
+    };
+    const toolbar = el("header", {class: "toolbar rs3-head"},
       el("div", {class: "toolbar-form resume-toolbar"},
-        el("h1", {class: "view-title", text: "Master resume"}),
+        el("h1", {class: "view-title display-xl"}, "Your ", el("span", {class: "underlined"}, "resume", inkMark("underline"))),
         status,
         el("div", {class: "toolbar-actions"}, importButton, pasteButton, saveVersionButton)));
  
-    const profileSection = el("section", {class: "resume-section", "aria-labelledby": "resume-profile-h"});
-    const experienceSection = el("section", {class: "resume-section", "aria-labelledby": "resume-exp-h"});
-    const educationSection = el("section", {class: "resume-section", "aria-labelledby": "resume-edu-h"});
-    const customSectionsPanel = el("section", {class: "resume-section", "aria-labelledby": "resume-custom-h"});
-    const importSection = el("section", {class: "resume-section import-review", "aria-labelledby": "resume-import-h", hidden: true});
+    const profileSection = el("section", {class: "resume-section paper paper-adapt", "aria-labelledby": "resume-profile-h"});
+    const experienceSection = el("section", {class: "resume-section paper paper-adapt", "aria-labelledby": "resume-exp-h"});
+    const educationSection = el("section", {class: "resume-section paper paper-adapt", "aria-labelledby": "resume-edu-h"});
+    const customSectionsPanel = el("section", {class: "resume-section paper paper-adapt", "aria-labelledby": "resume-custom-h"});
+    const importSection = el("section", {class: "resume-section import-review paper paper-adapt", "aria-labelledby": "resume-import-h", hidden: true});
     const editor = el("div", {class: "pane resume-editor"}, importSection, profileSection, experienceSection, educationSection, customSectionsPanel);
  
     const previewText = el("div", {class: "resume-doc"});
@@ -451,8 +462,35 @@
       else window.UI.play(previewPanels.text, "enter", 400);
     };
 
+    //v3: how ready the master resume is, with each missing piece one click from its field
+    const readySection = el("section", {class: "resume-section paper paper-adapt rs3-ready", "aria-labelledby": "resume-ready-h"});
+    const drawReady = async () => {
+      const m = await api().resume.get().catch(() => null);
+      if (disposed || !m) return;
+      const p = m.profile;
+      const gaps = window.Home?.resumeGaps ? window.Home.resumeGaps(m) : [];
+      const done = [];
+      if (p?.full_name && (p.email || p.phone)) done.push("Name and contact");
+      if (p?.summary) done.push("Summary");
+      if (m.experiences.length || m.education.length) {
+        const roles = m.experiences.length === 1 ? "1 role" : `${m.experiences.length} roles`;
+        const schools = m.education.length === 1 ? "1 school" : `${m.education.length} schools`;
+        done.push([m.experiences.length ? roles : "", m.education.length ? schools : ""].filter(Boolean).join(", "));
+      }
+      const total = done.length + gaps.length;
+      const pct = total ? Math.round((done.length / total) * 100) : 0;
+      fill(readySection,
+        el("div", {class: "paper-head"}, el("h2", {id: "resume-ready-h", text: "Ready to tailor?"})),
+        el("div", {class: "rs3-big"}, el("b", {class: "num", text: p ? `${pct}%` : "0%"}), el("span", {text: "complete"})),
+        done.map(d => el("div", {class: "rs3-check"}, inkMark("check"), el("span", {text: d}))),
+        gaps.map(g => el("div", {class: "rs3-check"}, inkMark("open"), el("span", {text: g.title}),
+          el("button", {type: "button", class: "btn", text: "Add", onclick: () => window.ResumeBuilder.reveal?.(g.target)}))),
+        !p ? el("p", {class: "ink-2 rs3-note", text: "Start with your name and how to reach you, or import a resume you already have."}) : null);
+    };
+
     const side = el("div", {class: "pane resume-side"},
-      el("section", {class: "resume-section"},
+      readySection,
+      el("section", {class: "resume-section paper paper-adapt"},
         el("div", {class: "section-head preview-head"}, el("h2", {text: "Preview"}), el("div", {class: "pdf-controls"}, styleSelect, exportButton, exportDocxButton)),
         el("div", {class: "preview-bar"},
           el("div", {class: "tabs", role: "tablist", "aria-label": "Preview format"}, previewTabs),
@@ -460,7 +498,7 @@
         exportNote,
         previewPanels.text,
         previewPanels.pdf),
-      el("section", {class: "resume-section"},
+      el("section", {class: "resume-section paper paper-adapt"},
         el("h2", {text: "Saved versions"}),
         versionForm,
         versionsList));
@@ -474,6 +512,7 @@
       if (disposed) return;
       fill(previewText, markdown.trim() ? readable(markdown) : el("p", {class: "hint", text: "Your resume appears here once you save your profile."}));
       refreshAudit();
+      drawReady();
       if (previewKind === "pdf") pdf.load(); //the PDF follows the text
     });
  

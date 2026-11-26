@@ -12,7 +12,7 @@
   const STATUS_STAGE = {Applied: "applied", Interviewing: "interview", Offered: "offer"};
   const STATUSES = ["Saved", "Applied", "Interviewing", "Offered", "Rejected"];
   const STATUS_LABEL = {Saved: "Saved", Applied: "Applied", Interviewing: "Interviewing", Offered: "Offer", Rejected: "Not moving forward"};
-  const ROUTE_BACK = {home: "Home", jobs: "Saved jobs", tracker: "Tracker", tailor: "Tailor"};
+  const ROUTE_BACK = {home: "Home", list: "Your jobs", jobs: "Search results", tracker: "Tracker", tailor: "Tailor"};
 
   const locale = () => window.I18n?.locale() || undefined;
   const shortDate = iso => {
@@ -117,8 +117,7 @@
         const from = window.JobPage.from;
         const label = ROUTE_BACK[from] || "Back";
         return el("button", {type: "button", class: "btn btn-text job3-back", onclick: () => {
-          if (from === "jobs") document.getElementById("tab-saved").click();
-          else if (from && from !== "job") window.App.go(from);
+          if (from && from !== "job") window.App.go(from);
           else history.back();
         }}, `← ${label}`);
       }
@@ -454,7 +453,7 @@
           await api().jobs.delete(job.id);
           forgetListing();
           notify("jobs");
-          document.getElementById("tab-saved").click();
+          window.App.go("list");
         } catch (error) {
           window.UI.alert(error.message);
         }

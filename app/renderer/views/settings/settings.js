@@ -57,6 +57,50 @@ window.Settings = {
     //the shortcut list names this computer's modifier key
     if (api?.platform !== "darwin") document.querySelectorAll(".mod-key").forEach(k => { k.textContent = "Ctrl"; });
     bind("pref-theme", "theme");
+    //v3: the themes as swatches. The select stays as the source of truth (and for the language files), hidden.
+    {
+      const SWATCH = {
+        classic: "#111851", bubblegum: "#b8146b", cyber: "#040b06", techno: "#090d1f", retro: "#1b48a1", vaporwave: "#1c0c36",
+        dracula: "#21222c", matcha: "#18261e", "midnight-gold": "#0e0f14", "ocean-abyss": "#051829", arcade: "#120d31",
+        january: "#0c1f38", february: "#360d24", march: "#0a2b1e", april: "#261838", may: "#113026", june: "#083344",
+        july: "#111c4e", august: "#3b1230", september: "#122b36", october: "#1c1030", november: "#38121f", december: "#0a291c",
+      };
+      const select = $("pref-theme");
+      const gallery = document.createElement("div");
+      gallery.className = "st3-swatches";
+      gallery.setAttribute("role", "radiogroup");
+      gallery.setAttribute("aria-label", "Color theme");
+      const buttons = [];
+      for (const option of select.querySelectorAll("option")) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "st3-swatch";
+        button.dataset.theme = option.value;
+        button.setAttribute("role", "radio");
+        const chip = document.createElement("span");
+        chip.className = option.value === "auto-season" ? "st3-chip auto" : "st3-chip";
+        if (SWATCH[option.value]) chip.style.setProperty("--chip", SWATCH[option.value]); //CSSOM, allowed by the CSP
+        chip.append(Object.assign(document.createElement("i"), {}));
+        const name = document.createElement("b");
+        name.textContent = option.textContent.split(" \u2014 ")[0].replace(/^Auto$/, "This month");
+        button.append(chip, name);
+        button.title = option.textContent;
+        button.addEventListener("click", () => {
+          select.value = option.value;
+          select.dispatchEvent(new Event("change"));
+          mark();
+        });
+        buttons.push(button);
+        gallery.append(button);
+      }
+      const mark = () => buttons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.theme === select.value)));
+      select.addEventListener("change", mark);
+      mark();
+      const row = select.closest(".setting");
+      select.hidden = true;
+      row.classList.add("st3-theme-row");
+      row.after(gallery);
+    }
     bind("pref-language", "language");
     //the page changes language in place, crossfading from the old words to the new ones
     $("pref-language").addEventListener("change", () => {

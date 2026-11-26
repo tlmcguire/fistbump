@@ -1,0 +1,111 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Jobs list</title><link rel="stylesheet" href="../../../app/renderer/styles/base.css"><link rel="stylesheet" href="../../../app/renderer/styles/views.css"><link rel="stylesheet" href="../../../app/renderer/styles/finish.css"><link rel="stylesheet" href="../../../app/renderer/styles/themes.css"><link rel="stylesheet" href="../../../app/renderer/styles/motion.css"><link rel="stylesheet" href="../../../app/renderer/styles/v3.css"><style>
+html,body{height:100%;overflow:hidden} .app{height:100vh} .scroll{flex:1;min-height:0;overflow-y:auto}
+.app > .main{display:flex;flex-direction:column} .titlebar{background:var(--canvas-2)}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px;max-width:1500px;margin:0 auto;padding:12px 44px 30px;align-items:start}
+
+.jl-head{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.jl-head h1{font-size:44px}
+.jl-sum{margin-top:10px;color:var(--on-canvas-2);font-size:16px}.jl-sum b{color:var(--on-canvas)}
+.jl-tools{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.jl-stages{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--on-canvas) 9%,transparent)}
+.jl-stages button{height:34px;padding:0 14px;border-radius:9px;background:transparent;color:var(--on-canvas-2);font-weight:650;font-size:13.5px}
+.jl-stages button span{margin-left:6px;opacity:.75;font-variant-numeric:tabular-nums}
+.jl-stages button.on{background:var(--paper);color:var(--ink)}
+.jl-quick{display:flex;gap:6px}
+.jl-quick button{height:34px;padding:0 12px;border-radius:999px;background:transparent;border:1.5px dashed color-mix(in srgb,var(--on-canvas) 30%,transparent);color:var(--on-canvas-2);font-size:13px;font-weight:600}
+.jl-quick button.on{border-style:solid;border-color:var(--mark);color:var(--on-canvas)}
+.jl-search{margin-left:auto;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:10px;background:color-mix(in srgb,var(--on-canvas) 9%,transparent);color:var(--on-canvas-2);font-size:13.5px;min-width:180px}
+.jl-search .icon{width:15px;height:15px}
+.jl-view{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--on-canvas) 9%,transparent)}
+.jl-view button{height:30px;padding:0 12px;border-radius:7px;background:transparent;color:var(--on-canvas-2);font-size:13px;font-weight:650}
+.jl-view button.on{background:color-mix(in srgb,var(--on-canvas) 16%,transparent);color:var(--on-canvas)}
+.jl-list{grid-column:1/-1;padding:8px 22px 14px}
+.jl-group{display:flex;align-items:baseline;justify-content:space-between;padding:12px 0 6px}
+.jl-group h2{font-size:15px;font-weight:720}
+.jl-bulk{display:flex;align-items:center;gap:6px;font-size:13px}
+.jl-bulk b{margin-right:6px}
+.jl-bulk .btn{min-height:30px;padding:5px 10px;font-size:13px}
+.jl-row{display:grid;grid-template-columns:22px 38px minmax(0,1fr) 92px 54px 92px 210px;gap:14px;align-items:center;padding:10px 6px;border-top:1.5px dashed var(--rule)}
+.jl-row:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.jl-row.picked{background:color-mix(in srgb,var(--mark) 14%,transparent)}
+.jl-check{width:17px;height:17px;accent-color:var(--ink)}
+.jl-main b{display:block;font-weight:650}.jl-main span{font-size:13px}
+.jl-stage{font-size:13px;font-weight:650;color:var(--ink-2)}
+.jl-fit{font:780 17px var(--display);text-align:right}
+.jl-pay{font-size:13px;text-align:right}
+.jl-next{justify-self:end;font-size:13px;font-weight:650;padding:5px 10px;border-radius:8px;background:var(--paper-2)}
+.jl-next.need{background:color-mix(in srgb,var(--mark) 28%,var(--paper));color:var(--mark-ink)}
+.jl-next.urgent{background:color-mix(in srgb,var(--urgent) 13%,var(--paper));color:var(--urgent-ink)}
+.jl-next.good{background:color-mix(in srgb,var(--success) 18%,var(--paper));color:var(--success-ink)}
+.jl-foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1.5px dashed var(--rule);font-size:13px;color:var(--ink-2)}
+.jl-foot a{color:var(--ink);font-weight:600}
+</style></head><body><svg class="icon-sprite" aria-hidden="true">
+                <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5.5h4V20"/></symbol>
+                <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+                <symbol id="i-link" viewBox="0 0 24 24"><path class="half a" d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path class="half b" d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+                <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H6.5v17h11V7z"/><path d="M14 3.5V7h3.5"/><path class="lines" pathLength="1" d="M9.5 12h5M9.5 15.5h5"/></symbol>
+                <symbol id="i-settings" viewBox="0 0 24 24"><path class="track a" d="M4 7h9.5M18.5 7H20"/><path class="track b" d="M4 17h3.5M12.5 17H20"/><circle class="knob a" cx="16" cy="7" r="2.5"/><circle class="knob b" cx="10" cy="17" r="2.5"/></symbol>
+                <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+                <symbol id="i-paste" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5h6V5"/><path class="lines" pathLength="1" d="M9 11h6M9 15h4"/></symbol>
+                <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17L12 16.5l-5.5 4z"/></symbol>
+                <symbol id="i-person" viewBox="0 0 24 24"><circle class="head" cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.5-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+                <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 11-11"/><path class="spark" d="m13.5 4.5.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/><path class="spark late" d="m18.5 12.5.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/></symbol>
+                <symbol id="i-external" viewBox="0 0 24 24"><path class="arrow" d="M14 4h6v6"/><path class="arrow" d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+                <symbol id="i-check" viewBox="0 0 24 24"><path class="tick" pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+                <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+                <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4.5 19.5.8-4L16.5 4.3a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.5 18.7z"/></symbol>
+                <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path class="hand" d="M12 7.5V12l3 2"/></symbol>
+                <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6z"/><path class="tick" pathLength="1" d="m9 12 2.2 2.2L15.2 10"/></symbol>
+                <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10a3.8 3.8 0 0 0 .6-7.5A5.5 5.5 0 0 0 7 9.6 4.5 4.5 0 0 0 7 18.5z"/></symbol>
+                <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6"/><path d="m20 4-7 7M4 20l7-7"/></symbol>
+                <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 10h-6V4M4 14h6v6"/><path d="m14 10 7-7M3 21l7-7"/></symbol>
+                <symbol id="i-list" viewBox="0 0 24 24"><path class="row a" pathLength="1" d="M9 6.5h11"/><path class="row b" pathLength="1" d="M9 12h11"/><path class="row c" pathLength="1" d="M9 17.5h11"/><path class="tick a" pathLength="1" d="m3.5 6.5 1.2 1.2 2-2.4"/><path class="tick b" pathLength="1" d="m3.5 12 1.2 1.2 2-2.4"/><path class="tick c" pathLength="1" d="m3.5 17.5 1.2 1.2 2-2.4"/></symbol>
+                <!--v3 ink marks: hand-drawn strokes in currentColor, used as <svg class="ink ink-*"><use href="#ink-*"/></svg>.-->
+                <symbol id="ink-underline" viewBox="0 0 300 18" preserveAspectRatio="none"><path d="M3 12C60 2 110 16 160 8s90-4 137 2" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-circle" viewBox="0 0 52 46" preserveAspectRatio="none"><path d="M8 25C6 10 30 2 44 12s2 28-20 30S3 32 10 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-check" viewBox="0 0 24 24"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></symbol>
+                <symbol id="ink-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="3 3"/></symbol>
+                <symbol id="ink-star" viewBox="0 0 24 24"><path d="M12 3.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L12 15.8l-5 2.8 1.2-5.5L4 9.3l5.6-.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-leaf" viewBox="0 0 24 24"><path d="M4 20C4 9 11 4 21 3c0 10-6 17-17 17z" fill="currentColor" stroke="#151a4a" stroke-width="1.6"/></symbol>
+            </svg><div class="app" data-route="jobs"><div class="titlebar"></div>
+<main class="main v3"><div class="scroll"><div class="grid">
+<header class="jl-head"><div><h1 class="display-xl">Your <span class="underlined">jobs<svg class="ink ink-underline " aria-hidden="true"><use href="#ink-underline"/></svg></span></h1>
+<p class="jl-sum"><b>7 active</b> · 2 need you today · 1 interview this week · 3 applications this month</p></div></header>
+<div class="jl-tools">
+ <div class="jl-stages" role="tablist"><button class="on">All<span>7</span></button><button>Saved<span>3</span></button><button>Tailored<span>1</span></button><button>Applied<span>2</span></button><button>Interview<span>1</span></button><button>Offer<span>0</span></button><button>Closed<span>4</span></button></div>
+ <div class="jl-quick"><button class="on">Remote</button><button>Has pay</button><button>70%+ fit</button></div>
+ <div class="jl-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Filter</div>
+ <div class="jl-view"><button class="on">List</button><button>Board</button></div>
+</div>
+<section class="paper jl-list">
+ <div class="jl-group"><h2>Needs you</h2><span class="aside ink-2">Sorted by what is due first</span></div>
+ <div class="jl-row"><input type="checkbox" class="jl-check" aria-label="Select Data Analyst">
+<span class="tile">T</span>
+<div class="jl-main"><b>Data Analyst</b><span class="ink-2">Tidewater Logistics · Savannah, GA · On-site</span></div>
+<span class="jl-stage">Tailored</span><span class="jl-fit num">76%</span><span class="jl-pay ink-2 num">$78–92k</span><span class="jl-next need">Review 2 changes</span></div><div class="jl-row"><input type="checkbox" class="jl-check" aria-label="Select Backend Engineer">
+<span class="tile">O</span>
+<div class="jl-main"><b>Backend Engineer</b><span class="ink-2">Oakline Software · Remote, US</span></div>
+<span class="jl-stage">Applied</span><span class="jl-fit num">69%</span><span class="jl-pay ink-2 num">$120–140k</span><span class="jl-next urgent">Follow up today</span></div>
+ <div class="jl-group"><h2>Everything else</h2>
+  <div class="jl-bulk"><b>2 selected</b><button class="btn">Move to stage ▾</button><button class="btn">Archive</button><button class="btn job3-danger">Trash</button><button class="btn btn-text">Clear</button></div></div>
+ <div class="jl-row"><input type="checkbox" class="jl-check" aria-label="Select BI Developer">
+<span class="tile tile-mark">N</span>
+<div class="jl-main"><b>BI Developer</b><span class="ink-2">Northgate Energy · Houston, TX</span></div>
+<span class="jl-stage">Interview</span><span class="jl-fit num">77%</span><span class="jl-pay ink-2 num">—</span><span class="jl-next good">Interview Mon 2:00 pm</span></div><div class="jl-row picked"><input type="checkbox" class="jl-check" aria-label="Select Data Scientist, Growth" checked>
+<span class="tile">L</span>
+<div class="jl-main"><b>Data Scientist, Growth</b><span class="ink-2">Lumen Fields · Austin, TX · Hybrid</span></div>
+<span class="jl-stage">Saved</span><span class="jl-fit num">81%</span><span class="jl-pay ink-2 num">$130–150k</span><span class="jl-next ">Tailor resume · closes Fri</span></div><div class="jl-row picked"><input type="checkbox" class="jl-check" aria-label="Select Product Analyst" checked>
+<span class="tile">F</span>
+<div class="jl-main"><b>Product Analyst</b><span class="ink-2">Fernway Health · Remote, US</span></div>
+<span class="jl-stage">Saved</span><span class="jl-fit num">74%</span><span class="jl-pay ink-2 num">$95–110k</span><span class="jl-next ">Tailor resume</span></div><div class="jl-row"><input type="checkbox" class="jl-check" aria-label="Select Operations Analyst">
+<span class="tile">H</span>
+<div class="jl-main"><b>Operations Analyst</b><span class="ink-2">Harbor & Pine · Portland, OR</span></div>
+<span class="jl-stage">Applied</span><span class="jl-fit num">71%</span><span class="jl-pay ink-2 num">$70–80k</span><span class="jl-next ">Waiting · 6 days</span></div><div class="jl-row"><input type="checkbox" class="jl-check" aria-label="Select Financial Analyst">
+<span class="tile">C</span>
+<div class="jl-main"><b>Financial Analyst</b><span class="ink-2">Cobalt Rivers Financial · Charlotte, NC · On-site</span></div>
+<span class="jl-stage">Saved</span><span class="jl-fit num">58%</span><span class="jl-pay ink-2 num">$85k</span><span class="jl-next ">Tailor resume</span></div>
+ <div class="jl-foot"><span>Archived jobs and the Trash are under Closed.</span><span><a href="#">Export CSV</a> · <a href="#">Compare offers</a></span></div>
+</section></div></div></main><nav class="bottombar"><img src="../../../app/renderer/views/graphics/logo.png" class="wordmark" alt="Fistbump"><div class="bottombar-nav"><button class="bar-item">Home</button><button class="bar-item" aria-current=page>Jobs</button><button class="bar-item">Resume</button></div>
+<form class="omnibox"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input placeholder="Search jobs, paste a link, or drop in a posting"><kbd>⌘K</kbd></form>
+<div class="bottombar-end"><button class="bar-icon"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></button></div></nav></div></body></html>
