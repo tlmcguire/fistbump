@@ -117,6 +117,7 @@ window.JobParser = {
         }
 
         main.classList.toggle("view-find", name === "find" || name === "saved");
+        main.classList.toggle("view-saved", name === "saved"); //v3: saved jobs open on the Job page, so the list takes the width
         main.classList.toggle("view-paste", name === "paste");
         main.classList.toggle("view-settings", name === "settings");
         $("settings-pane").hidden = name !== "settings";
@@ -1132,9 +1133,7 @@ window.JobParser = {
       //A job already saved opens in Saved jobs, where it can be tailored, tracked or archived.
       $("view-saved").addEventListener("click", () => {
         const id = posting?.id;
-        if (!id) return;
-        selectTab("saved");
-        openSavedJob({id});
+        if (id) window.JobPage.open(id);
       });
 
       // ---- Saved tab ----
@@ -1183,7 +1182,7 @@ window.JobParser = {
       };
 
       const savedRowItem = job => {
-        const item = resultItem(job, openSavedJob);
+        const item = resultItem(job, row => window.JobPage.open(row.id)); //v3: a saved job opens on its own page
         const check = document.createElement("input");
         check.type = "checkbox";
         check.className = "saved-check";
@@ -1464,10 +1463,7 @@ window.JobParser = {
       });
 
       //the tracker opens a job here: show it in the Saved tab
-      window.JobParser.openJob = id => {
-        if (activeTab !== "saved") selectTab("saved");
-        openSavedJob({id});
-      };
+      window.JobParser.openJob = id => window.JobPage.open(id);
 
       // ---- Tailor: open the saved job in the Tailor view ----
       $("tailor-job").addEventListener("click", () => {
@@ -1620,8 +1616,8 @@ window.JobParser = {
               //saved once: the button says so instead of offering to save the same posting again
               save.disabled = true;
               save.textContent = "Saved";
-              selectTab("saved");
-              displayPosting(job, true);
+              notifyJobsChanged();
+              window.JobPage.open(job.id);
             } catch (error) {
               form.showError(error);
             }

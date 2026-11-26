@@ -244,3 +244,36 @@ test('a new user sees the welcome, how it works, and Pico', async ({ window }) =
   await window.locator('.home3-next .btn-primary').click();
   await expect(window.locator('#nav-resume')).toHaveAttribute('aria-current', 'page');
 });
+
+test('a saved job opens on its own page with its stage, fit, notes and next step', async ({ window }) => {
+  const id = await window.evaluate(async () => {
+    const api = window.api;
+    await api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com' });
+    await api.resume.createExperience({ job_title: 'Research Assistant', company_name: 'Coastal University', start_date: '2022-01-01', skills: ['sql', 'excel'] });
+    const job = await api.jobs.create({ source: 'pasted', company_name: 'Tidewater Logistics', position_title: 'Data Analyst',
+      raw_text: 'Data Analyst\nTidewater Logistics\n\nRequirements:\n- Experience with sql\n- Experience with kubernetes' });
+    return job.id;
+  });
+
+  await window.locator('#nav-jobs').click();
+  await window.locator('#saved-pane').getByText('Data Analyst').click();
+  await expect(window).toHaveURL(new RegExp(`#/job/${id}$`));
+  await expect(window.locator('#job3-title')).toContainText('Data Analyst');
+  await expect(window.locator('.job3-go')).toHaveText('Tailor resume');
+  await expect(window.locator('.job3-stop.now b')).toHaveText('Saved');
+  await expect(window.locator('.job3-ri .ink-open').first()).toBeVisible();
+  await expect(window.locator('.job3-req .aside')).toHaveText('1 of 2 on your resume');
+  await expect(window.locator('#nav-jobs')).toHaveAttribute('aria-current', 'page');
+
+  await window.locator('.job3-notes-area').fill('Recruiter is Dana Ruiz.');
+  await expect(window.locator('.job3-saved')).toHaveText('Saved');
+  const notes = await window.evaluate(async jobId => (await window.api.applications.list({})).find(a => a.job_id === jobId)?.notes, id);
+  expect(notes).toBe('Recruiter is Dana Ruiz.');
+
+  await window.locator('.job3-stage-select').selectOption('Applied');
+  await expect(window.locator('.job3-stop.now b')).toHaveText('Applied');
+  await expect(window.locator('.job3-go')).toHaveText('Set a follow-up date');
+
+  await window.locator('.job3-back').click();
+  await expect(window.locator('#tab-saved')).toHaveAttribute('aria-selected', 'true');
+});

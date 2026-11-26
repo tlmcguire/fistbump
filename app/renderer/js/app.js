@@ -43,6 +43,13 @@ const VIEWS = {
     mount: container => window.Tracker.mount(container),
     redraw: true,
   },
+
+  //v3: one saved job, at #/job/<id>. Drawn again each time, and when the id changes.
+  job: {
+    container: "view-job",
+    mount: container => window.JobPage.mount(container),
+    redraw: true,
+  },
 };
 
 // A hidden pane forgets how far it was scrolled, so the offsets are noted before hiding and put back after showing.
@@ -77,7 +84,10 @@ const routeName = () => {
 };
 
 function show(name) {
-  if (current === name) return;
+  if (current === name) {
+    if (name === "job") mounted.get(name)?.(); //another job opened over this one
+    return;
+  }
   document.querySelector(".pdf-preview.expanded")?.collapse?.();
   for (const [key, v] of Object.entries(VIEWS)) {
     const container = document.getElementById(v.container);
@@ -102,7 +112,7 @@ function show(name) {
 
 // The bottom bar marks Home, Jobs or Resume; Jobs stays marked on Tracker and Tailor, which live under it for now.
 // Settings is a tab of the Jobs view, so while it is open nothing in the bar but the gear is marked.
-const JOBS_AREA = new Set(["jobs", "tracker", "tailor"]);
+const JOBS_AREA = new Set(["jobs", "tracker", "tailor", "job"]);
 let lastJobsRoute = "jobs";
 function markCurrent() {
   const name = app.dataset.route;

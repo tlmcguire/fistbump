@@ -121,6 +121,20 @@ Each phase ships behind the existing UI until it is complete, keeps all 23 theme
 - The stage path replaces the tracker's per-row stage select. "Change stage" opens a small menu, and "More actions" holds archive, trash, reload and open listing.
 - The primary button follows the stage, using existing calls: `revisions` create (Tailor), open review, export (`tailored`), `applications.update` (Mark applied).
 
+**Phase 3 as built:**
+- **New view:** `views/job/job.js` at `#/job/<id>`. It has:
+  - title and facts;
+  - a decision card with fit (required technical skills on the resume) and one stage-driven primary button, plus More actions: open tailored resume, open in tracker, open the listing, archive or unarchive, trash, delete;
+  - a stage path that marks a skipped Tailored stop honestly, with a stage select;
+  - requirements with resume evidence;
+  - pay and place;
+  - autosaving notes (the first note starts tracking);
+  - the posting, which can be expanded.
+- **Entry points:** Saved jobs, "View saved job" in search results, a newly saved pasted job, Home tiles and rows, and the Tracker's company and title links all open the Job page.
+- **Saved tab:** It becomes a full-width list.
+- **Still in the old views:** Search results keep the old detail pane for unsaved postings. Reloading a posting from its board stays in Find.
+- **Deferred:** The projected "after" fit needs a matcher over the tailored draft, so it waits for Phase 4.
+
 ### Phase 4: Tailor (`views/diff-view/diff-view.js`)
 - Render the tailored resume as a paper sheet with suggestions inline (highlight for insert, ink strike for delete), using `worddiff.js`.
 - Margin notes: one per suggestion, gold when active, with the reason, Accept/Reject/Edit, and Undo after a decision. Keep J/K/A/R/E.

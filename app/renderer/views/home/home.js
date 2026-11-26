@@ -136,7 +136,7 @@
         kind: "due",
         title: [a.position_title, a.company_name || "Unknown company"].filter(Boolean).join(" at "),
         detail: a.next_step_date < today ? "Next step is overdue" : "Next step is due today",
-        aside: "Open", onclick: () => window.Tracker.open(a.id),
+        aside: "Open", onclick: () => window.JobPage.open(a.job_id),
       });
     }
     const tracked = new Set((apps || []).map(a => a.job_id));
@@ -303,7 +303,7 @@
         who: a.company_name || a.position_title || "",
         verb: step.verb,
         tone: overdue ? "urgent" : step.tone,
-        open: () => window.Tracker.open(a.id),
+        open: () => a.status === "Interviewing" ? window.Tracker.open(a.id) : openSavedJob(a.job_id),
       });
     }
     const tracked = new Set(apps.map(a => a.job_id));
@@ -381,10 +381,7 @@
     try { localStorage.setItem(TIP_KEY, JSON.stringify([...new Set([...list, skill])].slice(-40))); } catch {}
   };
 
-  const openSavedJob = id => {
-    window.App.go("jobs");
-    window.JobParser.openJob(id);
-  };
+  const openSavedJob = id => window.JobPage.open(id);
 
   // ---------- The view ----------
 
@@ -588,7 +585,7 @@
         title: [entry.job.position_title, entry.job.company_name].filter(Boolean).join(", "),
         "aria-label": [entry.job.position_title, entry.job.company_name].filter(Boolean).join(", "),
         text: (entry.job.company_name || entry.job.position_title || "?").trim().charAt(0).toUpperCase(),
-        onclick: () => entry.app ? window.Tracker.open(entry.app.id) : openSavedJob(entry.job.id),
+        onclick: () => openSavedJob(entry.job.id),
       });
       fill(parts.pipe,
         el("div", {class: "paper-head"}, el("h2", {id: "home-pipe-h", text: total === 1 ? "Your 1 job" : `Your ${total} jobs`}),

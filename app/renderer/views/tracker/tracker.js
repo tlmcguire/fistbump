@@ -636,11 +636,8 @@
         }
       };
 
-      //opens the job in the Jobs view
-      const openJob = jobId => {
-        window.App.go("jobs");
-        window.JobParser.openJob?.(jobId);
-      };
+      //opens the job on its own page (v3)
+      const openJob = jobId => window.JobPage.open(jobId);
 
       //the company's own site when known, else the listing, in the system browser
       const openSite = async jobId => {
