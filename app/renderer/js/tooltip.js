@@ -9,7 +9,13 @@
   tip.className = "tip";
   tip.id = "app-tip";
   tip.setAttribute("role", "tooltip");
-  tip.hidden = true;
+  //In the top layer (the Popover API) the tip draws above everything, open dialogs included. Without it, it is a
+  //fixed element shown and hidden as before.
+  const layered = typeof tip.showPopover === "function";
+  if (layered) tip.popover = "manual";
+  else tip.hidden = true;
+  const open = () => { if (!layered) tip.hidden = false; else if (!tip.matches(":popover-open")) tip.showPopover(); };
+  const shut = () => { if (!layered) tip.hidden = true; else if (tip.matches(":popover-open")) tip.hidePopover(); };
   document.body.append(tip);
 
   let target = null;
@@ -53,7 +59,7 @@
       key.textContent = el.dataset.shortcut;
       tip.append(" ", key);
     }
-    tip.hidden = false;
+    open();
     tip.classList.remove("in");
     place(el);
     void tip.offsetWidth;
@@ -71,7 +77,7 @@
     }
     if (target.getAttribute("aria-describedby") === tip.id) target.removeAttribute("aria-describedby");
     target = null;
-    tip.hidden = true;
+    shut();
     tip.classList.remove("in");
     lastHidden = performance.now();
   };

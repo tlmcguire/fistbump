@@ -96,12 +96,32 @@ function show(name) {
     return;
   }
   document.querySelector(".pdf-preview.expanded")?.collapse?.();
+  const view = VIEWS[name];
+  const container = document.getElementById(view.container);
+  //A view already opened once crossfades in with a view transition. Its data is redrawn first, out of sight, so
+  //code that opens a view and then works in it (open a listing, select a tab) finds it ready at once; only the
+  //visible swap waits for the transition. First visits and Reduce Motion swap directly.
+  if (current !== null && mounted.has(name) && !view.selfAnimated && window.UI.motion() && document.startViewTransition && !document.hidden) {
+    mounted.get(name)?.();
+    current = name;
+    const swap = () => {
+      for (const [key, v] of Object.entries(VIEWS)) {
+        const other = document.getElementById(v.container);
+        if (key !== name && !other.hidden) window.ViewState.hide(other);
+      }
+      window.ViewState.show(container);
+      app.dataset.route = name;
+      markCurrent();
+    };
+    document.documentElement.dataset.vt = "page";
+    const t = document.startViewTransition(swap);
+    t.finished.finally(() => { if (document.documentElement.dataset.vt === "page") delete document.documentElement.dataset.vt; });
+    return;
+  }
   for (const [key, v] of Object.entries(VIEWS)) {
     const container = document.getElementById(v.container);
     if (key !== name && !container.hidden) window.ViewState.hide(container);
   }
-  const view = VIEWS[name];
-  const container = document.getElementById(view.container);
   window.ViewState.show(container);
   //Tailor animates its own stage and sidebar as they fill, so the page does not also fade in around them
   if (current !== null && !view.selfAnimated) window.UI.play(container, "view-enter", 320);
@@ -228,5 +248,16 @@ document.addEventListener("keydown", event => {
   document.getElementById("history-toggle").dataset.tip = "Recent searches you can run again";
 }
 
-window.Settings.mount();
+//Settings builds its theme gallery and asks the backend for storage, AI and model details. That waits until the app
+//is idle, or until Settings is first opened, whichever comes first, so the first view appears sooner.
+let settingsMounted = false;
+const mountSettings = () => {
+  if (settingsMounted) return;
+  settingsMounted = true;
+  window.Settings.mount();
+};
+//capture phase: runs before the Jobs view handles the click and asks Settings to refresh
+document.getElementById("tab-settings").addEventListener("click", mountSettings, true);
+window.api?.app?.onOpenSettings?.(mountSettings);
+(window.requestIdleCallback || (fn => setTimeout(fn, 600)))(mountSettings, {timeout: 1500});
 route();
