@@ -9,7 +9,7 @@ REPO = "tlmcguire/fistbump"
 # Create it with `npx wrangler kv namespace create RELAY` and put the id here.
 [[kv_namespaces]]
 binding = "RELAY"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "76a4dda497a04fbb823975bf4f29ff15"
 
 # Once a day, the shared boards waiting in the queue become one pull request.
 [triggers]

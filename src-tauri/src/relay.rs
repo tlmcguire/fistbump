@@ -10,7 +10,7 @@ use std::time::Duration;
 use serde_json::{json, Value};
 
 /// The relay's address. A build can point elsewhere with FISTBUMP_RELAY_URL (at build time or when it runs).
-const DEFAULT_RELAY: &str = "https://fistbump-relay.tlmcguire.workers.dev";
+const DEFAULT_RELAY: &str = "https://fistbump-relay.tymcg.workers.dev";
 
 fn base() -> String {
     std::env::var("FISTBUMP_RELAY_URL")
