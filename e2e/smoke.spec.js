@@ -277,3 +277,32 @@ test('a saved job opens on its own page with its stage, fit, notes and next step
   await window.locator('.job3-back').click();
   await expect(window.locator('#tab-saved')).toHaveAttribute('aria-selected', 'true');
 });
+
+test('Tailor shows each change in place on the resume and builds once all are decided', async ({ window }) => {
+  const jobId = await window.evaluate(async () => {
+    const api = window.api;
+    await api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com', summary: 'Analyst with five years of experience turning messy data into decisions.' });
+    await api.resume.createExperience({ job_title: 'Research Assistant', company_name: 'Coastal University', start_date: '2022-01-01',
+      skills: ['sql', 'excel', 'tableau', 'python'], description: 'Built Tableau dashboards' });
+    const job = await api.jobs.create({ source: 'pasted', company_name: 'Tidewater Logistics', position_title: 'Data Analyst',
+      raw_text: 'Data Analyst\nTidewater Logistics\n\nRequirements:\n- Experience with sql\n- Experience with excel\n- Experience with tableau' });
+    await api.revisions.create({ job_id: job.id, engine: 'rules' });
+    return job.id;
+  });
+  await window.evaluate(id => window.Tailor.open(id), jobId);
+
+  const notes = window.locator('.t3-note');
+  await expect(notes.first()).toBeVisible();
+  const count = await notes.count();
+  expect(count).toBeGreaterThan(0);
+  await expect(window.locator('.t3-sheet .t3-name')).toHaveText('Ada Okafor');
+  await expect(window.locator('.t3-change').first().locator('ins, del').first()).toBeVisible();
+  await expect(window.locator('.t3-priv')).toContainText('Built-in rules');
+  await expect(window.locator('.t3-bar-acts .btn-mark')).toBeDisabled();
+
+  for (let i = 0; i < count; i++) await window.keyboard.press('a');
+  await expect(window.locator('.t3-count')).toHaveText(`${count} of ${count} decided`);
+  await expect(window.locator('.t3-change ins')).toHaveCount(0);
+  await expect(window.locator('.t3-bar-acts .btn-mark')).toBeEnabled();
+  await expect(window.locator('.t3-finish')).toBeVisible();
+});
