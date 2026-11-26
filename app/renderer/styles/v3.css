@@ -327,7 +327,8 @@
 }
 .app[data-route="jobs"]:not(.settings-open) .subnav,
 .app[data-route="tracker"] .subnav,
-.app[data-route="tailor"] .subnav { display: flex; }
+.app[data-route="tailor"] .subnav,
+.app[data-route="job"] .subnav { display: flex; }
 :root .subnav .seg {
   display: inline-flex;
   gap: 2px;
@@ -463,6 +464,8 @@
 .app[data-route="home"] .titlebar { background: var(--canvas-2); }
 /* Themes paint their own art over the page instead of the canvas gradient, so the strip takes the page colour. */
 :root[data-theme] .app[data-route="home"] .titlebar { background: var(--bg); }
+.app[data-route="job"] .titlebar { background: var(--canvas-2); }
+:root[data-theme] .app[data-route="job"] .titlebar { background: var(--bg); }
 
 .home3 { display: flex; flex-direction: column; }
 .home3-scroll { flex: 1; min-height: 0; overflow-y: auto; }
@@ -628,3 +631,159 @@
 :root .v3 .home3-step b { display: block; font: 760 18px/1.25 var(--theme-font-display, var(--display)); margin-bottom: 4px; }
 :root .v3 .home3-step p { color: var(--ink-2); font-size: 14px; }
 :root .v3 .home3-step .num-mark { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-bottom: 8px; border-radius: 50%; background: var(--ink); color: var(--paper); font: 760 13px var(--display); }
+
+/* ==================== Job page ==================== */
+
+.job3 { display: flex; flex-direction: column; }
+.job3-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+:root .v3 .job3-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 10px 44px 32px;
+}
+:root .v3 .job3-missing { padding: 40px 44px; color: var(--on-canvas-2); }
+
+:root .v3 .job3-hero { grid-column: 1 / 9; align-self: end; }
+:root .v3 .job3-back { margin: 0 0 6px -10px; color: var(--on-canvas-2); }
+:root .v3 .job3-back:hover:not(:disabled) { color: var(--on-canvas); }
+:root .v3 .job3-hero h1 { font-size: 50px; line-height: 1.06; }
+:root .v3 .job3-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+:root .v3 .job3-facts b { font-weight: 650; }
+:root .v3 .job3-state { margin-top: 12px; color: var(--mark); font-weight: 600; font-size: 14px; }
+
+:root .v3 .job3-decide { grid-column: 9 / 13; align-self: end; padding: 18px 22px; }
+:root .v3 .job3-fit { display: flex; align-items: baseline; gap: 8px; }
+:root .v3 .job3-fit-n { font: 800 46px/1 var(--theme-font-display, var(--display)); }
+:root .v3 .job3-fit-l { font-weight: 650; color: var(--ink-2); }
+:root .v3 .job3-fit-sub { font-size: 14px; margin: 4px 0 14px; }
+:root .v3 .job3-go { width: 100%; }
+:root .v3 .job3-more { margin-top: 8px; }
+:root .v3 .job3-more > summary { display: flex; justify-content: center; width: 100%; list-style: none; cursor: pointer; color: var(--ink-2); }
+:root .v3 .job3-more > summary::-webkit-details-marker { display: none; }
+:root .v3 .job3-more-list { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; margin-top: 6px; border-top: 1.5px dashed var(--rule); }
+:root .v3 .job3-more-list .btn { min-height: 32px; padding: 6px 11px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; }
+:root .v3 .job3-danger { color: var(--urgent-ink); }
+:root .v3 .job3-danger:hover:not(:disabled) { background: var(--urgent-ink); color: var(--paper); }
+:root .v3 .job3-date-row { display: flex; gap: 8px; }
+:root .v3 .job3-date { flex: 1; min-width: 0; height: 44px; border-radius: var(--radius-control); border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink); padding: 0 10px; font: inherit; }
+
+/* Where this job stands: five stops on one line, done in ink, now in gold. */
+:root .v3 .job3-path { grid-column: 1 / -1; padding-bottom: 20px; }
+:root .v3 .job3-stage-change { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+:root .v3 .job3-stage-select { height: 32px; border-radius: 9px; border: 1.5px solid var(--rule); background: var(--paper-2); color: var(--ink); font: 600 13px system-ui, sans-serif; padding: 0 8px; }
+:root .v3 .job3-stops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+:root .v3 .job3-stops::before { content: ""; position: absolute; left: 10%; right: 10%; top: 19px; border-top: 2.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); }
+/* The stretch already travelled: a solid ink stroke over the dashed line. */
+:root .v3 .job3-stops::after { content: ""; position: absolute; left: 10%; top: 18px; width: calc(80% * var(--done)); height: 4px; background: var(--ink); border-radius: 2px; }
+:root .v3 .job3-stops.closed::after { background: var(--ink-2); }
+:root .v3 .job3-stop { position: relative; z-index: 1; text-align: center; }
+:root .v3 .job3-dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+}
+:root .v3 .job3-stop.done .job3-dot { background: var(--ink); border: 0; }
+:root .v3 .job3-stop.skipped .job3-dot { background: var(--paper-2); border-style: solid; border-color: color-mix(in srgb, var(--ink) 25%, transparent); }
+:root .v3 .job3-stop.done .job3-dot .ink { width: 20px; height: 20px; color: var(--paper); }
+:root .v3 .job3-stop.now .job3-dot { background: var(--mark); border: 0; }
+:root .v3 .job3-stop.now .job3-dot::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 2.5px solid var(--mark);
+  border-right-color: transparent;
+  transform: rotate(-20deg);
+}
+:root .v3 .job3-stop b { display: block; font: 720 16px var(--theme-font-display, var(--display)); }
+:root .v3 .job3-stop .ink-2 { font-size: 13px; }
+:root .v3 .job3-stop.now .ink-2 { color: var(--mark-ink); font-weight: 650; }
+:root .v3 .job3-closed-note { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+
+/* What they're asking for */
+:root .v3 .job3-req { grid-column: 1 / 8; }
+:root .v3 .job3-ri { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 11px 0; }
+:root .v3 .job3-ri .ink { width: 24px; height: 24px; margin-top: 1px; }
+:root .v3 .job3-ri .ink-check { color: var(--success-ink); }
+:root .v3 .job3-ri .ink-half { color: var(--mark-ink); }
+:root .v3 .job3-ri .ink-open { color: var(--urgent-ink); }
+:root .v3 .job3-ri b { display: block; font-weight: 650; }
+:root .v3 .job3-ri .ink-2 { font-size: 13.5px; }
+:root .v3 .job3-ri .btn { min-height: 32px; padding: 6px 11px; font-size: 13px; white-space: nowrap; }
+:root .v3 .job3-ris { border-top: 1.5px dashed var(--rule); }
+:root .v3 .job3-sub { font: 700 13px system-ui, sans-serif; letter-spacing: 0; color: var(--ink-2); margin: 16px 0 2px; }
+:root .v3 .job3-soft { font-size: 13.5px; margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--rule); }
+
+/* Pay, place and notes */
+:root .v3 .job3-side { grid-column: 8 / 13; display: flex; flex-direction: column; gap: 18px; }
+:root .v3 .job3-amt { font-size: 34px; font-weight: 800; line-height: 1.05; margin: 2px 0 8px; }
+:root .v3 .job3-scale { position: relative; height: 10px; margin: 14px 0 8px; border-radius: 6px; background: var(--paper-2); }
+:root .v3 .job3-scale i { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: var(--ink); }
+:root .v3 .job3-scale em { position: absolute; top: -7px; width: 4px; height: 24px; margin-left: -2px; border-radius: 3px; background: var(--mark); }
+:root .v3 .job3-scale-l { font-size: 12.5px; }
+:root .v3 .job3-pay-sum { margin-top: 10px; font-size: 14px; }
+:root .v3 .job3-life { margin-top: 8px; font-size: 13.5px; }
+:root .v3 .job3-est { margin-top: 10px; font-size: 12px; }
+:root .v3 .job3-saved { font-size: 13px; }
+:root .v3 .job3-notes-area {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, sans-serif;
+  resize: vertical;
+}
+:root .v3 .job3-notes-area::placeholder { color: var(--ink-2); }
+:root .v3 .job3-notes-area:focus { outline: none; border-color: var(--mark); }
+:root .v3 .job3-notes-hint { margin-top: 8px; font-size: 12.5px; }
+
+/* The posting */
+:root .v3 .job3-posting { grid-column: 1 / -1; }
+:root .v3 .job3-reqs { margin: 0 0 12px; padding-left: 20px; max-width: 80ch; }
+:root .v3 .job3-reqs li { margin-bottom: 4px; }
+:root .v3 .job3-posting-text {
+  max-width: 80ch;
+  max-height: 9.5em;
+  overflow: hidden;
+  white-space: pre-wrap;
+  color: color-mix(in oklab, var(--ink) 88%, var(--paper));
+  font-size: 14.5px;
+  line-height: 1.6;
+  -webkit-mask-image: linear-gradient(#000 60%, transparent);
+  mask-image: linear-gradient(#000 60%, transparent);
+}
+:root .v3 .job3-posting-text.open { max-height: none; -webkit-mask-image: none; mask-image: none; }
+
+@media (max-width: 1100px) {
+  :root .v3 .job3-grid { padding: 8px 24px 24px; }
+  :root .v3 .job3-hero { grid-column: 1 / 8; }
+  :root .v3 .job3-decide { grid-column: 8 / 13; }
+}
+@media (max-width: 900px) {
+  :root .v3 .job3-hero, :root .v3 .job3-decide, :root .v3 .job3-req, :root .v3 .job3-side { grid-column: 1 / -1; }
+  :root .v3 .job3-hero h1 { font-size: 38px; }
+}
+
+/* Saved jobs: each opens on its own page now, so the list takes the whole width. */
+.main.view-saved .detail-pane { display: none; }
+.main.view-saved .content { grid-template-columns: minmax(0, 1fr); }
