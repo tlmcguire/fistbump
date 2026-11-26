@@ -55,10 +55,35 @@
   --rule: color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
-/* Bright themes: the page does not lighten toward the top, and the gold is lifted so marks and links on the
-   canvas stay readable (it still reads as gold behind ink in Pico's bubble and on gold buttons). */
-:root[data-theme="bubblegum"] { --canvas-2: var(--bg); --mark: #ffe58a; --mark-ink: #6e4a00; }
-:root[data-theme="retro"] { --canvas-2: var(--bg); --mark: #ffd86e; }
+/* Each theme's accent: the colour of ink marks, Pico's bubble, gold buttons and highlights. Chosen to sit with
+   the theme instead of clashing with it; gold stays where gold belongs (Classic, Art Deco Gold, November).
+   The darker text version follows the accent. Bright themes also keep their canvas from lightening at the top. */
+:root[data-theme] { --mark-ink: color-mix(in oklab, var(--mark) 26%, var(--ink)); }
+/* Accent-coloured text on the canvas (links, notes). On the brightest backgrounds it is lifted toward white. */
+:root { --mark-text: var(--mark); }
+:root[data-theme="bubblegum"], :root[data-theme="retro"], :root[data-theme="june"] { --mark-text: color-mix(in oklab, var(--mark) 38%, #ffffff); }
+:root[data-theme="bubblegum"] { --canvas-2: var(--bg); --mark: #ffd3e6; }
+:root[data-theme="retro"] { --canvas-2: var(--bg); --mark: #b8f28a; }
+:root[data-theme="cyber"] { --mark: #39ff88; }
+:root[data-theme="techno"] { --mark: #5fd8ff; }
+:root[data-theme="vaporwave"] { --mark: #ff8ae0; }
+:root[data-theme="dracula"] { --mark: #c4a1ff; }
+:root[data-theme="matcha"] { --mark: #bfe39a; }
+:root[data-theme="midnight-gold"] { --mark: #e2bd5c; }
+:root[data-theme="ocean-abyss"] { --mark: #63e6d3; }
+:root[data-theme="arcade"] { --mark: #ff84e2; }
+:root[data-theme="january"] { --mark: #a9d9ff; }
+:root[data-theme="february"] { --mark: #ffa8c6; }
+:root[data-theme="march"] { --mark: #93e6ab; }
+:root[data-theme="april"] { --mark: #ffbbd6; }
+:root[data-theme="may"] { --mark: #d0ec8f; }
+:root[data-theme="june"] { --mark: #84e6f2; }
+:root[data-theme="july"] { --mark: #ffa494; }
+:root[data-theme="august"] { --mark: #ffc283; }
+:root[data-theme="september"] { --mark: #ecc970; }
+:root[data-theme="october"] { --mark: #ffa95c; }
+:root[data-theme="november"] { --mark: #f4b53f; }
+:root[data-theme="december"] { --mark: #ff9b9b; }
 
 /* High Contrast wins over every theme: white paper, black ink, solid rules, darker marks. */
 :root.high-contrast,
@@ -445,7 +470,7 @@
 :root .v3 .home3-hero { grid-column: 1 / 9; align-self: end; }
 :root .v3 .home3-sub { margin: 16px 0 16px; color: var(--on-canvas-2); font-size: 16px; text-wrap: pretty; max-width: 62ch; }
 :root .v3 .home3-sub b { color: var(--on-canvas); }
-:root .v3 .home3-sub a { color: var(--mark); font-weight: 650; text-underline-offset: 3px; }
+:root .v3 .home3-sub a { color: var(--mark-text); font-weight: 650; text-underline-offset: 3px; }
 
 :root .v3 .home3-next {
   display: grid;
@@ -618,7 +643,7 @@
 :root .v3 .job3-hero h1 { font-size: 50px; line-height: 1.06; }
 :root .v3 .job3-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 :root .v3 .job3-facts b { font-weight: 650; }
-:root .v3 .job3-state { margin-top: 12px; color: var(--mark); font-weight: 600; font-size: 14px; }
+:root .v3 .job3-state { margin-top: 12px; color: var(--mark-text); font-weight: 600; font-size: 14px; }
 
 :root .v3 .job3-decide { grid-column: 9 / 13; align-self: end; padding: 18px 22px; }
 :root .v3 .job3-fit { display: flex; align-items: baseline; gap: 8px; }
@@ -760,7 +785,7 @@
 :root .v3 .t3-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-bottom: 6px; }
 :root .v3 .t3-bar-meta { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
 :root .v3 .t3-priv { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: color-mix(in oklab, var(--success) 60%, var(--on-canvas)); }
-:root .v3 .t3-priv.remote { color: var(--mark); }
+:root .v3 .t3-priv.remote { color: var(--mark-text); }
 :root .v3 .t3-priv .icon { width: 15px; height: 15px; }
 :root .v3 .t3-count { font-size: 13px; color: var(--on-canvas-2); }
 :root .v3 .t3-meter { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--on-canvas) 8%, transparent); }
@@ -1227,3 +1252,86 @@
 :root .v3 .home3-match > span:nth-child(2) > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 :root .v3 .home3-match .tag { margin-left: 0; }
 :root .v3 .home3-match > span:nth-child(2) > span.ink-2 { flex-basis: 100%; }
+:root .v3.settings-pane .settings-group:focus { outline: none; }
+
+/* ==================== Find: the search bar ==================== */
+
+/* The Find bar sits on the page like the rest of v3: fields are tinted wells, Search is the one gold action. */
+.app[data-route="jobs"] #main > .toolbar { background: var(--bg); border-bottom: 1px solid color-mix(in srgb, var(--on-canvas) 10%, transparent); box-shadow: none; }
+:root[data-theme] .app[data-route="jobs"] #main > .toolbar { background: var(--bg); }
+.app[data-route="jobs"] .titlebar { background: var(--bg); } /* matches the result panes below, still drawn on --bg */
+:root[data-theme] .app[data-route="jobs"] .titlebar { background: var(--bg); }
+.app[data-route="jobs"] #search-form { gap: 10px; padding: 10px 24px 12px; }
+:root .app[data-route="jobs"] #search-form input:not([type="checkbox"]):not(.switch),
+:root .app[data-route="jobs"] #saved-form input:not([type="checkbox"]):not(.switch) {
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--on-canvas) 10%, transparent);
+  color: var(--on-canvas);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--on-canvas) 8%, transparent);
+  font-size: 14px;
+}
+:root .app[data-route="jobs"] #search-form input::placeholder { color: color-mix(in oklab, var(--on-canvas) 70%, var(--canvas)); }
+:root .app[data-route="jobs"] #search-form input:focus,
+:root .app[data-route="jobs"] #search-form input:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--on-canvas) 14%, transparent);
+  box-shadow: inset 0 0 0 2px var(--mark);
+}
+:root .app[data-route="jobs"] #search-form > button,
+:root .app[data-route="jobs"] #search-form .history-menu > button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--on-canvas) 10%, transparent);
+  color: var(--on-canvas);
+  font-weight: 650;
+  box-shadow: none;
+}
+:root .app[data-route="jobs"] #search-form > button:hover:not(:disabled),
+:root .app[data-route="jobs"] #search-form .history-menu > button:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 16%, transparent); }
+:root .app[data-route="jobs"] #search-form > button.primary { background: var(--mark); color: var(--ink); }
+:root .app[data-route="jobs"] #search-form > button.primary:hover:not(:disabled) { background: var(--mark); filter: brightness(1.05); }
+:root .app[data-route="jobs"] #search-form > button:disabled,
+:root .app[data-route="jobs"] #search-form .history-menu > button:disabled { opacity: 0.55; }
+:root .app[data-route="jobs"] #search-form .badge { background: var(--mark); color: var(--ink); }
+/* the clear button inside a search field, in the field's own colour */
+
+
+/* Title suggestions under the Find fields: a paper list, like the omnibox panel. */
+:root .app .suggestions { background: var(--paper); color: var(--ink); border: 0; border-radius: 14px; box-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.2); padding: 6px; }
+:root .app .suggestions li { border-radius: 9px; color: var(--ink); }
+:root .app .suggestions li.active, :root .app .suggestions li:hover { background: color-mix(in srgb, var(--mark) 26%, var(--paper)); }
+
+/* ==================== Accent choice ==================== */
+
+/* Settings can replace the theme's accent with one of these, on any theme. */
+:root[data-accent] { --mark-ink: color-mix(in oklab, var(--mark) 26%, var(--ink)); }
+:root[data-accent="gold"] { --mark: #f4b53f; }
+:root[data-accent="coral"] { --mark: #ff9474; }
+:root[data-accent="mint"] { --mark: #6fdcac; }
+:root[data-accent="sky"] { --mark: #8cc2ff; }
+:root[data-accent="violet"] { --mark: #bea6ff; }
+:root[data-accent="rose"] { --mark: #ff9cc2; }
+:root .v3 .st3-accents { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+:root .v3 .st3-accent { width: 34px; height: 34px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; cursor: pointer; }
+:root .v3 .st3-accent:hover:not(:disabled) { background: none; }
+:root .v3 .st3-dot { width: 26px; height: 26px; border-radius: 50%; background: var(--dot); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18); transition: transform 120ms var(--ease-settle); }
+:root .v3 .st3-dot.theme { background: conic-gradient(from 200deg, #f4b53f, #ff9cc2, #bea6ff, #8cc2ff, #6fdcac, #f4b53f); }
+:root .v3 .st3-accent:hover .st3-dot { transform: scale(1.08); }
+:root .v3 .st3-accent[aria-checked="true"] .st3-dot { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+/* Marks drawn on paper use a deeper shade of the accent, so a pale accent still shows on cream. */
+:root { --mark-deep: color-mix(in oklab, var(--mark) 70%, var(--mark-ink)); }
+:root .v3 .paper .ink:not(.ink-check):not(.ink-open):not(.ink-half) { color: var(--mark-deep); }
+:root .v3 .home3-kicker:not(.urgent)::before { background: var(--mark-deep); }
+:root .v3 .job3-stop.now .job3-dot { background: var(--mark-deep); }
+:root .v3 .job3-stop.now .job3-dot::after { border-color: var(--mark-deep); border-right-color: transparent; }
+:root .v3 .rs3-target { display: flex; align-items: center; gap: 4px; margin: 4px 0 10px; }
+:root .v3 .rs3-target-label { margin-right: 8px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+:root .v3 .rs3-target button { height: 30px; min-height: 0; padding: 0 12px; border: 0; border-radius: 999px; background: var(--paper-2); color: var(--ink); font-size: 13px; font-weight: 650; }
+:root .v3 .rs3-target button:hover:not(:disabled) { background: color-mix(in oklab, var(--paper-2) 80%, var(--ink)); color: var(--ink); }
+:root .v3 .rs3-target button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
