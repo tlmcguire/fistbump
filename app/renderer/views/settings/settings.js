@@ -186,6 +186,32 @@ window.Settings = {
       markAccent();
       accentRow.append(accentText, accents);
       gallery.after(accentRow);
+
+      //Where the navigation bar sits: at the foot of the window (the default) or at the top.
+      const barRow = document.createElement("div");
+      barRow.className = "setting st3-bar-row";
+      const barText = document.createElement("div");
+      barText.className = "setting-text";
+      barText.innerHTML = '<span class="setting-label" id="bar-label">Navigation bar</span><p>Home, Jobs, Resume, Search and the search box, at the bottom of the window or at the top.</p>';
+      const barSeg = document.createElement("div");
+      barSeg.className = "st3-seg";
+      barSeg.setAttribute("role", "radiogroup");
+      barSeg.setAttribute("aria-labelledby", "bar-label");
+      const barButtons = [["bottom", "Bottom"], ["top", "Top"]].map(([value, name]) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "radio");
+        b.dataset.bar = value;
+        b.textContent = name;
+        b.addEventListener("click", () => window.Prefs.set("barPosition", value));
+        barSeg.append(b);
+        return b;
+      });
+      const markBar = () => barButtons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.bar === window.Prefs.get("barPosition"))));
+      window.Prefs.onChange(key => { if (key === "barPosition") markBar(); });
+      markBar();
+      barRow.append(barText, barSeg);
+      accentRow.after(barRow);
     }
     bind("pref-language", "language");
     //the page changes language in place, crossfading from the old words to the new ones

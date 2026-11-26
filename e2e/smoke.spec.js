@@ -461,3 +461,21 @@ test('the resume target length sets what the page-count badge checks', async ({ 
   expect(await window.evaluate(() => window.Prefs.get('resumePages'))).toBe(2);
   await window.locator('.rs3-target button', { hasText: '1 page' }).click();
 });
+
+test('the navigation bar can move to the top, where it is also the drag area', async ({ window }) => {
+  await window.locator('#tab-settings').click();
+  await window.locator('.st3-seg button[data-bar="top"]').click();
+  await expect(window.locator('html')).toHaveClass(/bar-top/);
+  await expect(window.locator('.titlebar')).toBeHidden();
+  const bar = await window.locator('.bottombar').boundingBox();
+  expect(bar.y).toBeLessThan(5);
+  await expect(window.locator('.bottombar')).toHaveAttribute('data-tauri-drag-region', '');
+  await window.locator('#omnibox-input').click();
+  const panel = await window.locator('#omnibox-panel').boundingBox();
+  expect(panel.y).toBeGreaterThan(bar.y + bar.height - 1);
+  await window.keyboard.press('Escape');
+  await window.locator('#tab-settings').click();
+  await window.locator('.st3-seg button[data-bar="bottom"]').click();
+  await expect(window.locator('html')).not.toHaveClass(/bar-top/);
+  await expect(window.locator('.bottombar')).not.toHaveAttribute('data-tauri-drag-region', '');
+});

@@ -5,6 +5,7 @@ window.Prefs = (() => {
   const DEFAULTS = {
     theme: "classic",        // classic | bubblegum | techno | cyber | retro | auto-season | january..december
     accent: "theme",         // theme (the theme's own) | gold | coral | mint | sky | violet | rose
+    barPosition: "bottom",   // where the navigation bar sits: bottom | top
     language: "system",      // system | en | es | fr | de
     textSize: "default",     // small | default | large | larger
     reduceMotion: "system",  // system | on | off
@@ -30,6 +31,7 @@ window.Prefs = (() => {
   const ALLOWED = {
     theme: [...STYLE_THEMES, "auto-season", ...SEASONAL_THEMES],
     accent: ["theme", "gold", "coral", "mint", "sky", "violet", "rose"],
+    barPosition: ["bottom", "top"],
     language: ["system", "en", "es", "fr", "de"],
     textSize: Object.keys(ZOOM),
     reduceMotion: ["system", "on", "off"],
@@ -60,6 +62,10 @@ window.Prefs = (() => {
     root.classList.toggle("reduce-motion", reduce);
     root.classList.toggle("high-contrast", values.highContrast);
     root.classList.toggle("underline-links", values.underlineLinks);
+    root.classList.toggle("bar-top", values.barPosition === "top");
+    //at the top, the bar is also where the window is dragged from
+    const bar = document.querySelector?.(".bottombar");
+    if (bar) values.barPosition === "top" ? bar.setAttribute("data-tauri-drag-region", "") : bar.removeAttribute("data-tauri-drag-region");
     if (root.dataset) {
       if (values.accent && values.accent !== "theme") root.dataset.accent = values.accent;
       else delete root.dataset.accent;

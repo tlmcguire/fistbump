@@ -1,6 +1,10 @@
 // Spanish. Keys are the English text of the page; see js/i18n.js.
 window.I18n.add("es", {
   // v3 screens: Home, Jobs list, Job page, Tailor desk, Settings, Resume
+  "Navigation bar": "Barra de navegación",
+  "Bottom": "Abajo",
+  "Top": "Arriba",
+  "Home, Jobs, Resume, Search and the search box, at the bottom of the window or at the top.": "Inicio, Empleos, Currículum, Buscar y el cuadro de búsqueda, abajo o arriba de la ventana.",
   "Target length": "Extensión objetivo",
   "1 page": "1 página",
   "{0} pages": "{0} páginas",
