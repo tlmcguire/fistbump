@@ -30,6 +30,7 @@ const postings = ['data-analyst', 'backend-engineer', 'financial-analyst', 'data
   await page.waitForSelector('#nav-home');
 
   const shot = async (name) => {
+    await page.mouse.move(2, 2); //no hover state in the pictures
     await page.waitForTimeout(900);
     await page.screenshot({ path: path.join(out, `${name}.png`) });
     console.log('saved', name);
@@ -54,16 +55,50 @@ const postings = ['data-analyst', 'backend-engineer', 'financial-analyst', 'data
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#nav-home');
 
-  await page.waitForTimeout(2500); //Home fills its matches panel after the rest
+  //plans on the calendar this week, relative to today so the week view always has something on it
+  await page.evaluate(async (jobId) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (d) => {
+      const o = -d.getTimezoneOffset();
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${o >= 0 ? '+' : '-'}${pad(Math.floor(Math.abs(o) / 60))}:${pad(Math.abs(o) % 60)}`;
+    };
+    const at = (days, h, m = 0) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, m, 0, 0); return d; };
+    const plan = (kind, title, days, h, minutes, extra = {}) => window.api.events.create({ kind, title, starts_at: iso(at(days, h)), ends_at: iso(new Date(at(days, h).getTime() + minutes * 60000)), ...extra });
+    await plan('interview', 'Interview with Cobalt Rivers', 1, 10, 60, { job_id: jobId, location: 'Video call' });
+    await plan('call', 'Recruiter call, Lumen Fields', 2, 14, 30);
+    await plan('interview', 'Onsite, Oakline Software', 3, 9, 180);
+    await plan('follow_up', 'Thank-you notes', 3, 16, 30);
+  }, ids[2]);
+
+  //the pictures are of where things settle, not of things arriving
+  await page.evaluate(() => { window.Prefs.set('reduceMotion', 'on'); window.Prefs.set('barPosition', 'bottom'); window.Prefs.set('mode', 'night'); });
+  const go = async (route) => { await page.evaluate((r) => window.App.go(r), route); };
+
+  //Home fills its matches panel after the rest (a live search), so wait for it to settle
+  await page.waitForFunction(() => !document.body.innerText.includes('Looking for roles that match'), null, { timeout: 30000 }).catch(() => {});
   await shot('home');
-  await click('#nav-resume'); await shot('resume');
-  await click('#nav-jobs'); await shot('jobs');
-  await page.locator('.jl3-open', { hasText: 'Data Analyst' }).first().click();
-  await shot('job');
-  await page.evaluate((id) => window.Tailor.open(id), ids[0]);
+  await go('resume'); await shot('resume');
+  await go('list'); await shot('jobs');
+  await page.evaluate((id) => window.JobPage.open(id), ids[2]); await shot('job');
+  await go('tailor');
+  await page.locator('.stage-job', { hasText: 'Data Analyst' }).click();
   await shot('tailor');
-  await page.evaluate(() => window.App.go('tracker')); await shot('tracker');
-  await click('#tab-settings'); await shot('settings');
+  await go('tracker'); await shot('tracker');
+  await go('calendar'); await shot('calendar');
+  await page.evaluate(() => { window.App.go('jobs'); window.App.openTab('tab-settings'); });
+  await shot('settings');
+
+  //the same Home by day and in Darker
+  await go('home');
+  await page.waitForFunction(() => !document.body.innerText.includes('Looking for roles that match'), null, { timeout: 30000 }).catch(() => {});
+  const settled = () => page.waitForFunction(() => !document.body.innerText.includes('Looking for roles that match'), null, { timeout: 30000 }).catch(() => {});
+  await page.evaluate(() => window.Prefs.set('mode', 'day'));
+  await page.waitForTimeout(300); await settled();
+  await shot('home-day');
+  await page.evaluate(() => window.Prefs.set('mode', 'darker'));
+  await page.waitForTimeout(300); await settled();
+  await shot('home-darker');
+  await page.evaluate(() => window.Prefs.set('mode', 'night'));
 
   await browser.close();
   await harness.close();

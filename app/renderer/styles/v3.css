@@ -1657,9 +1657,18 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3.tl3 .tailor-stage.paper [role="tablist"] button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
 
 /* The rounds: tabs on the canvas. */
-:root .v3.tl3 .tailor-rounds button { border: 0; border-radius: 10px; background: color-mix(in srgb, var(--on-canvas) 9%, transparent); color: var(--on-canvas-2); }
-:root .v3.tl3 .tailor-rounds button[aria-pressed="true"], :root .v3.tl3 .tailor-rounds button[aria-current="true"] { background: var(--paper); color: var(--ink); }
-:root .v3.tl3 .tailor-rounds .round-meta { opacity: 0.8; }
+:root .v3.tl3 .tailor-rounds { display: flex; flex-wrap: wrap; gap: 8px; }
+:root .v3.tl3 .tailor-round-item { position: relative; display: inline-flex; align-items: center; }
+:root .v3.tl3 .tailor-round { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; height: auto; min-height: 0; padding: 8px 34px 8px 14px; border: 0; border-radius: 12px;
+  background: color-mix(in srgb, var(--on-canvas) 9%, transparent); color: var(--on-canvas); font-weight: 700; text-align: left; }
+:root .v3.tl3 .tailor-round:hover:not(:disabled) { background: color-mix(in srgb, var(--on-canvas) 15%, transparent); }
+:root .v3.tl3 .tailor-round .round-meta { font-size: 12px; font-weight: 500; color: var(--on-canvas-2); }
+:root .v3.tl3 .tailor-round[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-control); }
+:root .v3.tl3 .tailor-round[aria-pressed="true"] .round-meta { color: var(--ink-2); }
+:root .v3.tl3 .round-delete { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--on-canvas-2); opacity: 1; }
+:root .v3.tl3 .tailor-round-item:has(.tailor-round[aria-pressed="true"]) .round-delete { color: var(--ink-2); }
+:root .v3.tl3 .round-delete:hover:not(:disabled) { background: color-mix(in srgb, var(--urgent) 18%, transparent); color: var(--urgent-ink); }
+:root .v3.tl3 .round-delete .icon { width: 14px; height: 14px; }
 
 /* The empty page: Pico, a line, and the saved jobs as small paper cards. */
 :root .v3.tl3 .stage-empty h2 { color: var(--on-canvas); font-family: var(--theme-font-display, var(--display)); font-size: 26px; }
@@ -2008,3 +2017,12 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 @container (max-width: 760px) {
   :root .v3 .cal3-plan span:not(.cal3-clash-tag) { display: none; }
 }
+
+/* Skill chips on paper: "likely" in the deep accent ink, never pale gold on cream. */
+:root .v3 .paper-adapt .chip.skill-likely { background: color-mix(in srgb, var(--mark) 20%, var(--paper)); color: var(--mark-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mark-deep) 40%, transparent); }
+
+/* One fit number at a time: while a round is on the desk its meter shows the fit (and moves as you decide), so the
+   side panel's ring steps aside. Before any round, the ring is the fit. */
+:root .v3.tl3:has(.t3-desk) .tailor-aside .score { display: none; }
+/* The gear looks chosen only while Settings is open, not after you leave it for another place. */
+:root .app:not(.settings-open) .bottombar .bar-icon[aria-selected="true"] { color: var(--muted); background: transparent; }

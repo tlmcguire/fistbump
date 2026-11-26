@@ -158,12 +158,27 @@ const installMockApi = async (page) => {
     await page.waitForTimeout(700);
   }
 
+  //Home's matches come from a live search; wait for them so no picture says "Looking for roles"
+  await page.waitForFunction(() => !document.body.innerText.includes('Looking for roles that match'), null, { timeout: 30000 }).catch(() => {});
+  //settled pictures, the bar where most people keep it, and the Night version of each theme
+  await page.evaluate(() => { window.Prefs.set('reduceMotion', 'on'); window.Prefs.set('barPosition', 'bottom'); window.Prefs.set('mode', 'night'); });
   for (const theme of ALL_THEMES) {
     await page.evaluate((t) => window.Prefs.set('theme', t), theme);
     await page.waitForTimeout(220);
     await page.screenshot({ path: path.join(out, `${theme}.png`) });
     console.log('saved', theme);
   }
+
+  //each theme by day too, into docs/images/themes/day/
+  fs.mkdirSync(path.join(out, 'day'), { recursive: true });
+  await page.evaluate(() => window.Prefs.set('mode', 'day'));
+  for (const theme of ALL_THEMES) {
+    await page.evaluate((t) => window.Prefs.set('theme', t), theme);
+    await page.waitForTimeout(220);
+    await page.screenshot({ path: path.join(out, 'day', `${theme}.png`) });
+    console.log('saved day', theme);
+  }
+  await page.evaluate(() => { window.Prefs.set('mode', 'night'); window.Prefs.set('theme', 'classic'); });
 
   await browser.close();
   if (harness) await harness.close();
