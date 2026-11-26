@@ -62,12 +62,34 @@ window.Settings = {
     {
       const holder = document.querySelector("#settings-pane .settings");
       const groups = [...holder.querySelectorAll(":scope > .settings-group")];
-      const LEFT = new Set(["set-appearance", "set-keys", "set-search"]);
       const left = document.createElement("div");
       const right = document.createElement("div");
       left.className = right.className = "st3-col";
-      for (const g of groups) (LEFT.has(g.getAttribute("aria-labelledby")) ? left : right).append(g);
       holder.append(left, right);
+      //Each panel goes, in reading order, to whichever column is shorter, so the two end close together.
+      //Run again when Settings is shown and when the window or the language changes panel heights.
+      const balance = () => {
+        if (!holder.offsetParent) return; //hidden: nothing to measure yet
+        const wide = getComputedStyle(holder).gridTemplateColumns.split(" ").length > 1;
+        //both columns are the same width, so a panel is as tall in either one
+        const heights = groups.map(g => g.offsetHeight);
+        let l = 0, r = 0;
+        const sides = groups.map((g, i) => {
+          if (!wide || l <= r) { l += heights[i] + 18; return left; }
+          r += heights[i] + 18;
+          return right;
+        });
+        //only move panels when the split changes, so the observer below cannot loop
+        if (sides.every((col, i) => groups[i].parentElement === col)) return;
+        groups.forEach((g, i) => sides[i].append(g));
+      };
+      groups.forEach(g => left.append(g));
+      window.SettingsLayout = {balance};
+      let pending = 0;
+      const soon = () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(balance); };
+      const watch = new ResizeObserver(soon);
+      groups.forEach(g => watch.observe(g));
+      watch.observe(holder);
     }
     //v3: the themes as swatches. The select stays as the source of truth (and for the language files), hidden.
     {
@@ -496,11 +518,22 @@ window.Settings = {
         aiStatus(error.message, true);
       }
     });
+    //While a test runs, its button says so and counts the seconds, so a slow model never looks like a frozen app.
     const runTest = async engine => {
+      const button = $(engine === "local" ? "ai-test-local" : "ai-test-remote");
+      const label = button.textContent;
+      const busy = sec => {
+        button.textContent = sec ? `Testing\u2026 ${sec} s` : "Testing\u2026";
+        button.setAttribute("aria-busy", "true");
+        button.disabled = true;
+        button.classList.add("testing");
+      };
+      busy(0);
       const started = Date.now();
       aiStatus(`Testing ${engine} engine… 0 s`);
       const timer = setInterval(() => {
         const sec = Math.round((Date.now() - started) / 1000);
+        busy(sec);
         aiStatus(sec >= 15
           ? `Testing ${engine} engine… ${sec} s (taking longer than usual — model may be loading or stalled)`
           : `Testing ${engine} engine… ${sec} s`);
@@ -520,6 +553,10 @@ window.Settings = {
       } finally {
         clearInterval(timer);
         clearTimeout(timeoutId);
+        button.textContent = label;
+        button.removeAttribute("aria-busy");
+        button.classList.remove("testing");
+        showAi(); //puts back whether the button can be used (an engine that is not set up stays disabled)
       }
     };
     $("ai-test-local").addEventListener("click", () => runTest("local"));

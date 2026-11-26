@@ -38,11 +38,13 @@
                     <button type="button" id="nav-home" class="bar-item">Home</button>
                     <button type="button" id="nav-jobs" class="bar-item">Jobs</button>
                     <button type="button" id="nav-resume" class="bar-item" data-route="resume">Resume</button>
+                    <button type="button" id="nav-search" class="bar-item">Search</button>
                 </div>
                 <form id="omnibox" class="omnibox" role="search" autocomplete="off">
                     <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-                    <input id="omnibox-input" type="search" aria-label="Search jobs, paste a job link, or paste a posting" placeholder="Search jobs, paste a link, or drop in a posting">
+                    <input id="omnibox-input" type="search" role="combobox" aria-expanded="false" aria-controls="omnibox-panel" aria-autocomplete="list" aria-label="Search jobs, paste a job link, or paste a posting" placeholder="Search jobs, paste a link, or drop in a posting">
                     <kbd id="omnibox-key" aria-hidden="true"></kbd>
+                    <div id="omnibox-panel" class="omnibox-panel" role="listbox" aria-label="Suggestions" hidden></div>
                 </form>
                 <div class="bottombar-end" role="tablist" aria-label="Settings">
                     <button type="button" id="tab-settings" class="bar-icon" role="tab" aria-selected="false" aria-label="Settings" title="Settings (Cmd or Ctrl and comma)"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span id="update-dot" class="dot" title="An update is available" hidden></span></button>
