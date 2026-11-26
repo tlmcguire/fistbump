@@ -25,7 +25,7 @@ fn fail(code: &str, message: impl Into<String>) -> Value {
     json!({ "error": { "code": code, "message": message.into(), "details": Value::Null } })
 }
 
-/// `relay:similar` (words) · `relay:report` (report) · `relay:share-boards` (boards) · `relay:boards` ().
+/// `relay:similar` (words) · `relay:report` (report) · `relay:share-boards` (boards) · `relay:boards` () · `relay:share-listing` (listing) · `relay:listings` ().
 pub async fn call(channel: &str, a0: Option<&Value>) -> Value {
     let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
@@ -50,6 +50,11 @@ pub async fn call(channel: &str, a0: Option<&Value>) -> Value {
             _ => return fail("validation_failed", "Nothing to share."),
         },
         "relay:boards" => client.get(format!("{root}/v1/boards")),
+        "relay:share-listing" => match a0 {
+            Some(body) if body.is_object() => client.post(format!("{root}/v1/listings")).json(body),
+            _ => return fail("validation_failed", "Nothing to share."),
+        },
+        "relay:listings" => client.get(format!("{root}/v1/listings")),
         _ => return fail("validation_failed", format!("Unknown channel: {channel}")),
     };
     let response = match request.send().await {

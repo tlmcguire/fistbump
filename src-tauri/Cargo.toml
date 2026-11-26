@@ -1,6 +1,6 @@
 [package]
 name = "fistbump"
-version = "0.5.0"
+version = "0.5.1"
 description = "A local-first job application assistant"
 authors = ["tlmcguire"]
 edition = "2021"

@@ -192,6 +192,8 @@
       report: (body) => call('relay:report', body),
       shareBoards: (body) => call('relay:share-boards', body),
       boards: () => call('relay:boards'),
+      shareListing: (body) => call('relay:share-listing', body),
+      listings: () => call('relay:listings'),
     },
 
     desktop: {
