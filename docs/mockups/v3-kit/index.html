@@ -1,0 +1,54 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>v3 kit</title>
+<link rel="stylesheet" href="../../../app/renderer/styles/base.css"><link rel="stylesheet" href="../../../app/renderer/styles/views.css"><link rel="stylesheet" href="../../../app/renderer/styles/finish.css"><link rel="stylesheet" href="../../../app/renderer/styles/themes.css"><link rel="stylesheet" href="../../../app/renderer/styles/motion.css"><link rel="stylesheet" href="../../../app/renderer/styles/v3.css">
+<style>html,body{overflow:auto;height:auto} .kit{padding:28px 40px;display:grid;grid-template-columns:repeat(12,1fr);gap:18px;min-height:100vh}</style></head>
+<body><svg class="icon-sprite" aria-hidden="true">
+                <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5.5h4V20"/></symbol>
+                <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+                <symbol id="i-link" viewBox="0 0 24 24"><path class="half a" d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path class="half b" d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+                <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H6.5v17h11V7z"/><path d="M14 3.5V7h3.5"/><path class="lines" pathLength="1" d="M9.5 12h5M9.5 15.5h5"/></symbol>
+                <symbol id="i-settings" viewBox="0 0 24 24"><path class="track a" d="M4 7h9.5M18.5 7H20"/><path class="track b" d="M4 17h3.5M12.5 17H20"/><circle class="knob a" cx="16" cy="7" r="2.5"/><circle class="knob b" cx="10" cy="17" r="2.5"/></symbol>
+                <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+                <symbol id="i-paste" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5h6V5"/><path class="lines" pathLength="1" d="M9 11h6M9 15h4"/></symbol>
+                <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17L12 16.5l-5.5 4z"/></symbol>
+                <symbol id="i-person" viewBox="0 0 24 24"><circle class="head" cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.5-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+                <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 11-11"/><path class="spark" d="m13.5 4.5.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/><path class="spark late" d="m18.5 12.5.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/></symbol>
+                <symbol id="i-external" viewBox="0 0 24 24"><path class="arrow" d="M14 4h6v6"/><path class="arrow" d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+                <symbol id="i-check" viewBox="0 0 24 24"><path class="tick" pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+                <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+                <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4.5 19.5.8-4L16.5 4.3a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.5 18.7z"/></symbol>
+                <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path class="hand" d="M12 7.5V12l3 2"/></symbol>
+                <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6z"/><path class="tick" pathLength="1" d="m9 12 2.2 2.2L15.2 10"/></symbol>
+                <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10a3.8 3.8 0 0 0 .6-7.5A5.5 5.5 0 0 0 7 9.6 4.5 4.5 0 0 0 7 18.5z"/></symbol>
+                <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6"/><path d="m20 4-7 7M4 20l7-7"/></symbol>
+                <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 10h-6V4M4 14h6v6"/><path d="m14 10 7-7M3 21l7-7"/></symbol>
+                <symbol id="i-list" viewBox="0 0 24 24"><path class="row a" pathLength="1" d="M9 6.5h11"/><path class="row b" pathLength="1" d="M9 12h11"/><path class="row c" pathLength="1" d="M9 17.5h11"/><path class="tick a" pathLength="1" d="m3.5 6.5 1.2 1.2 2-2.4"/><path class="tick b" pathLength="1" d="m3.5 12 1.2 1.2 2-2.4"/><path class="tick c" pathLength="1" d="m3.5 17.5 1.2 1.2 2-2.4"/></symbol>
+                <!--v3 ink marks: hand-drawn strokes in currentColor, used as <svg class="ink ink-*"><use href="#ink-*"/></svg>.-->
+                <symbol id="ink-underline" viewBox="0 0 300 18" preserveAspectRatio="none"><path d="M3 12C60 2 110 16 160 8s90-4 137 2" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-circle" viewBox="0 0 52 46" preserveAspectRatio="none"><path d="M8 25C6 10 30 2 44 12s2 28-20 30S3 32 10 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-check" viewBox="0 0 24 24"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></symbol>
+                <symbol id="ink-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="3 3"/></symbol>
+                <symbol id="ink-star" viewBox="0 0 24 24"><path d="M12 3.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L12 15.8l-5 2.8 1.2-5.5L4 9.3l5.6-.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-leaf" viewBox="0 0 24 24"><path d="M4 20C4 9 11 4 21 3c0 10-6 17-17 17z" fill="currentColor" stroke="#151a4a" stroke-width="1.6"/></symbol>
+            </svg>
+<div class="v3 kit">
+ <div style="grid-column:1/9"><h1 class="display-xl">Good evening, <span class="underlined">Ada.<svg class="ink ink-underline" aria-hidden="true"><use href="#ink-underline"/></svg></span></h1>
+  <p class="on-canvas-2" style="margin:14px 0 14px">Wednesday, November 25 · 2 things need you today</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="fact">Tidewater Logistics</span><span class="fact">Savannah, GA</span><span class="fact">$78–92k</span></div></div>
+ <div style="grid-column:9/13;display:flex;gap:10px;align-items:center"><div class="bubble tail-right" id="bubble"><h2 class="display-m" style="font-size:18px">Power BI shows up in 4 of your 7 jobs.</h2><p style="font-size:13.5px;margin:4px 0 10px">Pico can suggest a line for you to review.</p><button class="btn btn-primary">Suggest a line</button> <button class="btn">Not yet</button></div></div>
+ <section class="paper" style="grid-column:1/8" id="paper">
+  <div class="paper-head"><h2>What they're asking for</h2><a href="#">4 of 6 on your resume</a></div>
+  <div class="ruled">
+   <div style="display:flex;gap:12px;padding:10px 0"><svg class="ink ink-check"><use href="#ink-check"/></svg><div><b>Dashboards in Tableau</b><div class="ink-2" id="ink2">Built 3 Tableau dashboards · Research Assistant</div></div></div>
+   <div style="display:flex;gap:12px;padding:10px 0"><svg class="ink ink-half"><use href="#ink-half"/></svg><div><b>Present findings monthly</b> <span class="tag tag-mark" id="tm">close match</span></div></div>
+   <div style="display:flex;gap:12px;padding:10px 0"><svg class="ink ink-open"><use href="#ink-open"/></svg><div><b>Power BI</b> <span class="tag tag-urgent" id="tu">missing</span> <span class="tag tag-good" id="tg">matched</span></div></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px;align-items:center"><button class="btn btn-primary">Review 2 changes</button><button class="btn">Strengthen</button><button class="btn btn-text">More actions</button><button class="btn" disabled>Export PDF</button></div>
+ </section>
+ <section class="paper" style="grid-column:8/13">
+  <div class="paper-head"><h2>Your 7 jobs</h2><span class="aside">All jobs</span></div>
+  <div style="display:flex;gap:8px;align-items:flex-end"><span class="tile">L</span><span class="tile">F</span><span class="tile tile-mark">N</span><span class="tile tile-slot"><svg class="ink" style="width:18px;height:18px;color:inherit"><use href="#ink-star"/></svg></span>
+   <span class="circled display" style="font-size:26px;font-weight:780;margin-left:24px">25<svg class="ink ink-circle" aria-hidden="true"><use href="#ink-circle"/></svg></span></div>
+  <div style="margin-top:16px;display:flex;gap:8px"><button class="btn btn-mark">Export PDF</button></div>
+ </section>
+</div></body></html>

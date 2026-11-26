@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="styles/finish.css" />
         <link rel="stylesheet" href="styles/themes.css" />
         <link rel="stylesheet" href="styles/motion.css" />
+        <link rel="stylesheet" href="styles/v3.css" />
     </head>
     <body spellcheck="false">
         <div class="app">
@@ -67,6 +68,14 @@
                 <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6"/><path d="m20 4-7 7M4 20l7-7"/></symbol>
                 <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 10h-6V4M4 14h6v6"/><path d="m14 10 7-7M3 21l7-7"/></symbol>
                 <symbol id="i-list" viewBox="0 0 24 24"><path class="row a" pathLength="1" d="M9 6.5h11"/><path class="row b" pathLength="1" d="M9 12h11"/><path class="row c" pathLength="1" d="M9 17.5h11"/><path class="tick a" pathLength="1" d="m3.5 6.5 1.2 1.2 2-2.4"/><path class="tick b" pathLength="1" d="m3.5 12 1.2 1.2 2-2.4"/><path class="tick c" pathLength="1" d="m3.5 17.5 1.2 1.2 2-2.4"/></symbol>
+                <!--v3 ink marks: hand-drawn strokes in currentColor, used as <svg class="ink ink-*"><use href="#ink-*"/></svg>.-->
+                <symbol id="ink-underline" viewBox="0 0 300 18" preserveAspectRatio="none"><path d="M3 12C60 2 110 16 160 8s90-4 137 2" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-circle" viewBox="0 0 52 46" preserveAspectRatio="none"><path d="M8 25C6 10 30 2 44 12s2 28-20 30S3 32 10 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+                <symbol id="ink-check" viewBox="0 0 24 24"><path d="M4 13.5c2 1.5 3.5 3.2 5 5.5 3-6 6.5-10 11-13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></symbol>
+                <symbol id="ink-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="3 3"/></symbol>
+                <symbol id="ink-star" viewBox="0 0 24 24"><path d="M12 3.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L12 15.8l-5 2.8 1.2-5.5L4 9.3l5.6-.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+                <symbol id="ink-leaf" viewBox="0 0 24 24"><path d="M4 20C4 9 11 4 21 3c0 10-6 17-17 17z" fill="currentColor" stroke="#151a4a" stroke-width="1.6"/></symbol>
             </svg>
 
             <main id="main" class="main view-find">
