@@ -94,6 +94,7 @@ function routeRequest(channel, args) {
     'jobs:list': () => ['GET', `/v1/jobs${qs({ ...(a1 || {}), q: a0 || '' }, ['q', 'archived', 'trashed'])}`],
     'jobs:get': () => ['GET', `/v1/jobs/${a0}`],
     'jobs:analyze': () => ['POST', `/v1/jobs/${a0}/analyze`],
+    'connectors:suggest': () => ['POST', '/v1/connectors/greenhouse/fetch', { query: a0 }],
     'jobs:delete': () => ['DELETE', `/v1/jobs/${a0}`],
     'jobs:archive': () => ['POST', `/v1/jobs/${a0}/archive`, a1 || {}],
     'jobs:unarchive': () => ['POST', `/v1/jobs/${a0}/unarchive`],

@@ -47,11 +47,13 @@ If your Linux is missing the libraries the app needs, the message will say which
 
 ## First run
 
-Fistbump opens on the Home page. Start with your resume.
+Fistbump opens on **Home**. Everything is reached from the bar at the bottom of the window: **Home**, **Jobs**, **Resume**, the search box, and the gear for **Settings**. Press **⌘K** (or **Ctrl+K**) to jump to the search box from anywhere.
+
+Home shows what needs you today, your next seven days (follow-ups, interviews and closing dates), every job by stage, and new postings that match your target roles. Start with your resume.
 
 ### 1. Build your master resume
 
-1. Click **Master resume** in the sidebar.
+1. Click **Resume** in the bottom bar. The **Ready to tailor?** panel lists what is still missing; click **Add** beside an item to go straight to its field.
 2. Fill in your details: name, email, phone, where you live, the kind of work you are looking for.
 3. Add each job you have had, with what you did and what came of it.
 4. Add your education.
@@ -61,12 +63,18 @@ Your master resume is the starting point for every tailored version.
 
 ### 2. Find a job, or paste one
 
-- **Find jobs** searches Greenhouse, Lever, and Ashby job boards (plus any company boards on your watchlist in **Settings**). Type a job title, add a location, and press **Search**, or paste a Greenhouse, Lever, or Ashby job URL straight into the search bar to open and analyze it. The **Filters** button opens company, ATS source, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume.
-- **Paste a job** takes the text of a posting from any site.
+Everything starts in the search box at the bottom of the window:
+
+- **Type a search** to look through Greenhouse, Lever, and Ashby job boards (plus any company boards on your watchlist in **Settings**). The results open with the full search form, where you can add a location and filters.
+- **Paste a job link** from Greenhouse, Lever, or Ashby to open and analyze it.
+- **Paste or drop the text of a posting** from any site, and it opens in **Paste a job**, ready to preview and save.
+
+In the search results, The **Filters** button opens company, ATS source, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume.
+Saved jobs are listed under **Jobs**: what needs you comes first, and the tabs filter by stage (Saved, Tailored, Applied, Interview, Offer, and Closed for archived, trashed and rejected jobs). Select several jobs to move them to a stage, archive them or move them to the Trash.
 
 ### 3. Read the skill gap
 
-Open a posting. Fistbump shows how well your resume covers it: a percentage with a word such as **Strong fit**, **Partial fit** or **Weak fit**, and the list of required skills you are missing. Below that it lists the technical and soft skills the posting asks for, marking each as matched or missing.
+Open a saved job from **Jobs** and its page shows where it stands, the one next step, and how well your resume covers it: a percentage with a word such as **Strong fit**, **Partial fit** or **Weak fit**, and the list of required skills you are missing. Below that it lists the technical and soft skills the posting asks for, marking each as matched or missing.
 
 This analysis is done with plain rules on your computer. It never uses AI, so it is instant and it never invents anything.
 
@@ -74,9 +82,9 @@ The comparison is deliberately forgiving, because a resume is not a list of ever
 
 ### 4. Tailor the resume
 
-1. Click **Save job** on the posting, then **Tailor** in the sidebar.
-2. Pick the saved job, pick the base resume, and click **Generate suggestions**.
-3. Read each suggestion. **Accept** it, **Reject** it, or **Edit** it to write your own wording. Nothing changes in your resume until you accept a suggestion.
+1. Open the saved job and click **Tailor resume**.
+2. Pick the base resume if you want one other than your master resume, and click **Generate suggestions**.
+3. Your resume appears as a page with each suggestion in place: added words highlighted, removed words struck through, and a note in the margin saying why. **Accept** it, **Reject** it, or **Edit** it to write your own wording (keys **A**, **R**, **E**; **J** and **K** move between changes). Nothing changes in your resume until you accept a suggestion.
 4. When you have decided on all of them, click **Build tailored resume**.
 5. The **Changes** tab shows the differences against your base resume, and the **PDF preview** tab shows the PDF exactly as it will be saved.
 
@@ -86,7 +94,7 @@ Click **Export PDF**. The file is saved to your Documents folder, and a link app
 
 ### 6. Track the application
 
-Click **Track** on the posting, or open **Tracker** in the sidebar. Every application is a row with the company, the position, a status, the date you applied, and the next step. Change a status from the dropdown and it saves straight away. You can archive an application to hide it while keeping it, or move a job to the Trash.
+On the job's page, change its **Stage** (Applied, Interviewing, and so on), set a follow-up date, and keep notes; it then appears in Home's next seven days. The full **Tracker** table, with CSV export and offer comparison, is linked from the bottom of **Jobs** and from each job's page. Every application is a row with the company, the position, a status, the date you applied, and the next step. Change a status from the dropdown and it saves straight away. You can archive an application to hide it while keeping it, or move a job to the Trash.
 
 ## AI suggestions
 

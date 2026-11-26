@@ -54,15 +54,15 @@ const postings = ['data-analyst', 'backend-engineer', 'financial-analyst', 'data
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#nav-home');
 
+  await page.waitForTimeout(2500); //Home fills its matches panel after the rest
   await shot('home');
   await click('#nav-resume'); await shot('resume');
-  await click('#tab-saved');
-  await page.locator('text=Data Analyst').first().click();
-  await shot('jobs');
-  await click('#nav-tailor');
-  await page.locator('.stage-job', { hasText: 'Data Analyst' }).click();
+  await click('#nav-jobs'); await shot('jobs');
+  await page.locator('.jl3-open', { hasText: 'Data Analyst' }).first().click();
+  await shot('job');
+  await page.evaluate((id) => window.Tailor.open(id), ids[0]);
   await shot('tailor');
-  await click('#nav-tracker'); await shot('tracker');
+  await page.evaluate(() => window.App.go('tracker')); await shot('tracker');
   await click('#tab-settings'); await shot('settings');
 
   await browser.close();

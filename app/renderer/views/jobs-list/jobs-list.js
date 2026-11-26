@@ -142,7 +142,10 @@
         const needCount = open.map(nextOf).filter(n => n.needs).length;
 
         const summary = el("p", {class: "jl3-sum"}, el("b", {text: open.length === 1 ? "1 active" : `${open.length} active`}),
-          ` · ${needCount === 1 ? "1 needs" : `${needCount} need`} you today · ${interviews === 1 ? "1 interview" : `${interviews} interviews`} · ${sent === 1 ? "1 application" : `${sent} applications`} this month`);
+          //each part is its own text, so each one matches its translation
+          " · ", el("span", {text: needCount === 1 ? "1 needs you today" : `${needCount} need you today`}),
+          " · ", el("span", {text: interviews === 1 ? "1 interview" : `${interviews} interviews`}),
+          " · ", el("span", {text: sent === 1 ? "1 application this month" : `${sent} applications this month`}));
 
         const stageTabs = el("div", {class: "jl3-stages", role: "tablist", "aria-label": "Stage"}, STAGES.map(s => el("button", {
           type: "button", role: "tab", "aria-selected": String(prefs.stage === s.key),

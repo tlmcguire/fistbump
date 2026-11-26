@@ -1346,7 +1346,7 @@
         const peek = el("img", {class: "t3-peek", src: "views/graphics/mascots/14-writing.png", alt: "", "aria-hidden": "true"});
 
         const changeRow = s => {
-          const text = el("div", {class: "t3-text"});
+          const text = el("div", {class: "t3-text", translate: "no"}); //your resume text, never translated
           const paintText = () => fill(text, inline(s, modeOf(s)));
           const row = el("div", {class: "t3-row t3-change", "data-state": s.state}, text);
           const note = noteFor(s, () => { paintText(); row.dataset.state = s.state; });
@@ -1360,7 +1360,7 @@
           rows.push({s, row, note});
           return row;
         };
-        const plainRow = (text, cls = "") => text ? el("div", {class: `t3-row ${cls}`.trim()}, el("div", {class: "t3-text", text: window.WordDiff.plain(text)})) : null;
+        const plainRow = (text, cls = "") => text ? el("div", {class: `t3-row ${cls}`.trim()}, el("div", {class: "t3-text", translate: "no", text: window.WordDiff.plain(text)})) : null;
         const heading = text => el("h3", {class: "t3-h", text});
         const by = (section, id = undefined) => list.filter(x => x.section === section && (id === undefined || x.target_id === id));
         const placed = new Set();
@@ -1383,7 +1383,7 @@
           sheet.append(heading("Experience"));
           for (const e of exps) {
             const dates = [e.start_date, e.end_date || (e.date_na ? "" : "now")].filter(Boolean).map(d => String(d).slice(0, 4)).join(" – ");
-            sheet.append(el("div", {class: "t3-row t3-role"}, el("div", {class: "t3-text"},
+            sheet.append(el("div", {class: "t3-row t3-role"}, el("div", {class: "t3-text", translate: "no"},
               el("b", {translate: "no", text: [e.job_title, e.company_name].filter(Boolean).join(", ")}), el("span", {text: dates}))));
             const mine = take(by("experience", e.id));
             //each line of the role's text, with any suggestion that rewrites it standing in its place

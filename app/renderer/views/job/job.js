@@ -119,7 +119,7 @@
         return el("button", {type: "button", class: "btn btn-text job3-back", onclick: () => {
           if (from && from !== "job") window.App.go(from);
           else history.back();
-        }}, `← ${label}`);
+        }}, "← ", el("span", {text: label}));
       }
 
       // The job's stage: the tracker's status once there is one, else Tailored when a round has finished.
@@ -278,7 +278,7 @@
           const nice = group(pref);
           fill(parts.req,
             el("div", {class: "paper-head"}, el("h2", {id: "job3-req-h", text: "What they're asking for"}),
-              total ? el("span", {class: "aside", text: `${have} of ${total} on your resume`}) : null),
+              total ? el("span", {class: "aside", text: `${have} of ${total} skills on your resume`}) : null),
             required.length ? el("div", {class: "ruled job3-ris"}, required) : el("p", {class: "ink-2", text: "No required skills were found in this posting."}),
             soft.length ? el("p", {class: "job3-soft ink-2"}, "They also mention ", el("span", {translate: "no", text: soft.join(", ")}),
               ". Resumes rarely list these, so show them through results instead.") : null,
@@ -315,7 +315,7 @@
                 styled(el("i"), {left: pos(p.market_low), width: `calc(${pos(p.market_high)} - ${pos(p.market_low)})`}),
                 p.listed ? styled(el("em"), {left: pos(((p.min || 0) + (p.max || p.min || 0)) / 2)}) : null),
               el("p", {class: "ink-2 job3-scale-l"}, `Typical here: ${money(p.market_low)} to ${money(p.market_high)}`,
-                p.listed ? el("span", {}, " · posted midpoint in gold") : null));
+                p.listed ? [" · ", el("span", {text: "posted midpoint in gold"})] : null));
           }
           fill(parts.pay,
             el("div", {class: "paper-head"}, el("h2", {id: "job3-pay-h", text: "Pay and place"}),
@@ -371,14 +371,14 @@
         const {job} = current;
         const reqs = Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
         const text = (job.description || job.raw_text || "").trim();
-        const body = el("div", {class: "job3-posting-text", text});
+        const body = el("div", {class: "job3-posting-text", translate: "no", text});
         const toggle = el("button", {type: "button", class: "btn btn-text", text: "Show the full posting", onclick: () => {
           const open = body.classList.toggle("open");
           toggle.textContent = open ? "Show less" : "Show the full posting";
         }});
         fill(parts.posting,
           el("div", {class: "paper-head"}, el("h2", {id: "job3-posting-h", text: "The posting"})),
-          reqs.length ? el("ul", {class: "job3-reqs"}, reqs.slice(0, 8).map(r => el("li", {text: r}))) : null,
+          reqs.length ? el("ul", {class: "job3-reqs", translate: "no"}, reqs.slice(0, 8).map(r => el("li", {text: r}))) : null,
           text ? [body, text.length > 600 ? toggle : null] : el("p", {class: "ink-2", text: "No posting text was saved for this job."}));
       }
 

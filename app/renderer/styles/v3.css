@@ -55,6 +55,11 @@
   --rule: color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
+/* Bright themes: the page does not lighten toward the top, and the gold is lifted so marks and links on the
+   canvas stay readable (it still reads as gold behind ink in Pico's bubble and on gold buttons). */
+:root[data-theme="bubblegum"] { --canvas-2: var(--bg); --mark: #ffe58a; --mark-ink: #6e4a00; }
+:root[data-theme="retro"] { --canvas-2: var(--bg); --mark: #ffd86e; }
+
 /* High Contrast wins over every theme: white paper, black ink, solid rules, darker marks. */
 :root.high-contrast,
 :root.high-contrast[data-theme] {
@@ -469,7 +474,8 @@
 :root .v3 .home3-scene .bubble { flex: 1; align-self: center; margin-bottom: 36px; }
 :root .v3 .home3-scene .bubble h2 { font-size: 19px; margin-bottom: 4px; }
 :root .v3 .home3-scene .bubble p { font-size: 13.5px; line-height: 1.4; }
-:root .v3 .home3-bubble-acts { display: flex; gap: 8px; margin-top: 10px; }
+:root .v3 .home3-bubble-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+:root .v3 .home3-scene .bubble { min-width: 0; }
 :root .v3 .home3-bubble-acts .btn { white-space: nowrap; min-height: 34px; padding: 7px 12px; }
 :root .v3 .home3-bubble-line { font-weight: 600; font-size: 14px; }
 
@@ -993,10 +999,10 @@
 :root .v3 .st3-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
 :root .v3 .st3-jump a { padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--on-canvas) 9%, transparent); color: var(--on-canvas-2); font-size: 13px; font-weight: 650; text-decoration: none; }
 :root .v3 .st3-jump a:hover { color: var(--on-canvas); background: color-mix(in srgb, var(--on-canvas) 14%, transparent); }
-:root .v3.settings-pane .settings { display: block; max-width: 1500px; margin: 0 auto; padding: 18px 44px 40px; columns: 2 460px; column-gap: 18px; }
+:root .v3.settings-pane .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; align-items: start; max-width: 1500px; margin: 0 auto; padding: 18px 44px 40px; }
+:root .v3 .st3-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 :root .v3.settings-pane .settings-group {
-  break-inside: avoid;
-  margin: 0 0 18px;
+  margin: 0;
   padding: 18px 22px;
   border-radius: var(--radius-paper);
   background: var(--paper);
@@ -1085,3 +1091,12 @@
   :root .v3 .rs3-head .toolbar-form, :root .v3.rs3 .resume-content { padding-left: 24px; padding-right: 24px; }
   :root .v3.rs3 .resume-content { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
 }
+/* Home's week on narrower windows: four days a row, and an event's text never runs into its action. */
+:root .v3 .home3-ev > span:first-child { overflow: hidden; }
+:root .v3 .home3-ev > span:first-child > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1200px) {
+  :root .v3 .home3-days { flex-wrap: wrap; }
+  :root .v3 .home3-day, :root .v3 .home3-day.empty { flex: 1 1 24%; min-width: 150px; border-bottom: 1.5px dashed var(--rule); }
+}
+/* Model rows in Settings: ruled rows on the paper, not cards inside it. */
+:root .v3 .paper-adapt .model-row, :root .v3 .paper-adapt .model-row:hover { margin: 0; padding: 11px 0; border: 0; border-top: 1.5px dashed var(--rule); border-radius: 0; background: none; box-shadow: none; }
