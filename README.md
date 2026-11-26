@@ -2,7 +2,7 @@
 
 ![Fistbump, with Pico giving a fistbump](docs/images/github-banner.png)
 
-A local-first job application assistant. Stores a master resume (`.pdf`, `.docx`, `.odt`, `.md`, `.txt` import), searches Greenhouse, Lever, and Ashby job boards, shows skill gaps and pay/cost-of-living analysis, generates reviewable resume revisions, exports PDF/DOCX, tracks applications, and includes 23 customizable style and seasonal themes. Data stays on the user's machine unless a remote AI provider is configured.
+A local-first job application assistant. Stores a master resume (`.pdf`, `.docx`, `.odt`, `.md`, `.txt` import), searches Greenhouse, Lever, and Ashby job boards, shows skill gaps and pay/cost-of-living analysis, generates reviewable resume revisions, exports PDF/DOCX, tracks applications, plans interviews on a calendar, and includes 23 style and seasonal themes, each in Day, Night and Darker. Data stays on the user's machine unless a remote AI provider is configured.
 
 Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
@@ -14,17 +14,21 @@ Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 | **Home.** The one thing to do next, the next seven days, your jobs by stage, Pico's tip, and new matches. | **Your jobs.** Every job in one list, grouped by what needs you, filtered by stage, with bulk actions. |
 | ![A job's page: where it stands, fit, and what the posting asks for](docs/images/job.png) | ![Tailoring a resume: each suggestion in place on the page, with a note in the margin](docs/images/tailor.png) |
 | **A job.** Where it stands, one next step, each required skill against your resume, pay and place, notes. | **Tailor.** Your resume as a page with every suggestion in place; accept, reject, or edit each one. |
-| ![Your resume, with how ready it is to tailor](docs/images/resume.png) | ![Settings, with the theme swatches](docs/images/settings.png) |
-| **Your resume.** Your one source of truth, how ready it is, and a live PDF preview. | **Settings.** 23 themes, accessibility controls, AI engine, company watchlist, backup/restore, and storage. |
+| ![Your resume, with how ready it is to tailor](docs/images/resume.png) | ![The Tracker: every application on one sheet](docs/images/tracker.png) |
+| **Your resume.** Your one source of truth, how ready it is, and a live PDF preview. | **Tracker.** Every application on one sheet: dates, stage and notes edit in place, and what needs you comes first. |
+| ![The calendar: interviews and follow-ups by week](docs/images/calendar.png) | ![Settings, with the theme swatches and Day or night](docs/images/settings.png) |
+| **Calendar.** Interviews, calls and follow-ups by week or month, with clashes flagged; add any plan to Apple Calendar, Outlook or Google. | **Settings.** 23 themes in Day, Night or Darker, paper and accent, accessibility, AI engine, calendar, and storage. |
 
 ### Themes
 
-Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto — Current Month**). See all 22 new theme screenshots in the [v0.5.0 release notes](docs/release-notes.md).
+Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto — Current Month**). Every theme comes in **Night**, **Day** and **Darker** (dark paper, light ink), or follows your system. See every theme in the [v0.5.0 release notes](docs/release-notes.md).
 
 | | |
 |---|---|
-| ![Bubblegum theme](docs/images/themes/bubblegum.png) | ![Cyber theme](docs/images/themes/cyber.png) |
-| ![Retro theme](docs/images/themes/retro.png) | ![December — Holiday Evergreen](docs/images/themes/december.png) |
+| ![Home by day](docs/images/home-day.png) | ![Home in Darker](docs/images/home-darker.png) |
+| **Day.** Each theme's light version, made from its own colors. | **Darker.** Dark paper with light ink, for dark rooms. |
+| ![Bubblegum theme](docs/images/themes/bubblegum.png) | ![Cyber theme by day](docs/images/themes/day/cyber.png) |
+| ![Retro theme](docs/images/themes/retro.png) | ![December — Holiday Evergreen by day](docs/images/themes/day/december.png) |
 
 ## Install
 
@@ -60,7 +64,7 @@ npm run build:go     # build the Go backend into bin/<platform>-<arch>/
 npm run dev          # start the Tauri app
 ```
 
-The pictures above come from `node scripts/screenshots.js` (main views into `docs/images/`) and `node scripts/theme-screenshots.js` (all 22 new themes into `docs/images/themes/`).
+The pictures above come from `node scripts/screenshots.js` (main views into `docs/images/`) and `node scripts/theme-screenshots.js` (all 22 new themes into `docs/images/themes/`, and their Day versions into `docs/images/themes/day/`).
 
 `npm run build:go` builds the backend for this computer. To build for another platform or architecture, name it: `node scripts/build-go.js --platform darwin --arch x64`.
 

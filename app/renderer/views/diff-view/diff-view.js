@@ -303,7 +303,8 @@
           a ? el("div", {class: "score"}, ring,
             el("p", {text: "of required skills are already on your resume"})) : null,
           a && preferredTotal ? el("p", {class: "aside-preferred", text: `${preferredHave} of ${preferredTotal} nice-to-have skills are on your resume`}) : null,
-          match ? el("div", {class: "skill-match"}, el("h3", {text: match.heading}), ...match.groups) : null,
+          //the percentage is the ring above (or the desk's meter); this list says which skills
+          match ? el("div", {class: "skill-match"}, el("h3", {text: "Skills this job asks for"}), ...match.groups) : null,
           bridgeBox,
           !a ? el("p", {class: "hint", text: analysis === null ? "" : "Add your master resume to see how it matches."}) : null,
           el("p", {class: "hint", text: "Suggestions only reword what is already true. Skills you have not used stay missing until you add them yourself."}));

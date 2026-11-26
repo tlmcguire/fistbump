@@ -778,4 +778,5 @@ window.I18n.add("es", {
   "Browse by industry": "Explorar por sector",
   "Settings sections": "Secciones de Ajustes",
   "Close (Esc)": "Cerrar (Esc)",
+  "Skills this job asks for": "Habilidades que pide este empleo",
 });

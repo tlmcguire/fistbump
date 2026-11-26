@@ -770,4 +770,5 @@ window.I18n.add("fr", {
   "Browse by industry": "Parcourir par secteur",
   "Settings sections": "Sections des réglages",
   "Close (Esc)": "Fermer (Échap)",
+  "Skills this job asks for": "Compétences demandées par cette offre",
 });
