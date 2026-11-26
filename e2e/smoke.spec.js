@@ -203,3 +203,44 @@ test('the omnibox searches, and sends a pasted posting to Paste a job', async ({
   await expect(window.locator('#paste-pane')).toBeVisible();
   await expect(window.locator('#paste-text')).toHaveValue(posting);
 });
+
+test('Home shows the next step, the week, the pipeline and Pico\'s tip from real data', async ({ window }) => {
+  const day = n => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  await window.evaluate(async ({ today, soon }) => {
+    const api = window.api;
+    await api.resume.putProfile({ full_name: 'Ada Okafor', email: 'ada@example.com', summary: 'Analyst.' });
+    await api.resume.createExperience({ job_title: 'Research Assistant', company_name: 'Coastal University', start_date: '2022-01-01', skills: ['sql', 'excel'] });
+    const job = (title, company, skills) => api.jobs.create({ source: 'pasted', position_title: title, company_name: company,
+      raw_text: `${title}\n${company}\n\nRequirements:\n${skills.map(s => `- Experience with ${s}`).join('\n')}` });
+    const a = await job('Data Analyst', 'Tidewater Logistics', ['sql', 'kubernetes']);
+    const b = await job('Backend Engineer', 'Oakline Software', ['sql', 'kubernetes']);
+    const c = await job('BI Developer', 'Northgate Energy', ['excel']);
+    await api.applications.create({ job_id: b.id, status: 'Applied', date_applied: today, next_step_date: today });
+    await api.applications.create({ job_id: c.id, status: 'Interviewing', date_applied: today, next_step_date: soon });
+    return a.id;
+  }, { today: day(0), soon: day(3) });
+  await window.evaluate(() => window.Home.refresh());
+
+  await expect(window.locator('.home3-next h2')).toHaveText('Backend Engineer at Oakline Software');
+  await expect(window.locator('.home3-next .btn-primary')).toHaveText('Open');
+  await expect(window.locator('.home3-day.today .home3-ev')).toContainText('Follow up');
+  await expect(window.locator('.home3-ev.good')).toContainText('Interview');
+  await expect(window.locator('#home-pipe-h')).toHaveText('Your 3 jobs');
+  await expect(window.locator('.home3-stage').nth(2).locator('button.tile')).toHaveCount(1);
+  await expect(window.locator('.home3-scene .bubble')).toContainText('Kubernetes shows up in 2 of your 3 jobs');
+
+  await window.locator('.home3-scene .bubble').getByRole('button', { name: 'Not now' }).click();
+  await expect(window.locator('.home3-scene .bubble')).toContainText('Interview');
+});
+
+test('a new user sees the welcome, how it works, and Pico', async ({ window }) => {
+  await expect(window.locator('#home-greeting')).toContainText('Welcome to');
+  await expect(window.locator('.home3-how .home3-step')).toHaveCount(3);
+  await expect(window.locator('.home3-scene .pico')).toHaveCount(1);
+  await window.locator('.home3-next .btn-primary').click();
+  await expect(window.locator('#nav-resume')).toHaveAttribute('aria-current', 'page');
+});

@@ -1,6 +1,7 @@
-// The Home view: a greeting, the listing that was open last, what the master resume still lacks,
-// saved versions and recent searches. Each row opens the place it names in the Jobs or Resume view.
-// It reads the same data those views keep, so it is drawn again every time it is shown.
+// The Home view (v3, "Paper on Night"): a greeting with where things stand, the one thing to do next, this
+// month's Pico with a tip, the next seven days, the pipeline as company tiles, and new matches.
+// Every panel opens the place it names. It reads the same data the other views keep, so it is drawn again
+// every time it is shown. See DESIGN.md for the visual rules and docs/mockups/home-v3.html for the target.
 (() => {
   const api = () => window.FistBumpAPI;
   const {el, fill} = window.ResumeBuilder;
@@ -35,24 +36,6 @@
     return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   };
 
-  //A row is one button: what it is, a detail line, something short on the right, and an arrow.
-  const chevron = () => {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("viewBox", "0 0 16 16");
-    svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS(ns, "path");
-    path.setAttribute("d", "M6 3.5 10.5 8 6 12.5");
-    svg.append(path);
-    return svg;
-  };
-  const row = ({title, detail, aside, onclick, tip}) =>
-    el("button", {type: "button", class: "home-row", onclick, title: tip},
-      el("div", {}, el("strong", {text: title}), detail ? el("span", {text: detail}) : null),
-      el("small", {text: aside || ""}),
-      chevron());
-  const rows = items => el("ul", {class: "home-rows"}, items.map(item => el("li", {}, row(item))));
-
   // ---------- Time away ----------
 
   //When Fistbump was last open. It is read once, when the app starts, so Home can welcome someone back
@@ -80,25 +63,23 @@
   setInterval(seen, 10 * 60 * 1000);
   window.addEventListener("beforeunload", seen);
 
-  //Pico, the mascot. Home shows still poses only.
+  //Pico, the mascot. Home shows this month's pose, the same art all month, as a season marker.
   const MASCOTS = "views/graphics/mascots";
   const MONTHS = ["01-january", "02-february", "03-march", "04-april", "05-may", "06-june",
     "07-july", "08-august", "09-september", "10-october", "11-november", "12-december"];
-  const FUN = ["01-pixel-alien", "02-playful-error", "03-tiny-bird-game", "04-pixel-cat", "05-pixel-heart", "06-achievement"];
-  //Half the time this month's pose, otherwise one of the fun poses, picked again each time Home is shown.
-  const greetingPose = () => Math.random() < 0.5
-    ? `monthly/${MONTHS[new Date().getMonth()]}`
-    : `fun-screen/${FUN[Math.floor(Math.random() * FUN.length)]}`;
-  //The monthly and fun poses keep the art's full canvas, so they are drawn a little larger to match.
-  const pico = src => el("img", {class: src.startsWith("home/") ? "mascot" : "mascot full", src: `${MASCOTS}/${src}.png`, alt: ""});
-  //A small pose that cheers on the last step or two of the resume.
-  const nudge = () => el("img", {class: "mascot home-nudge", src: `${MASCOTS}/home/03-youve-got-this.png`, alt: ""});
-  //New users meet Pico first. The picture carries its own words, so they are its alt text.
-  const intro = () => el("img", {
-    class: "home-intro",
-    src: `${MASCOTS}/intro/meet-pico.png`,
-    alt: "Meet Pico, your job-search sidekick. Here to help you keep going.",
-  });
+  const monthPose = () => `${MASCOTS}/monthly/${MONTHS[new Date().getMonth()]}.png`;
+
+  //A hand-drawn mark from the sprite (#ink-*), drawn in currentColor.
+  const ink = (id, cls = "") => {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", `ink ink-${id} ${cls}`.trim());
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", `#ink-${id}`);
+    svg.append(use);
+    return svg;
+  };
 
   // ---------- Where each row goes ----------
 
@@ -153,7 +134,7 @@
       .sort((x, y) => x.next_step_date < y.next_step_date ? -1 : 1)) {
       items.push({
         kind: "due",
-        title: [a.company_name || "Unknown company", a.position_title].filter(Boolean).join(", "),
+        title: [a.position_title, a.company_name || "Unknown company"].filter(Boolean).join(" at "),
         detail: a.next_step_date < today ? "Next step is overdue" : "Next step is due today",
         aside: "Open", onclick: () => window.Tracker.open(a.id),
       });
@@ -162,7 +143,7 @@
     for (const job of (jobs || []).slice(0, 6)) {
       if (items.length >= limit) break;
       const rounds = await api().revisions.list(job.id).catch(() => []);
-      const name = [job.position_title, job.company_name].filter(Boolean).join(", ");
+      const name = [job.position_title, job.company_name].filter(Boolean).join(" at ");
       const latest = rounds?.[0];
       if (latest?.status === "done") {
         const full = await api().revisions.get(latest.id).catch(() => null);
@@ -231,19 +212,6 @@
     return items;
   }
 
-  function matchRows(items) {
-    return rows(items.map(job => ({
-      title: job.position_title || "Unknown position",
-      tip: window.Places.summary(job.location).full,
-      detail: [job.company_name, window.Places.summary(job.location).short, job.work_mode, payLine(job)].filter(Boolean).join(" · "),
-      aside: job.fit ? `${job.fit.percent}% fit` : "Open",
-      onclick: () => {
-        openJobs();
-        window.JobParser.openListing(job);
-      },
-    })));
-  }
-
   //"Data Analyst, Security Analyst · Remote · Austin, TX"
   const matchScope = p => [
     (p.target_positions || []).slice(0, 3).join(", "),
@@ -285,58 +253,382 @@
     return out;
   }
 
+  // ---------- Dates for the next seven days ----------
+
+  const pad = n => String(n).padStart(2, "0");
+  const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+  //US public holidays and a few days most offices close, by date. The cost figures are US-only too.
+  function holidays(year) {
+    const nth = (month, weekday, n) => { //the nth weekday of a month; n = -1 is the last
+      if (n > 0) {
+        const first = new Date(year, month, 1);
+        return new Date(year, month, 1 + ((weekday - first.getDay() + 7) % 7) + (n - 1) * 7);
+      }
+      const last = new Date(year, month + 1, 0);
+      return new Date(year, month, last.getDate() - ((last.getDay() - weekday + 7) % 7));
+    };
+    const list = [
+      [new Date(year, 0, 1), "New Year's Day"], [nth(0, 1, 3), "Martin Luther King Jr. Day"], [nth(1, 1, 3), "Presidents' Day"],
+      [nth(4, 1, -1), "Memorial Day"], [new Date(year, 5, 19), "Juneteenth"], [new Date(year, 6, 4), "Independence Day"],
+      [nth(8, 1, 1), "Labor Day"], [new Date(year, 10, 11), "Veterans Day"], [nth(10, 4, 4), "Thanksgiving"],
+      [new Date(year, 11, 24), "Christmas Eve"], [new Date(year, 11, 25), "Christmas Day"], [new Date(year, 11, 31), "New Year's Eve"],
+    ];
+    return new Map(list.map(([d, name]) => [isoDay(d), name]));
+  }
+
+  //What a next step is called, from where the application stands. The tracker keeps a date, not a label.
+  const STEP = {
+    Interviewing: {label: "Interview", verb: "Prep", tone: "good"},
+    Applied: {label: "Follow up", verb: "Open", tone: "urgent"},
+    Offered: {label: "Reply to the offer", verb: "Open", tone: "mark"},
+    Saved: {label: "Next step", verb: "Open", tone: ""},
+  };
+
+  //The next seven days as columns. Overdue steps land on today. Empty Saturday and Sunday share one column.
+  function weekColumns(apps, jobs) {
+    const now = new Date();
+    const today = isoDay(now);
+    const days = Array.from({length: 7}, (_, i) => addDays(now, i));
+    const last = isoDay(days[6]);
+    const off = new Map([...holidays(now.getFullYear()), ...holidays(now.getFullYear() + 1)]);
+    const events = new Map(days.map(d => [isoDay(d), []]));
+    for (const a of apps) {
+      if (!a.next_step_date || a.archived_at || a.status === "Rejected" || a.next_step_date > last) continue;
+      const step = STEP[a.status] || STEP.Saved;
+      const overdue = a.next_step_date < today;
+      events.get(overdue ? today : a.next_step_date)?.push({
+        title: overdue ? `${step.label}, overdue` : step.label,
+        who: a.company_name || a.position_title || "",
+        verb: step.verb,
+        tone: overdue ? "urgent" : step.tone,
+        open: () => window.Tracker.open(a.id),
+      });
+    }
+    const tracked = new Set(apps.map(a => a.job_id));
+    for (const j of jobs) {
+      const close = (j.close_date || "").slice(0, 10);
+      if (!close || close < today || close > last) continue;
+      events.get(close)?.push({
+        title: "Posting closes",
+        who: j.company_name || j.position_title || "",
+        verb: tracked.has(j.id) ? "Open" : "Tailor",
+        tone: "mark",
+        open: () => tracked.has(j.id) ? openSavedJob(j.id) : window.Tailor.open(j.id),
+      });
+    }
+    const columns = [];
+    for (let i = 0; i < days.length; i++) {
+      const d = days[i];
+      const key = isoDay(d);
+      const next = days[i + 1];
+      //an empty weekend is one column, so the week spends its width on days that hold something
+      if (d.getDay() === 6 && next && !events.get(key).length && !events.get(isoDay(next)).length && !off.has(key) && !off.has(isoDay(next))) {
+        columns.push({date: d, weekend: true, events: []});
+        i++;
+        continue;
+      }
+      columns.push({date: d, today: key === today, holiday: off.get(key), events: events.get(key)});
+    }
+    return columns;
+  }
+
+  // ---------- Stages, for the pipeline ----------
+
+  const STAGES = [
+    {key: "saved", label: "Saved"}, {key: "tailored", label: "Tailored"}, {key: "applied", label: "Applied"},
+    {key: "interview", label: "Interview"}, {key: "offer", label: "Offer"},
+  ];
+  const APP_STAGE = {Applied: "applied", Interviewing: "interview", Offered: "offer"};
+
+  //Each active job in one stage: the tracker's status once it has applied; before that, Tailored when a round of
+  //suggestions has finished, else Saved. Rejected and archived jobs are left out.
+  async function stagesOf(apps, jobs) {
+    const appOf = new Map(apps.filter(a => !a.archived_at).map(a => [a.job_id, a]));
+    const list = jobs.slice(0, 60);
+    const rounds = await Promise.all(list.map(j => {
+      const a = appOf.get(j.id);
+      return a && APP_STAGE[a.status] ? null : api().revisions.list(j.id).catch(() => []);
+    }));
+    const byStage = Object.fromEntries(STAGES.map(s => [s.key, []]));
+    list.forEach((j, i) => {
+      const a = appOf.get(j.id);
+      if (a?.status === "Rejected") return;
+      const stage = a && APP_STAGE[a.status] ? APP_STAGE[a.status] : rounds[i]?.some(r => r.status === "done") ? "tailored" : "saved";
+      byStage[stage].push({job: j, app: a});
+    });
+    return byStage;
+  }
+
+  // ---------- Pico's tip: the skill your jobs ask for most that the resume lacks ----------
+
+  const TIP_KEY = "fistbump.home-tip-dismissed";
+  async function gapTip(byStage) {
+    const active = ["saved", "tailored", "applied", "interview"].flatMap(k => byStage[k]).map(e => e.job).slice(0, 25);
+    if (active.length < 2) return null;
+    const results = await Promise.all(active.map(j => api().jobs.analyze(j.id).catch(() => null)));
+    const count = new Map();
+    for (const r of results) {
+      for (const skill of new Set(r?.required?.tech?.missing || [])) count.set(skill, (count.get(skill) || 0) + 1);
+    }
+    const dismissed = readJSON(TIP_KEY) || [];
+    const [skill, n] = [...count].filter(([k]) => !dismissed.includes(k)).sort((a, b) => b[1] - a[1])[0] || [];
+    return skill && n >= 2 ? {skill, n, of: active.length} : null;
+  }
+  const dismissTip = skill => {
+    const list = readJSON(TIP_KEY) || [];
+    try { localStorage.setItem(TIP_KEY, JSON.stringify([...new Set([...list, skill])].slice(-40))); } catch {}
+  };
+
+  const openSavedJob = id => {
+    window.App.go("jobs");
+    window.JobParser.openJob(id);
+  };
+
   // ---------- The view ----------
 
   function mount(container) {
-    const introSlot = el("div", {class: "home-intro-slot"});
-    const welcome = el("section", {class: "home-welcome", "aria-labelledby": "home-greeting"});
-    const resumeSection = el("section", {class: "home-section", "aria-labelledby": "home-resume-h"});
-    const versionsSection = el("section", {class: "home-section", "aria-labelledby": "home-versions-h"});
-    const searchSection = el("section", {class: "home-section", "aria-labelledby": "home-search-h"});
-    const matchSection = el("section", {class: "home-section home-matches", "aria-labelledby": "home-matches-h", hidden: true});
-    const needsSection = el("section", {class: "home-section home-needs", "aria-labelledby": "home-needs-h", hidden: true});
-    const home = el("div", {class: "home"}, introSlot, welcome, needsSection, matchSection,
-      el("div", {class: "home-columns"}, resumeSection, versionsSection), searchSection);
-
-    container.replaceChildren(
-      el("header", {class: "toolbar drag", "data-tauri-drag-region": ""}, el("div", {class: "toolbar-form"}, el("h1", {class: "view-title", text: "Home"}))),
-      el("div", {class: "pane home-pane"}, home));
+    container.classList.add("v3", "home3");
+    const scroll = el("div", {class: "home3-scroll"});
+    container.replaceChildren(scroll);
 
     let seq = 0;
     async function refresh() {
       const mine = ++seq;
-      const [master, versions, apps, jobs] = await Promise.all([
+      const [master, apps, jobs] = await Promise.all([
         api().resume.get().catch(() => null),
-        api().resumes.list().catch(() => []),
         api().applications.list({}).catch(() => []),
         api().jobs.list("").catch(() => []),
       ]);
-      const needs = await pipeline(4, apps || [], jobs || []).catch(() => []);
+      const [needs, byStage] = await Promise.all([
+        pipeline(4, apps || [], jobs || []).catch(() => []),
+        stagesOf(apps || [], jobs || []).catch(() => Object.fromEntries(STAGES.map(s => [s.key, []]))),
+      ]);
       if (mine !== seq) return;
       // Drop the remembered "Keep reading" listing if it was a saved job that was deleted, trashed, or archived.
       const kept = readJSON(LISTING_KEY);
-      if (kept?.id && !(jobs || []).some(j => j.id === kept.id)) {
-        clearLastListing();
-      }
-      render(master || {profile: null, experiences: [], education: []}, versions || [], needs || []);
+      if (kept?.id && !(jobs || []).some(j => j.id === kept.id)) clearLastListing();
+      const state = {master: master || {profile: null, experiences: [], education: []}, apps: apps || [], jobs: jobs || [], needs, byStage, tip: null};
+      render(state);
+      //the tip runs the skill analysis over every active job, so it arrives after the rest of Home
+      const tip = await gapTip(byStage).catch(() => null);
+      if (mine !== seq || !tip) return;
+      state.tip = tip;
+      fillScene(state, true);
     }
 
-    //Draws the matches section. The search can take a while, so it shows a waiting line first and fills in when
-    //the answer is back; a newer drawing of Home makes an older answer stop.
+    let parts = {};
+
+    function render(state) {
+      const p = state.master.profile;
+      parts = {
+        hero: el("section", {class: "home3-hero", "aria-labelledby": "home-greeting"}),
+        scene: el("section", {class: "home3-scene", "aria-label": "Pico"}),
+        week: el("section", {class: "paper home3-week", "aria-labelledby": "home-week-h"}),
+        pipe: el("section", {class: "paper home3-pipe", "aria-labelledby": "home-pipe-h"}),
+        matches: el("section", {class: "paper home3-matches", "aria-labelledby": "home-matches-h"}),
+      };
+      scroll.replaceChildren(el("div", {class: "home3-grid"}, parts.hero, parts.scene,
+        p ? [parts.week, parts.pipe, parts.matches] : howItWorks()));
+      fillHero(state);
+      fillScene(state);
+      if (!p) return;
+      fillWeek(state);
+      fillPipe(state);
+      renderMatches(p);
+      window.UI?.stagger?.(scroll.querySelector(".home3-grid"), 45, 6);
+    }
+
+    // ----- Greeting and Up next -----
+    function fillHero(state) {
+      const {master, needs} = state;
+      const p = master.profile;
+      const gaps = resumeGaps(master);
+      const kept = readJSON(LISTING_KEY);
+      const listing = typeof kept?.raw_text === "string" ? kept : null;
+      const today = new Date().toLocaleDateString(locale(), {weekday: "long", month: "long", day: "numeric"});
+      const firstName = (p?.full_name || "").split(/\s+/)[0];
+
+      if (!p) {
+        fill(parts.hero,
+          el("h1", {id: "home-greeting", class: "display-xl"}, "Welcome to ", el("span", {class: "underlined", translate: "no"}, "Fistbump", ink("underline"))),
+          el("p", {class: "home3-sub"}, "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."),
+          upNext({kicker: "Start here", title: "Your master resume", detail: "Import a file, paste text or fill it in", action: "Begin",
+            onclick: () => openResume({field: "full_name"})}));
+        return;
+      }
+
+      const hello = away ? "Welcome back" : greeting();
+      const due = needs.filter(n => n.kind === "due").length;
+      const review = needs.filter(n => n.kind === "review").length;
+      const waiting = due + review;
+      const sub = el("p", {class: "home3-sub"}, el("span", {translate: "no", text: today}));
+      const add = (...nodes) => sub.append(" · ", ...nodes);
+      if (away) add(away.text);
+      else if (waiting) add(el("b", {text: waiting === 1 ? "1 thing" : `${waiting} things`}), " need you today");
+      else add("Nothing is due today");
+      if (gaps.length) {
+        add("resume: ", el("a", {href: "#", text: gaps[0].title.charAt(0).toLowerCase() + gaps[0].title.slice(1),
+          onclick: event => { event.preventDefault(); openResume(gaps[0].target); }}));
+      } else add("resume ready to tailor");
+
+      const next = needs[0];
+      const card = listing && !next ? upNext({
+        kicker: "Keep reading", title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(" at "),
+        detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "), action: "Open",
+        onclick: () => { openJobs(); window.JobParser.openListing(listing); },
+      }) : next ? upNext({
+        kicker: next.kind === "due" ? "Due now" : next.kind === "review" ? "Ready for your review" : "Up next",
+        urgent: next.kind === "due",
+        title: next.title, detail: next.detail,
+        action: next.kind === "review" ? "Review changes" : next.kind === "tailor" ? "Tailor resume" : "Open",
+        onclick: next.onclick,
+      }) : upNext({
+        kicker: "Up next", title: "Find your next role", detail: "Search Greenhouse, Lever and Ashby boards by title, place or company",
+        action: "Search", onclick: () => window.Omnibox?.focus(),
+      });
+
+      fill(parts.hero,
+        el("h1", {id: "home-greeting", class: "display-xl"}, `${hello}, `,
+          el("span", {class: "underlined", translate: "no"}, firstName ? `${firstName}.` : "friend.", ink("underline"))),
+        sub, card);
+    }
+
+    //First run: the three steps, so a new user sees the whole path before starting it.
+    function howItWorks() {
+      const steps = [
+        ["Your master resume", "Everything you have done, in one place. Each tailored version starts from it."],
+        ["Add a job", "Search the job boards, paste a link, or paste the posting into the bar below."],
+        ["Tailor and review", "See which skills the job asks for, then accept, reject or edit each suggested change."],
+      ];
+      return el("section", {class: "paper home3-how", "aria-labelledby": "home-how-h"},
+        el("div", {class: "paper-head"}, el("h2", {id: "home-how-h", text: "How Fistbump works"})),
+        el("div", {class: "home3-steps"}, steps.map(([title, text], i) => el("div", {class: "home3-step"},
+          el("span", {class: "num-mark", text: String(i + 1)}), el("b", {text: title}), el("p", {text})))));
+    }
+
+    function upNext({kicker, title, detail, action, onclick, urgent = false}) {
+      return el("div", {class: "paper home3-next"},
+        el("div", {class: "home3-next-text"},
+          el("span", {class: urgent ? "home3-kicker urgent" : "home3-kicker", text: kicker}),
+          el("h2", {class: "display-l", text: title}),
+          detail ? el("p", {class: "ink-2", text: detail}) : null),
+        el("button", {type: "button", class: "btn btn-primary", text: action, onclick}));
+    }
+
+    // ----- Pico and its one bubble -----
+    function fillScene(state, animate = false) {
+      const p = state.master.profile;
+      let bubble = null;
+      if (!p) {
+        fill(parts.scene,
+          el("div", {class: "bubble tail-right"},
+            el("h2", {class: "display-m", text: "Hi, I'm Pico."}),
+            el("p", {text: "Your job-search sidekick. Everything stays on this computer, and you approve every word."})),
+          el("img", {class: "pico", src: monthPose(), alt: ""}));
+        return;
+      }
+      const interview = state.apps.find(a => a.status === "Interviewing" && a.next_step_date
+        && a.next_step_date >= isoDay(new Date()) && a.next_step_date <= isoDay(addDays(new Date(), 6)));
+      if (state.tip) {
+        const {skill, n, of} = state.tip;
+        bubble = el("div", {class: "bubble tail-right"},
+          el("h2", {class: "display-m"}, el("span", {translate: "no", text: skill.charAt(0).toUpperCase() + skill.slice(1)}), ` shows up in ${n} of your ${of} jobs.`),
+          el("p", {text: n === 2 ? "Used it? Add it to your resume and your fit goes up on both." : `Used it? Add it to your resume and your fit goes up on all ${n}.`}),
+          el("div", {class: "home3-bubble-acts"},
+            el("button", {type: "button", class: "btn btn-primary", text: "Add to resume", onclick: () => openResume({add: "experience"})}),
+            el("button", {type: "button", class: "btn", text: "Not now", onclick: () => { dismissTip(skill); state.tip = null; fillScene(state); }})));
+      } else if (interview) {
+        const when = new Date(`${interview.next_step_date}T12:00`).toLocaleDateString(locale(), {weekday: "long"});
+        bubble = el("div", {class: "bubble tail-right"},
+          el("h2", {class: "display-m"}, `Interview ${when}`, el("span", {translate: "no", text: interview.company_name ? ` with ${interview.company_name}` : ""}), "."),
+          el("p", {text: "Want to prep? The tracker has practice questions for it."}),
+          el("div", {class: "home3-bubble-acts"},
+            el("button", {type: "button", class: "btn btn-primary", text: "Prep", onclick: () => window.Tracker.open(interview.id)})));
+      } else if (away) {
+        bubble = el("div", {class: "bubble tail-right"}, el("p", {class: "home3-bubble-line", text: away.text}));
+      }
+      fill(parts.scene, bubble, el("img", {class: "pico", src: monthPose(), alt: ""}));
+      if (animate && bubble) window.UI?.play?.(bubble, "enter", 320);
+    }
+
+    // ----- Next seven days -----
+    function fillWeek(state) {
+      const cols = weekColumns(state.apps, state.jobs);
+      const anything = cols.some(c => c.events.length);
+      fill(parts.week,
+        el("div", {class: "paper-head"}, el("h2", {id: "home-week-h", text: "Next 7 days"}),
+          el("a", {href: "#/tracker", text: "Open tracker"})),
+        el("div", {class: "home3-days"}, cols.map(c => {
+          const num = el("b", {class: "num", translate: "no", text: String(c.date.getDate())});
+          const label = c.weekend ? "Sat · Sun" : c.today ? "Today"
+            : c.date.getDate() === 1 ? c.date.toLocaleDateString(locale(), {month: "short"})
+            : c.date.toLocaleDateString(locale(), {weekday: "short"});
+          return el("div", {class: ["home3-day", c.today && "today", (c.holiday || c.weekend) && "off", !c.events.length && "empty"].filter(Boolean).join(" ")},
+            el("div", {class: "home3-date"}, c.today ? el("span", {class: "circled"}, num, ink("circle")) : num, el("span", {text: label})),
+            c.holiday ? el("span", {class: "home3-free", text: c.holiday}) : null,
+            c.weekend ? el("span", {class: "home3-free", text: anything ? "Free. A good time to prep." : "Free"}) : null,
+            c.events.map(e => el("button", {type: "button", class: `home3-ev ${e.tone}`, onclick: e.open},
+              el("span", {}, el("b", {text: e.title}), el("span", {translate: "no", text: e.who})),
+              el("span", {class: "home3-verb", text: e.verb}))));
+        })),
+        anything ? null : el("p", {class: "home3-week-note ink-2", text: "Nothing scheduled this week. Next steps you set in the tracker, and closing dates of saved jobs, show up here."}));
+    }
+
+    // ----- Pipeline as company tiles -----
+    function fillPipe(state) {
+      const {byStage, apps} = state;
+      const total = STAGES.reduce((n, s) => n + byStage[s.key].length, 0);
+      const month = isoDay(new Date()).slice(0, 7);
+      const sent = apps.filter(a => (a.date_applied || "").startsWith(month)).length;
+      const interviews = apps.filter(a => a.status === "Interviewing" || a.status === "Offered").length;
+      const tile = (entry, stage) => el("button", {
+        type: "button", class: stage === "interview" ? "tile tile-mark" : "tile",
+        title: [entry.job.position_title, entry.job.company_name].filter(Boolean).join(", "),
+        "aria-label": [entry.job.position_title, entry.job.company_name].filter(Boolean).join(", "),
+        text: (entry.job.company_name || entry.job.position_title || "?").trim().charAt(0).toUpperCase(),
+        onclick: () => entry.app ? window.Tracker.open(entry.app.id) : openSavedJob(entry.job.id),
+      });
+      fill(parts.pipe,
+        el("div", {class: "paper-head"}, el("h2", {id: "home-pipe-h", text: total === 1 ? "Your 1 job" : `Your ${total} jobs`}),
+          el("a", {href: "#", text: "All jobs", onclick: event => { event.preventDefault(); document.getElementById("nav-jobs").click(); }})),
+        total ? el("div", {class: "home3-stages"}, STAGES.map(s => {
+          const list = byStage[s.key];
+          const shown = list.slice(0, list.length > 4 ? 3 : 4);
+          return el("div", {class: "home3-stage"},
+            el("b", {class: "num", text: String(list.length)}),
+            el("div", {class: "home3-stack"},
+              list.length ? shown.map(e => tile(e, s.key)) : el("span", {class: "tile tile-slot", title: s.key === "offer" ? "Your first offer goes here" : `Nothing ${s.label.toLowerCase()} yet`},
+                s.key === "offer" ? ink("star") : null),
+              list.length > shown.length ? el("span", {class: "tile home3-more", text: `+${list.length - shown.length}`}) : null),
+            el("span", {class: "home3-stage-label", text: s.label}));
+        })) : el("p", {class: "ink-2 home3-empty", text: "Save a job from a search or a pasted posting, and it starts here."}),
+        el("div", {class: "home3-pipe-foot ruled-top"},
+          el("span", {class: "ink-2", text: sent === 1 ? "1 application sent this month" : `${sent} applications sent this month`}),
+          interviews ? el("span", {class: "ink-2"}, el("b", {text: String(interviews)}), interviews === 1 ? " reached an interview" : " reached interviews") : null));
+    }
+
+    // ----- New matches, or recent searches when there are no target roles -----
     let matchSeq = 0;
     function renderMatches(p, force = false) {
       const mine = ++matchSeq;
+      const section = parts.matches;
       const targets = (p?.target_positions || []).filter(t => String(t).trim());
-      matchSection.hidden = !targets.length;
-      if (!targets.length) return;
+      const searches = recentSearches(3);
+      const head = aside => el("div", {class: "paper-head"}, el("h2", {id: "home-matches-h", text: targets.length ? "New for you" : "Search again"}),
+        aside ? el("span", {class: "aside", text: aside}) : null);
+      const searchRows = () => searches.length ? el("div", {class: "ruled"}, searches.map(s => el("button", {type: "button", class: "home3-row", onclick: s.onclick},
+        el("span", {}, el("b", {text: s.title}), el("span", {class: "ink-2", text: s.detail})), el("span", {class: "ink-2 num", text: s.aside}))))
+        : el("p", {class: "ink-2 home3-empty", text: "Searches you run show up here, so you can run them again."});
+      if (!targets.length) {
+        fill(section, head(""), searchRows(),
+          el("p", {class: "ink-2 home3-note"}, "Add target roles to your ", el("a", {href: "#", text: "profile", onclick: e => { e.preventDefault(); openResume({field: "target_positions"}); }}), " and new matches show up here."));
+        return;
+      }
       const key = matchKey(p);
-      const head = note => [
-        el("h3", {id: "home-matches-h", text: "Jobs that fit you"}),
-        el("p", {text: note}),
-      ];
-      //Search again. After a rate limit it waits out the limit, counting down, so a click cannot just fail again.
       const retry = (waitSeconds = 0) => {
-        const button = el("button", {type: "button", class: "quiet", text: "Search again", onclick: () => renderMatches(p, true)});
+        const button = el("button", {type: "button", class: "btn btn-text", text: "Search again", onclick: () => renderMatches(p, true)});
         if (waitSeconds > 0) {
           let left = waitSeconds;
           button.disabled = true;
@@ -354,134 +646,42 @@
         }
         return button;
       };
-      const RATE_WAIT = 30; //seconds; the backend backs off at least this long after Greenhouse says "too many requests"
-      //animate: the answer just arrived, so its rows come in one after another; a cached answer is simply there
+      const RATE_WAIT = 30;
+      const matchRow = job => el("button", {type: "button", class: "home3-row home3-match", title: window.Places.summary(job.location).full,
+        onclick: () => { openJobs(); window.JobParser.openListing(job); }},
+        el("span", {class: "tile", "aria-hidden": "true", text: (job.company_name || "?").charAt(0).toUpperCase()}),
+        el("span", {},
+          el("b", {text: job.position_title || "Unknown position"}),
+          job.fit?.missing?.[0] ? el("span", {class: "tag tag-urgent"}, "missing: ", el("span", {translate: "no", text: job.fit.missing[0]})) : null,
+          el("span", {class: "ink-2", text: [job.company_name, window.Places.summary(job.location).short, payLine(job)].filter(Boolean).join(" · ")})),
+        job.fit ? el("span", {class: "home3-pc num", text: `${job.fit.percent}%`}) : null);
       const show = (items, animate = false) => {
         if (mine !== matchSeq) return;
-        fill(matchSection, ...head(items.length
-          ? `Open roles that match ${matchScope(p)}, best fit to your resume first.`
-          : items.nothingCached
-            ? "Run a search in Find jobs and matches will show up here. Home reuses what that search loaded, so it never adds load on the job boards."
-            : items.rateLimited
-            ? "Job boards are limiting how many requests they answer right now, so matches could not be loaded. Try again in a minute or two."
-            : `No strong matches for ${matchScope(p)} right now. Widen your target positions or check back later.`),
-        items.length ? matchRows(items) : null,
-        retry(items.rateLimited && !items.length ? RATE_WAIT : 0));
-        if (!animate) return;
-        window.UI?.play(matchSection.querySelector("p"), "enter", 260);
-        const list = matchSection.querySelector(".home-rows");
-        if (list) window.UI?.stagger(list, 55, 6);
-        else window.UI?.play(matchSection.querySelector(".quiet"), "enter", 260);
+        const note = items.length ? null
+          : items.nothingCached ? "Run a search and matches show up here. Home reuses what that search loaded, so it never adds load on the job boards."
+          : items.rateLimited ? "Job boards are limiting requests right now. Try again in a minute or two."
+          : `No strong matches for ${matchScope(p)} right now.`;
+        fill(section, head(matchScope(p)),
+          items.length ? el("div", {class: "ruled"}, items.slice(0, 3).map(matchRow)) : el("p", {class: "ink-2 home3-empty", text: note}),
+          items.length ? null : retry(items.rateLimited && !items.length ? RATE_WAIT : 0));
+        if (animate) window.UI?.stagger?.(section.querySelector(".ruled") || section, 55, 6);
       };
       if (!force && matchCache && matchCache.key === key && Date.now() - matchCache.at < MATCH_TTL) return show(matchCache.items);
-      //grey placeholder rows hold the space, so the real rows do not push the page down when they arrive
-      fill(matchSection, ...head(`Looking for roles that match ${matchScope(p)}…`),
-        el("ul", {class: "home-skeletons", "aria-hidden": "true"}, [0, 1, 2, 3].map(() => el("li", {class: "skeleton"}))));
+      fill(section, head(matchScope(p)), el("p", {class: "ink-2 home3-empty", text: "Looking for roles that match…"}));
       if (!matchLoad || matchLoad.key !== key || force) matchLoad = {key, promise: findMatches(p)};
       const load = matchLoad;
-      //the placeholder stays up long enough to read, so a quick answer does not flicker past
-      const shown = new Promise(resolve => setTimeout(resolve, force ? 700 : 0));
-      Promise.all([load.promise, shown]).then(([items]) => {
+      load.promise.then(items => {
         if (items.length || !(items.rateLimited || items.nothingCached)) matchCache = {key, at: Date.now(), items};
-        else matchLoad = null; //try again next time Home is shown
+        else matchLoad = null;
         show(items, true);
       }, error => {
         if (matchLoad === load) matchLoad = null;
         if (mine !== matchSeq) return;
         const limited = /limiting/i.test(error?.message || "");
-        fill(matchSection, ...head(limited
-          ? "Job boards are limiting how many requests they answer right now, so matches could not be loaded. Search again when the countdown ends."
-          : `Couldn't look for matches just now. ${error?.message || ""}`.trim()), retry(limited ? RATE_WAIT : 0));
-        window.UI?.play(matchSection.querySelector("p"), "enter", 260);
+        fill(section, head(matchScope(p)), el("p", {class: "ink-2 home3-empty", text: limited
+          ? "Job boards are limiting requests right now. Search again when the countdown ends."
+          : `Couldn't look for matches just now. ${error?.message || ""}`.trim()}), retry(limited ? RATE_WAIT : 0));
       });
-    }
-
-    function render(master, versions, needs = []) {
-      const p = master.profile;
-      const gaps = resumeGaps(master);
-      //A listing remembered before its text was kept cannot be shown without Greenhouse, so it is not offered.
-      const kept = readJSON(LISTING_KEY);
-      const listing = typeof kept?.raw_text === "string" ? kept : null;
-      const today = new Date().toLocaleDateString(locale(), {weekday: "long", month: "long", day: "numeric"});
-      const firstName = (p?.full_name || "").split(/\s+/)[0];
-
-      // Welcome: the greeting, where things stand, and the one thing worth doing next.
-      // A new user meets Pico above it; after that Pico sits beside the greeting.
-      if (!p) {
-        introSlot.hidden = false;
-        if (!introSlot.firstChild) fill(introSlot, intro());
-        fill(welcome,
-          el("div", {class: "home-welcome-text"},
-            el("h2", {id: "home-greeting", text: "Welcome to Fistbump"}),
-            el("p", {text: "Start with your master resume. Every version you tailor for a job begins from it, and you can import one you already have."}),
-            row({title: "Start your master resume", detail: "Import a file, paste text or fill it in", aside: "Begin", onclick: () => openResume({field: "full_name"})})));
-      } else {
-        introSlot.hidden = true;
-        const status = gaps.length === 0 ? "Your resume is ready to tailor."
-          : gaps.length <= 2 ? "Your resume is nearly there."
-          : "Your resume has a few gaps left to fill.";
-        const hello = away ? "Welcome back" : greeting();
-        //each sentence is its own text, so each can be translated; the date is already in the app's language
-        const line = el("p", {}, el("span", {translate: "no", text: `${today}.`}), " ");
-        for (const sentence of [away?.text, status, listing && "The listing you were reading is right where you left it."]) {
-          if (sentence) line.append(document.createTextNode(sentence), " ");
-        }
-        const next = needs[0];
-        fill(welcome,
-          el("div", {class: "home-welcome-text"},
-            el("h2", {id: "home-greeting"}, el("span", {text: hello}), firstName ? el("span", {translate: "no", text: `, ${firstName}`}) : null),
-            line,
-            !listing && next ? row(next) : listing ? row({
-              title: [listing.position_title || "Unknown position", listing.company_name].filter(Boolean).join(", "),
-              detail: [listing.location, listing.work_mode].filter(Boolean).join(" · "),
-              aside: "Keep reading",
-              onclick: () => {
-                openJobs();
-                window.JobParser.openListing(listing);
-              },
-            }) : row({title: "Find jobs", detail: "Search Greenhouse, Lever, and Ashby boards by title, place or company", aside: "Search", onclick: () => window.App.openTab("tab-find")})),
-          pico(greetingPose()));
-      }
-
-      // What needs you: due steps, decisions, jobs to tailor. The first one is also the welcome's next step.
-      const rest = listing ? needs : needs.slice(1);
-      needsSection.hidden = !rest.length;
-      fill(needsSection,
-        el("h3", {id: "home-needs-h", text: "Needs you"}),
-        el("p", {text: "Follow-ups that are due, suggestions to decide and jobs to tailor."}),
-        rest.length ? rows(rest) : null);
-
-      // Jobs that fit the target positions, work mode and place the profile names
-      renderMatches(p);
-
-      // Finish your resume
-      const done = p ? resumeDone(master) : "";
-      fill(resumeSection,
-        p && gaps.length > 0 && gaps.length <= 2 ? nudge() : null,
-        el("h3", {id: "home-resume-h", text: gaps.length || !p ? "Finish your resume" : "Your resume"}),
-        !p ? el("p", {text: "Nothing here yet. Your profile, jobs and schools will show up as you add them."})
-          : gaps.length ? el("p", {}, done ? el("span", {class: "home-done", text: done}) : null, done ? " " : null,
-            el("span", {text: gaps.length === 1 ? "One thing left:" : `${gaps.length} things left:`}))
-          : el("p", {}, el("span", {class: "home-done", text: done}), " ", el("span", {text: "Nothing is missing."})),
-        gaps.length ? rows(gaps.map(g => ({...g, onclick: () => openResume(g.target)}))) : null);
-
-      // Saved versions
-      fill(versionsSection,
-        el("h3", {id: "home-versions-h", text: "Saved versions"}),
-        el("p", {text: versions.length ? "Copies of your resume you can come back to." : "None yet. Save a version from the Resume view to keep it as it is now."}),
-        versions.length ? rows(versions.slice(0, 3).map(v => ({
-          title: v.version_label,
-          detail: v.target_position ? `For ${v.target_position} roles` : "",
-          aside: day(v.created_at),
-          onclick: () => openResume({version: v.id}),
-        }))) : null);
-
-      // Search again
-      const searches = recentSearches();
-      fill(searchSection,
-        el("h3", {id: "home-search-h", text: "Search again"}),
-        el("p", {text: searches.length ? "Your recent searches, with their filters." : "Searches you run in Find jobs show up here, so you can run them again."}),
-        searches.length ? rows(searches) : null);
     }
 
     const refreshIfVisible = () => {
@@ -513,6 +713,5 @@
     return refresh;
   }
 
-  //The sidebar lists the same searches and opens versions the same way.
   window.Home = {mount, recentSearches, openResume, invalidate: invalidateMatches};
 })();

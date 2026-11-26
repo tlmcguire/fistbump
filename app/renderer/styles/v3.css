@@ -38,7 +38,7 @@
   --radius-tile: 10px;
   --shadow-paper: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 36px -18px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.2);
   --shadow-control: 0 10px 20px -10px rgba(0, 0, 0, 0.55);
-  --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --ease-settle: cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 /* Every other theme: derived from its own --bg, --text and --muted (all 22 are dark themes). */
@@ -138,7 +138,7 @@
   font-size: 14px;
   background: var(--paper-2);
   color: var(--ink);
-  transition: transform 120ms var(--ease-spring), background-color 120ms ease, color 120ms ease;
+  transition: transform 120ms var(--ease-settle), background-color 120ms ease, color 120ms ease;
 }
 :root .v3 .btn:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
 :root .v3 .btn:active:not(:disabled) { transform: scale(0.97); filter: none; }
@@ -213,6 +213,9 @@
 :root .v3 .tile {
   width: 38px;
   height: 34px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
   flex: none;
   display: grid;
   place-items: center;
@@ -281,7 +284,7 @@
 /* ==================== Motion ==================== */
 
 @media (prefers-reduced-motion: no-preference) {
-  :root:not(.reduce-motion) .v3 .enter { animation: v3-enter 420ms var(--ease-spring) both; }
+  :root:not(.reduce-motion) .v3 .enter { animation: v3-enter 420ms var(--ease-settle) both; }
 }
 @keyframes v3-enter { from { opacity: 0; transform: translateY(8px); } }
 :root.reduce-motion .v3 *,
@@ -453,3 +456,175 @@
   :root .bottombar .bar-item { padding: 0 10px; }
   .omnibox kbd { display: none; }
 }
+
+/* ==================== Home ==================== */
+
+/* The strip above Home takes the top of the canvas, so the two read as one surface. */
+.app[data-route="home"] .titlebar { background: var(--canvas-2); }
+/* Themes paint their own art over the page instead of the canvas gradient, so the strip takes the page colour. */
+:root[data-theme] .app[data-route="home"] .titlebar { background: var(--bg); }
+
+.home3 { display: flex; flex-direction: column; }
+.home3-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+:root .v3 .home3-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 18px 44px 28px;
+}
+
+:root .v3 .home3-hero { grid-column: 1 / 9; align-self: end; }
+:root .v3 .home3-sub { margin: 16px 0 16px; color: var(--on-canvas-2); font-size: 16px; text-wrap: pretty; max-width: 62ch; }
+:root .v3 .home3-sub b { color: var(--on-canvas); }
+:root .v3 .home3-sub a { color: var(--mark); font-weight: 650; text-underline-offset: 3px; }
+
+:root .v3 .home3-next {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: 18px 24px;
+}
+:root .v3 .home3-next h2 { font-size: 26px; margin: 3px 0 2px; }
+:root .v3 .home3-next p { font-size: 14px; }
+:root .v3 .home3-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+:root .v3 .home3-kicker::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--mark); }
+:root .v3 .home3-kicker.urgent { color: var(--urgent-ink); }
+:root .v3 .home3-kicker.urgent::before { background: var(--urgent); }
+
+/* Pico's corner: one bubble, its tail pointing at Pico, and nothing spills onto the panels below. */
+:root .v3 .home3-scene {
+  grid-column: 9 / 13;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-height: 230px;
+  overflow: hidden;
+}
+:root .v3 .home3-scene .pico { width: 176px; flex: none; margin-left: -6px; }
+:root .v3 .home3-scene .bubble { flex: 1; align-self: center; margin-bottom: 36px; }
+:root .v3 .home3-scene .bubble h2 { font-size: 19px; margin-bottom: 4px; }
+:root .v3 .home3-scene .bubble p { font-size: 13.5px; line-height: 1.4; }
+:root .v3 .home3-bubble-acts { display: flex; gap: 8px; margin-top: 10px; }
+:root .v3 .home3-bubble-acts .btn { white-space: nowrap; min-height: 34px; padding: 7px 12px; }
+:root .v3 .home3-bubble-line { font-weight: 600; font-size: 14px; }
+
+/* Next 7 days: a ruled strip of days; empty days are narrow so busy days get the room. */
+:root .v3 .home3-week { grid-column: 1 / -1; padding-bottom: 14px; }
+:root .v3 .home3-days { display: flex; border-top: 1.5px dashed var(--rule); }
+:root .v3 .home3-day {
+  flex: 1.25 1 0;
+  min-width: 0;
+  min-height: 84px;
+  padding: 12px 12px 6px;
+  border-left: 1.5px dashed var(--rule);
+}
+:root .v3 .home3-day:first-child { border-left: 0; }
+:root .v3 .home3-day.empty { flex-grow: 0.8; }
+:root .v3 .home3-day.off { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+:root .v3 .home3-date { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+:root .v3 .home3-date b { font: 780 26px/1 var(--theme-font-display, var(--display)); color: var(--ink); }
+:root .v3 .home3-date > span:last-child { font-size: 12px; font-weight: 650; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
+:root .v3 .home3-day.today .home3-date > span:last-child { color: var(--urgent-ink); }
+:root .v3 .home3-free { display: block; color: var(--ink-2); font-size: 13px; }
+:root .v3 .home3-ev {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin-bottom: 6px;
+  padding: 7px 8px 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--ink);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+:root .v3 .home3-ev > span:first-child { min-width: 0; }
+:root .v3 .home3-ev b { display: block; font-weight: 680; }
+:root .v3 .home3-ev.urgent { background: color-mix(in srgb, var(--urgent) 14%, var(--paper)); }
+:root .v3 .home3-ev.good { background: color-mix(in srgb, var(--success) 20%, var(--paper)); }
+:root .v3 .home3-ev.mark { background: color-mix(in srgb, var(--mark) 26%, var(--paper)); }
+:root .v3 .home3-ev:hover:not(:disabled) { filter: brightness(0.97); background-color: inherit; }
+:root .v3 .home3-ev.urgent:hover:not(:disabled) { background: color-mix(in srgb, var(--urgent) 20%, var(--paper)); }
+:root .v3 .home3-verb { flex: none; padding: 5px 9px; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 700; }
+:root .v3 .home3-week-note { margin-top: 8px; font-size: 13px; }
+
+/* The pipeline: each stage a stack of company tiles; an empty stage keeps a dashed slot. */
+:root .v3 .home3-pipe { grid-column: 1 / 7; }
+:root .v3 .home3-stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-height: 168px;
+}
+:root .v3 .home3-stage { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+:root .v3 .home3-stage > b { font: 800 20px/1 var(--theme-font-display, var(--display)); }
+:root .v3 .home3-stack { display: flex; flex-direction: column-reverse; gap: 5px; }
+:root .v3 .home3-stack button.tile { cursor: pointer; transition: transform 120ms var(--ease-settle); }
+:root .v3 .home3-stack button.tile:hover:not(:disabled) { transform: scale(1.08); background: var(--ink); color: var(--paper); }
+:root .v3 .home3-stack button.tile-mark:hover:not(:disabled) { background: var(--mark); color: var(--ink); }
+:root .v3 .home3-stack .tile-slot .ink { width: 18px; height: 18px; color: var(--mark-ink); }
+:root .v3 .home3-more { background: var(--paper-2); color: var(--ink); font-size: 13px; }
+:root .v3 .home3-stage-label { font-size: 12px; font-weight: 650; color: var(--ink-2); }
+:root .v3 .home3-pipe-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 10px; font-size: 13px; }
+:root .v3 .home3-pipe-foot b { color: var(--ink); }
+
+/* New for you / Search again */
+:root .v3 .home3-matches { grid-column: 7 / 13; }
+:root .v3 .home3-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 500;
+}
+:root .v3 .home3-row:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+:root .v3 .home3-row b { font-weight: 650; }
+:root .v3 .home3-row > span > span.ink-2 { display: block; font-size: 13px; }
+:root .v3 .home3-match { grid-template-columns: 38px minmax(0, 1fr) auto; }
+:root .v3 .home3-match .tag { margin-left: 8px; vertical-align: 1px; font-size: 11.5px; padding: 1px 7px; }
+:root .v3 .home3-pc { font: 780 18px var(--theme-font-display, var(--display)); }
+:root .v3 .home3-empty { font-size: 14px; padding: 6px 0; }
+:root .v3 .home3-note { font-size: 13px; margin-top: 10px; }
+:root .v3 .home3-note a { color: var(--ink); }
+
+@media (max-width: 1100px) {
+  :root .v3 .home3-grid { padding: 14px 24px 24px; }
+  :root .v3 .home3-hero { grid-column: 1 / 8; }
+  :root .v3 .home3-scene { grid-column: 8 / 13; }
+  :root .v3 .home3-scene .pico { width: 130px; }
+}
+@media (max-width: 900px) {
+  :root .v3 .home3-hero, :root .v3 .home3-scene, :root .v3 .home3-pipe, :root .v3 .home3-matches { grid-column: 1 / -1; }
+  :root .v3 .home3-scene { min-height: 0; }
+  :root .v3 .home3-days { flex-wrap: wrap; }
+  :root .v3 .home3-day { flex-basis: 33%; }
+}
+
+/* First run: how Fistbump works, three steps across one panel. */
+:root .v3 .home3-how { grid-column: 1 / -1; }
+:root .v3 .home3-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1.5px dashed var(--rule); }
+:root .v3 .home3-step { padding: 14px 16px 6px; border-left: 1.5px dashed var(--rule); }
+:root .v3 .home3-step:first-child { border-left: 0; padding-left: 0; }
+:root .v3 .home3-step b { display: block; font: 760 18px/1.25 var(--theme-font-display, var(--display)); margin-bottom: 4px; }
+:root .v3 .home3-step p { color: var(--ink-2); font-size: 14px; }
+:root .v3 .home3-step .num-mark { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-bottom: 8px; border-radius: 50%; background: var(--ink); color: var(--paper); font: 760 13px var(--display); }
