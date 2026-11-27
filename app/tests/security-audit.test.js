@@ -85,6 +85,38 @@ test('update-ats-boards.js --offline validates public_boards.json', () => {
   assert.match(out, /ok \(offline\)/);
 });
 
+test('dead ATS board check distinguishes definitive removal from empty or transient boards', async () => {
+  const checker = require(path.join(ROOT, 'scripts', 'check-dead-ats-boards.js'));
+  let requestOptions;
+  const board = { ats: 'greenhouse', token: 'exampleco', company: 'Example Co', sources: ['curated'] };
+
+  const emptyBoard = await checker.checkBoard(board, async (_url, options) => {
+    requestOptions = options;
+    return new Response('{"jobs":[]}', { status: 200 });
+  });
+  assert.equal(emptyBoard.status, 'live');
+  assert.equal(requestOptions.redirect, 'error');
+
+  const missingBoard = await checker.checkBoard(board, async () => new Response('{}', { status: 404 }));
+  assert.equal(missingBoard.status, 'dead');
+  assert.equal(missingBoard.reason, 'HTTP 404');
+
+  const goneBoard = await checker.checkBoard(board, async () => new Response('{}', { status: 410 }));
+  assert.equal(goneBoard.status, 'dead');
+  assert.equal(goneBoard.reason, 'HTTP 410');
+
+  const unavailableBoard = await checker.checkBoard(board, async () => new Response('{}', { status: 503 }));
+  assert.equal(unavailableBoard.status, 'unknown');
+  assert.equal(unavailableBoard.reason, 'HTTP 503');
+
+  const boards = checker.loadBoards();
+  assert.equal(new Set(boards.map(({ ats, token }) => `${ats}:${token}`)).size, boards.length);
+  assert.deepEqual([...new Set(boards.map(({ ats }) => ats))].sort(), ['ashby', 'greenhouse', 'lever']);
+  const sharded = Array.from({ length: 7 }, (_, shard) => checker.boardsForShard(boards, shard));
+  assert.equal(sharded.flat().length, boards.length);
+  assert.equal(new Set(sharded.flat().map(({ ats, token }) => `${ats}:${token}`)).size, boards.length);
+});
+
 test('update-ats-boards.js enforces strict institutional host allowlist and rejects HTML/cross-host redirects', () => {
   const src = fs.readFileSync(path.join(ROOT, 'scripts', 'update-ats-boards.js'), 'utf8');
   assert.match(src, /ALLOWED_HOSTS\s*=\s*new Set\(/);
@@ -128,6 +160,12 @@ test('GitHub Actions workflows enforce PR review, timeouts, and community data s
   assert.match(pruneWf, /prune-community-listings\.js/);
   assert.match(pruneWf, /verify-community-data\.js/);
   assert.match(pruneWf, /gh pr create/);
+
+  const deadBoardsWf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'check-dead-ats-boards.yml'), 'utf8');
+  assert.match(deadBoardsWf, /cron:\s*'0 8 \* \* \*'/);
+  assert.match(deadBoardsWf, /timeout-minutes:\s*30/);
+  assert.match(deadBoardsWf, /contents:\s*read/);
+  assert.match(deadBoardsWf, /check-dead-ats-boards\.js/);
 
   assert.ok(fs.existsSync(path.join(ROOT, 'docs', 'security-policy.md')));
   assert.ok(fs.existsSync(path.join(ROOT, 'docs', 'periodic-external-calls.md')));
