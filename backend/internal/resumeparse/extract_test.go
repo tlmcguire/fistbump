@@ -88,6 +88,11 @@ func TestTextFromPDFSortsLeftToRightWithinALine(t *testing.T) {
 	if got := extract(t, pdfDoc(page)).Text; !strings.HasPrefix(got, "Ada Lovelace | worked at Acme Corporation") {
 		t.Errorf("text = %q", got)
 	}
+	// A trailing space at the end of the left column must not suppress the wide-gap column separator.
+	trailing := draw(72, 700, 10, "Software Engineer ") + draw(350, 700, 10, "May 2026 - Jul 2026") + draw(72, 650, 10, "Charleston South Carolina Analyst")
+	if got := extract(t, pdfDoc(trailing)).Text; !strings.HasPrefix(got, "Software Engineer | May 2026 - Jul 2026") {
+		t.Errorf("trailing space suppressed column break: %q", got)
+	}
 }
 
 func TestTextFromPDFSeparatesParagraphsAndPages(t *testing.T) {

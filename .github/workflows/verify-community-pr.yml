@@ -1,0 +1,27 @@
+name: Verify Community Data Security
+
+on:
+  pull_request:
+    paths:
+      - 'data/community-boards.json'
+      - 'data/community-listings.json'
+      - 'backend/internal/connectors/public_boards.json'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-community-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit community boards, listings, and public ATS catalogs
+        run: node scripts/verify-community-data.js

@@ -131,6 +131,7 @@
       } else if (field.type === "select") {
         input = el("select", {id}, field.options.map(([value, label]) => el("option", {value, text: label})));
         input.value = values[field.name] || "";
+        if (input.selectedIndex < 0) input.value = "";
       } else if (field.type === "list") {
         input = el("input", {id, type: "text", placeholder: field.placeholder, value: listToText(values[field.name])});
         const preview = el("div", {class: "chip-row"});
@@ -253,7 +254,7 @@
     {name: "links", label: "Links", type: "list", wide: true, placeholder: "e.g. github.com/ada, linkedin.com/in/ada", hint: "Separate links with commas."},
     {name: "target_positions", label: "Target positions", type: "list", placeholder: "e.g. Data Analyst, Business Analyst"},
     {name: "preferred_mode", label: "Preferred work mode", type: "select",
-      options: [["", "No preference"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"], ["Any", "Any"]]},
+      options: [["", "No preference"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"]]},
     {name: "summary", label: "Summary", type: "textarea", wide: true, rows: 4},
     {name: "skills", label: "General skills", type: "list", wide: true, placeholder: "e.g. sql, excel, python", hint: "Separate skills with commas."},
   ];

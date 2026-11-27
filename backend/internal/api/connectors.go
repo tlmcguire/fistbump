@@ -123,8 +123,17 @@ func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	for _, src := range []string{"greenhouse", "lever", "ashby"} {
+		for _, b := range connectors.PublicBoards(src) {
+			if b.Company != "" && !seenCo[b.Company] {
+				seenCo[b.Company] = true
+				companies = append(companies, b.Company)
+			}
+		}
+	}
 	sort.Strings(companies)
-	total := len(greenhouse.Tokens()) + len(lever.Tokens()) + len(ashby.Tokens())
+	total := len(greenhouse.Tokens()) + len(lever.Tokens()) + len(ashby.Tokens()) +
+		len(connectors.PublicBoards("greenhouse")) + len(connectors.PublicBoards("lever")) + len(connectors.PublicBoards("ashby"))
 	writeJSON(w, http.StatusOK, struct {
 		Categories []category `json:"categories"`
 		Companies  []string   `json:"companies"`
@@ -437,6 +446,16 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 			}
 		}
 		for _, b := range curated {
+			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+				continue
+			}
+			addTarget(b.Token, false)
+		}
+	}
+
+	// 2b. Public-dataset boards for this ATS (when not narrowed to a specific curated category).
+	if len(q.Categories) == 0 {
+		for _, b := range connectors.PublicBoards(source) {
 			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
 				continue
 			}
@@ -819,6 +838,16 @@ func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query)
 		}
 		seen[token] = true
 		boards = append(boards, token)
+	}
+	for _, b := range connectors.PublicBoards("greenhouse") {
+		if seen[b.Token] {
+			continue
+		}
+		if want != "" && !strings.Contains(strings.ToLower(b.Company), want) && !strings.Contains(b.Token, want) {
+			continue
+		}
+		seen[b.Token] = true
+		boards = append(boards, b.Token)
 	}
 	return boards
 }

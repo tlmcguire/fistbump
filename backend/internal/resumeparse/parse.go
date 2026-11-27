@@ -42,6 +42,7 @@ var headings = map[string]section{
 	"professional history": secExperience, "experience highlights": secExperience, "work": secExperience, "career": secExperience,
 	"professional background": secExperience, "selected experience": secExperience, "industry experience": secExperience,
 	"engineering experience": secExperience, "software experience": secExperience, "military experience": secExperience,
+	"leadership experience": secExperience, "work and leadership experience": secExperience,
 	"internships": secExperience, "internship experience": secExperience,
 	"education": secEducation, "academic background": secEducation, "education and training": secEducation, "academics": secEducation,
 	"education and certifications": secEducation, "education and honors": secEducation, "academic history": secEducation, "degrees": secEducation,
@@ -53,6 +54,7 @@ var headings = map[string]section{
 	"certifications": secCerts, "licenses": secCerts, "certifications and licenses": secCerts, "licenses and certifications": secCerts,
 	"clearance": secCerts, "security clearance": secCerts, "certificates": secCerts, "certifications and training": secCerts,
 	"projects": secActivities, "personal projects": secActivities, "research": secActivities, "research experience": secActivities,
+	"research and projects": secActivities, "projects and research": secActivities, "research and publications": secActivities,
 	"volunteer": secActivities, "volunteer experience": secActivities, "leadership": secActivities, "activities": secActivities,
 	"extracurricular": secActivities, "extracurriculars": secActivities, "extracurricular activities": secActivities, "involvement": secActivities,
 	"campus involvement": secActivities, "leadership and activities": secActivities, "academic projects": secActivities,
@@ -101,6 +103,9 @@ var (
 	monthNums  = map[string]string{"jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05", "jun": "06", "jul": "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12",
 		"spr": "05", "sum": "08", "fal": "12", "aut": "12", "win": "12"}
 	dateLineRe = regexp.MustCompile(`(?i)^\(?(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\d{4}[-/]\d{2}|(?:19|20)\d{2})\)?(?:\s*\(.*\))?$`)
+	// Single date at the end of a header line (e.g. "AISAI: ... | Spring 2026", "ICPC — College | November 2025").
+	tailDateRe = regexp.MustCompile(`(?i)(?:\s*[|—–,-]\s+|\s{2,})\(?(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\d{4}[-/]\d{2})\)?(?:\s*\(.*\))?$`)
+	minorRe    = regexp.MustCompile(`(?i)\bminors?\s+(?:in\s+)?[^|—–;]+`)
 )
 
 // Tidy up the heading
@@ -146,8 +151,12 @@ func normDate(s string) string {
 
 // Start of a role: a season is its first month ("Summer 2021" is 2021-06), so a summer internship runs June to August.
 func normStart(s string) string {
-	if m := regexp.MustCompile(`(?i)^(spring|summer|fall|autumn|winter)\s+(\d{4})$`).FindStringSubmatch(strings.TrimSpace(s)); m != nil {
-		return m[2] + "-" + seasonStart[strings.ToLower(m[1])[:3]] + "-01"
+	if m := regexp.MustCompile(`(?i)^(spring|summer|fall|autumn|winter)\s+(?:'(\d{2})|(\d{4}))$`).FindStringSubmatch(strings.TrimSpace(s)); m != nil {
+		year := m[3]
+		if year == "" {
+			year = expandShortYear(m[2])
+		}
+		return year + "-" + seasonStart[strings.ToLower(m[1])[:3]] + "-01"
 	}
 	return normDate(s)
 }
@@ -544,7 +553,7 @@ func headerLine(lines []string, i int) bool {
 	if first := []rune(l)[0]; first >= 'a' && first <= 'z' {
 		return false
 	}
-	if isDateLine(l) || rangeRe.MatchString(l) && len(l) <= 100 {
+	if isDateLine(l) || (rangeRe.MatchString(l) || tailDateRe.MatchString(l)) && len(l) <= 100 {
 		return true
 	}
 	// Look a few lines ahead for the dates. PDF text often has a blank line between a title and its
@@ -560,7 +569,7 @@ func headerLine(lines []string, i int) bool {
 		if isBullet(lines[j]) || endsSentence(lines[j]) {
 			break
 		}
-		if isDateLine(lines[j]) || rangeRe.MatchString(lines[j]) {
+		if isDateLine(lines[j]) || rangeRe.MatchString(lines[j]) || tailDateRe.MatchString(lines[j]) {
 			return true
 		}
 	}
@@ -595,17 +604,18 @@ func splitEntries(lines []string) []entry {
 			continue
 		}
 		hdr := headerLine(lines, i)
+		hasDate := isDateLine(l) || rangeRe.MatchString(l) || tailDateRe.MatchString(l)
 		switch {
-		case cur != nil && inHeader && !cur.dated && !isBullet(l) && len(cur.header) < 4 && (isDateLine(l) || rangeRe.MatchString(l) || len(l) <= 90 && !endsSentence(l)):
+		case cur != nil && inHeader && !cur.dated && !isBullet(l) && len(cur.header) < 4 && (hasDate || len(l) <= 90 && !endsSentence(l)):
 			cur.header = append(cur.header, l)
-			cur.dated = isDateLine(l) || rangeRe.MatchString(l)
+			cur.dated = hasDate
 		case cur != nil && inHeader && cur.dated && len(cur.header) == 1 && !hdr && !isBullet(l) && len(l) <= 60 && !endsSentence(l):
 			// "Senior Engineer | Jan 2020 - Present" then "Babbage Co., London, UK": the line after a
 			// dated title line is the organization.
 			cur.header = append(cur.header, l)
 			inHeader = false
 		case hdr:
-			out = append(out, entry{header: []string{l}, dated: isDateLine(l) || rangeRe.MatchString(l)})
+			out = append(out, entry{header: []string{l}, dated: hasDate})
 			cur = &out[len(out)-1]
 			inHeader = true
 		case cur == nil:
@@ -680,6 +690,9 @@ func parseExperiences(lines []string, defaultOrg string, warnings *[]string) []m
 				// A single date: an event or a one-off role. A season spans its months.
 				e.StartDate, e.EndDate = strPtr(normStart(m[1])), strPtr(normDate(m[1]))
 				continue
+			} else if m := tailDateRe.FindStringSubmatch(h); m != nil && e.StartDate == nil {
+				e.StartDate, e.EndDate = strPtr(normStart(m[1])), strPtr(normDate(m[1]))
+				h = strings.TrimSpace(strings.TrimSuffix(h, m[0]))
 			}
 			if m := findCity(h); m != "" && e.Location == nil {
 				e.Location = strPtr(m)
@@ -772,7 +785,33 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 		}
 		cur, details = nil, nil
 	}
+	// Expand lines with multiple semicolon-separated degrees (e.g. "B.S. Computer Science; B.S. Software Engineering — GPA: 3.84")
+	// so each degree becomes its own education entry sharing GPA, minors, and dates.
+	var expanded []string
 	for _, l := range lines {
+		if strings.Contains(l, ";") && len(degreeRe.FindAllStringIndex(l, -1)) >= 2 {
+			parts := strings.Split(l, ";")
+			// Trailing metadata (GPA, minors, dates) on the last part applies to the first entry too.
+			last := parts[len(parts)-1]
+			var shared []string
+			if m := gpaRe.FindString(last); m != "" {
+				shared = append(shared, m)
+			}
+			for i, p := range parts {
+				p = strings.TrimSpace(p)
+				if p == "" {
+					continue
+				}
+				if i < len(parts)-1 && len(shared) > 0 && !gpaRe.MatchString(p) {
+					p += " — " + strings.Join(shared, " — ")
+				}
+				expanded = append(expanded, p)
+			}
+			continue
+		}
+		expanded = append(expanded, l)
+	}
+	for _, l := range expanded {
 		if l == "" {
 			continue
 		}
@@ -816,7 +855,7 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 			rest = strings.TrimPrefix(strings.TrimPrefix(rest, "in "), "of ")
 			rest = sepRe.Split(rest, 2)[0]
 			rest = singleRe.ReplaceAllString(rest, "")
-			if rest = strings.Trim(strings.TrimSpace(rest), ",.|-– "); rest != "" && !schoolRe.MatchString(rest) {
+			if rest = strings.Trim(strings.TrimSpace(rest), ",.|-–; "); rest != "" && !schoolRe.MatchString(rest) {
 				cur.Discipline = strPtr(rest)
 			}
 			used = true
@@ -841,7 +880,11 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 			cur.Honors = strPtr(h)
 			used = true
 		}
-		if !used {
+		if used {
+			if m := strings.TrimSpace(minorRe.FindString(body)); m != "" {
+				details = append(details, strings.TrimRight(m, ",. "))
+			}
+		} else {
 			details = append(details, body)
 		}
 	}

@@ -221,7 +221,268 @@ var catalog = []Category{
 	{
 		ID: "hospitality_events",
 		Boards: []Board{
-			{"luma-events", "Luma"}, {"blackbird", "Blackbird"},
+			{"luma-events", "Luma"}, {"blackbird", "Blackbird"}, {"partiful", "Partiful"},
+			{"beli", "Beli"}, {"wander", "Wander"},
+		},
+	},
+	{
+		ID: "embedded_iot", Parent: ptr("technical"),
+		Boards: []Board{
+			{"oxide", "Oxide Computer"}, {"span", "SPAN"}, {"hadrian", "Hadrian"},
+			{"nominal", "Nominal"}, {"eight-sleep", "Eight Sleep"}, {"oura", "Oura"},
+			{"quilt", "Quilt"}, {"runwise", "Runwise"},
+		},
+	},
+	{
+		ID: "productivity_collaboration", Parent: ptr("technical"),
+		Boards: []Board{
+			{"notion", "Notion"}, {"linear", "Linear"}, {"superhuman", "Superhuman"},
+			{"raycast", "Raycast"}, {"cal", "Cal.com"}, {"framer", "Framer"},
+			{"attio", "Attio"}, {"zapier", "Zapier"}, {"gamma", "Gamma"},
+		},
+	},
+	{
+		ID: "social_creator", Parent: ptr("technical"),
+		Boards: []Board{
+			{"substack", "Substack"}, {"beehiiv", "beehiiv"}, {"whatnot", "Whatnot"},
+			{"partiful", "Partiful"}, {"suno", "Suno"}, {"descript", "Descript"},
+			{"krea", "Krea"}, {"runway", "Runway"},
+		},
+	},
+	{
+		ID: "customer_experience", Parent: ptr("technical"),
+		Boards: []Board{
+			{"sierra", "Sierra"}, {"decagon", "Decagon"}, {"plain", "Plain"},
+			{"pylon", "Pylon"}, {"commonroom", "Common Room"}, {"clay", "Clay"},
+		},
+	},
+	{
+		ID: "payments_banking",
+		Boards: []Board{
+			{"ramp", "Ramp"}, {"mercury", "Mercury"}, {"modern-treasury", "Modern Treasury"},
+			{"column", "Column"}, {"increase", "Increase"}, {"lithic", "Lithic"},
+			{"moov", "Moov"}, {"bridge", "Bridge"}, {"parafin", "Parafin"},
+		},
+	},
+	{
+		ID: "venture_investing",
+		Boards: []Board{
+			{"paradigm", "Paradigm"}, {"pulley", "Pulley"}, {"kalshi", "Kalshi"},
+			{"polymarket", "Polymarket"}, {"carta", "Carta"},
+		},
+	},
+	{
+		ID: "education",
+		Boards: []Board{
+			{"replit", "Replit"}, {"brilliant", "Brilliant"}, {"synth", "Synthesis"},
+			{"maven", "Maven"},
+		},
+	},
+	{
+		ID: "gaming", Parent: ptr("technical"),
+		Boards: []Board{
+			{"discord", "Discord"}, {"inworld", "Inworld AI"}, {"overwolf", "Overwolf"},
+		},
+	},
+	{
+		ID: "autonomous_vehicles", Parent: ptr("technical"),
+		Boards: []Board{
+			{"waabi", "Waabi"}, {"appliedintuition", "Applied Intuition"}, {"wayve", "Wayve"},
+			{"kodiak", "Kodiak"}, {"maymobility", "May Mobility"}, {"gatik", "Gatik"},
+			{"torc", "Torc Robotics"}, {"ouster", "Ouster"}, {"aeva", "Aeva"},
+		},
+	},
+	{
+		ID: "retail_ecommerce",
+		Boards: []Board{
+			{"faire", "Faire"}, {"whatnot", "Whatnot"}, {"hexclad", "HexClad"},
+			{"ridge", "Ridge"}, {"quince", "Quince"}, {"italic", "Italic"},
+			{"evergreen", "Evergreen"}, {"shopmy", "ShopMy"}, {"flagship", "Flagship"},
+			{"canal", "Canal"}, {"violet", "Violet"}, {"rye", "Rye"},
+		},
+	},
+	{
+		ID: "transportation_logistics",
+		Boards: []Board{
+			{"flexport", "Flexport"}, {"altana", "Altana"}, {"cargo", "Cargo"},
+			{"terminal", "Terminal Industries"}, {"happyrobot", "HappyRobot"}, {"augusto", "Augment"},
+			{"vroom", "Vroom"}, {"flocargo", "Flock Freight"}, {"mothership", "Mothership"},
+			{"stord", "Stord"}, {"ware2go", "Ware2Go"}, {"warpfreight", "Warp"},
+		},
+	},
+	{
+		ID: "media_entertainment",
+		Boards: []Board{
+			{"substack", "Substack"}, {"beehiiv", "beehiiv"}, {"suno", "Suno"},
+			{"runway", "Runway"}, {"pika", "Pika"}, {"luma", "Luma AI"},
+			{"elevenlabs", "ElevenLabs"}, {"descript", "Descript"}, {"captions", "Captions"},
+			{"opusclip", "OpusClip"}, {"heygen", "HeyGen"}, {"hedras", "Hedra"},
+			{"krea", "Krea"}, {"ideogram", "Ideogram"}, {"midjourney", "Midjourney"},
+		},
+	},
+	{
+		ID: "marketing_advertising",
+		Boards: []Board{
+			{"clay", "Clay"}, {"unify", "Unify"}, {"commonroom", "Common Room"},
+			{"warmly", "Warmly"}, {"koala", "Koala"}, {"default", "Default"},
+			{"vector", "Vector"}, {"rb2b", "RB2B"}, {"mutiny", "Mutiny"},
+			{"jasper", "Jasper"}, {"typeface", "Typeface"}, {"pencil", "Pencil"},
+			{"smartly", "Smartly"}, {"triplewhale", "Triple Whale"}, {"northbeam", "Northbeam"},
+		},
+	},
+	{
+		ID: "food_agriculture",
+		Boards: []Board{
+			{"monarchtractor", "Monarch Tractor"}, {"carbonrobotics", "Carbon Robotics"},
+			{"verdantrobotics", "Verdant Robotics"}, {"bountiful", "Bountiful"},
+			{"soundag", "Sound Agriculture"}, {"nitricity", "Nitricity"},
+			{"milli", "Milli"}, {"slice", "Slice"}, {"owner", "Owner.com"},
+			{"snackpass", "Snackpass"}, {"sunday", "sunday"}, {"popmenu", "Popmenu"},
+		},
+	},
+	{
+		ID: "travel_hospitality",
+		Boards: []Board{
+			{"wander", "Wander"}, {"blackbird", "Blackbird"}, {"beli", "Beli"},
+			{"mindtrip", "Mindtrip"}, {"fora", "Fora Travel"}, {"duffel", "Duffel"},
+			{"amadeus", "Amadeus"}, {"canary", "Canary Technologies"}, {"mews", "Mews"},
+			{"spotnana", "Spotnana"}, {"navan", "Navan"}, {"engine", "Engine"},
+		},
+	},
+	{
+		ID: "fashion_beauty",
+		Boards: []Board{
+			{"daydream", "Daydream"}, {"photoroom", "Photoroom"}, {"shopmy", "ShopMy"},
+			{"glossier", "Glossier"}, {"summerfridays", "Summer Fridays"}, {"kosas", "Kosas"},
+			{"dieux", "Dieux"}, {"saie", "Saie"}, {"jonesroad", "Jones Road Beauty"},
+		},
+	},
+	{
+		ID: "semiconductors_hardware",
+		Boards: []Board{
+			{"oxide", "Oxide Computer"}, {"etched", "Etched"}, {"matx", "MatX"},
+			{"extropic", "Extropic"}, {"normalcomputing", "Normal Computing"}, {"rain", "Rain AI"},
+			{"positrion", "Positron AI"}, {"rivos", "Rivos"}, {"aheadcomputing", "AheadComputing"},
+			{"lightmatter", "Lightmatter"}, {"ayarlabs", "Ayar Labs"}, {"celestialai", "Celestial AI"},
+		},
+	},
+	{
+		ID: "manufacturing",
+		Boards: []Board{
+			{"hadrian", "Hadrian"}, {"nominal", "Nominal"}, {"dirac", "Dirac"},
+			{"senra", "Senra Systems"}, {"atomic", "Atomic Industries"}, {"machina", "Machina Labs"},
+			{"freeform", "Freeform"}, {"rangeenergy", "Range Energy"}, {"bedrock", "Bedrock Robotics"},
+			{"standardbots", "Standard Bots"}, {"brightmachines", "Bright Machines"},
+		},
+	},
+	{
+		ID: "labs",
+		Boards: []Board{
+			{"evolutionaryscale", "EvolutionaryScale"}, {"chai-discovery", "Chai Discovery"},
+			{"cradle", "Cradle"}, {"latch", "LatchBio"}, {"biorender", "BioRender"},
+			{"futurehouse", "FutureHouse"}, {"edisonscientific", "Edison Scientific"},
+			{"periodic", "Periodic Labs"}, {"lila", "Lila Sciences"}, {"orbitalmaterials", "Orbital Materials"},
+			{"radicalai", "Radical AI"}, {"cuspai", "CuspAI"}, {"boltz", "Boltz"},
+		},
+	},
+	{
+		ID: "quantum_computing",
+		Boards: []Board{
+			{"psiquantum", "PsiQuantum"}, {"quera", "QuEra"}, {"atlanticquantum", "Atlantic Quantum"},
+			{"aliceandbob", "Alice & Bob"}, {"nordquantique", "Nord Quantique"}, {"photonic", "Photonic"},
+			{"sandboxaq", "SandboxAQ"}, {"classiq", "Classiq"},
+		},
+	},
+	{
+		ID: "nonprofit",
+		Boards: []Board{
+			{"epochai", "Epoch AI"}, {"redwoodresearch", "Redwood Research"},
+			{"apollo-research", "Apollo Research"}, {"metr", "METR"},
+			{"rethinkpriorities", "Rethink Priorities"}, {"openphilanthropy", "Open Philanthropy"},
+			{"arcinstitute", "Arc Institute"}, {"renaissancephilanthropy", "Renaissance Philanthropy"},
+		},
+	},
+	{
+		ID: "government_civic",
+		Boards: []Board{
+			{"govly", "Govly"}, {"usg", "CivicTech"}, {"peregrine", "Peregrine"},
+			{"flock", "Flock Safety"}, {"skydio", "Skydio"}, {"usdigitalresponse", "U.S. Digital Response"},
+			{"coda-gov", "Polimorphic"}, {"civicplus", "CivicPlus"}, {"opengov", "OpenGov"},
+		},
+	},
+	{
+		ID: "telecom",
+		Boards: []Board{
+			{"livekit", "LiveKit"}, {"daily", "Daily"}, {"vapi", "Vapi"},
+			{"retell", "Retell AI"}, {"bland", "Bland AI"}, {"openphone", "OpenPhone"},
+			{"quo", "Quo"}, {"tarana", "Tarana Wireless"}, {"astspacemobile", "AST SpaceMobile"},
+		},
+	},
+	{
+		ID: "automotive",
+		Boards: []Board{
+			{"waabi", "Waabi"}, {"wayve", "Wayve"}, {"appliedintuition", "Applied Intuition"},
+			{"harbinger", "Harbinger"}, {"slate", "Slate Auto"}, {"telomotors", "Telo Trucks"},
+			{"rivian", "Rivian"}, {"scout", "Scout Motors"}, {"tekion", "Tekion"},
+		},
+	},
+	{
+		ID: "consulting_services",
+		Boards: []Board{
+			{"distyl", "Distyl AI"}, {"cinder", "Cinder"}, {"scale", "Scale AI"},
+			{"mercor", "Mercor"}, {"surge", "Surge AI"}, {"turing", "Turing"},
+			{"micro1", "micro1"}, {"handshake-ai", "Handshake AI"},
+		},
+	},
+	{
+		ID: "data_analytics_bi", Parent: ptr("technical"),
+		Boards: []Board{
+			{"hex", "Hex"}, {"motherduck", "MotherDuck"}, {"clickhouse", "ClickHouse"},
+			{"tinybird", "Tinybird"}, {"omni", "Omni"}, {"evidence", "Evidence"},
+			{"lightdash", "Lightdash"}, {"rill", "Rill Data"}, {"equals", "Equals"},
+			{"posthog", "PostHog"}, {"statsig", "Statsig"}, {"eppo", "Eppo"},
+		},
+	},
+	{
+		ID: "ecommerce_enablement", Parent: ptr("technical"),
+		Boards: []Board{
+			{"faire", "Faire"}, {"medusa", "Medusa"}, {"swell", "Swell"},
+			{"fermat", "FERMÀT"}, {"replay", "Rebuy"}, {"loop", "Loop Returns"},
+			{"rye", "Rye"}, {"canal", "Canal"}, {"violet", "Violet"},
+			{"disco-network", "Disco"}, {"blackcrow", "Black Crow AI"},
+		},
+	},
+	{
+		ID: "marketplace_gig", Parent: ptr("technical"),
+		Boards: []Board{
+			{"whatnot", "Whatnot"}, {"faire", "Faire"}, {"mercor", "Mercor"},
+			{"contra", "Contra"}, {"braintrust", "Braintrust"}, {"paraform", "Paraform"},
+			{"partiful", "Partiful"}, {"wander", "Wander"}, {"bilt", "Bilt Rewards"},
+		},
+	},
+	{
+		ID: "pet_veterinary",
+		Boards: []Board{
+			{"sploot", "Sploot Veterinary Care"}, {"modernanimal", "Modern Animal"},
+			{"smalls", "Smalls"}, {"petfolk", "Petfolk"}, {"scribenote", "Scribenote"},
+			{"vetspire", "Vetspire"}, {"dutch", "Dutch"},
+		},
+	},
+	{
+		ID: "architecture_civil",
+		Boards: []Board{
+			{"buildots", "Buildots"}, {"trunktools", "Trunk Tools"}, {"join", "Join"},
+			{"snaptrude", "Snaptrude"}, {"rayon", "Rayon"}, {"maket", "Maket"},
+			{"gendo", "Gendo"}, {"kailo", "Kailo"}, {"giraffetech", "Giraffe"},
+		},
+	},
+	{
+		ID: "aviation_maritime",
+		Boards: []Board{
+			{"saronic", "Saronic"}, {"mach", "Mach Industries"}, {"heron", "Hermeus"},
+			{"boom", "Boom Supersonic"}, {"regent", "Regent"}, {"saildrone", "Saildrone"},
+			{"orca-ai", "Orca AI"}, {"shone", "Shone"}, {"pyka", "Pyka"},
+			{"reliable-robotics", "Reliable Robotics"}, {"merlinlabs", "Merlin Labs"},
 		},
 	},
 }

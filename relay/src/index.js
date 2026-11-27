@@ -25,17 +25,48 @@ const LABEL = "from-the-app";
 const KINDS = { bug: "Something is broken", idea: "An idea", question: "A question" };
 const ATS = ["greenhouse", "lever", "ashby"];
 const WORK_MODES = new Set(["Remote", "Hybrid", "On-site"]);
-const TOKEN = /^[a-z0-9][a-z0-9_.-]{0,63}$/;
+const TOKEN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const URL_SHORTENERS = new Set([
+  "bit.ly", "tinyurl.com", "t.co", "ow.ly", "goo.gl", "is.gd", "buff.ly",
+  "rebrand.ly", "cutt.ly", "rb.gy", "shorturl.at", "tiny.cc", "lnkd.in",
+]);
 
 // ---------- small helpers ----------
 
 export const json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extra } });
 const problem = (status, code, message) => json({ error: { code, message } }, status);
 
-//Strips what should never leave someone's computer by accident: email addresses, phone numbers, home folders.
+// Levenshtein edit distance (bounded) to catch 1-char typosquats against known board tokens.
+export function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = prev[j];
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diag = tmp;
+    }
+  }
+  return prev[b.length];
+}
+
+export function isLikelyTyposquat(token, knownTokens) {
+  if (token.length < 5) return false;
+  for (const k of knownTokens) {
+    if (k === token || k.length < 5) continue;
+    if (editDistance(token, k) === 1) return true;
+  }
+  return false;
+}
+
+// Strips what should never leave someone's computer by accident: invisible/bidi/tag chars,
+// email addresses, phone numbers, home folders.
 export function scrub(text, max) {
   return String(text ?? "")
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g, "")
+    .replace(/[\u{E0000}-\u{E007F}]/gu, "")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email removed]")
     .replace(/\+?\d[\d\s().-]{8,}\d/g, "[number removed]")
     .replace(/(\/Users\/|\/home\/|C:\\Users\\)[^\s/\\]+/gi, "$1[name]")
@@ -213,18 +244,26 @@ export function readBoards(body) {
   return [...new Map(out.map(b => [`${b.ats}:${b.token}`, b])).values()];
 }
 
-//Asks the job board itself whether it exists, and what the company calls itself.
+// Asks the job board itself whether it exists, has at least one active open posting (blocking
+// empty/placeholder/fake boards), and what the company calls itself.
 export async function checkBoard({ ats, token }) {
-  const url = ats === "greenhouse" ? `https://boards-api.greenhouse.io/v1/boards/${token}`
+  const url = ats === "greenhouse" ? `https://boards-api.greenhouse.io/v1/boards/${token}/jobs`
     : ats === "lever" ? `https://api.lever.co/v0/postings/${token}?mode=json&limit=1`
     : `https://api.ashbyhq.com/posting-api/job-board/${token}`;
-  const res = await fetch(url, { headers: { "user-agent": "fistbump-relay" } });
+  const res = await fetch(url, { headers: { "user-agent": "fistbump-relay" }, redirect: "error" });
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
-  if (ats === "lever" && !Array.isArray(data)) return null;
-  //Lever's public list has no company name, so the board's own name stands in
-  const company = ats === "greenhouse" ? data?.name : ats === "lever" ? token : data?.organizationName || data?.name;
-  return { ats, token, company: scrub(company || token, 80) };
+  if (ats === "lever") {
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return { ats, token, company: scrub(token, 80) };
+  }
+  if (ats === "greenhouse") {
+    if (!Array.isArray(data?.jobs) || data.jobs.length === 0) return null;
+    const meta = await fetch(`https://boards-api.greenhouse.io/v1/boards/${token}`, { headers: { "user-agent": "fistbump-relay" }, redirect: "error" }).then(r => r.ok ? r.json() : null).catch(() => null);
+    return { ats, token, company: scrub(meta?.name || token, 80) };
+  }
+  if (!Array.isArray(data?.jobs) || data.jobs.length === 0) return null;
+  return { ats, token, company: scrub(data?.organizationName || data?.name || token, 80) };
 }
 
 async function readShared(env) {
@@ -238,11 +277,15 @@ async function shareBoards(env, request) {
   if (await limited(env, request, "boards", 30)) return problem(429, "rate_limited", "Too many boards in one hour. They will keep until later.");
   const boards = readBoards(await request.json().catch(() => null));
   if (!boards.length) return problem(400, "validation_failed", "Nothing to share: boards look like greenhouse:stripe or lever:netflix.");
-  const known = new Set(((await cachedShared(env)).boards || []).map(b => `${b.ats}:${b.token}`));
+  const sharedBoards = (await cachedShared(env)).boards || [];
+  const known = new Set(sharedBoards.map(b => `${b.ats}:${b.token}`));
+  const knownByAts = { greenhouse: [], lever: [], ashby: [] };
+  for (const b of sharedBoards) if (knownByAts[b.ats]) knownByAts[b.ats].push(b.token);
   const result = { queued: [], known: [], not_found: [] };
   for (const b of boards) {
     const key = `${b.ats}:${b.token}`;
     if (known.has(key) || (env.RELAY && await env.RELAY.get(`board:${key}`))) { result.known.push(key); continue; }
+    if (isLikelyTyposquat(b.token, knownByAts[b.ats] || [])) { result.not_found.push(key); continue; }
     const real = await checkBoard(b);
     if (!real) { result.not_found.push(key); continue; }
     await env.RELAY?.put(`board:${key}`, JSON.stringify({ ...real, added: new Date().toISOString().slice(0, 10) }));
@@ -299,31 +342,45 @@ export async function publishBoards(env) {
 
 // ---------- community listings ----------
 
-function safeHttpUrl(value, max, allowHttp = true) {
+function isHostMatch(host, domain) {
+  return host === domain || host.endsWith("." + domain);
+}
+
+// Enforces HTTPS-only, rejects credentials, IP literals, localhost/local TLDs, punycode (IDN
+// homographs like xn--), and URL shorteners to prevent phishing/typosquat links.
+export function safeHttpsUrl(value, max) {
   const raw = String(value ?? "").trim();
   if (!raw || raw.length > max) return "";
   try {
     const u = new URL(raw);
-    if (u.protocol === "https:" || (allowHttp && u.protocol === "http:")) return u.href;
+    if (u.protocol !== "https:") return "";
+    if (u.username || u.password) return "";
+    const host = u.hostname.toLowerCase();
+    if (!host || !host.includes(".") || host.includes("xn--")) return "";
+    if (/^(\d+\.){3}\d+$/.test(host) || host.startsWith("[") || host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return "";
+    if (URL_SHORTENERS.has(host.replace(/^www\./, ""))) return "";
+    return u.href;
   } catch {
-    // invalid URL
+    return "";
   }
-  return "";
 }
 
-function siteFromUrl(value) {
+export function siteFromUrl(value) {
   if (!value) return "";
   try {
     const host = new URL(value).hostname.replace(/^www\./i, "").toLowerCase();
-    if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
-    if (host === "indeed.com" || host.endsWith(".indeed.com")) return "Indeed";
-    if (host === "glassdoor.com" || host.endsWith(".glassdoor.com")) return "Glassdoor";
-    if (host.includes("workday")) return "Workday";
-    if (host === "wellfound.com" || host === "angel.co") return "Wellfound";
-    if (host === "ziprecruiter.com" || host.endsWith(".ziprecruiter.com")) return "ZipRecruiter";
-    if (host.includes("smartrecruiters")) return "SmartRecruiters";
-    if (host.includes("icims")) return "iCIMS";
-    if (host.includes("jobvite")) return "Jobvite";
+    if (isHostMatch(host, "linkedin.com")) return "LinkedIn";
+    if (isHostMatch(host, "indeed.com")) return "Indeed";
+    if (isHostMatch(host, "glassdoor.com")) return "Glassdoor";
+    if (isHostMatch(host, "myworkdayjobs.com") || isHostMatch(host, "workday.com")) return "Workday";
+    if (isHostMatch(host, "wellfound.com") || isHostMatch(host, "angel.co")) return "Wellfound";
+    if (isHostMatch(host, "ziprecruiter.com")) return "ZipRecruiter";
+    if (isHostMatch(host, "smartrecruiters.com")) return "SmartRecruiters";
+    if (isHostMatch(host, "icims.com")) return "iCIMS";
+    if (isHostMatch(host, "jobvite.com")) return "Jobvite";
+    if (isHostMatch(host, "greenhouse.io")) return "Greenhouse";
+    if (isHostMatch(host, "lever.co")) return "Lever";
+    if (isHostMatch(host, "ashbyhq.com")) return "Ashby";
     return host;
   } catch {
     return "";
@@ -335,8 +392,8 @@ export function readListing(body) {
   const position_title = scrub(body?.position_title, 160);
   const location = scrub(body?.location, 120);
   const work_mode = WORK_MODES.has(body?.work_mode) ? body.work_mode : "";
-  const listing_url = safeHttpUrl(body?.listing_url, 500, true);
-  const company_url = safeHttpUrl(body?.company_url, 300, false);
+  const listing_url = safeHttpsUrl(body?.listing_url, 500);
+  const company_url = safeHttpsUrl(body?.company_url, 300);
   const raw_text = scrub(body?.raw_text, 25000);
   const source = siteFromUrl(listing_url) || scrub(body?.source, 40) || "Community";
   return { source, company_name, position_title, location, work_mode, listing_url, company_url, raw_text };

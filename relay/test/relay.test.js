@@ -1,7 +1,7 @@
 // The relay against a pretend GitHub and pretend job boards: nothing leaves the test.
 import test from "node:test";
 import assert from "node:assert/strict";
-import relay, { scrub, words, likeness, readReport, readBoards, issueBody } from "../src/index.js";
+import relay, { scrub, words, likeness, readReport, readBoards, readListing, issueBody, safeHttpsUrl, siteFromUrl, isLikelyTyposquat } from "../src/index.js";
 
 //a KV namespace in memory
 const kv = () => {
@@ -100,14 +100,21 @@ test("too many reports from one place in an hour are turned away", async () => {
 
 test("shared boards are checked against the board itself and queued once", async () => {
   fakeFetch({
-    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, { content: btoa(JSON.stringify({ version: 1, boards: [{ ats: "greenhouse", token: "known" }] })), sha: "x" }],
+    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, { content: btoa(JSON.stringify({ version: 1, boards: [{ ats: "greenhouse", token: "knownco" }] })), sha: "x" }],
+    "GET boards-api.greenhouse.io/v1/boards/stripe/jobs": () => [200, { jobs: [{ id: 101 }] }],
     "GET boards-api.greenhouse.io/v1/boards/stripe": () => [200, { name: "Stripe" }],
+    "GET boards-api.greenhouse.io/v1/boards/ghostco/jobs": () => [200, { jobs: [] }],
+    "GET boards-api.greenhouse.io/v1/boards/ghostco": () => [200, { name: "Ghost Co" }],
     "GET boards-api.greenhouse.io/v1/boards/nosuch": () => [404, {}],
   });
   assert.deepEqual(readBoards({ boards: ["greenhouse:Stripe", "bad entry", "workday:x", "greenhouse:stripe"] }), [{ ats: "greenhouse", token: "stripe" }]);
   const e = env();
-  const res = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe", "greenhouse:known", "greenhouse:nosuch"] }), e);
-  assert.deepEqual(await res.json(), { queued: ["greenhouse:stripe"], known: ["greenhouse:known"], not_found: ["greenhouse:nosuch"] });
+  const res = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe", "greenhouse:knownco", "greenhouse:knownc0", "greenhouse:ghostco", "greenhouse:nosuch"] }), e);
+  assert.deepEqual(await res.json(), {
+    queued: ["greenhouse:stripe"],
+    known: ["greenhouse:knownco"],
+    not_found: ["greenhouse:knownc0", "greenhouse:ghostco", "greenhouse:nosuch"],
+  });
   assert.equal(JSON.parse(e.RELAY.m.get("board:greenhouse:stripe")).company, "Stripe");
   const again = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe"] }), e);
   assert.deepEqual((await again.json()).known, ["greenhouse:stripe"]);

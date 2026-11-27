@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "updated_at": "2026-11-26",
+  "refresh_days": 30,
+  "sources": [
+    {
+      "id": "hf_open_apply_jobs",
+      "name": "Hugging Face — edwarddgao/open-apply-jobs",
+      "updated_at": "2026-11-26",
+      "boards_added": 0
+    },
+    {
+      "id": "hf_storesignal_ats_boards",
+      "name": "Hugging Face — storesignalhq/ats-job-boards",
+      "updated_at": "2026-11-26",
+      "boards_added": 0
+    },
+    {
+      "id": "common_crawl_cdx",
+      "name": "Common Crawl CDX Index (Greenhouse, Lever, Ashby)",
+      "updated_at": "2026-11-26",
+      "boards_added": 0
+    }
+  ],
+  "boards": {
+    "greenhouse": [],
+    "lever": [],
+    "ashby": []
+  }
+}

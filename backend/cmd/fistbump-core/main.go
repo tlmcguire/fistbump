@@ -17,6 +17,7 @@ import (
 
 	"github.com/tlmcguire/fistbump/backend/internal/ai"
 	"github.com/tlmcguire/fistbump/backend/internal/api"
+	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/ashby"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/greenhouse"
 	"github.com/tlmcguire/fistbump/backend/internal/connectors/lever"
@@ -110,6 +111,8 @@ func run() error {
 
 	// Refresh cost-of-living, pay, tax, and benefits source citations in-app every 30 days.
 	cost.StartUpdater(roundsCtx, *dataDir, "")
+	// Refresh public ATS board catalog in-app every 30 days.
+	connectors.StartBoardUpdater(roundsCtx, *dataDir, "")
 
 	// Search results are cached in the database. Files from the earlier on-disk cache are not used.
 	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
