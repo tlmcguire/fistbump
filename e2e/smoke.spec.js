@@ -725,6 +725,9 @@ test('search filters stay readable and a completed search can be bookmarked inli
   await expect(window.locator('#pin-search')).toBeVisible();
   await window.locator('#pin-search').click();
   await expect(window.locator('#saved-searches-section').getByRole('button', { name: 'Local engineering', exact: true })).toBeVisible();
+  const saved = await window.evaluate(() => window.api.savedSearches.list());
+  expect(saved).toEqual([expect.objectContaining({ name: 'Local engineering' })]);
+  expect(JSON.parse(saved[0].query_json)['search-keywords']).toBe('Local engineering');
   await expect(window.locator('#history')).toBeHidden();
 });
 
