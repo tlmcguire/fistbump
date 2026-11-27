@@ -12,7 +12,18 @@ window.JobParser = {
       const isDirectATSLink = value => {
         const t = String(value || "").trim();
         if (!t || /\s/.test(t)) return false;
-        return /^(?:https?:\/\/)?(?:(?:job-)?boards\.greenhouse\.io\/|grnh\.se\/|jobs\.(?:eu\.)?lever\.co\/|jobs\.ashbyhq\.com\/)/i.test(t);
+        let url;
+        try { url = new URL(normalizeJobLink(t)); } catch { return false; }
+        if (url.username || url.password) return false;
+        const [board, id, action, extra] = url.pathname.replace(/^\/+|\/+$/g, "").split("/");
+        if (extra !== undefined) return false;
+        if (["boards.greenhouse.io", "job-boards.greenhouse.io"].includes(url.hostname)) {
+          return /^[a-z0-9][a-z0-9_-]{0,63}$/i.test(board) && id === "jobs" && /^\d+$/.test(action || "");
+        }
+        if (!/^[a-z0-9][a-z0-9_.-]{0,63}$/i.test(board) || !/^[a-z0-9-]{6,64}$/i.test(id || "")) return false;
+        const host = url.hostname.replace(/\.$/, "");
+        if (host === "jobs.ashbyhq.com") return !action || action === "application";
+        return ["jobs.lever.co", "jobs.eu.lever.co"].includes(host) && (!action || action === "apply");
       };
       const looksLikeJobLink = value => {
         const t = String(value || "").trim();
@@ -45,7 +56,7 @@ window.JobParser = {
       };
       const syncSearchButton = () => {
         const val = $("search-keywords").value;
-        searchButton.textContent = looksLikeJobLink(val) ? (isDirectATSLink(val) ? "Open link" : "Add listing") : "Search";
+        searchButton.textContent = looksLikeJobLink(val) ? (isDirectATSLink(val) ? "Open link" : "Paste a job") : "Search";
       };
 
       //The results pane and the detail pane each show one state at a time.
@@ -382,24 +393,16 @@ window.JobParser = {
         showDetail("detail-loading");
       };
 
-      const DEFAULT_PASTE_HINT = "Submit a job listing from LinkedIn, Indeed, Workday, or any other site. Add the link if you have it, then paste the job content below.";
-      const openPasteWithLink = (url = "", customHint = "") => {
+      const DEFAULT_PASTE_HINT = "Paste the posting to preview its details before saving.";
+      const openPasteWithLink = (url = "") => {
         selectTab("paste");
-        const normalized = url ? normalizeJobLink(url) : "";
+        if (!url) return; // returning to Paste keeps the draft and its preview
+        const normalized = normalizeJobLink(url);
         const urlInput = $("paste-url");
-        const hint = $("paste-hint");
-        if (urlInput) urlInput.value = normalized;
-        if (hint) {
-          const site = siteNameFromURL(normalized);
-          const text = customHint || (normalized
-            ? `${site || "This site"} doesn't allow direct fetching — paste the job listing content below and click Preview to save it.`
-            : DEFAULT_PASTE_HINT);
-          hint.textContent = text;
-          hint.classList.toggle("site-note", Boolean(normalized));
-        }
-        $("paste-result").replaceChildren();
-        if (normalized) $("paste-text").focus();
-        else (urlInput || $("paste-text")).focus();
+        urlInput.value = normalized;
+        invalidatePastePreview();
+        syncPasteMode();
+        $("paste-text").focus();
       };
 
       //opens a pasted job link directly from the search bar
@@ -794,7 +797,7 @@ window.JobParser = {
       //explains what the search could and could not find, so a filter that did not apply is never silent.
       //Postings outside the requested place only get through as remote, so matched - location_matched is the remote count.
       const describeSearch = (data, query) => {
-        const place = query.location;
+        const place = query.radius_miles ? "" : query.location;
         const mode = query.work_mode;
         //an older backend build does not send location_matched; skip the location notes rather than guess
         const located = Number.isInteger(data.location_matched);
@@ -844,6 +847,9 @@ window.JobParser = {
           }
         }
 
+        if (query.radius_miles && data.matched === 0) {
+          empty = `No postings with a recognized location matched within ${query.radius_miles} miles. Try a larger radius or clear it.`;
+        }
         if (place && mode === "Remote") {
           notes.push(`Showing remote postings only. Remote jobs are not tied to ${place}, so the location was not used.`);
         } else if (place && !located) {
@@ -889,7 +895,8 @@ window.JobParser = {
         const out = [];
         const add = (text, ids) => out.push({text, ids});
         const optionName = (id, value) => ($(id).querySelector(`option[value="${CSS.escape(String(value))}"]`)?.textContent || "").replace(/\s*\(\d+\)$/, "").trim();
-        if (q.location) add(`In ${q.location}`, ["search-location"]);
+        if (q.radius_miles) add(`Within ${q.radius_miles} miles of ${q.location || "your resume location"}`, ["search-radius"]);
+        else if (q.location) add(`In ${q.location}`, ["search-location"]);
         if (q.company) add(`At ${q.company}`, ["search-company"]);
         if (q.source) add(`Source: ${SOURCE_NAMES[q.source] || q.source}`, ["search-source"]);
         if (q.include_community && !q.source) add("Including community listings", ["search-include-community"]);
@@ -991,7 +998,7 @@ window.JobParser = {
         const kws = (query.keywords || []).map(k => k.toLowerCase()).filter(Boolean);
         const exs = (query.exclude || []).map(e => e.toLowerCase()).filter(Boolean);
         const co = String(query.company || "").trim().toLowerCase();
-        const loc = String(query.location || "").trim().toLowerCase();
+        const loc = query.radius_miles ? "" : String(query.location || "").trim().toLowerCase();
         const mode = query.work_mode && query.work_mode !== "Any" ? query.work_mode.toLowerCase() : "";
         const cutoff = query.posted_within > 0 ? Date.now() - query.posted_within * 86400000 : 0;
         const matched = all.filter(item => {
@@ -1011,7 +1018,18 @@ window.JobParser = {
           if (kws.length && !kws.some(k => title.includes(k) || company.includes(k) || text.includes(k) || String(item.source || "").toLowerCase().includes(k))) return false;
           return true;
         });
-        return {postings: matched, scanned: all.length};
+        if (!query.radius_miles) return {postings: matched, scanned: all.length};
+        const locations = [...new Set(matched.map(item => String(item.location || "")))];
+        const nearby = new Set();
+        // Validate the origin even when none of the listings match the other filters.
+        for (let offset = 0; offset < Math.max(1, locations.length); offset += 500) {
+          const batch = locations.slice(offset, offset + 500);
+          const {matches} = await window.FistBumpAPI.request(() => window.api.connectors.locationRadius({
+            location: query.location, radius_miles: query.radius_miles, locations: batch,
+          }));
+          batch.forEach((place, i) => { if (matches[i]) nearby.add(place); });
+        }
+        return {postings: matched.filter(item => nearby.has(String(item.location || ""))), scanned: all.length};
       };
 
       //main function to run the search
@@ -1185,6 +1203,7 @@ window.JobParser = {
         const words = id => $(id).value.split(",").map(word => word.trim()).filter(Boolean);
         const number = id => Math.max(0, parseInt($(id).value, 10) || 0);
         const pay = id => parsePay($(id).value);
+        const radiusMiles = number("search-radius");
         //"data analyst, " is "data analyst": stray commas and spaces are tidied in the box as well
         $("search-keywords").value = words("search-keywords").join(", ");
         const query = {
@@ -1192,6 +1211,7 @@ window.JobParser = {
           include_community: Boolean($("search-include-community")?.checked),
           keywords: words("search-keywords"),
           location: $("search-location").value.trim(),
+          ...(radiusMiles ? {radius_miles: radiusMiles} : {}),
           work_mode: $("search-work-mode").value,
           company: $("search-company").value.trim(),
           categories: $("search-industry").value ? [$("search-industry").value] : [],
@@ -1218,16 +1238,24 @@ window.JobParser = {
             return;
           }
         }
-        if (!query.keywords.length && !query.location && !query.categories.length && !query.company && !query.source) {
+        if (!query.keywords.length && !query.location && !query.radius_miles && !query.categories.length && !query.company && !query.source) {
           showInitial("Enter keywords, a location, a company, an industry, or paste a Greenhouse, Lever, or Ashby job link.");
           $("search-keywords").focus();
           return;
         }
         saveForm();
+        const searchFields = readFields();
+        const pinned = findSavedSearch(searchFields);
+        activePinnedId = pinned?.id ?? null;
+        activePinnedSeen = pinned ? new Set(pinned.seen_keys || []) : null;
+        lastCompletedSearch = null;
+        syncSaveSearchButton();
         //only a search that worked goes into the history and the suggestions
         runSearch(query).then(ok => {
           if (!ok) return;
-          recordSearch();
+          lastCompletedSearch = {fields: searchFields, seenKeys: (results?.postings || []).map(keyOf)};
+          syncSaveSearchButton();
+          recordSearch(searchFields);
           window.Suggest.remember("keywords", query.keywords);
           window.Suggest.remember("location", [query.location]);
           window.Suggest.remember("company", [query.company]);
@@ -1240,7 +1268,7 @@ window.JobParser = {
       $("detail-try-again").addEventListener("click", () => detailRetry ? detailRetry() : showDetailEmpty());
       $("detail-paste-instead")?.addEventListener("click", () => openPasteWithLink(failedLinkUrl));
       $("open-paste")?.addEventListener("click", () => openPasteWithLink(""));
-      $("submit-listing")?.addEventListener("click", () => window.SubmitListing?.open());
+      $("paste-back").addEventListener("click", () => selectTab("find"));
 
       const jobsApi = window.FistBumpAPI.jobs;
 
@@ -1753,61 +1781,190 @@ window.JobParser = {
         {name: "location", label: "Location"},
         {name: "work_mode", label: "Work mode", type: "select",
          options: [["", "Not stated"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"]]},
-        {name: "listing_url", label: "Link to the listing", type: "url"},
-        {name: "company_url", label: "Company website", type: "url"},
+        {name: "employment_type", label: "Employment type", placeholder: "e.g. Full-time"},
+        {name: "close_date", label: "Application deadline", type: "date"},
+        {name: "pay_min", label: "Minimum yearly pay (USD)", type: "number", step: "1", min: "0"},
+        {name: "pay_max", label: "Maximum yearly pay (USD)", type: "number", step: "1", min: "0"},
+        {name: "company_url", label: "Company website", type: "url", wide: true},
       ];
 
-      $("paste-preview").addEventListener("click", async () => {
-        const {el, fill, chips, makeForm} = window.ResumeBuilder;
-        const text = $("paste-text").value;
-        const rawLink = ($("paste-url")?.value || "").trim();
+      const pastePreviewButton = $("paste-preview");
+      const setPastePreviewBusy = busy => {
+        pastePreviewButton.setAttribute("aria-busy", String(busy));
+        pastePreviewButton.setAttribute("aria-disabled", String(busy));
+        $("paste-preview-status").textContent = busy ? "Loading preview…" : "";
+      };
+      const manualPaste = window.ResumeBuilder.makeForm(PASTE_SPEC, {}, {idPrefix: "paste"});
+      $("paste-manual").append(manualPaste.el);
+      const pasteLink = () => $("paste-url").value.trim() ||
+        (looksLikeJobLink($("paste-text").value.trim()) ? $("paste-text").value.trim() : "");
+      const syncPasteMode = () => {
+        const link = pasteLink();
+        const supported = isDirectATSLink(link);
+        const site = siteNameFromURL(link);
+        const hint = $("paste-hint");
+        $("paste-manual").hidden = supported;
+        hint.classList.toggle("site-note", Boolean(site));
+        hint.textContent = supported
+          ? "Fistbump can fetch this listing. Paste the posting text too if you want to use your own copy."
+          : site ? `Paste the posting text from ${site} and check the listing details before saving.` : DEFAULT_PASTE_HINT;
+      };
+      let pastePreviewSeq = 0;
+      const invalidatePastePreview = () => {
+        pastePreviewSeq++;
+        manualPaste.clearErrors();
+        setPastePreviewBusy(false);
+        $("paste-result").replaceChildren();
+      };
+      for (const id of ["paste-url", "paste-text"]) {
+        $(id).addEventListener("input", () => {
+          invalidatePastePreview();
+          syncPasteMode();
+        });
+      }
+      syncPasteMode();
+
+      pastePreviewButton.addEventListener("click", async () => {
+        if (pastePreviewButton.getAttribute("aria-busy") === "true") return;
+        const {el, fill, chips} = window.ResumeBuilder;
+        const mine = ++pastePreviewSeq;
+        const postingText = $("paste-text").value;
+        const linkInText = looksLikeJobLink(postingText.trim());
+        const rawLink = pasteLink();
         const listingUrl = rawLink ? normalizeJobLink(rawLink) : "";
+        setPastePreviewBusy(true);
         try {
-          const parsed = await jobsApi.parse(text);
-          const initial = {...parsed.inferred, ...(listingUrl ? {listing_url: listingUrl} : {})};
-          const form = makeForm(PASTE_SPEC, initial, {idPrefix: "paste"});
-          const skills = (label, list) => list.length ? [el("p", {text: label}), chips(list)] : null;
-
-          const shareBox = el("input", {type: "checkbox", checked: Boolean(window.Prefs?.get("communityShare"))});
-          const shareRow = el("div", {class: "paste-share-row"},
-            el("label", {}, shareBox, "Share with the Fistbump community"),
-            el("p", {class: "hint", text: "Contributes this listing (link, company, title, location, and scrubbed text) to Community resources once reviewed. Nothing personal is sent."}));
-
-          const save = el("button", {class: "primary", type: "button", text: "Save job", onclick: async () => {
-            // drop blank fields (read() turns them into null)
-            const body = Object.fromEntries(Object.entries(form.read()).filter(([, value]) => value !== null));
-            try {
-              const job = await jobsApi.create({...body, source: "pasted", raw_text: text});
-              if (shareBox.checked && window.Community?.shareListing) {
-                window.Community.shareListing({...body, raw_text: text}).catch(() => {});
-              }
-              //saved once: the button says so instead of offering to save the same posting again
-              save.disabled = true;
-              save.textContent = "Saved";
-              if ($("paste-url")) $("paste-url").value = "";
-              $("paste-text").value = "";
-              notifyJobsChanged();
-              window.JobPage.open(job.id);
-            } catch (error) {
-              form.showError(error);
+          if (listingUrl) {
+            let url;
+            try { url = new URL(listingUrl); } catch {}
+            if (!url?.hostname.includes(".") || url.username || url.password || !["http:", "https:"].includes(url.protocol)) {
+              throw new Error("Enter a valid job listing link.");
             }
-          }});
+          }
+          const supported = isDirectATSLink(listingUrl);
+          const pasted = linkInText ? "" : postingText.trim();
+          let fetched;
+          if (supported) {
+            try {
+              fetched = await window.FistBumpAPI.link(listingUrl);
+            } catch (error) {
+              if (!pasted) throw error;
+            }
+          }
+          const text = pasted || fetched?.raw_text || "";
+          if (!text.trim()) throw new Error("Paste the job description or enter a Greenhouse, Lever, or Ashby link.");
+          const parsed = await jobsApi.parse(text);
+          if (mine !== pastePreviewSeq) return;
+          const initial = {...parsed.inferred};
+          if (fetched) {
+            for (const {name} of PASTE_SPEC) if (fetched[name]) initial[name] = fetched[name];
+          }
+          if (!supported) {
+            for (const [name, input] of Object.entries(manualPaste.inputs)) {
+              if (!input.value.trim() && initial[name]) input.value = initial[name];
+            }
+          }
+          const postingDetails = () => {
+            const details = supported ? initial : manualPaste.read();
+            return Object.fromEntries(Object.entries({...details, listing_url: listingUrl || undefined})
+              .filter(([, value]) => value != null && value !== ""));
+          };
+          const skills = (label, list) => list.length ? [el("p", {text: label}), chips(list)] : null;
+          const keepLocal = el("input", {type: "checkbox", checked: true});
+          const shareBox = el("input", {type: "checkbox"});
+          const status = el("p", {class: "hint", role: "status"});
+          let savedJob = null;
+          let shared = false;
+          let busy = false;
+          const open = el("button", {type: "button", hidden: true, onclick: () => window.JobPage.open(savedJob.id)}, "Open saved job");
+          const save = el("button", {class: "primary", type: "button"});
+          const updateAction = () => {
+            const keep = keepLocal.checked && !savedJob;
+            const share = shareBox.checked && !shared;
+            save.disabled = busy || (!keep && !share);
+            save.textContent = keep && share ? "Save and share" : share ? "Share listing" : savedJob ? "Saved" : shared ? "Shared" : "Save job";
+          };
+          keepLocal.addEventListener("change", updateAction);
+          shareBox.addEventListener("change", updateAction);
+          save.addEventListener("click", async () => {
+            if (busy) return;
+            if (!supported && !Object.values(manualPaste.inputs).every(input => input.reportValidity())) return;
+            const body = postingDetails();
+            busy = true;
+            manualPaste.clearErrors();
+            updateAction();
+            status.textContent = "";
+            try {
+              if (keepLocal.checked && !savedJob) {
+                if (!pasted && fetched?.board && fetched?.external_id) {
+                  const {imported, refreshed} = await window.FistBumpAPI.importJobs([{
+                    board: fetched.board, external_id: fetched.external_id, source: fetched.source,
+                  }]);
+                  savedJob = imported?.[0] || refreshed?.[0];
+                  if (!savedJob) throw new Error("The board did not return a saved job.");
+                } else {
+                  savedJob = await jobsApi.create({...body, source: "pasted", raw_text: text});
+                }
+                keepLocal.disabled = true;
+                open.hidden = false;
+                notifyJobsChanged();
+              }
+              if (shareBox.checked && !shared) {
+                const result = await window.Community.shareListing({...body, raw_text: text, closes_at: body.close_date});
+                if (!["known", "queued"].includes(result?.status)) throw new Error("Sharing could not be confirmed.");
+                shared = true;
+                shareBox.disabled = true;
+                status.textContent = result.status === "known" ? "This listing was already shared." : "Listing sent for community review.";
+              }
+              if (savedJob) status.textContent = `Saved to your jobs. ${status.textContent}`.trim();
+              if (mine === pastePreviewSeq) {
+                $("paste-url").value = "";
+                $("paste-text").value = "";
+                for (const input of Object.values(manualPaste.inputs)) input.value = "";
+                syncPasteMode();
+              }
+            } catch (error) {
+              if (savedJob) {
+                keepLocal.disabled = true;
+                open.hidden = false;
+                notifyJobsChanged();
+              }
+              status.textContent = savedJob ? `Saved to your jobs. ${error.message}` : error.message;
+              if (!savedJob && !supported) manualPaste.showError(error);
+            } finally {
+              busy = false;
+              updateAction();
+            }
+          });
+          updateAction();
 
+          const review = el("h2", {tabindex: "-1"}, "Review posting");
           fill($("paste-result"),
+            review,
             parsed.hidden_text && el("p", {class: "note", text: "Hidden text was removed from this posting."}),
-            form.el,
+            supported ? el("p", {text: [initial.position_title, initial.company_name, initial.location].filter(Boolean).join(" · ") || "Review the pasted posting before saving."}) : null,
             skills("Required skills", [...parsed.req_tech_skills, ...parsed.req_soft_skills]),
             skills("Preferred skills", [...parsed.pref_tech_skills, ...parsed.pref_soft_skills]),
-            shareRow,
-            el("div", {class: "job-actions paste-save-actions"}, save));
+            el("fieldset", {class: "paste-share-row"},
+              el("legend", {text: "Where should this posting go?"}),
+              el("label", {}, keepLocal, "Save to my jobs"),
+              el("label", {}, shareBox, "Share with the Fistbump community"),
+              el("p", {class: "hint", text: "The listing details and scrubbed posting text go to community review before publication."})),
+            el("div", {class: "job-actions paste-save-actions"}, save, open),
+            status);
+          if (activeTab === "paste" && !main.hidden) {
+            review.focus({preventScroll: true});
+            review.scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+          }
         } catch (error) {
-          const {el, fill} = window.ResumeBuilder;
-          fill($("paste-result"), el("p", {class: "note", text: error.message}));
+          if (mine === pastePreviewSeq) fill($("paste-result"), el("p", {class: "note", role: "alert", text: error.message}));
+        } finally {
+          if (mine === pastePreviewSeq) setPastePreviewBusy(false);
         }
       });
 
       //The filters row opens from the toolbar. Its button counts the filters in use, so they are not forgotten.
-      const FILTER_IDS = ["search-company", "search-source", "search-include-community", "search-industry", "search-work-mode", "search-posted",
+      const FILTER_IDS = ["search-radius", "search-company", "search-source", "search-include-community", "search-industry", "search-work-mode", "search-posted",
         "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-min-fit", "search-max-missing",
         "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const filterInUse = id => {
@@ -1870,7 +2027,7 @@ window.JobParser = {
       }).catch(() => {});
 
       //the search form is kept between launches; pay and word boxes are text, the rest are selects and a checkbox
-      const FORM_IDS = ["search-keywords", "search-location", "search-company", "search-source", "search-include-community", "search-work-mode", "search-industry",
+      const FORM_IDS = ["search-keywords", "search-location", "search-radius", "search-company", "search-source", "search-include-community", "search-work-mode", "search-industry",
         "search-posted", "search-pay-min", "search-pay-max", "search-exclude", "search-require-pay", "search-use-resume",
         "search-min-fit", "search-max-missing", "search-use-ratings", "search-min-pay-rating", "search-min-benefits", "search-min-living"];
       const FORM_KEY = "fistbump.search-form";
@@ -1881,11 +2038,17 @@ window.JobParser = {
         for (const id of FORM_IDS) fields[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
         return fields;
       };
+      const fieldDefault = field => {
+        if (field.type === "checkbox") return field.defaultChecked;
+        if (field.options) return [...field.options].find(option => option.defaultSelected)?.value ?? field.options[0]?.value ?? "";
+        return field.defaultValue;
+      };
       const applyFields = fields => {
         for (const id of FORM_IDS) {
-          if (!(id in fields)) continue;
-          if ($(id).type === "checkbox") $(id).checked = fields[id] === true;
-          else $(id).value = String(fields[id]);
+          const field = $(id);
+          const value = fields[id] ?? fieldDefault(field);
+          if (field.type === "checkbox") field.checked = value === true;
+          else field.value = String(value);
         }
         applyResumeSwitch();
         applyRatingsSwitch();
@@ -1982,7 +2145,8 @@ window.JobParser = {
         const srcName = src ? (SOURCE_NAMES[src] || src) : "";
         const title = text("search-keywords") || (company && `Jobs at ${company}`) || industry || (place && `Jobs in ${place}`) || (srcName && `${srcName} jobs`) || "All jobs";
         const details = [];
-        if (text("search-keywords") && place) details.push(`in ${place}`);
+        if (text("search-radius")) details.push(`within ${text("search-radius")} miles of ${place || "your resume location"}`);
+        else if (text("search-keywords") && place) details.push(`in ${place}`);
         else if (!text("search-keywords") && (company || industry) && place) details.push(`in ${place}`);
         if (text("search-keywords") && company) details.push(`at ${company}`);
         if (srcName && title !== `${srcName} jobs`) details.push(`on ${srcName}`);
@@ -2012,7 +2176,10 @@ window.JobParser = {
         return {title, details};
       };
 
-      const sameSearch = (a, b) => FORM_IDS.every(id => String(a[id] ?? "") === String(b[id] ?? ""));
+      const sameSearch = (a, b) => FORM_IDS.every(id => {
+        const fallback = fieldDefault($(id));
+        return String(a[id] ?? fallback) === String(b[id] ?? fallback);
+      });
 
       //the history menu opens over the page and closes when the user picks something or clicks elsewhere
       const setHistoryOpen = open => {
@@ -2074,8 +2241,7 @@ window.JobParser = {
       };
 
       //called when a search starts; a search already in the list moves to the top
-      const recordSearch = () => {
-        const fields = readFields();
+      const recordSearch = fields => {
         const list = loadHistory().filter(entry => !sameSearch(entry.fields, fields));
         const industry = fields["search-industry"]
           ? ($("search-industry").selectedOptions[0]?.textContent || "").replace(/\s*\(\d+\)$/, "").trim()
@@ -2088,53 +2254,86 @@ window.JobParser = {
       //Clear history also forgets the recent entries each box suggests
       $("clear-history").addEventListener("click", () => window.JobParser.clearHistory());
 
-      // ---- Pinned (saved) searches with "New since last check" badges ----
+      // Saved searches are visible in the search bar. History only contains recent searches.
+      const SAVED_SEARCH_INLINE_LIMIT = 5;
+      let showAllSavedSearches = false;
       let savedSearches = [];
       let activePinnedId = null;
       let activePinnedSeen = null;
+      let lastCompletedSearch = null;
+      let savingSearch = false;
+      const saveSearchButton = $("pin-search");
+      const saveSearchStatus = $("save-search-status");
 
+      const savedFields = entry => {
+        try { return JSON.parse(entry.query_json) || {}; }
+        catch { return {}; }
+      };
+      const findSavedSearch = fields => savedSearches.find(entry => sameSearch(savedFields(entry), fields));
+      const syncSaveSearchButton = () => {
+        const finished = lastCompletedSearch && sameSearch(lastCompletedSearch.fields, readFields());
+        const saved = finished && Boolean(findSavedSearch(lastCompletedSearch.fields));
+        saveSearchButton.hidden = !finished;
+        saveSearchButton.disabled = savingSearch || saved;
+        saveSearchButton.dataset.saved = String(Boolean(saved));
+        saveSearchButton.title = saved ? "Search saved" : "Save search";
+        saveSearchButton.setAttribute("aria-label", saveSearchButton.title);
+      };
+
+      const savedSearchesMore = $("saved-searches-more");
       const renderSavedSearches = () => {
-        const section = $("saved-searches-section");
+        $("saved-searches-section").hidden = savedSearches.length === 0;
         const list = $("saved-searches-list");
-        if (!section || !list) return;
-        section.hidden = savedSearches.length === 0;
-        if (savedSearches.length > 0) $("history-toggle").disabled = false;
-        list.replaceChildren(...savedSearches.map(entry => {
-          const item = document.createElement("li");
-          const run = document.createElement("button");
+        const focused = document.activeElement?.dataset.savedSearchId;
+        const hasMore = savedSearches.length > SAVED_SEARCH_INLINE_LIMIT;
+        if (!hasMore) showAllSavedSearches = false;
+        savedSearchesMore.hidden = !hasMore;
+        savedSearchesMore.setAttribute("aria-expanded", String(showAllSavedSearches));
+        savedSearchesMore.textContent = showAllSavedSearches ? "Show fewer" : `Show all (${savedSearches.length})`;
+        const visible = showAllSavedSearches ? savedSearches : savedSearches.slice(0, SAVED_SEARCH_INLINE_LIMIT);
+        list.replaceChildren(...visible.map(entry => {
+          const item = el("li");
+          const run = el("button", entry.name);
           run.type = "button";
-          run.className = "history-run";
-          const label = document.createElement("span");
-          label.className = "history-label";
-          label.append(el("strong", entry.name));
-          if (entry.last_run_at) label.append(el("small", `Checked ${ago(entry.last_run_at).replace("Updated ", "") || "recently"}`));
-          run.append(label);
+          run.className = "saved-search-run";
+          run.dataset.savedSearchId = entry.id;
+          run.title = [entry.name, ...describeFields(savedFields(entry)).details].join(" · ");
           run.addEventListener("click", () => {
             if (searchButton.disabled) return;
-            setHistoryOpen(false);
-            let fields = {};
-            try { fields = JSON.parse(entry.query_json || "{}"); } catch { fields = {}; }
-            activePinnedId = entry.id;
-            activePinnedSeen = new Set(Array.isArray(entry.seen_keys) ? entry.seen_keys : []);
-            applyFields(fields);
-            saveForm();
+            applyFields(savedFields(entry));
             searchForm.requestSubmit();
           });
-          const remove = el("button", "Unpin");
+
+          const remove = el("button", "×");
           remove.type = "button";
-          remove.className = "history-remove";
-          remove.setAttribute("aria-label", `Remove pinned search "${entry.name}"`);
+          remove.className = "saved-search-remove";
+          remove.title = "Remove saved search";
+          remove.setAttribute("aria-label", `Remove saved search "${entry.name}"`);
           remove.addEventListener("click", async () => {
+            remove.disabled = true;
             try {
               await window.FistBumpAPI.savedSearches.delete(entry.id);
+              savedSearches = savedSearches.filter(search => search.id !== entry.id);
               if (activePinnedId === entry.id) { activePinnedId = null; activePinnedSeen = null; }
-              await loadSavedSearches();
-            } catch (err) { window.UI.alert(err.message); }
+              renderSavedSearches();
+              (list.querySelector("button") || $("search-keywords")).focus();
+              saveSearchStatus.textContent = "Saved search removed.";
+            } catch (err) {
+              remove.disabled = false;
+              window.UI.alert(err.message);
+            }
           });
           item.append(run, remove);
           return item;
         }));
+        if (focused) list.querySelector(`[data-saved-search-id="${CSS.escape(focused)}"]`)?.focus();
+        syncSaveSearchButton();
       };
+
+      savedSearchesMore.addEventListener("click", () => {
+        showAllSavedSearches = !showAllSavedSearches;
+        renderSavedSearches();
+      });
 
       const loadSavedSearches = async () => {
         if (!window.api?.savedSearches?.list) return;
@@ -2142,54 +2341,53 @@ window.JobParser = {
           savedSearches = await window.FistBumpAPI.savedSearches.list();
           renderSavedSearches();
         } catch {
-          // saved searches optional if backend is not running
+          // The rest of job search is available when saved searches cannot be read.
         }
       };
 
-      $("pin-search")?.addEventListener("click", async () => {
-        if (!window.api?.savedSearches?.create) return;
-        const fields = readFields();
-        const hasCriteria = Boolean(
-          String(fields["search-keywords"] || "").trim() ||
-          String(fields["search-location"] || "").trim() ||
-          String(fields["search-company"] || "").trim() ||
-          String(fields["search-industry"] || "").trim() ||
-          String(fields["search-source"] || "").trim()
-        );
-        if (!hasCriteria) {
-          window.UI.alert("Enter keywords, a location, a company, or a filter first before saving a search.", "Nothing to save");
-          return;
+      saveSearchButton.addEventListener("click", async () => {
+        const completed = lastCompletedSearch;
+        if (!completed || !sameSearch(completed.fields, readFields()) || findSavedSearch(completed.fields) || savingSearch) return;
+        const {title} = describeFields(completed.fields);
+        // The API caps the UTF-8 name at 120 bytes.
+        const encoder = new TextEncoder();
+        let name = "";
+        for (const char of title) {
+          if (encoder.encode(name + char).length > 120) break;
+          name += char;
         }
-        const {title} = describeFields(fields);
-        const seenKeys = (results?.postings || []).map(p => keyOf(p));
+        savingSearch = true;
+        syncSaveSearchButton();
         try {
-          await window.FistBumpAPI.savedSearches.create({
-            name: title,
-            query_json: JSON.stringify(fields),
-            seen_keys: seenKeys,
+          const saved = await window.FistBumpAPI.savedSearches.create({
+            name, query_json: JSON.stringify(completed.fields), seen_keys: completed.seenKeys,
           });
-          await loadSavedSearches();
-          setHistoryOpen(true);
+          savedSearches.unshift(saved);
+          renderSavedSearches();
+          saveSearchStatus.textContent = `${name} saved.`;
         } catch (err) {
           window.UI.alert(err.message, "Could not save search");
+        } finally {
+          savingSearch = false;
+          syncSaveSearchButton();
         }
       });
 
-      // When a pinned search finishes, persist the updated seen keys for the next run.
-      const origRenderResults = renderResults;
       const syncPinnedSeen = data => {
-        if (!activePinnedId || !window.api?.savedSearches?.markSeen) return;
-        const merged = new Set([...(activePinnedSeen || []), ...(data.postings || []).map(p => keyOf(p))]);
-        const id = activePinnedId;
-        window.FistBumpAPI.savedSearches.markSeen(id, [...merged]).then(() => loadSavedSearches()).catch(() => {});
+        const entry = savedSearches.find(search => search.id === activePinnedId);
+        if (!entry || !window.api?.savedSearches?.markSeen) return;
+        const merged = new Set([...(entry.seen_keys || []), ...data.postings.map(keyOf)]);
+        window.FistBumpAPI.savedSearches.markSeen(entry.id, [...merged]).then(updated => {
+          const index = savedSearches.findIndex(search => search.id === entry.id);
+          if (index >= 0) savedSearches[index] = updated;
+        }).catch(() => {});
       };
-      void origRenderResults;
-      void syncPinnedSeen;
 
       restoreForm();
       renderHistory();
       loadSavedSearches();
-      searchForm.addEventListener("change", saveForm);
+      searchForm.addEventListener("change", () => { saveForm(); syncSaveSearchButton(); });
+      searchForm.addEventListener("input", syncSaveSearchButton);
 
       //The "show under each result" boxes act at once, on the results already on screen.
       syncShowBoxes();
@@ -2206,7 +2404,9 @@ window.JobParser = {
         searchForm.reset();
         syncShowBoxes(); //reset clears every box in the form; the display choices are not part of the search
         try { localStorage.removeItem(FORM_KEY); } catch { /* nothing saved to remove */ }
-        updateFilterCount();
+        applyResumeSwitch();
+        applyRatingsSwitch();
+        syncSaveSearchButton();
         $("search-keywords").focus();
       });
 
@@ -2242,9 +2442,14 @@ window.JobParser = {
             event.preventDefault();
             selectTab("settings");
           }
-        } else if (event.key === "Escape" && !event.defaultPrevented && !$("filters").hidden) {
-          setFiltersOpen(false);
-          $("filters-toggle").focus();
+        } else if (event.key === "Escape" && !event.defaultPrevented && !main.hidden && !document.querySelector("dialog[open]")) {
+          if (activeTab === "paste") {
+            event.preventDefault();
+            selectTab("find");
+          } else if (!$("filters").hidden) {
+            setFiltersOpen(false);
+            $("filters-toggle").focus();
+          }
         }
       });
 

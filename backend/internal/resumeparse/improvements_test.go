@@ -118,3 +118,25 @@ Go, Python, AWS (EKS)
 		t.Errorf("ICPC StartDate = %v, want 2025-11-01", icpc.StartDate)
 	}
 }
+
+func TestParseRepeatedCombinedAndIndividualDegrees(t *testing.T) {
+	d := Parse(`Jane Doe
+
+EDUCATION
+B.S. in Computer Science; B.S. Software Engineering, College of Charleston
+Honors College
+B.S. in Computer Science, College of Charleston
+Honors College
+B.S. in Software Engineering, College of Charleston
+Honors College
+Minors in Data Science, Spanish
+`)
+	if len(d.Education) != 2 {
+		t.Fatalf("expected two degrees, got %+v", d.Education)
+	}
+	if d.Education[0].Discipline == nil || *d.Education[0].Discipline != "Computer Science" ||
+		d.Education[1].Discipline == nil || *d.Education[1].Discipline != "Software Engineering" ||
+		d.Education[1].Details == nil || *d.Education[1].Details != "Minors in Data Science, Spanish" {
+		t.Fatalf("incorrect parsed degrees: %+v", d.Education)
+	}
+}

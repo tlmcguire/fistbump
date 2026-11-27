@@ -73,11 +73,12 @@ type CustomSection struct {
 
 // Master is the master resume: the profile with its experiences, education, custom sections, and section order.
 type Master struct {
-	Profile        *Profile
-	Experiences    []Experience
-	Education      []Education
-	SectionOrder   []string
-	CustomSections []CustomSection
+	Profile         *Profile
+	Experiences     []Experience
+	Education       []Education
+	SectionOrder    []string
+	EducationLayout string
+	CustomSections  []CustomSection
 }
 
 // Skills returns the de-duplicated union of the profile's skills and every experience's skills,

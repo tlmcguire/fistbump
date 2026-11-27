@@ -2,14 +2,29 @@
 // Manager, Linux Secret Service) via `keyring`. Ports `app/main/secrets.js`.
 
 use reqwest::Method;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tokio::sync::Mutex;
 
 use crate::backend::BackendManager;
 
 const SERVICE_NAME: &str = "com.fistbump.desktop";
 const REMOTE_KEY_USER: &str = "ai-remote-key";
 
+#[derive(Deserialize, Serialize)]
+struct RemoteCredential {
+    origin: String,
+    key: String,
+}
+
+fn provider_origin(base_url: &str) -> Option<String> {
+    let url = reqwest::Url::parse(base_url).ok()?;
+    let origin = url.origin();
+    matches!(url.scheme(), "http" | "https").then(|| origin.ascii_serialization())
+}
+
 pub struct SecretsStore {
+    pub(crate) remote_change: Mutex<()>,
     service: String,
     account: String,
 }
@@ -23,6 +38,7 @@ impl Default for SecretsStore {
 impl SecretsStore {
     pub fn new() -> Self {
         Self {
+            remote_change: Mutex::new(()),
             service: SERVICE_NAME.to_string(),
             account: REMOTE_KEY_USER.to_string(),
         }
@@ -32,16 +48,20 @@ impl SecretsStore {
         keyring::Entry::new(&self.service, &self.account)
     }
 
-    pub fn get(&self) -> Option<String> {
-        let entry = self.entry().ok()?;
-        entry.get_password().ok().filter(|s| !s.is_empty())
+    fn get(&self, base_url: &str) -> Option<String> {
+        let credential = self.entry().ok()?.get_password().ok()?;
+        key_for_provider(&credential, base_url)
     }
 
-    pub fn set(&self, secret: &str) -> bool {
-        let Ok(entry) = self.entry() else {
+    pub fn set(&self, base_url: &str, key: &str) -> bool {
+        let (Ok(entry), Some(origin)) = (self.entry(), provider_origin(base_url)) else {
             return false;
         };
-        entry.set_password(secret).is_ok()
+        let credential = RemoteCredential {
+            origin,
+            key: key.to_owned(),
+        };
+        serde_json::to_string(&credential).is_ok_and(|value| entry.set_password(&value).is_ok())
     }
 
     pub fn clear(&self) {
@@ -51,9 +71,16 @@ impl SecretsStore {
     }
 }
 
+fn key_for_provider(value: &str, base_url: &str) -> Option<String> {
+    let credential: RemoteCredential = serde_json::from_str(value).ok()?;
+    (credential.origin == provider_origin(base_url)? && !credential.key.is_empty())
+        .then_some(credential.key)
+}
+
 /// At launch (and after a backend restart): when a remote provider is configured and a key
 /// was saved in the OS keychain, send the key to `fistbump-core` so it stays only in memory.
 pub async fn restore_remote_key(backend: &BackendManager, secrets: &SecretsStore) -> bool {
+    let _guard = secrets.remote_change.lock().await;
     let status = backend.call(Method::GET, "/v1/ai/status", None).await;
     let Some(remote) = status.get("remote").and_then(|v| v.as_object()) else {
         return false;
@@ -69,7 +96,7 @@ pub async fn restore_remote_key(backend: &BackendManager, secrets: &SecretsStore
     if base_url.is_empty() || has_key {
         return false;
     }
-    let Some(key) = secrets.get() else {
+    let Some(key) = secrets.get(base_url) else {
         return false;
     };
     let model = remote.get("model").and_then(|v| v.as_str()).unwrap_or("");
@@ -85,4 +112,21 @@ pub async fn restore_remote_key(backend: &BackendManager, secrets: &SecretsStore
         )
         .await;
     res.get("error").is_none()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::key_for_provider;
+
+    #[test]
+    fn only_credentials_bound_to_the_current_origin_are_restored() {
+        let value = r#"{"origin":"https://provider.example","key":"saved"}"#;
+        assert_eq!(
+            key_for_provider(value, "https://provider.example:443/v1").as_deref(),
+            Some("saved")
+        );
+        assert!(key_for_provider(value, "https://other.example/v1").is_none());
+        assert!(key_for_provider(value, "https://provider.example:8443/v1").is_none());
+        assert!(key_for_provider("legacy-unbound-key", "https://provider.example/v1").is_none());
+    }
 }

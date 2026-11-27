@@ -88,7 +88,7 @@ test('Open a link page is removed and combined with the search bar', () => {
   const jp = read('views/job-parser/job-parser.js');
   assert.ok(!jp.includes('tab-link'), 'job-parser.js should not reference tab-link');
   assert.ok(jp.includes('looksLikeJobLink'), 'job-parser.js should detect pasted job links in search');
-  assert.ok(jp.includes('lever\\.co') && jp.includes('ashbyhq\\.com'), 'job-parser.js should recognize Lever and Ashby links');
+  assert.ok(jp.includes('jobs.lever.co') && jp.includes('jobs.ashbyhq.com'), 'job-parser.js should recognize Lever and Ashby links');
   assert.ok(html.includes('id="pin-search"'), 'index.html should include Pin search button');
   assert.ok(html.includes('id="watchlist-input"'), 'index.html should include Company Watchlist input');
 });
@@ -268,11 +268,10 @@ test('Skills & benefits colors, ATS result toggle, and external listing submissi
   assert.ok(html.includes('value="community"') && html.includes('id="search-include-community"'), 'index.html should include community source option and include-community toggle');
   assert.ok(jp.includes('searchCommunityListings') && jp.includes('Community \\u00b7'), 'job-parser.js should search community listings and flag them with the source badge');
 
-  const sl = read('js/submit-listing.js');
-  assert.ok(sl.includes('isDirectATSLink') && sl.includes('FistBumpAPI.link') && sl.includes('Community.shareListing'),
-    'submit-listing.js should use ATS connectors for Greenhouse/Lever/Ashby and ask for pasted content for other sites');
-  assert.ok(read('views/jobs-list/jobs-list.js').includes('SubmitListing?.open') && read('views/tracker/tracker.js').includes('SubmitListing?.open'),
-    'Jobs list and Tracker Add listing buttons should open the SubmitListing dialog');
+  assert.ok(!html.includes('id="submit-listing"') && !html.includes('js/submit-listing.js'));
+  assert.ok(jp.includes('FistBumpAPI.link(listingUrl)') && jp.includes('Community.shareListing'));
+  assert.ok(read('views/jobs-list/jobs-list.js').includes('openTab("tab-paste")') &&
+    read('views/tracker/tracker.js').includes('openTab("tab-paste")'));
 });
 
 test('App version stays in sync across package.json, tauri.conf.json, and Cargo.toml', () => {

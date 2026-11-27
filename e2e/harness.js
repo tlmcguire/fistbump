@@ -75,6 +75,7 @@ function routeRequest(channel, args) {
   };
   const map = {
     'connectors:list': () => ['GET', '/v1/connectors'],
+    'connectors:location-radius': () => ['POST', '/v1/connectors/location-radius', a0],
     'connectors:categories': () => ['GET', '/v1/connectors/greenhouse/categories'],
     'resume:get': () => ['GET', '/v1/resume'],
     'resume:putProfile': () => ['PUT', '/v1/resume/profile', a0],
@@ -93,7 +94,7 @@ function routeRequest(channel, args) {
     'models:list': () => ['GET', '/v1/models'],
     'jobs:create': () => ['POST', '/v1/jobs', a0],
     'jobs:parse': () => ['POST', '/v1/jobs/parse', { raw_text: a0 }],
-    'jobs:list': () => ['GET', `/v1/jobs${qs({ ...(a1 || {}), q: a0 || '' }, ['q', 'archived', 'trashed'])}`],
+    'jobs:list': () => ['GET', `/v1/jobs${qs({ ...(a1 || {}), q: a0 || '' }, ['q', 'archived', 'trashed', 'limit', 'offset'])}`],
     'jobs:get': () => ['GET', `/v1/jobs/${a0}`],
     'jobs:analyze': () => ['POST', `/v1/jobs/${a0}/analyze`],
     'connectors:suggest': () => ['POST', '/v1/connectors/greenhouse/fetch', { query: a0 }],
@@ -150,7 +151,7 @@ const CLIENT_SHIM = `
     setZoom: () => {},
     onBackendRestarted: () => {},
     error: group('error', { details: 0, copyDetails: 0, quit: 0 }),
-    connectors: group('connectors', { link: 0, posting: 0, search: 0, suggest: 0, list: 0, categories: 0, logo: 0, cancelSearch: 'connectors:cancel-search', import: 0 }),
+    connectors: group('connectors', { link: 0, posting: 0, search: 0, suggest: 0, list: 0, categories: 0, locationRadius: 'connectors:location-radius', logo: 0, cancelSearch: 'connectors:cancel-search', import: 0 }),
     resume: group('resume', { get: 0, putProfile: 0, preview: 0, audit: 0, createExperience: 'experiences:create', updateExperience: 'experiences:update', deleteExperience: 'experiences:delete', createEducation: 'education:create', updateEducation: 'education:update', deleteEducation: 'education:delete', importFile: 0, importData: 0, importText: 0, importApply: 0, export: 0, previewPdf: 0 }),
     resumes: group('resumes', { list: 0, get: 0, create: 0, update: 0, delete: 0 }),
     revisions: group('revisions', { create: 0, list: 0, get: 0, cancel: 0, delete: 0 }),

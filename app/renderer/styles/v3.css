@@ -944,6 +944,7 @@
 :root .v3 .jl3-next.good { background: color-mix(in srgb, var(--success) 16%, var(--paper)); color: var(--success-ink); }
 :root .v3 .jl3-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; font-size: 13px; }
 :root .v3 .jl3-foot a { color: var(--ink); font-weight: 600; }
+:root .v3 .jl3-pages { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding-top: 10px; font-size: 13px; }
 :root .v3 .jl3-empty { padding: 28px 6px; }
 :root .v3 .jl3-empty b { display: block; font: 760 22px var(--theme-font-display, var(--display)); }
 :root .v3 .jl3-empty p { margin: 6px 0 14px; max-width: 60ch; }
@@ -1575,6 +1576,40 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 .app[data-route="jobs"] #main.find3 > .toolbar { border-bottom: 0; }
 
 /* The filters open in place under the bar, as one paper sheet, never over the results. */
+/* Save from a completed search. Saved searches stay visible beside the search controls. */
+:root .v3.find3 #search-form .field:has(.search-pin:not([hidden])) input { padding-right: 42px; }
+:root .v3.find3 .search-pin {
+  position: absolute;
+  inset-block: 0;
+  right: 5px;
+  align-self: center;
+  margin-block: auto;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  justify-content: center;
+  color: var(--on-canvas);
+  background: transparent;
+}
+:root .v3.find3 .search-pin:not(:disabled):hover { background: color-mix(in srgb, var(--on-canvas) 16%, transparent); }
+:root .v3.find3 .search-pin[data-saved="true"] svg { fill: currentColor; }
+:root .v3.find3 .saved-search-strip { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; min-width: 0; }
+:root .v3.find3 .saved-search-strip h2 { margin: 0; color: var(--on-canvas); font-size: 12px; font-weight: 650; }
+:root .v3.find3 .saved-search-strip ul { display: flex; flex: 1 1 180px; flex-wrap: wrap; gap: 6px; min-width: 0; max-height: 66px; overflow: auto; margin: 0; padding: 2px; list-style: none; }
+:root .v3.find3 .saved-search-strip li { display: flex; min-width: 0; max-width: min(100%, 18rem); border: 1px solid color-mix(in srgb, var(--on-canvas) 26%, transparent); border-radius: 9px; }
+:root .v3.find3 .saved-search-strip button {
+  height: 26px;
+  min-height: 0;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--on-canvas);
+  font-size: 12px;
+}
+:root .v3.find3 .saved-search-strip button:not(:disabled):hover { background: color-mix(in srgb, var(--on-canvas) 16%, transparent); }
+:root .v3.find3 .saved-search-run { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .v3.find3 .saved-search-remove { flex: none; }
 :root .v3.find3 .filters.paper { margin-top: 4px; padding: 18px 22px; border: 0; box-shadow: var(--shadow-paper); }
 :root .v3.find3 .filters legend, :root .v3.find3 .filters summary { color: var(--ink); font: 720 15px var(--theme-font-display, var(--display)); }
 :root .v3.find3 .filters label { color: var(--ink-2); }
@@ -1627,20 +1662,65 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3 .paper-adapt .skill-key-likely::before { background: var(--warn-ink); }
 :root .v3 .paper-adapt .skill-key-gap::before { background: var(--urgent-ink); }
 
-/* Paste: one sheet to paste into, with room to see the posting whole. */
-:root .v3.find3 .paste-pane.paper { align-self: start; width: min(1100px, calc(100% - 48px)); margin: 6px auto 22px; padding: 22px 24px; overflow: visible; }
-:root .v3.find3 .paste-hint { margin: 0 0 14px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
-:root .v3.find3 .paste-hint.site-note { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--mark) 18%, var(--paper)); color: var(--ink); }
-:root .v3.find3 .paste-url-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-:root .v3.find3 .paste-url-row label { font-size: 13.5px; font-weight: 650; color: var(--ink); }
-:root .v3.find3 .paste-url-row label .hint { font-weight: 450; color: var(--ink-2); }
-:root .v3.find3 #paste-url { width: 100%; height: 40px; padding: 0 14px; border: 1.5px solid var(--rule); border-radius: 11px; background: var(--paper); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
-:root .v3.find3 #paste-url:focus { border-color: var(--mark-deep); outline: none; }
-:root .v3.find3 #paste-text { min-height: 40vh; padding: 16px 18px; border: 1.5px dashed var(--rule); border-radius: 14px; background: var(--paper); font: 15px/1.6 system-ui, sans-serif; resize: vertical; }
-:root .v3.find3 #paste-text:focus { border-style: solid; border-color: var(--mark-deep); outline: none; }
-:root .v3.find3 #paste-preview { min-height: 44px; padding: 0 22px; border-radius: 12px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-control); }
-:root .v3.find3 .paste-share-row { display: flex; flex-direction: column; gap: 3px; margin: 12px 0 4px; padding: 10px 14px; border-radius: 12px; background: var(--paper-2); }
+/* Paste a job */
+:root .v3.find3 .paste-details {
+  min-width: 0;
+  margin: 0;
+  padding: 10px 14px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+:root .v3.find3 .paste-details legend { padding-inline: 5px; font-weight: 650; }
+:root .v3.find3 .paste-details .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 560px) {
+  :root .v3.find3 .paste-details .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+:root .v3.find3 #paste-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: min(760px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 14px 0;
+}
+:root .v3.find3 #paste-back { white-space: nowrap; }
+:root .v3.find3 .paste-pane.paper {
+  align-self: start;
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  width: min(760px, calc(100% - 40px));
+  min-height: 0;
+  margin: 8px auto 20px;
+  padding: clamp(14px, 3vw, 24px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+:root .v3.find3 .paste-hint { margin: 0; color: var(--ink-2); line-height: 1.5; }
+:root .v3.find3 .paste-hint.site-note { padding: 8px 12px; border-radius: 10px; background: var(--paper-2); }
+:root .v3.find3 .paste-field { display: grid; gap: 6px; }
+:root .v3.find3 .paste-field label { font-weight: 650; }
+:root .v3.find3 .paste-field label .hint { font-weight: 400; color: var(--ink-2); }
+:root .v3.find3 #paste-url, :root .v3.find3 #paste-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+:root .v3.find3 #paste-text { height: clamp(9rem, 26vh, 15rem); resize: vertical; }
+:root .v3.find3 #paste-url:focus, :root .v3.find3 #paste-text:focus { border-color: var(--mark-deep); }
+:root .v3.find3 .paste-pane > .job-actions { justify-content: flex-end; }
+:root .v3.find3 #paste-preview { min-height: 38px; padding-inline: 16px; transform: none; }
+:root .v3.find3 #paste-preview[aria-busy="true"] { cursor: progress; opacity: 0.65; }
+:root .v3.find3 #paste-result:not(:empty) { padding-top: 14px; border-top: 1px solid var(--rule); }
+:root .v3.find3 .paste-share-row { display: flex; flex-direction: column; gap: 3px; margin: 2px 0 4px; padding: 10px 14px; min-width: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper-2); }
 :root .v3.find3 .paste-share-row label { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+:root .v3.find3 .paste-share-row legend { padding-inline: 5px; font-weight: 650; }
 :root .v3.find3 .paste-share-row .hint { margin: 0 0 0 25px; font-size: 12.5px; color: var(--ink-2); }
 :root .v3.find3 .detail-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
 :root .v3.find3 .result-pending { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); color: var(--warn-ink); }
@@ -1762,11 +1842,6 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root dialog.ask textarea { border: 1.5px solid var(--rule); border-radius: 10px; background: var(--paper); color: var(--ink); }
 :root dialog.ask .dialog-close { background: transparent; color: var(--ink-2); }
 :root dialog.ask .cost-card, :root dialog.ask .compare-card { background: var(--paper-2); border: 0; border-radius: 14px; box-shadow: none; }
-:root .v3.find3 .paste-pane.paper { flex: 0 1 auto; height: auto; min-height: 0; overflow-y: auto; }
-:root .v3.find3 #paste-title { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 22px 0 8px; }
-:root .v3.find3 #paste-text { font-size: 15px; }
-:root .v3.find3 #paste-text::placeholder { color: var(--ink-2); font-size: 15px; }
-
 /* ==================== Arrival: sheets settle, ink draws itself ==================== */
 /* For a moment after a view is shown (.arriving, set by app.js), its paper sheets settle onto the canvas one after
    another, and the hand-drawn marks are drawn in: underlines left to right, circles round the clock, stars spun in.
@@ -1897,15 +1972,6 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root dialog.report-dialog .report-done .pico { width: 120px; height: auto; }
 :root dialog.report-dialog .report-done p { max-width: 42ch; color: var(--ink-2); }
 :root dialog.report-dialog .report-done a { color: var(--ink); font-weight: 650; }
-:root dialog.submit-listing-dialog { width: min(620px, calc(100vw - 48px)); }
-:root dialog.submit-listing-dialog .sl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
-:root dialog.submit-listing-dialog select { width: 100%; height: 40px; padding: 0 12px; font: 14.5px/1.4 system-ui, sans-serif; }
-:root dialog.submit-listing-dialog .sl-ats-note { margin: -4px 0 12px; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--success) 18%, var(--paper)); color: var(--success-ink); font-size: 13.5px; font-weight: 600; line-height: 1.45; }
-:root dialog.submit-listing-dialog .sl-ats-note[hidden],
-:root dialog.submit-listing-dialog .sl-manual[hidden] { display: none; }
-:root dialog.submit-listing-dialog .sl-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 10px; }
-:root dialog.submit-listing-dialog .sl-local-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
-@media (max-width: 520px) { :root dialog.submit-listing-dialog .sl-grid { grid-template-columns: 1fr; } }
 :root dialog.report-dialog .st3-seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
 :root dialog.report-dialog .st3-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
 :root dialog.report-dialog .st3-seg button { height: 32px; min-height: 0; padding: 0 14px; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; }

@@ -1,5 +1,5 @@
--- Greenhouse search cache. Rows are disposable: the backend deletes rows older than a day at startup,
--- and storage cleanup can empty both tables. Times are UTC RFC 3339, so text comparison orders them.
+-- Greenhouse search cache. Listing snapshots are retained for up to 7 days for local refresh;
+-- descriptions are retained for 24 hours. Storage cleanup can empty both tables. Times are UTC RFC 3339.
 CREATE TABLE IF NOT EXISTS greenhouse_listing_cache (
   board      TEXT PRIMARY KEY,
   etag       TEXT NOT NULL DEFAULT '',

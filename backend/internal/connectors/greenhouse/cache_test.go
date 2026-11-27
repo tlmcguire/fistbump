@@ -240,3 +240,52 @@ func TestPurgeOlderThanADay(t *testing.T) {
 		t.Error("memory copy of the old listing survived")
 	}
 }
+
+func TestListingSnapshotsOutliveDescriptions(t *testing.T) {
+	b := &boardServer{body: listBody}
+	c, clk, conn := newCachedClient(t, b)
+	c.ListBoard(context.Background(), "acme")
+	c.Cache.putDescription("acme", "1", samplePosting())
+
+	clk.t = clk.t.Add(2 * 24 * time.Hour)
+	if n, err := c.Cache.PurgeListingsOlderThan(7 * 24 * time.Hour); err != nil || n != 0 {
+		t.Fatalf("purged %d listings, err %v; want none", n, err)
+	}
+	if n, err := c.Cache.PurgeDescriptionsOlderThan(24 * time.Hour); err != nil || n != 1 {
+		t.Fatalf("purged %d descriptions, err %v; want 1", n, err)
+	}
+	if rows(t, conn, "greenhouse_listing_cache") != 1 || rows(t, conn, "greenhouse_description_cache") != 0 {
+		t.Fatal("expected the listing snapshot to remain after descriptions expire")
+	}
+
+	clk.t = clk.t.Add(6 * 24 * time.Hour)
+	if n, err := c.Cache.PurgeListingsOlderThan(7 * 24 * time.Hour); err != nil || n != 1 {
+		t.Fatalf("purged %d listings, err %v; want 1", n, err)
+	}
+}
+
+func TestBoardsStaleBeforeIncludesPersistentAndMemoryEntries(t *testing.T) {
+	b := &boardServer{body: listBody}
+	c, clk, _ := newCachedClient(t, b)
+	if _, err := c.ListBoard(context.Background(), "acme"); err != nil {
+		t.Fatal(err)
+	}
+	clk.t = clk.t.Add(48 * time.Hour)
+	c.Cache.putListing(cachedListing{
+		Board:     "memory",
+		FetchedAt: clk.t.Add(-48 * time.Hour),
+	})
+	c.Cache.putListing(cachedListing{
+		Board:     "missing",
+		FetchedAt: clk.t.Add(-48 * time.Hour),
+		NotFound:  true,
+	})
+
+	boards, err := c.Cache.BoardsStaleBefore(context.Background(), clk.t.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(boards) != 2 || boards[0] != "acme" || boards[1] != "memory" {
+		t.Fatalf("stale boards = %v, want [acme memory]", boards)
+	}
+}

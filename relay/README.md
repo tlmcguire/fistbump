@@ -1,6 +1,6 @@
 # Fistbump community relay
 
-A small Cloudflare Worker between the app and GitHub. It does two jobs, both only when someone asks for them:
+A small Cloudflare Worker between the app and GitHub. It handles three kinds of community submissions:
 
 - **Report an issue.** People without a GitHub account describe a problem in the app. The relay files it as an issue
   labelled `from-the-app`, or, when it reads like an open report, adds it to that one as "someone else ran into this
@@ -11,9 +11,9 @@ A small Cloudflare Worker between the app and GitHub. It does two jobs, both onl
   a single pull request that adds them to `data/community-boards.json`. A maintainer reviews and merges it; people
   who use shared boards then get them on their next search.
 
-Nothing personal is stored. Reports are scrubbed of email addresses, phone numbers and home folder names (the app
-does the same, and shows the exact text before it is sent). Rate limits use a salted hash of the IP address that
-expires within the hour.
+- **Shared job listings.** The relay queues public listing text and links for a maintainer-reviewed PR. Published listings are visible through their expiration date.
+
+The relay scrubs common email addresses, phone numbers, and home folder names from submitted text. Rate limits use a secret-salted IP hash scoped to the hour. The publisher keeps queued entries until GitHub confirms the write and any required PR creation.
 
 ## Set up
 
@@ -43,4 +43,7 @@ expires within the hour.
 | `POST /v1/boards` | `{boards: ["greenhouse:stripe", "lever:netflix"]}` → `{queued, known, not_found}` |
 | `GET /v1/boards` | the shared list (`data/community-boards.json`) |
 
-`npm test` runs the tests against a pretend GitHub.
+| `POST /v1/listings` | Submits a listing for review |
+| `GET /v1/listings` | Returns published listings that are still current |
+
+`npm test` runs the relay tests with mocked GitHub and ATS APIs.

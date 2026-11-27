@@ -22,6 +22,7 @@ test('trusted community verifier checks data from an explicit root', () => {
     fs.writeFileSync(
       path.join(dataRoot, 'data', 'community-listings.json'),
       JSON.stringify({
+        version: 1,
         listings: [{
           id: 'non-https',
           listing_url: 'http://example.test/jobs',
@@ -43,6 +44,17 @@ test('trusted community verifier checks data from an explicit root', () => {
   }
 });
 
+test('trusted community verifier refuses symlinked catalogs and parent directories', t => {
+  if (process.platform === 'win32') return t.skip('symlink creation requires Windows developer mode');
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'community-data-symlink-'));
+  t.after(() => fs.rmSync(dataRoot, { recursive: true, force: true }));
+  fs.symlinkSync(path.join(ROOT, 'data'), path.join(dataRoot, 'data'), 'dir');
+  assert.throws(
+    () => execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'verify-community-data.js'), '--root', dataRoot]),
+    error => /symlinks are not allowed/.test(String(error.stderr)),
+  );
+});
+
 test('community verifier rejects caller-set evergreen flags and extended standard expiry', () => {
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'community-data-policy-'));
   try {
@@ -50,6 +62,7 @@ test('community verifier rejects caller-set evergreen flags and extended standar
     fs.writeFileSync(
       path.join(dataRoot, 'data', 'community-listings.json'),
       JSON.stringify({
+        version: 1,
         listings: [{
           id: 'extended-standard',
           company_name: 'Example',
@@ -83,6 +96,98 @@ test('update-ats-boards.js --offline validates public_boards.json', () => {
     encoding: 'utf8',
   });
   assert.match(out, /ok \(offline\)/);
+});
+
+test('StoreSignal board ingestion follows the dataset row count instead of a fixed page cap', async () => {
+  const updater = require(path.join(ROOT, 'scripts', 'update-ats-boards.js'));
+  const originalFetch = global.fetch;
+  const offsets = [];
+  global.fetch = async (input) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith('/splits')) {
+      return new Response(JSON.stringify({ splits: [{ config: 'default', split: 'train' }] }), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    const offset = Number(url.searchParams.get('offset'));
+    offsets.push(offset);
+    const total = 205;
+    const count = Math.min(100, total - offset);
+    const rows = Array.from({ length: count }, (_, index) => ({
+      row: { ats: 'greenhouse', slug: `board-${offset + index}` },
+    }));
+    return new Response(JSON.stringify({ num_rows_total: total, rows }), {
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  try {
+    const boards = [];
+    const added = await updater.pullHuggingFaceDataset('example/boards', (ats, token) => {
+      boards.push(`${ats}:${token}`);
+      return true;
+    });
+    assert.equal(added, 205);
+    assert.equal(boards.length, 205);
+    assert.deepEqual(offsets.sort((a, b) => a - b), [0, 100, 200]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('ATS candidate verification shares its budget and matches official URL hosts exactly', () => {
+  const { parseBoardFromURL, selectCandidates } = require(path.join(ROOT, 'scripts', 'update-ats-boards.js'));
+  assert.deepEqual(parseBoardFromURL('https://jobs.lever.co/example/123'), { ats: 'lever', token: 'example' });
+  for (const url of ['https://fakejobs.lever.co/example', 'https://untrusted.test/jobs.lever.co/example', 'https://jobs.lever.co:444/example']) {
+    assert.equal(parseBoardFromURL(url), null);
+  }
+  const ats = ['greenhouse', 'lever', 'ashby'];
+  const candidates = ats.flatMap(source => Array.from({ length: 50 }, (_, i) => ({ ats: source, token: `board-${i}` })));
+  const selected = selectCandidates(candidates, '2026-11-26', 12);
+  assert.equal(selected.length, 12);
+  assert.deepEqual(ats.map(source => selected.filter(entry => entry.ats === source).length), [4, 4, 4]);
+  assert.deepEqual(selectCandidates([...candidates].reverse(), '2026-11-26', 12), selected);
+});
+
+test('Open-Apply seeds only supported ATS board slugs and reports the newest daily partition', async () => {
+  const updater = require(path.join(ROOT, 'scripts', 'update-ats-boards.js'));
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (input) => {
+    const url = new URL(input);
+    requests.push(url.hostname + url.pathname);
+    if (url.hostname === 'huggingface.co') {
+      return new Response(JSON.stringify([
+        { path: 'data/date=2026-11-24', type: 'directory' },
+        { path: 'data/date=2026-11-26', type: 'directory' },
+        { path: 'data/not-a-date', type: 'directory' },
+      ]), { headers: { 'content-type': 'application/json' } });
+    }
+    const name = url.pathname.split('/').pop();
+    const files = {
+      'cc_greenhouse_FINAL.txt': 'stripe\nnew-gh\n',
+      'cc_lever_FINAL.txt': 'new-lever\n',
+      'cc_ashby_FINAL.txt': 'new-ashby\n',
+    };
+    return new Response(files[name], { headers: { 'content-type': 'text/plain' } });
+  };
+  try {
+    assert.equal(await updater.latestOpenApplyPartition(), '2026-11-26');
+    const added = [];
+    const count = await updater.pullOpenApplyBoardSlugs((ats, token) => {
+      added.push(`${ats}:${token}`);
+      return true;
+    });
+    assert.equal(count, 4);
+    assert.deepEqual(added.sort(), [
+      'ashby:new-ashby',
+      'greenhouse:new-gh',
+      'greenhouse:stripe',
+      'lever:new-lever',
+    ]);
+    assert.equal(requests.filter((request) => request.startsWith('raw.githubusercontent.com')).length, 3);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test('dead ATS board check distinguishes definitive removal from empty or transient boards', async () => {
@@ -121,9 +226,12 @@ test('update-ats-boards.js enforces strict institutional host allowlist and reje
   const src = fs.readFileSync(path.join(ROOT, 'scripts', 'update-ats-boards.js'), 'utf8');
   assert.match(src, /ALLOWED_HOSTS\s*=\s*new Set\(/);
   assert.match(src, /datasets-server\.huggingface\.co/);
+  assert.match(src, /huggingface\.co/);
+  assert.match(src, /raw\.githubusercontent\.com/);
   assert.match(src, /index\.commoncrawl\.org/);
   assert.match(src, /redirect:\s*'manual'/);
   assert.match(src, /text\/html/);
+  assert.match(src, /MAX_HF_DATASET_ROWS/);
   assert.doesNotMatch(src, /lemonsignal\.io/);
   assert.doesNotMatch(src, /datahub\.io/);
 });
@@ -141,6 +249,12 @@ test('GitHub Actions workflows enforce PR review, timeouts, and community data s
   assert.match(atsWf, /timeout-minutes:\s*15/);
   assert.match(atsWf, /verify-community-data\.js/);
   assert.match(atsWf, /gh pr create/);
+
+  const openApplyWf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'discover-openapply-boards.yml'), 'utf8');
+  assert.match(openApplyWf, /cron:\s*'0 9 \* \* \*'/);
+  assert.match(openApplyWf, /contents:\s*read/);
+  assert.match(openApplyWf, /update-ats-boards\.js --openapply-only/);
+  assert.match(openApplyWf, /gh pr create/);
 
   const prWf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'verify-community-pr.yml'), 'utf8');
   assert.match(prWf, /community-boards\.json/);

@@ -59,7 +59,6 @@
    so the form works the same with motion off. Its fields follow it down one after another. */
 #filters {
   interpolate-size: allow-keywords;
-  overflow: clip;
   transition:
     height 280ms var(--ease-out),
     padding-block 280ms var(--ease-out),
@@ -67,6 +66,7 @@
     display 280ms allow-discrete;
 }
 #filters[hidden] {
+  overflow: clip;
   display: none !important;
   height: 0;
   padding-block: 0;

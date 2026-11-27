@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tlmcguire/fistbump/backend/internal/connectors"
 )
@@ -52,6 +53,7 @@ func TestFetchAndListBoard(t *testing.T) {
 			w.Write([]byte(payload))
 			return
 		}
+
 		http.NotFound(w, r)
 	}))
 	defer srv.Close()
@@ -69,5 +71,24 @@ func TestFetchAndListBoard(t *testing.T) {
 	}
 	if !strings.Contains(p.RawText, "TypeScript and Go") {
 		t.Fatalf("unexpected RawText: %q", p.RawText)
+	}
+}
+
+func TestBoardsStaleBeforeAndClear(t *testing.T) {
+	now := time.Now()
+	c := &Client{cache: map[string]cacheEntry{
+		"stale":  {fetchedAt: now.Add(-48 * time.Hour)},
+		"recent": {fetchedAt: now.Add(-time.Hour)},
+		"failed": {err: ErrorUpstream, fetchedAt: now.Add(-48 * time.Hour)},
+	}}
+	boards := c.BoardsStaleBefore(now.Add(-24 * time.Hour))
+	if len(boards) != 1 || boards[0] != "stale" {
+		t.Fatalf("stale boards = %v, want [stale]", boards)
+	}
+	if err := c.Clear(); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.BoardsStaleBefore(now); len(got) != 0 {
+		t.Fatalf("boards after Clear = %v, want none", got)
 	}
 }

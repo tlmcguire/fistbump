@@ -1,0 +1,52 @@
+name: Discover ATS boards from Open-Apply
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-openapply-boards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Discover boards and inspect the latest Open-Apply snapshot
+        run: node scripts/update-ats-boards.js --openapply-only
+
+      - name: Verify the updated public board catalog
+        run: node scripts/verify-community-data.js
+
+      - name: Open or update the public board catalog pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git diff --quiet backend/internal/connectors/public_boards.json; then
+            BRANCH="chore/discover-openapply-boards"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -B "$BRANCH"
+            git add backend/internal/connectors/public_boards.json
+            git commit -m "chore(connectors): refresh public ATS board discovery"
+            git push --force origin "$BRANCH"
+            if ! gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+              gh pr create \
+                --title "Refresh public ATS board discovery" \
+                --body "Automated board-token candidates from Open-Apply's Common Crawl-derived slug files. The daily Open-Apply snapshot date is logged; raw job descriptions are not ingested. Review the diff before merging." \
+                --head "$BRANCH" \
+                --base main
+            fi
+          fi

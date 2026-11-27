@@ -107,7 +107,7 @@
       groups.push({title: "", rows: [looksLikeLink(q)
         ? (isDirectATSLink(q)
           ? {icon: "link", label: "Open this job link", detail: q, run: () => route(q)}
-          : {icon: "paste", label: `Add listing from ${siteNameFromURL(q)}`, detail: "Paste its content to save and analyze", run: () => route(q)})
+          : {icon: "paste", label: `Paste a job from ${siteNameFromURL(q)}`, detail: "Paste its content to save and analyze", run: () => route(q)})
         : {icon: "search", label: `Search job boards for \u201c${q}\u201d`, detail: "Greenhouse, Lever and Ashby", run: () => route(q)}]});
       const jobs = (saved || []).filter(j => `${j.position_title} ${j.company_name}`.toLowerCase().includes(low)).slice(0, 5);
       if (jobs.length) groups.push({title: "Your jobs", rows: jobs.map(j => ({icon: "bookmark", label: j.position_title, detail: j.company_name, own: true,
@@ -118,7 +118,6 @@
     if (!q) groups.push({title: "Go to", rows: [
       {icon: "search", label: "Browse job boards", detail: "Search with filters for place, pay and fit", run: go(() => openFind())},
       {icon: "paste", label: "Paste a job posting", detail: "Save a posting to your jobs", run: go(() => window.App.openTab("tab-paste"))},
-      {icon: "cloud", label: "Submit a job listing", detail: "Share a LinkedIn, Indeed, or Workday listing with the community", run: go(() => window.SubmitListing?.open())},
       {icon: "list", label: "Your jobs", detail: "Everything you have saved", run: go(() => { location.hash = "#/list"; })},
     ]});
     return groups;

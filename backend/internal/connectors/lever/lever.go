@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -68,9 +69,10 @@ func ParseLink(raw string) (board, jobID string, err error) {
 }
 
 type cacheEntry struct {
-	postings []connectors.Posting
-	err      error
-	expires  time.Time
+	postings  []connectors.Posting
+	err       error
+	fetchedAt time.Time
+	expires   time.Time
 }
 
 // Client fetches postings from Lever's public Postings API.
@@ -162,13 +164,10 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Post
 	if !boardRe.MatchString(board) {
 		return nil, ErrorBadLink
 	}
-	key := strings.ToLower(board)
-	c.mu.RLock()
-	if entry, ok := c.cache[key]; ok && time.Now().Before(entry.expires) {
-		c.mu.RUnlock()
-		return entry.postings, entry.err
+	if postings, err, found := c.CachedBoard(board); found {
+		return postings, err
 	}
-	c.mu.RUnlock()
+	key := strings.ToLower(board)
 
 	endpoint := c.base() + "/v0/postings/" + url.PathEscape(board) + "?mode=json"
 	body, err := c.get(ctx, endpoint)
@@ -190,13 +189,47 @@ func (c *Client) ListBoard(ctx context.Context, board string) ([]connectors.Post
 	return out, nil
 }
 
+// CachedBoard returns a fresh in-memory entry without making a network request.
+func (c *Client) CachedBoard(board string) ([]connectors.Posting, error, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	entry, ok := c.cache[strings.ToLower(board)]
+	if !ok || !time.Now().Before(entry.expires) {
+		return nil, nil, false
+	}
+	return entry.postings, entry.err, true
+}
+
 func (c *Client) storeCache(key string, postings []connectors.Posting, err error, ttl time.Duration) {
 	c.mu.Lock()
 	if c.cache == nil {
 		c.cache = make(map[string]cacheEntry)
 	}
-	c.cache[key] = cacheEntry{postings: postings, err: err, expires: time.Now().Add(ttl)}
+	now := time.Now()
+	c.cache[key] = cacheEntry{postings: postings, err: err, fetchedAt: now, expires: now.Add(ttl)}
 	c.mu.Unlock()
+}
+
+// BoardsStaleBefore returns successfully searched boards whose cached listings are older than cutoff.
+func (c *Client) BoardsStaleBefore(cutoff time.Time) []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	var boards []string
+	for board, entry := range c.cache {
+		if entry.err == nil && entry.fetchedAt.Before(cutoff) {
+			boards = append(boards, board)
+		}
+	}
+	sort.Strings(boards)
+	return boards
+}
+
+// Clear removes the in-memory listing cache.
+func (c *Client) Clear() error {
+	c.mu.Lock()
+	c.cache = nil
+	c.mu.Unlock()
+	return nil
 }
 
 func (c *Client) get(ctx context.Context, endpoint string) ([]byte, error) {

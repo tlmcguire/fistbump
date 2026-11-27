@@ -72,6 +72,7 @@
       suggest: (query) => call('connectors:suggest', query),
       list: () => call('connectors:list'),
       categories: () => call('connectors:categories'),
+      locationRadius: (query) => call('connectors:location-radius', query),
       logo: (url, board) => call('connectors:logo', url, board),
       cancelSearch: () => call('connectors:cancel-search'),
       import: (postings) => call('connectors:import', postings),

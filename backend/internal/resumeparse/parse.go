@@ -93,7 +93,6 @@ var (
 	singleRe   = regexp.MustCompile(`(?i)(?:expected\s+|anticipated\s+)?(` + month + `\s+(?:'\d{2}|\d{4})|\d{1,2}[/.]\d{4}|\b(?:19|20)\d{2}\b)`)
 	quantRe    = regexp.MustCompile(`\d+(?:\.\d+)?\s*(?:%|x\b|k\b|m\b|\+)|\$\s?\d|\b\d{2,}\b`)
 	gpaRe      = regexp.MustCompile(`(?i)(?:cumulative\s+)?GPA[:\s]*([0-4]\.\d{1,2})(?:\s*/\s*[45]\.0{0,2})?`)
-	degreeRe   = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?(?: of [A-Z][a-z]+)?|J\.?D\.?|M\.?D\.?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|A\.?A\.?S?\.?|A\.?S\.?|High School Diploma|Certificate)(?:\s|,|$)`)
 	schoolRe   = regexp.MustCompile(`(?i)\b(university|college|institute|school|academy|polytechnic|conservatory|bootcamp)\b`)
 	honorsRe   = regexp.MustCompile(`(?i)(summa|magna)? ?cum laude|honors|dean'?s list|valedictorian`)
 	clearRe    = regexp.MustCompile(`(?i)\b(TS/SCI(?: with (?:full scope |CI )?poly(?:graph)?)?|top secret(?: clearance)?|secret clearance|public trust)\b`)
@@ -115,10 +114,14 @@ func exactHeading(line string) bool {
 	return ok
 }
 
+func educationHonorsLine(line string) bool {
+	return strings.EqualFold(line, "Honors College") || strings.EqualFold(line, "Honors Program")
+}
+
 func headingOf(line string) (section, bool) {
 	l := strings.ToLower(strings.TrimSpace(strings.TrimRight(line, ":")))
 	l = strings.Join(strings.Fields(strings.NewReplacer("&", "and", "/", " and ").Replace(l)), " ")
-	if len(l) > 40 || bulletRe.MatchString(line) {
+	if len(l) > 40 || bulletRe.MatchString(line) || educationHonorsLine(l) {
 		return "", false
 	}
 	if s, ok := headings[l]; ok {
@@ -789,11 +792,17 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 	// so each degree becomes its own education entry sharing GPA, minors, and dates.
 	var expanded []string
 	for _, l := range lines {
-		if strings.Contains(l, ";") && len(degreeRe.FindAllStringIndex(l, -1)) >= 2 {
+		if strings.Contains(l, ";") && models.CountEducationDegrees(l) >= 2 {
 			parts := strings.Split(l, ";")
 			// Trailing metadata (GPA, minors, dates) on the last part applies to the first entry too.
 			last := parts[len(parts)-1]
 			var shared []string
+			for _, segment := range schoolSep.Split(last, -1) {
+				if schoolRe.MatchString(segment) && models.FindEducationDegree(segment) == nil {
+					shared = append(shared, strings.TrimSpace(segment))
+					break
+				}
+			}
 			if m := gpaRe.FindString(last); m != "" {
 				shared = append(shared, m)
 			}
@@ -802,7 +811,7 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 				if p == "" {
 					continue
 				}
-				if i < len(parts)-1 && len(shared) > 0 && !gpaRe.MatchString(p) {
+				if i < len(parts)-1 && len(shared) > 0 && !schoolRe.MatchString(p) {
 					p += " — " + strings.Join(shared, " — ")
 				}
 				expanded = append(expanded, p)
@@ -816,8 +825,8 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 			continue
 		}
 		body := stripBullet(l)
-		school := schoolRe.MatchString(body) && !isBullet(l)
-		deg := degreeRe.FindStringSubmatch(body)
+		school := schoolRe.MatchString(body) && !isBullet(l) && !educationHonorsLine(body)
+		deg := models.FindEducationDegree(body)
 		// A new school line starts a new entry. A second degree under the same school becomes its own row
 		// that shares the school, date, GPA and honors.
 		if school && (cur == nil || cur.Institution != "" && cur.Institution != "Unknown institution") {
@@ -889,6 +898,10 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 		}
 	}
 	flush()
+	out = models.UniqueEducation(out)
+	for i := range out {
+		out[i].SortOrder = int64(i)
+	}
 	return out
 }
 

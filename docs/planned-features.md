@@ -2,7 +2,7 @@
 
 This document plans the next wave of Fistbump improvements, aligned with [PRODUCT.md](../PRODUCT.md): **local-first by default**, **human-approved AI edits**, **fast deterministic analysis**, and **zero cloud lock-in**.
 
-## Phase A — Job Discovery & Multi-ATS Connectors
+## Phase A: Job Discovery & Multi-ATS Connectors
 
 ### 1. Lever & Ashby Connectors
 - **Goal**: Expand job search and unified paste-a-link support beyond Greenhouse to cover Lever and Ashby public job boards.
@@ -26,7 +26,7 @@ This document plans the next wave of Fistbump improvements, aligned with [PRODUC
 - **Backend**: Persist custom boards in `settings` (`connectors.custom_boards`) and include them in search queries and autocomplete.
 - **Frontend**: Simple "Add company board" control in Settings / Search filters with validation.
 
-## Phase B — Resume Builder, Tailoring & Export
+## Phase B: Resume Builder, Tailoring & Export
 
 ### 4. Consecutive Resume Imports (Back-to-Back Without Leaving the Page)
 - **Goal**: Let users import or paste multiple resumes back-to-back on the Master Resume page without having to navigate away and return.
@@ -56,7 +56,7 @@ This document plans the next wave of Fistbump improvements, aligned with [PRODUC
 - **Backend**: Add `application_drafts` table linked to `job_id` and `tailored_resume_id`, reusing `ai.Engines` with strict resume-grounding prompts and guardrails.
 - **Frontend**: New **Answers & Cover Letter** tab inside Tailor with editable cards, word count, and one-click copy.
 
-## Phase C — Application Tracker & Interview Prep
+## Phase C: Application Tracker & Interview Prep
 
 ### 9. CSV Export & Full Local Backup / Restore
 - **Goal**: Ensure zero lock-in by letting users export their tracker to CSV and create or restore full local ZIP backups of their SQLite database.
@@ -76,7 +76,7 @@ This document plans the next wave of Fistbump improvements, aligned with [PRODUC
 - **Backend**: `GET /v1/applications/stats` returning stage conversion counts (`Saved -> Applied -> Interviewing -> Offered`) and the top recurring missing skills across saved jobs.
 - **Frontend**: Compact local analytics card on Home / Tracker.
 
-## Phase D — Compensation & Offer Comparison
+## Phase D: Compensation & Offer Comparison
 
 ### 13. Side-by-Side Offer Comparison
 - **Goal**: Compare 2–3 saved or offered jobs side by side using `backend/internal/cost`.
@@ -84,7 +84,7 @@ This document plans the next wave of Fistbump improvements, aligned with [PRODUC
 - **Frontend**: Comparison table view accessible from Saved Jobs and Tracker showing gross pay, bonus/equity, effective tax rate, rent, monthly budget, and net savings side by side with cited sources.
 
 ## Suggested Implementation Order
-1. **Phase A (Lever & Ashby + Watchlists)** — highest immediate impact on job discovery.
-2. **Phase B (1-Page PDF Fit Check + Custom Sections + DOCX Export)** — completes the resume authoring loop.
-3. **Phase C (CSV/ZIP Backup + `.ics` Export + Interview Prep)** — strengthens the Tracker and interview workflow.
-4. **Phase D (Side-by-Side Offer Comparison + Cover Letter / Q&A Drafts)** — high-value decision and application tools.
+1. **Phase A (Lever & Ashby + Watchlists)**: highest immediate impact on job discovery.
+2. **Phase B (1-Page PDF Fit Check + Custom Sections + DOCX Export)**: completes the resume authoring loop.
+3. **Phase C (CSV/ZIP Backup + `.ics` Export + Interview Prep)**: strengthens the Tracker and interview workflow.
+4. **Phase D (Side-by-Side Offer Comparison + Cover Letter / Q&A Drafts)**: high-value decision and application tools.

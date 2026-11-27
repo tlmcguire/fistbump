@@ -415,13 +415,11 @@ button.primary:hover:not(:disabled), .button.primary:hover { background: var(--a
   min-width: 0;
 }
 
-/* The search fields grow with the window up to a comfortable width; past that the extra space
-   goes between the search and the Filters and History buttons, which stay at the right edge. */
+/* Keep the search fields at a comfortable width and the related actions beside them. */
 .toolbar-form > .field { flex: 0 1 220px; }
 .toolbar-form > .field.grow { flex: 1 1 320px; max-width: 560px; }
 .toolbar-form input { text-overflow: ellipsis; }
 #job-form > .field.grow { max-width: 760px; }
-#filters-toggle { margin-left: auto; }
 
 .filters {
   display: grid;

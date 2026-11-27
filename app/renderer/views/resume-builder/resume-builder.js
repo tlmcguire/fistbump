@@ -740,6 +740,24 @@
         k.skills(entry).length ? chips(k.skills(entry)) : null);
     }
  
+    const degreeLayout = el("select", {"aria-label": "Degree layout"},
+      el("option", {value: "consolidate", text: "One line per group"}),
+      el("option", {value: "split", text: "Separate lines"}));
+    const degreeLayoutControl = el("label", {class: "form-row"},
+      el("span", {text: "Degree layout"}), degreeLayout);
+    degreeLayout.addEventListener("change", async () => {
+      degreeLayout.disabled = true;
+      try {
+        await window.FistBumpAPI.request(() => window.api.settings.put({"resume.education_layout": degreeLayout.value}));
+        refreshPreview();
+      } catch (err) {
+        degreeLayout.value = degreeLayout.value === "split" ? "consolidate" : "split";
+        say(err.message, true);
+      } finally {
+        degreeLayout.disabled = false;
+      }
+    });
+
     function renderEntries() {
       for (const kind of Object.keys(KINDS)) {
         const k = KINDS[kind];
@@ -754,6 +772,7 @@
           editing?.kind === kind && editing.id === entry.id ? entryForm(kind, entry) : entryCard(kind, entry, i, list.length));
         fill(k.section,
           el("div", {class: "section-head"}, el("h2", {id: k.headingId, text: k.heading}), addButton),
+          kind === "education" ? degreeLayoutControl : null,
           !master.profile ? el("p", {class: "hint", text: "Save your profile first."}) : null,
           master.profile && list.length === 0 && !adding ? el("p", {class: "empty", text: `No ${k.heading.toLowerCase()} entries yet.`}) : null,
           items,
@@ -1176,6 +1195,7 @@
       if (window.api?.settings?.get) {
         try {
           const st = await window.FistBumpAPI.request(() => window.api.settings.get());
+          degreeLayout.value = st?.["resume.education_layout"] === "split" ? "split" : "consolidate";
           if (Array.isArray(st?.["resume.section_order"]) && st["resume.section_order"].length) sectionOrder = [...st["resume.section_order"]];
           if (typeof st?.["resume.custom_sections"] === "string") {
             const parsed = JSON.parse(st["resume.custom_sections"] || "[]");

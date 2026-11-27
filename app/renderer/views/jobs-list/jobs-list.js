@@ -13,6 +13,7 @@
   const APP_STAGE = {Applied: "applied", Interviewing: "interview", Offered: "offer"};
   const MOVE_TO = [["Saved", "Saved"], ["Applied", "Applied"], ["Interviewing", "Interview"], ["Offered", "Offer"], ["Rejected", "Not moving forward"]];
   const VIEW_KEY = "fistbump.jobs-list";
+  const JOBS_PER_PAGE = 25;
 
   const locale = () => window.I18n?.locale() || undefined;
   const pad = n => String(n).padStart(2, "0");
@@ -40,16 +41,28 @@
 
       const prefs = Object.assign({stage: "all", remote: false, pay: false, fit: false, view: "list"}, readPrefs());
       let query = "";
+      let page = 0;
       let entries = [];      //[{job, app, stage, pending, closed, fit}]
       const picked = new Set();
       let seq = 0;
 
+      async function loadJobs(scope = {}) {
+        const batchSize = 50;
+        const jobs = new Map();
+        for (let offset = 0; ; offset += batchSize) {
+          const batch = await api().jobs.list("", {...scope, limit: String(batchSize), offset: String(offset)});
+          const previousSize = jobs.size;
+          for (const job of batch) jobs.set(job.id, job);
+          if (batch.length < batchSize || jobs.size === previousSize) return [...jobs.values()];
+        }
+      }
+
       async function refresh() {
         const mine = ++seq;
         const [active, archived, trashed, apps] = await Promise.all([
-          api().jobs.list("").catch(() => []),
-          api().jobs.list("", {archived: "only"}).catch(() => []),
-          api().jobs.list("", {trashed: "only"}).catch(() => []),
+          loadJobs().catch(() => []),
+          loadJobs({archived: "only"}).catch(() => []),
+          loadJobs({trashed: "only"}).catch(() => []),
           api().applications.list({archived: "include"}).catch(() => []),
         ]);
         const appOf = new Map((apps || []).map(a => [a.job_id, a]));
@@ -134,8 +147,12 @@
         const counts = Object.fromEntries(STAGES.map(s => [s.key, s.key === "all" ? open.length : entries.filter(e => e.stage === s.key).length]));
         const list = visible();
         const withNext = list.map(e => ({...e, next: nextOf(e)}));
-        const needs = withNext.filter(e => e.next.needs);
-        const rest = withNext.filter(e => !e.next.needs);
+        const ordered = [...withNext.filter(e => e.next.needs), ...withNext.filter(e => !e.next.needs)];
+        const pages = Math.max(1, Math.ceil(ordered.length / JOBS_PER_PAGE));
+        page = Math.min(page, pages - 1);
+        const shown = ordered.slice(page * JOBS_PER_PAGE, (page + 1) * JOBS_PER_PAGE);
+        const needs = shown.filter(e => e.next.needs);
+        const rest = shown.filter(e => !e.next.needs);
         const month = isoDay(new Date()).slice(0, 7);
         const sent = entries.filter(e => (e.app?.date_applied || "").startsWith(month)).length;
         const interviews = open.filter(e => e.stage === "interview").length;
@@ -149,13 +166,14 @@
 
         const stageTabs = el("div", {class: "jl3-stages", role: "tablist", "aria-label": "Stage"}, STAGES.map(s => el("button", {
           type: "button", role: "tab", "aria-selected": String(prefs.stage === s.key),
-          onclick: () => { prefs.stage = s.key; picked.clear(); writePrefs(prefs); draw(); },
+          onclick: () => { prefs.stage = s.key; page = 0; picked.clear(); writePrefs(prefs); draw(); },
         }, s.label, el("span", {class: "num", text: String(counts[s.key])}))));
         const quick = (key, label) => el("button", {type: "button", class: "jl3-quick", "aria-pressed": String(prefs[key]),
-          onclick: () => { prefs[key] = !prefs[key]; writePrefs(prefs); draw(); }}, label);
+          onclick: () => { prefs[key] = !prefs[key]; page = 0; writePrefs(prefs); draw(); }}, label);
         const filter = el("input", {type: "search", class: "jl3-filter", placeholder: "Filter by company or title", "aria-label": "Filter by company or title", value: query});
         filter.addEventListener("input", () => {
           query = filter.value;
+          page = 0;
           const at = filter.selectionStart;
           draw();
           const again = scroll.querySelector(".jl3-filter");
@@ -180,6 +198,18 @@
           el("button", {type: "button", role: "radio", "aria-checked": String(prefs.view === v),
             onclick: () => { prefs.view = v; picked.clear(); writePrefs(prefs); draw(); }}, label)));
         const board = prefs.view === "board";
+        const pageButton = (label, step, disabled) => el("button", {type: "button", class: "btn btn-text", "data-step": step, text: label, disabled,
+          onclick: () => {
+            page += step;
+            picked.clear();
+            draw();
+            const buttons = scroll.querySelectorAll(".jl3-pages button:not(:disabled)");
+            (Array.from(buttons).find(button => Number(button.dataset.step) === step) || buttons[0])?.focus();
+          }});
+        const pagination = pages > 1 ? el("nav", {class: "jl3-pages", "aria-label": "Job pages"},
+          pageButton("Previous", -1, page === 0),
+          el("span", {class: "ink-2", text: `Page ${page + 1} of ${pages}`}),
+          pageButton("Next", 1, page === pages - 1)) : null;
 
         fill(scroll, el("div", {class: "jl3-grid"},
           el("header", {class: "jl3-head"},
@@ -188,11 +218,11 @@
           el("div", {class: "jl3-tools"}, board ? null : stageTabs,
             el("div", {class: "jl3-quicks"}, quick("remote", "Remote"), quick("pay", "Has pay"), quick("fit", "70%+ fit")),
             el("label", {class: "jl3-search"}, icon("search"), filter),
-            el("button", {type: "button", class: "btn btn-mark jl3-add", text: "Add listing",
-              title: "Submit a job listing from LinkedIn, Indeed, Workday, or another site",
-              onclick: () => window.SubmitListing?.open()}),
+            el("button", {type: "button", class: "btn btn-mark jl3-add", text: "Paste a job",
+              onclick: () => window.App.openTab("tab-paste")}),
             viewSwitch),
           board ? boardView(withNext) : el("section", {class: "paper jl3-list", "aria-label": "Jobs"}, groups,
+            pagination,
             el("div", {class: "jl3-foot ruled-top"},
               el("span", {class: "ink-2", text: "Archived jobs, the Trash and jobs that did not move forward are under Closed."}),
               el("span", {}, el("a", {href: "#/tracker", text: "Tracker table, export and offer comparison"}))))));

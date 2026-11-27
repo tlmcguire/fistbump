@@ -2,9 +2,13 @@
 
 ![Fistbump, with Pico giving a fistbump](docs/images/github-banner.png)
 
-A local-first job application assistant. Stores a master resume (`.pdf`, `.docx`, `.odt`, `.md`, `.txt` import), searches Greenhouse, Lever, and Ashby job boards, shows skill gaps and pay/cost-of-living analysis, generates reviewable resume revisions, exports PDF/DOCX, tracks applications, plans interviews on a calendar, and includes 23 style and seasonal themes, each in Day, Night and Darker. Data stays on the user's machine unless a remote AI provider is configured.
+A local-first job application assistant. Stores a master resume (`.pdf`, `.docx`, `.odt`, `.md`, `.txt` import), searches Greenhouse, Lever, and Ashby job boards, shows skill gaps and pay/cost-of-living analysis, generates reviewable resume revisions, exports PDF/DOCX, tracks applications, plans interviews on a calendar, and includes 23 style and seasonal themes, each in Day, Night and Darker. Resumes and application records are stored locally. Remote AI, community submissions, and external calendar connections are optional.
 
-Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
+Fistbump uses Tauri v2, a Go backend, and SQLite.
+
+## What’s coming in v0.6.0
+
+The next release expands Greenhouse, Lever, and Ashby coverage, refreshes recently searched boards in the background, improves resume imports, and hardens credentials, exports, and community publishing. [Release notes](docs/release-notes.md)
 
 ## What it looks like
 
@@ -21,7 +25,7 @@ Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
 ### Themes
 
-Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto (Current Month)**). Every theme comes in **Night**, **Day** and **Darker** (dark paper, light ink), or follows your system. See every theme in the [v0.5.0 release notes](docs/release-notes.md).
+Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto (Current Month)**). Every theme comes in **Night**, **Day** and **Darker** (dark paper, light ink), or follows your system. See the [v0.5.0 release](https://github.com/tlmcguire/fistbump/releases/tag/v0.5.0) for its theme gallery.
 
 | | |
 |---|---|
@@ -47,11 +51,11 @@ The builds are unsigned, so the first launch asks you to open the app yourself. 
 | Doc | Contents |
 |-----|----------|
 | [docs/user-guide.md](docs/user-guide.md) | How to install, set up the resume, tailor it to a job, customize themes, and track applications |
-| [docs/release-notes.md](docs/release-notes.md) | Release highlights and full theme gallery for the latest version |
+| [docs/release-notes.md](docs/release-notes.md) | Highlights and upgrade instructions for the next release |
 | [docs/release-checklist.md](docs/release-checklist.md) | The manual check to run on every platform before publishing a release |
 | [docs/architecture.md](docs/architecture.md) | System design, app lifecycle, ATS board search strategy, API key handling, file structure, Q&A |
-| [docs/security-policy.md](docs/security-policy.md) | How community boards, community listings, and public ATS datasets are validated and pruned |
-| [docs/periodic-external-calls.md](docs/periodic-external-calls.md) | Inventory of all scheduled outbound calls across GitHub Actions, the relay, and the desktop app |
+| [docs/security-policy.md](docs/security-policy.md) | Desktop trust boundaries, credentials, community validation, and automation |
+| [docs/periodic-external-calls.md](docs/periodic-external-calls.md) | Scheduled network calls and ATS dataset credits |
 | [docs/api.md](docs/api.md) | Backend routes, request and response shapes, error format, DB interactions |
 | [docs/schema.md](docs/schema.md) | SQLite tables, relationships, constraints, settings keys |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide |

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/tlmcguire/fistbump/backend/internal/store"
 )
@@ -45,13 +47,13 @@ func (s *Server) appExportCSV(w http.ResponseWriter, r *http.Request) error {
 		}
 		_ = cw.Write([]string{
 			strconv.FormatInt(a.ID, 10),
-			a.CompanyName,
-			a.PositionTitle,
+			safeCSVCell(a.CompanyName),
+			safeCSVCell(a.PositionTitle),
 			a.Status,
 			deref(a.DateApplied),
 			deref(a.NextStepDate),
 			archived,
-			deref(a.Notes),
+			safeCSVCell(deref(a.Notes)),
 			a.CreatedAt,
 			a.UpdatedAt,
 		})
@@ -68,6 +70,17 @@ func (s *Server) appExportCSV(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
 	return nil
+}
+
+// safeCSVCell preserves ordinary text and marks formula-like text as literal for spreadsheets.
+func safeCSVCell(s string) string {
+	trimmed := strings.TrimLeftFunc(s, func(r rune) bool { return unicode.IsSpace(r) || r == '\uFEFF' })
+	first, _ := utf8.DecodeRuneInString(trimmed)
+	if strings.HasPrefix(s, "\t") || strings.HasPrefix(s, "\r") || strings.HasPrefix(s, "\n") ||
+		strings.ContainsRune("=+-@＝＋－＠", first) {
+		return "'" + s
+	}
+	return s
 }
 
 // appExportICS handles GET /v1/applications/{id}/ics: RFC 5545 calendar invite for next_step_date.
@@ -122,7 +135,7 @@ func (s *Server) appExportICS(w http.ResponseWriter, r *http.Request) error {
 }
 
 func escapeICS(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, "\r\n", `\n`, "\n", `\n`, ",", `\,`, ";", `\;`)
+	r := strings.NewReplacer(`\`, `\\`, "\r\n", `\n`, "\r", `\n`, "\n", `\n`, ",", `\,`, ";", `\;`)
 	return r.Replace(s)
 }
 

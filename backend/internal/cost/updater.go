@@ -2,44 +2,27 @@ package cost
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/tlmcguire/fistbump/backend/internal/catalogfeed"
 )
 
 // RefreshNow fetches feedURL (or the catalog's configured FeedURL when empty), validates the
 // catalog, updates the active in-memory catalog, and caches it to <dataDir>/cost-sources.json.
 func RefreshNow(ctx context.Context, dataDir, feedURL string, client *http.Client) bool {
 	if feedURL == "" {
-		cat, _ := CurrentCatalog()
-		feedURL = cat.FeedURL
+		feedURL = loadBundledCatalog().FeedURL
 	}
 	if feedURL == "" {
 		return false
 	}
-	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
 	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, feedURL, nil)
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Accept", "application/vnd.github.raw+json")
-	req.Header.Set("User-Agent", "Fistbump")
-	resp, err := client.Do(req)
+	body, err := catalogfeed.Get(reqCtx, client, feedURL, 256<<10)
 	if err != nil {
 		slog.Debug("cost sources refresh skipped", "error", err)
-		return false
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 256<<10))
-	if err != nil {
 		return false
 	}
 	if !ApplyCatalogJSON(dataDir, body, time.Now()) {

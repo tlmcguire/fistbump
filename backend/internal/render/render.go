@@ -80,41 +80,7 @@ func Master(m models.Master) string {
 				}
 			}
 		case "education":
-			if len(m.Education) > 0 {
-				blocks = append(blocks, "## Education")
-				for _, e := range m.Education {
-					heading := e.Institution
-					var degree []string
-					for _, v := range []*string{e.DegreeLevel, e.Discipline} {
-						if v != nil && strings.TrimSpace(*v) != "" {
-							degree = append(degree, strings.TrimSpace(*v))
-						}
-					}
-					if len(degree) == 2 {
-						heading = degree[0] + " in " + degree[1] + ", " + e.Institution
-					} else if len(degree) == 1 {
-						heading = degree[0] + ", " + e.Institution
-					}
-					blocks = append(blocks, "### "+Escape(heading))
-					meta := []string{}
-					if e.GraduationDate != nil {
-						if d := formatDate(*e.GraduationDate); d != "" {
-							meta = append(meta, d)
-						}
-					}
-					if e.GPA != nil {
-						meta = append(meta, fmt.Sprintf("GPA %.2f", *e.GPA))
-					}
-					if len(meta) > 0 {
-						blocks = append(blocks, strings.Join(meta, " | "))
-					}
-					for _, text := range []*string{e.Honors, e.Details} {
-						if text != nil && strings.TrimSpace(*text) != "" {
-							blocks = append(blocks, Escape(*text))
-						}
-					}
-				}
-			}
+			blocks = append(blocks, educationBlocks(m.Education, m.EducationLayout == models.EducationLayoutSplit)...)
 		case "skills":
 			if skills := m.Skills(); len(skills) > 0 {
 				blocks = append(blocks, "## Skills", strings.Join(skills, ", "))
@@ -137,6 +103,70 @@ func Master(m models.Master) string {
 		return ""
 	}
 	return strings.Join(blocks, "\n\n") + "\n"
+}
+
+func educationBlocks(rows []models.Education, split bool) []string {
+	if len(rows) == 0 {
+		return nil
+	}
+	type group struct {
+		meta    models.Education
+		degrees []string
+	}
+	var groups []group
+	for _, row := range models.UniqueEducation(rows) {
+		i := 0
+		for i < len(groups) && !models.SameEducationTerm(groups[i].meta, row) {
+			i++
+		}
+		if i == len(groups) {
+			groups = append(groups, group{meta: row})
+		}
+		g := &groups[i]
+		g.meta = models.MergeEducationDetails(g.meta, row)
+		var degree []string
+		for _, field := range []*string{row.DegreeLevel, row.Discipline} {
+			if field != nil && strings.TrimSpace(*field) != "" {
+				degree = append(degree, strings.TrimSpace(*field))
+			}
+		}
+		if len(degree) > 0 {
+			g.degrees = append(g.degrees, strings.Join(degree, " in "))
+		}
+	}
+
+	blocks := []string{"## Education"}
+	for _, g := range groups {
+		e := g.meta
+		switch {
+		case len(g.degrees) == 0:
+			blocks = append(blocks, "### "+Escape(e.Institution))
+		case split:
+			for _, degree := range g.degrees {
+				blocks = append(blocks, "### "+Escape(degree+", "+e.Institution))
+			}
+		default:
+			blocks = append(blocks, "### "+Escape(strings.Join(g.degrees, "; ")+", "+e.Institution))
+		}
+		var meta []string
+		if e.GraduationDate != nil {
+			if date := formatDate(*e.GraduationDate); date != "" {
+				meta = append(meta, date)
+			}
+		}
+		if e.GPA != nil {
+			meta = append(meta, fmt.Sprintf("GPA %.2f", *e.GPA))
+		}
+		if len(meta) > 0 {
+			blocks = append(blocks, strings.Join(meta, " | "))
+		}
+		for _, text := range []*string{e.Honors, e.Details} {
+			if text != nil && strings.TrimSpace(*text) != "" {
+				blocks = append(blocks, Escape(*text))
+			}
+		}
+	}
+	return blocks
 }
 
 // escape backslash-escapes a leading #, - or * on each line, the characters that would turn

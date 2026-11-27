@@ -64,11 +64,12 @@ export function isLikelyTyposquat(token, knownTokens) {
 // Strips what should never leave someone's computer by accident: invisible/bidi/tag chars,
 // email addresses, phone numbers, home folders.
 export function scrub(text, max) {
-  return String(text ?? "")
+  return (typeof text === "string" ? text : "")
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g, "")
     .replace(/[\u{E0000}-\u{E007F}]/gu, "")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email removed]")
-    .replace(/\+?\d[\d\s().-]{8,}\d/g, "[number removed]")
+    .replace(/\+?\d[\d \t().-]{8,}\d/g, text =>
+      text.replace(/\D/g, "").length >= 10 ? "[number removed]" : text)
     .replace(/(\/Users\/|\/home\/|C:\\Users\\)[^\s/\\]+/gi, "$1[name]")
     .trim()
     .slice(0, max);
@@ -94,11 +95,38 @@ async function sha256(text) {
   return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+const MAX_POST_BYTES = 192 * 1024;
+
+async function readJsonBody(request) {
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_POST_BYTES) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return JSON.parse(text + decoder.decode());
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function limited(env, request, bucket, perHour) {
-  if (!env.RELAY) return false;
+  if (!env.RELAY || !env.RATE_SALT) throw new Error("Relay rate limiting is not configured");
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
   const hour = Math.floor(Date.now() / 3600000);
-  const key = `rl:${bucket}:${hour}:${(await sha256(`${env.RATE_SALT || ""}:${ip}`)).slice(0, 24)}`;
+  const key = `rl:${bucket}:${hour}:${(await sha256(`${env.RATE_SALT || ""}:${hour}:${ip}`)).slice(0, 24)}`;
   const n = Number(await env.RELAY.get(key)) || 0;
   if (n >= perHour) return true;
   await env.RELAY.put(key, String(n + 1), { expirationTtl: 3700 });
@@ -127,6 +155,7 @@ async function githubToken(env) {
   if (cachedToken && cachedToken.expires > Date.now() + 60000) return cachedToken.value;
   const res = await fetch(`https://api.github.com/app/installations/${env.GITHUB_INSTALLATION_ID}/access_tokens`, {
     method: "POST",
+    redirect: "error",
     headers: { authorization: `Bearer ${await appJwt(env)}`, accept: "application/vnd.github+json", "user-agent": "fistbump-relay" },
   });
   if (!res.ok) throw new Error(`GitHub app token: ${res.status}`);
@@ -138,6 +167,7 @@ async function githubToken(env) {
 export async function gh(env, path, init = {}) {
   const res = await fetch(`https://api.github.com${path}`, {
     ...init,
+    redirect: "error",
     headers: {
       authorization: `Bearer ${await githubToken(env)}`,
       accept: "application/vnd.github+json",
@@ -147,7 +177,7 @@ export async function gh(env, path, init = {}) {
       ...init.headers,
     },
   });
-  if (!res.ok && res.status !== 404 && res.status !== 422) throw new Error(`GitHub ${init.method || "GET"} ${path}: ${res.status}`);
+  if (!res.ok && !(res.status === 404 && (!init.method || init.method === "GET"))) throw new Error(`GitHub ${init.method || "GET"} ${path}: ${res.status}`);
   return { status: res.status, data: res.status === 204 ? null : await res.json().catch(() => null) };
 }
 
@@ -202,14 +232,14 @@ export function readReport(body) {
 
 async function report(env, request) {
   if (await limited(env, request, "report", 6)) return problem(429, "rate_limited", "That is a lot of reports in one hour. Please try again later.");
-  const r = readReport(await request.json().catch(() => null));
+  const r = readReport(await readJsonBody(request));
   if (r.title.length < 4 || (r.details.length < 8 && !r.sameAs)) return problem(400, "validation_failed", "Say in a few words what happened.");
   r.fingerprint = (await sha256(words(`${r.title} ${r.details}`).sort().join(" "))).slice(0, 16);
 
   //The person said it is one of the reports they were shown.
   if (r.sameAs) {
     const { status, data } = await gh(env, `/repos/${env.REPO}/issues/${r.sameAs}`);
-    if (status === 200 && data.state === "open" && (data.labels || []).some(l => l.name === LABEL)) {
+    if (status === 200 && data.state === "open" && !data.pull_request && (data.labels || []).some(l => l.name === LABEL)) {
       await addTo(env, r.sameAs, r);
       return json({ status: "added", number: r.sameAs, url: data.html_url });
     }
@@ -238,8 +268,11 @@ export function readBoards(body) {
   const list = Array.isArray(body?.boards) ? body.boards.slice(0, 25) : [];
   const out = [];
   for (const entry of list) {
-    const [ats, token] = String(entry || "").toLowerCase().trim().split(":");
-    if (ATS.includes(ats) && TOKEN.test(token || "")) out.push({ ats, token });
+    if (typeof entry !== "string") continue;
+    const [ats, token, extra] = entry.toLowerCase().trim().split(":");
+    if (extra === undefined && ATS.includes(ats) && TOKEN.test(token || "") && !RESERVED_SLUGS.has(token)) {
+      out.push({ ats, token });
+    }
   }
   return [...new Map(out.map(b => [`${b.ats}:${b.token}`, b])).values()];
 }
@@ -266,21 +299,34 @@ export async function checkBoard({ ats, token }) {
   return { ats, token, company: scrub(data?.organizationName || data?.name || token, 80) };
 }
 
-async function readShared(env) {
-  const { status, data } = await gh(env, `/repos/${env.REPO}/contents/${BOARDS_FILE}`);
-  if (status !== 200) return { file: { version: 1, boards: [] }, sha: null };
-  const text = new TextDecoder().decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), c => c.charCodeAt(0)));
-  return { file: JSON.parse(text), sha: data.sha };
+async function readCatalog(env, path, field, branch) {
+  const suffix = branch ? `?ref=${encodeURIComponent(branch)}` : "";
+  const root = `/repos/${env.REPO}`;
+  const { status, data } = await gh(env, `${root}/contents/${path}${suffix}`, {
+    headers: { accept: "application/vnd.github.object+json" },
+  });
+  if (status === 404) return { file: { version: 1, [field]: [] }, sha: null };
+  if (!data?.sha || (data.type && data.type !== "file")) throw new Error("Invalid community catalog response");
+  let content = data.content;
+  if (data.encoding === "none") {
+    const blob = await gh(env, `${root}/git/blobs/${encodeURIComponent(data.sha)}`);
+    if (blob.data?.encoding !== "base64") throw new Error("Invalid community catalog blob");
+    content = blob.data.content;
+  }
+  const bytes = Uint8Array.from(atob(content.replace(/\s/g, "")), c => c.charCodeAt(0));
+  const file = JSON.parse(new TextDecoder().decode(bytes));
+  if (file.version !== 1 || !Array.isArray(file[field])) throw new Error("Invalid community catalog schema");
+  return { file, sha: data.sha };
 }
 
 async function shareBoards(env, request) {
   if (await limited(env, request, "boards", 30)) return problem(429, "rate_limited", "Too many boards in one hour. They will keep until later.");
-  const boards = readBoards(await request.json().catch(() => null));
+  const boards = readBoards(await readJsonBody(request));
   if (!boards.length) return problem(400, "validation_failed", "Nothing to share: boards look like greenhouse:stripe or lever:netflix.");
   const sharedBoards = (await cachedShared(env)).boards || [];
   const known = new Set(sharedBoards.map(b => `${b.ats}:${b.token}`));
   const knownByAts = { greenhouse: [], lever: [], ashby: [] };
-  for (const b of sharedBoards) if (knownByAts[b.ats]) knownByAts[b.ats].push(b.token);
+  for (const b of sharedBoards) if (Object.hasOwn(knownByAts, b.ats)) knownByAts[b.ats].push(b.token);
   const result = { queued: [], known: [], not_found: [] };
   for (const b of boards) {
     const key = `${b.ats}:${b.token}`;
@@ -297,50 +343,93 @@ async function shareBoards(env, request) {
 async function cachedShared(env) {
   const hit = env.RELAY && await env.RELAY.get("shared-boards", "json");
   if (hit) return hit;
-  const { file } = await readShared(env);
+  const { file } = await readCatalog(env, BOARDS_FILE, "boards");
   await env.RELAY?.put("shared-boards", JSON.stringify(file), { expirationTtl: 6 * 3600 });
   return file;
 }
 
-//Once a day: the queued boards go into one pull request, so a person reviews every addition before it ships.
-export async function publishBoards(env) {
-  if (!env.RELAY) return;
-  const { keys } = await env.RELAY.list({ prefix: "board:" });
-  if (!keys.length) return;
-  const queued = (await Promise.all(keys.map(k => env.RELAY.get(k.name, "json")))).filter(Boolean);
-  const branch = "community-boards";
-  const { data: repo } = await gh(env, `/repos/${env.REPO}`);
-  const base = repo.default_branch;
-  const { data: head } = await gh(env, `/repos/${env.REPO}/git/ref/heads/${base}`);
-  const existing = await gh(env, `/repos/${env.REPO}/git/ref/heads/${branch}`);
-  if (existing.status === 404) {
-    await gh(env, `/repos/${env.REPO}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: head.object.sha }) });
+function encodeCatalog(file) {
+  const bytes = new TextEncoder().encode(`${JSON.stringify(file, null, 2)}\n`);
+  const chunks = [];
+  for (let offset = 0; offset < bytes.length; offset += 8192) {
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 8192)));
   }
-  const { data: current } = await gh(env, `/repos/${env.REPO}/contents/${BOARDS_FILE}?ref=${branch}`);
-  const file = current?.content ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(current.content.replace(/\s/g, "")), c => c.charCodeAt(0)))) : { version: 1, boards: [] };
-  const have = new Set(file.boards.map(b => `${b.ats}:${b.token}`));
-  const added = queued.filter(b => !have.has(`${b.ats}:${b.token}`));
-  if (added.length) {
-    file.boards = [...file.boards, ...added].sort((a, b) => `${a.ats}:${a.token}`.localeCompare(`${b.ats}:${b.token}`));
-    file.updated = new Date().toISOString().slice(0, 10);
-    const content = btoa(String.fromCharCode(...new TextEncoder().encode(`${JSON.stringify(file, null, 2)}\n`)));
-    await gh(env, `/repos/${env.REPO}/contents/${BOARDS_FILE}`, {
-      method: "PUT",
-      body: JSON.stringify({ message: `data: ${added.length} shared job board${added.length === 1 ? "" : "s"}`, content, branch, ...(current?.sha ? { sha: current.sha } : {}) }),
+  return btoa(chunks.join(""));
+}
+
+export function publishBoards(env) {
+  return publishQueue(env, {
+    field: "boards",
+    key: b => `${b.ats}:${b.token}`,
+    path: BOARDS_FILE,
+    prefix: "board:",
+    compare: (a, b) => `${a.ats}:${a.token}`.localeCompare(`${b.ats}:${b.token}`),
+    title: "Job boards shared from the app",
+    description: "Review the shared ATS boards before making them available in Fistbump.",
+  });
+}
+
+async function publishQueue(env, { field, key, path, prefix, compare, title, description }) {
+  if (!env.RELAY) return;
+  const { keys } = await env.RELAY.list({ prefix, limit: 40 });
+  const pending = (await Promise.all(keys.map(async ({ name }) => ({
+    name,
+    item: await env.RELAY.get(name, "json"),
+  })))).filter(({ item }) => item);
+  if (!pending.length) return;
+
+  const branch = `community-${field}`;
+  const root = `/repos/${env.REPO}`;
+  const { data: repo } = await gh(env, root);
+  const base = repo.default_branch;
+  const { status } = await gh(env, `${root}/git/ref/heads/${branch}`);
+  if (status === 404) {
+    const { data: head } = await gh(env, `${root}/git/ref/heads/${base}`);
+    await gh(env, `${root}/git/refs`, {
+      method: "POST",
+      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: head.object.sha }),
     });
-    const owner = env.REPO.split("/")[0];
-    const { data: open } = await gh(env, `/repos/${env.REPO}/pulls?state=open&head=${owner}:${branch}`);
-    if (!open?.length) {
-      await gh(env, `/repos/${env.REPO}/pulls`, {
+  }
+  const { file, sha } = await readCatalog(env, path, field, branch);
+  const have = new Set(file[field].map(key));
+  const added = pending.map(({ item }) => item).filter(item => !have.has(key(item)));
+  if (added.length) {
+    file[field] = [...file[field], ...added].sort(compare);
+    file.updated = new Date().toISOString().slice(0, 10);
+    await gh(env, `${root}/contents/${path}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message: `data: add ${added.length} community ${field}`,
+        content: encodeCatalog(file), branch, ...(sha ? { sha } : {}),
+      }),
+    });
+  }
+
+  // If a previous run wrote the file but could not open its PR, retry that step.
+  const owner = env.REPO.split("/")[0];
+  const { data: open } = await gh(env, `${root}/pulls?state=open&head=${owner}:${branch}&base=${encodeURIComponent(base)}`);
+  if (!Array.isArray(open)) throw new Error("Could not check for an open community pull request");
+  if (!open.length) {
+    const { data: comparison } = await gh(env, `${root}/compare/${encodeURIComponent(base)}...${branch}`);
+    if (!comparison) throw new Error("Could not compare the community branch");
+    if (comparison.ahead_by > 0) {
+      await gh(env, `${root}/pulls`, {
         method: "POST",
-        body: JSON.stringify({ title: "Job boards shared from the app", head: branch, base, body: "Boards people shared from Fistbump. Each one answered as a real job board when it was shared. Merge to make them available to everyone who uses shared boards." }),
+        body: JSON.stringify({ title, head: branch, base, body: description }),
       });
     }
   }
-  await Promise.all(keys.map(k => env.RELAY.delete(k.name)));
+  await Promise.all(pending.map(({ name }) => env.RELAY.delete(name)));
 }
 
 // ---------- community listings ----------
+
+function currentListings(file) {
+  const today = new Date().toISOString().slice(0, 10);
+  return { ...file, listings: file.listings.filter(item =>
+    parseIsoDate(item.expires_at) && item.expires_at >= today &&
+    (!item.closes_at || (parseIsoDate(item.closes_at) && item.closes_at >= today))) };
+}
 
 function isHostMatch(host, domain) {
   return host === domain || host.endsWith("." + domain);
@@ -349,16 +438,17 @@ function isHostMatch(host, domain) {
 // Enforces HTTPS-only, rejects credentials, IP literals, localhost/local TLDs, punycode (IDN
 // homographs like xn--), and URL shorteners to prevent phishing/typosquat links.
 export function safeHttpsUrl(value, max) {
-  const raw = String(value ?? "").trim();
+  const raw = typeof value === "string" ? value.trim() : "";
   if (!raw || raw.length > max) return "";
   try {
     const u = new URL(raw);
     if (u.protocol !== "https:") return "";
     if (u.username || u.password) return "";
-    const host = u.hostname.toLowerCase();
+    const host = u.hostname.toLowerCase().replace(/\.$/, "");
     if (!host || !host.includes(".") || host.includes("xn--")) return "";
     if (/^(\d+\.){3}\d+$/.test(host) || host.startsWith("[") || host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return "";
     if (URL_SHORTENERS.has(host.replace(/^www\./, ""))) return "";
+    u.hostname = host;
     return u.href;
   } catch {
     return "";
@@ -400,8 +490,8 @@ const MONTHS = {
 };
 
 function parseIsoDate(s) {
-  if (!ISO_DATE_RE.test(String(s || "").trim())) return null;
-  const [y, m, d] = String(s).trim().split("-").map(Number);
+  if (typeof s !== "string" || !ISO_DATE_RE.test(s.trim())) return null;
+  const [y, m, d] = s.trim().split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
   return dt;
@@ -476,22 +566,17 @@ export function readListing(body) {
   const company_url = safeHttpsUrl(body?.company_url, 300);
   const raw_text = scrub(body?.raw_text, 25000);
   const source = siteFromUrl(listing_url) || scrub(body?.source, 40) || "Community";
-  const closes_at = parseIsoDate(body?.closes_at) ? String(body.closes_at).trim() : extractCloseDate(raw_text);
+  const suppliedClose = parseIsoDate(body?.closes_at) ? body.closes_at.trim() : "";
+  const extractedClose = extractCloseDate(raw_text);
+  const closes_at = [suppliedClose, extractedClose].filter(Boolean).sort()[0] || "";
   const evergreen = isLongRunningListing(position_title, raw_text);
   return { source, company_name, position_title, location, work_mode, listing_url, company_url, raw_text, ...(closes_at ? { closes_at } : {}), ...(evergreen ? { evergreen: true } : {}) };
-}
-
-async function readSharedListings(env) {
-  const { status, data } = await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}`);
-  if (status !== 200) return { file: { version: 1, listings: [] }, sha: null };
-  const text = new TextDecoder().decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), c => c.charCodeAt(0)));
-  return { file: JSON.parse(text), sha: data.sha };
 }
 
 async function cachedSharedListings(env) {
   const hit = env.RELAY && await env.RELAY.get("shared-listings", "json");
   if (hit) return hit;
-  const { file } = await readSharedListings(env);
+  const { file } = await readCatalog(env, LISTINGS_FILE, "listings");
   await env.RELAY?.put("shared-listings", JSON.stringify(file), { expirationTtl: 6 * 3600 });
   return file;
 }
@@ -514,7 +599,7 @@ async function maybeQueueDiscoveredBoard(env, listing) {
 
 async function shareListing(env, request) {
   if (await limited(env, request, "listings", 20)) return problem(429, "rate_limited", "Too many listings shared in one hour. Please try again later.");
-  const l = readListing(await request.json().catch(() => null));
+  const l = readListing(await readJsonBody(request));
   if (l.company_name.length < 2 || l.position_title.length < 2) return problem(400, "validation_failed", "A shared listing needs a company name and position title.");
   if (l.raw_text.length < 40) return problem(400, "validation_failed", "Include the job listing content so others can read and match against it.");
   const today = new Date().toISOString().slice(0, 10);
@@ -525,7 +610,7 @@ async function shareListing(env, request) {
   const expires_at = l.closes_at && l.closes_at < maxExpiry ? l.closes_at : maxExpiry;
 
   const identity = l.listing_url
-    ? l.listing_url.toLowerCase()
+    ? l.listing_url
     : `${l.company_name.toLowerCase()}|${l.position_title.toLowerCase()}|${l.location.toLowerCase()}`;
   const id = (await sha256(identity)).slice(0, 16);
   const known = new Set(((await cachedSharedListings(env)).listings || []).map(x => x.id));
@@ -538,41 +623,16 @@ async function shareListing(env, request) {
   return json({ status: "queued", id, listing: entry, ...(discovered_board ? { discovered_board } : {}) }, 201);
 }
 
-export async function publishListings(env) {
-  if (!env.RELAY) return;
-  const { keys } = await env.RELAY.list({ prefix: "listing:" });
-  if (!keys.length) return;
-  const queued = (await Promise.all(keys.map(k => env.RELAY.get(k.name, "json")))).filter(Boolean);
-  const branch = "community-listings";
-  const { data: repo } = await gh(env, `/repos/${env.REPO}`);
-  const base = repo.default_branch;
-  const { data: head } = await gh(env, `/repos/${env.REPO}/git/ref/heads/${base}`);
-  const existing = await gh(env, `/repos/${env.REPO}/git/ref/heads/${branch}`);
-  if (existing.status === 404) {
-    await gh(env, `/repos/${env.REPO}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: head.object.sha }) });
-  }
-  const { data: current } = await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}?ref=${branch}`);
-  const file = current?.content ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(current.content.replace(/\s/g, "")), c => c.charCodeAt(0)))) : { version: 1, listings: [] };
-  const have = new Set((file.listings || []).map(x => x.id));
-  const added = queued.filter(x => !have.has(x.id));
-  if (added.length) {
-    file.listings = [...added, ...(file.listings || [])].sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || a.company_name.localeCompare(b.company_name));
-    file.updated = new Date().toISOString().slice(0, 10);
-    const content = btoa(String.fromCharCode(...new TextEncoder().encode(`${JSON.stringify(file, null, 2)}\n`)));
-    await gh(env, `/repos/${env.REPO}/contents/${LISTINGS_FILE}`, {
-      method: "PUT",
-      body: JSON.stringify({ message: `data: ${added.length} shared job listing${added.length === 1 ? "" : "s"}`, content, branch, ...(current?.sha ? { sha: current.sha } : {}) }),
-    });
-    const owner = env.REPO.split("/")[0];
-    const { data: open } = await gh(env, `/repos/${env.REPO}/pulls?state=open&head=${owner}:${branch}`);
-    if (!open?.length) {
-      await gh(env, `/repos/${env.REPO}/pulls`, {
-        method: "POST",
-        body: JSON.stringify({ title: "Job listings shared from the app", head: branch, base, body: "External job listings (LinkedIn, Indeed, Workday, etc.) people shared from Fistbump with scrubbed content. Merge to make them available in Community resources." }),
-      });
-    }
-  }
-  await Promise.all(keys.map(k => env.RELAY.delete(k.name)));
+export function publishListings(env) {
+  return publishQueue(env, {
+    field: "listings",
+    key: listing => listing.id,
+    path: LISTINGS_FILE,
+    prefix: "listing:",
+    compare: (a, b) => String(b.added || "").localeCompare(String(a.added || "")) || a.company_name.localeCompare(b.company_name),
+    title: "Job listings shared from the app",
+    description: "Review the shared external job listings before making them available in Fistbump.",
+  });
 }
 
 // ---------- routing ----------
@@ -589,7 +649,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/v1/boards") return await shareBoards(env, request);
       if (request.method === "GET" && url.pathname === "/v1/boards") return json(await cachedShared(env), 200, { "cache-control": "public, max-age=3600" });
       if (request.method === "POST" && url.pathname === "/v1/listings") return await shareListing(env, request);
-      if (request.method === "GET" && url.pathname === "/v1/listings") return json(await cachedSharedListings(env), 200, { "cache-control": "public, max-age=3600" });
+      if (request.method === "GET" && url.pathname === "/v1/listings") return json(currentListings(await cachedSharedListings(env)), 200, { "cache-control": "public, max-age=3600" });
       if (url.pathname === "/") return json({ service: "fistbump-relay", ok: true });
       return problem(404, "not_found", "Nothing here.");
     } catch (err) {

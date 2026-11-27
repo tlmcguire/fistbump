@@ -60,9 +60,9 @@ function checkHttpsUrl(raw, label) {
   }
   if (u.protocol !== 'https:') errors.push(`${label}: non-HTTPS URL ${raw}`);
   if (u.username || u.password) errors.push(`${label}: URL contains credentials`);
-  const host = u.hostname.toLowerCase();
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
   if (!host.includes('.') || host.includes('xn--')) errors.push(`${label}: suspicious/punycode host ${host}`);
-  if (/^(\d+\.){3}\d+$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.local')) {
+  if (/^(\d+\.){3}\d+$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) {
     errors.push(`${label}: IP or local host not allowed (${host})`);
   }
   if (SHORTENERS.has(host.replace(/^www\./, ''))) errors.push(`${label}: URL shortener not allowed (${host})`);
@@ -86,12 +86,31 @@ function loadCuratedTokens(root) {
   return curated;
 }
 
+// PR checkouts are untrusted. Never follow a symlink or read a non-regular file.
+function readCatalog(relativePath, field) {
+  const root = fs.realpathSync(ROOT);
+  let file = root;
+  for (const segment of relativePath.split('/')) {
+    file = path.join(file, segment);
+    const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+    if (!stat) return null;
+    if (stat.isSymbolicLink()) throw new Error(`${relativePath}: symlinks are not allowed`);
+  }
+  const stat = fs.statSync(file);
+  if (!stat.isFile() || stat.size > 4 * 1024 * 1024) {
+    throw new Error(`${relativePath}: expected a regular JSON file up to 4 MiB`);
+  }
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (data?.version !== 1 || !field(data)) throw new Error(`${relativePath}: invalid catalog schema`);
+  return data;
+}
+
 const curated = loadCuratedTokens(REPO_ROOT);
 
 // 1. Audit data/community-boards.json
-const boardsFile = path.join(ROOT, 'data', 'community-boards.json');
-if (fs.existsSync(boardsFile)) {
-  const data = JSON.parse(fs.readFileSync(boardsFile, 'utf8'));
+const boardsCatalog = readCatalog('data/community-boards.json', value => Array.isArray(value.boards));
+if (boardsCatalog) {
+  const data = boardsCatalog;
   const seen = new Set();
   for (const b of data.boards || []) {
     const ats = String(b.ats || '').toLowerCase();
@@ -114,13 +133,13 @@ if (fs.existsSync(boardsFile)) {
 }
 
 // 2. Audit data/community-listings.json
-const listingsFile = path.join(ROOT, 'data', 'community-listings.json');
-if (fs.existsSync(listingsFile)) {
-  const data = JSON.parse(fs.readFileSync(listingsFile, 'utf8'));
+const listingsCatalog = readCatalog('data/community-listings.json', value => Array.isArray(value.listings));
+if (listingsCatalog) {
+  const data = listingsCatalog;
   const today = new Date().toISOString().slice(0, 10);
   for (const l of data.listings || []) {
     const label = `community-listings/${l.id || l.company_name || 'unknown'}`;
-    for (const field of ['company_name', 'position_title', 'location', 'raw_text']) {
+    for (const field of ['source', 'company_name', 'position_title', 'location', 'raw_text']) {
       if (INVISIBLE_RE.test(String(l[field] || ''))) {
         errors.push(`${label}: invisible/bidi/tag characters found in ${field}`);
       }
@@ -129,6 +148,7 @@ if (fs.existsSync(listingsFile)) {
     checkHttpsUrl(l.company_url, `${label}.company_url`);
     const added = parseIsoDate(l.added) ? String(l.added).trim() : '';
     const expires = parseIsoDate(l.expires_at) ? String(l.expires_at).trim() : '';
+    if (added && added > addDays(today, 2)) errors.push(`${label}: added date is in the future`);
     if (!added) {
       errors.push(`${label}: missing or invalid YYYY-MM-DD added date`);
     }
@@ -141,7 +161,7 @@ if (fs.existsSync(listingsFile)) {
         errors.push(`${label}: invalid YYYY-MM-DD closes_at date (${l.closes_at})`);
       }
     }
-    const closeDate = explicitClose || extractCloseDate(l.raw_text);
+    const closeDate = [explicitClose, extractCloseDate(l.raw_text)].filter(Boolean).sort()[0] || '';
     if (closeDate && closeDate < today) {
       errors.push(`${label}: closes_at (${closeDate}) has already elapsed`);
     }
@@ -163,10 +183,9 @@ if (fs.existsSync(listingsFile)) {
 }
 
 // 3. Audit backend/internal/connectors/public_boards.json
-const pubFile = path.join(ROOT, 'backend', 'internal', 'connectors', 'public_boards.json');
-if (fs.existsSync(pubFile)) {
-  const data = JSON.parse(fs.readFileSync(pubFile, 'utf8'));
-  if (data.version !== 1) errors.push(`public_boards.json: unsupported version ${data.version}`);
+const publicCatalog = readCatalog('backend/internal/connectors/public_boards.json', value => value.boards && typeof value.boards === 'object' && !Array.isArray(value.boards) && Object.entries(value.boards).every(([ats, boards]) => ATS_SET.has(ats) && Array.isArray(boards)));
+if (publicCatalog) {
+  const data = publicCatalog;
   for (const ats of ['greenhouse', 'lever', 'ashby']) {
     const seen = new Set();
     for (const b of data.boards?.[ats] || []) {

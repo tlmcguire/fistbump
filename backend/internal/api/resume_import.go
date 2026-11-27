@@ -14,10 +14,12 @@ package api
 //	func Parse(text string) Draft  // parse.go
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -252,14 +254,12 @@ func (s *Server) resumeImportApply(w http.ResponseWriter, r *http.Request) error
 				return err
 			}
 		}
-		if !body.Replace {
-			offset = int64(len(cur.Education))
+		savedEducation := cur.Education
+		if body.Replace {
+			savedEducation = nil
 		}
-		for _, e := range edus {
-			e.SortOrder += offset
-			if _, err := tx.CreateEducation(ctx, e); err != nil {
-				return err
-			}
+		if err := applyImportedEducation(ctx, tx, savedEducation, edus); err != nil {
+			return err
 		}
 		if copyRV != nil {
 			if _, err := tx.CreateResume(ctx, *copyRV); err != nil {
@@ -276,6 +276,49 @@ func (s *Server) resumeImportApply(w http.ResponseWriter, r *http.Request) error
 		return storeError(err, "Resume")
 	}
 	return s.resumeGet(w, r)
+}
+
+func applyImportedEducation(ctx context.Context, tx *store.Store, saved, incoming []models.Education) error {
+	existing := models.UniqueEducation(saved)
+	byID := make(map[int64]models.Education, len(saved))
+	for _, row := range saved {
+		byID[row.ID] = row
+	}
+	for _, row := range models.UniqueEducation(incoming) {
+		match := slices.IndexFunc(existing, func(other models.Education) bool {
+			return models.SameEducationDegree(other, row)
+		})
+		if match >= 0 {
+			prior := existing[match]
+			merged := models.MergeEducationDetails(prior, row)
+			if merged == prior {
+				continue
+			}
+			if raw := byID[prior.ID]; len(models.SplitEducation(raw)) == 1 &&
+				(merged.Details == nil || utf8.RuneCountInString(*merged.Details) <= maxLongText) &&
+				(merged.Honors == nil || utf8.RuneCountInString(*merged.Honors) <= maxShortText) {
+				updated, err := tx.UpdateEducation(ctx, prior.ID, merged)
+				if err != nil {
+					return err
+				}
+				existing[match], byID[updated.ID] = updated, updated
+				continue
+			}
+			// A legacy row can describe several credentials. Keep its original fields and
+			// record new metadata against the individual credential being imported.
+			existing[match] = merged
+		}
+		row.SortOrder = 0
+		created, err := tx.CreateEducation(ctx, row)
+		if err != nil {
+			return err
+		}
+		if match < 0 {
+			existing = append(existing, created)
+			byID[created.ID] = created
+		}
+	}
+	return nil
 }
 
 // mergeProfile fills the draft's empty fields from the current profile, then validates. Draft

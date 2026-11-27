@@ -45,6 +45,7 @@ const (
 	dbFile          = "fistbump.db"
 	shutdownTimeout = 5 * time.Second
 	cacheMaxAge     = 24 * time.Hour
+	listingCacheAge = 7 * 24 * time.Hour
 )
 
 func main() {
@@ -62,6 +63,8 @@ func run() error {
 	if token == "" {
 		return errors.New("FISTBUMP_TOKEN is not set")
 	}
+	// The bearer authenticates the host to this process. Child processes need their own credentials.
+	os.Unsetenv("FISTBUMP_TOKEN")
 	if *dataDir == "" {
 		return errors.New("--data-dir is required")
 	}
@@ -118,23 +121,62 @@ func run() error {
 	os.RemoveAll(filepath.Join(*dataDir, "cache", "greenhouse"))
 	gh := greenhouse.NewClient()
 	gh.Cache = greenhouse.NewCache(conn)
-	// Cached results older than a day are of no use: listings revalidate after 6 hours and descriptions expire after 24.
-	if n, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
-		slog.Warn("purging the search cache", "error", err)
+	leverClient := lever.NewClient()
+	ashbyClient := ashby.NewClient()
+	if n, err := gh.Cache.PurgeListingsOlderThan(listingCacheAge); err != nil {
+		slog.Warn("purging old Greenhouse listing snapshots", "error", err)
 	} else if n > 0 {
-		slog.Info("purged old search cache", "rows", n)
+		slog.Info("purged old Greenhouse listing snapshots", "rows", n)
 	}
+	if n, err := gh.Cache.PurgeDescriptionsOlderThan(cacheMaxAge); err != nil {
+		slog.Warn("purging old Greenhouse descriptions", "error", err)
+	} else if n > 0 {
+		slog.Info("purged old Greenhouse descriptions", "rows", n)
+	}
+	connectors.StartListingCacheUpdater(roundsCtx,
+		connectors.ListingCacheSource{
+			Name:        "greenhouse",
+			StaleBoards: gh.Cache.BoardsStaleBefore,
+			Refresh: func(ctx context.Context, board string) error {
+				_, err := gh.ListBoard(ctx, board)
+				return err
+			},
+		},
+		connectors.ListingCacheSource{
+			Name: "lever",
+			StaleBoards: func(_ context.Context, cutoff time.Time) ([]string, error) {
+				return leverClient.BoardsStaleBefore(cutoff), nil
+			},
+			Refresh: func(ctx context.Context, board string) error {
+				_, err := leverClient.ListBoard(ctx, board)
+				return err
+			},
+		},
+		connectors.ListingCacheSource{
+			Name: "ashby",
+			StaleBoards: func(_ context.Context, cutoff time.Time) ([]string, error) {
+				return ashbyClient.BoardsStaleBefore(cutoff), nil
+			},
+			Refresh: func(ctx context.Context, board string) error {
+				_, err := ashbyClient.ListBoard(ctx, board)
+				return err
+			},
+		},
+	)
 
 	logoFetcher := logos.New(conn)
 	if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
 		slog.Warn("purging the logo cache", "error", err)
 	}
 
-	// A long-running app would otherwise keep a day-old cache until the next launch.
+	// A long-running app would otherwise keep expired cache rows until the next launch.
 	go func() {
 		for range time.Tick(time.Hour) {
-			if _, err := gh.Cache.PurgeOlderThan(cacheMaxAge); err != nil {
-				slog.Warn("purging the search cache", "error", err)
+			if _, err := gh.Cache.PurgeListingsOlderThan(listingCacheAge); err != nil {
+				slog.Warn("purging old Greenhouse listing snapshots", "error", err)
+			}
+			if _, err := gh.Cache.PurgeDescriptionsOlderThan(cacheMaxAge); err != nil {
+				slog.Warn("purging old Greenhouse descriptions", "error", err)
 			}
 			if _, err := logoFetcher.PurgeOlderThan(cacheMaxAge); err != nil {
 				slog.Warn("purging the logo cache", "error", err)
@@ -172,12 +214,12 @@ func run() error {
 	handler := api.New(api.Config{
 		DB:          conn,
 		Greenhouse:  gh,
-		Lever:       lever.NewClient(),
-		Ashby:       ashby.NewClient(),
+		Lever:       leverClient,
+		Ashby:       ashbyClient,
 		Searcher:    gh,
 		Logos:       logoFetcher,
 		DataDir:     *dataDir,
-		Caches:      []api.CacheClearer{gh.Cache, logoFetcher},
+		Caches:      []api.CacheClearer{gh.Cache, leverClient, ashbyClient, logoFetcher},
 		Token:       token,
 		Version:     version,
 		PDF:         pdf.RenderFile,
@@ -193,7 +235,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("listening: %w", err)
 	}
-	server := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()

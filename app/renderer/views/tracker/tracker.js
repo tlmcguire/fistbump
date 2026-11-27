@@ -168,7 +168,11 @@
       };
 
       const exportCsvButton = el("button", {type: "button", class: "tr3-tool", title: "Save every application shown as a spreadsheet file", onclick: () => {
-        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const esc = value => {
+          let text = String(value ?? "");
+          if (/^[\t\r\n]|^\s*[=+\-@＝＋－＠]/u.test(text)) text = "'" + text;
+          return '"' + text.replace(/"/g, '""') + '"';
+        };
         const header = ["Company", "Position", "Status", "Date Applied", "Next Step Date", "Notes"].map(esc).join(",");
         const lines = rows.map(a => [a.company_name, a.position_title, a.status, a.date_applied || "", a.next_step_date || "", a.notes || ""].map(esc).join(","));
         downloadBlob("Fistbump-Applications.csv", [header, ...lines].join("\r\n") + "\r\n", "text/csv;charset=utf-8");
@@ -636,7 +640,7 @@
             el("div", {class: "jl3-view", role: "radiogroup", "aria-label": "Show"}, scopeButtons),
             el("div", {class: "tr3-stages", role: "group", "aria-label": "Filter by stage"}, stageChips),
             el("label", {class: "jl3-search"}, icon("search"), search),
-            el("button", {type: "button", class: "tr3-tool", title: "Add a job listing from Greenhouse, Lever, Ashby, LinkedIn, Indeed, or any site", onclick: () => window.SubmitListing?.open()}, "Add listing"),
+            el("button", {type: "button", class: "tr3-tool", title: "Add a job listing from Greenhouse, Lever, Ashby, LinkedIn, Indeed, or any site", onclick: () => window.App.openTab("tab-paste")}, "Add listing"),
             el("button", {type: "button", class: "tr3-tool", title: "Interviews and follow-ups by week, with clashes flagged", onclick: () => window.App.go("calendar")}, "Calendar"),
             compareButton, exportCsvButton),
           status,
@@ -695,9 +699,10 @@
         nextDay.setDate(nextDay.getDate() + 1);
         const end = `${nextDay.getFullYear()}${String(nextDay.getMonth() + 1).padStart(2, "0")}${String(nextDay.getDate()).padStart(2, "0")}`;
         const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fistbump//Tracker//EN", "BEGIN:VEVENT",
-          `UID:fistbump-app-${a.id}@local`, `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
-          `SUMMARY:Follow-up: ${a.company_name || "Company"} - ${a.position_title || "Role"}`,
-          `DESCRIPTION:Status: ${a.status}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
+          `UID:fistbump-app-${a.id}@local`, `DTSTAMP:${new Date().toISOString().replace(/[-:]|\.\d{3}/g, "")}`,
+          `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
+          `SUMMARY:${window.ICS.escapeText(`Follow-up: ${a.company_name || "Company"} - ${a.position_title || "Role"}`)}`,
+          `DESCRIPTION:${window.ICS.escapeText(`Status: ${a.status}`)}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
         downloadBlob(`${(a.company_name || "Follow-up").replace(/[^a-z0-9_-]+/gi, "-")}.ics`, ics, "text/calendar;charset=utf-8");
       };
 

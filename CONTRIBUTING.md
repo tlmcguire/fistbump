@@ -209,6 +209,8 @@ cd backend && gofmt -w . && go test ./... && go test -race ./... && go vet ./...
 # Rust host & renderer
 npm run test:rust
 npm test
+npm --prefix relay test
+node scripts/verify-community-data.js
 ```
 
 After running `go mod tidy`, review the resulting changes (`git status`, `git diff`) to confirm that formatting changes, dependency changes, generated files, and test artifacts are intentional before committing.

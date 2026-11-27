@@ -1,7 +1,7 @@
 // The relay against a pretend GitHub and pretend job boards: nothing leaves the test.
 import test from "node:test";
 import assert from "node:assert/strict";
-import relay, { scrub, words, likeness, readReport, readBoards, readListing, issueBody, safeHttpsUrl, siteFromUrl, isLikelyTyposquat } from "../src/index.js";
+import relay, { scrub, words, likeness, readReport, readBoards, readListing, issueBody, publishListings, safeHttpsUrl, siteFromUrl, isLikelyTyposquat } from "../src/index.js";
 
 //a KV namespace in memory
 const kv = () => {
@@ -170,4 +170,69 @@ test("an elapsed explicit close date rejects shared listings", async () => {
 
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.code, "listing_expired");
+});
+
+test("listing deadline survives scrubbing and takes precedence over a later supplied date", () => {
+  const listing = readListing({ raw_text: "Application deadline: 2026-12-03", closes_at: "2026-12-19" });
+  assert.equal(listing.closes_at, "2026-12-03");
+  assert.equal(safeHttpsUrl("https://bit.ly./abc", 100), "");
+  assert.deepEqual(readBoards({ boards: ["greenhouse:login", "lever:token:extra"] }), []);
+});
+
+test("oversized relay submissions are rejected before calling GitHub", async () => {
+  const calls = fakeFetch({});
+  const response = await relay.fetch(post("/v1/listings", { raw_text: "x".repeat(200 * 1024) }), env());
+  assert.equal(response.status, 400);
+  assert.equal(calls.length, 0);
+});
+
+test("publication retries rejected writes and PR creation without losing or duplicating entries", async () => {
+  const e = env();
+  const id = "test-id";
+  const raw_text = "é".repeat(20_000);
+  for (const key of [id, "second", "third", "fourth"]) {
+    e.RELAY.m.set(`listing:${key}`, JSON.stringify({ id: key, company_name: "Example", raw_text }));
+  }
+  let stored;
+  let rejectWrite = true;
+  let rejectPr = true;
+  const calls = fakeFetch({
+    "GET api.github.com/repos/owner/app/git/ref/heads/community-listings": () => [200, {}],
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () => stored ? [200, stored] : [404, {}],
+    "PUT api.github.com/repos/owner/app/contents/data/community-listings.json": (_url, init) => {
+      if (rejectWrite) return [422, {}];
+      stored = { content: JSON.parse(init.body).content, sha: "updated" };
+      return [200, stored];
+    },
+    "GET api.github.com/repos/owner/app/pulls": () => [200, []],
+    "GET api.github.com/repos/owner/app/compare": () => [200, { ahead_by: 1 }],
+    "POST api.github.com/repos/owner/app/pulls": () => [rejectPr ? 422 : 201, {}],
+    "GET api.github.com/repos/owner/app": () => [200, { default_branch: "main" }],
+  });
+
+  await assert.rejects(publishListings(e), /422/);
+  assert.equal(e.RELAY.m.size, 4);
+  rejectWrite = false;
+  await assert.rejects(publishListings(e), /422/);
+  assert.equal(e.RELAY.m.size, 4);
+  rejectPr = false;
+  await publishListings(e);
+  assert.equal(e.RELAY.m.size, 0);
+  assert.equal(calls.filter(call => call.key.startsWith("PUT ")).length, 2);
+  const file = JSON.parse(Buffer.from(stored.content, "base64").toString("utf8"));
+  assert.equal(file.listings.length, 4);
+  assert.equal(file.listings[0].raw_text, raw_text);
+});
+
+test("a community catalog over the inline response limit is read by blob SHA", async () => {
+  const calls = fakeFetch({
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () =>
+      [200, { type: "file", sha: "catalog-sha", encoding: "none", content: "" }],
+    "GET api.github.com/repos/owner/app/git/blobs/catalog-sha": () =>
+      [200, { encoding: "base64", content: btoa(JSON.stringify({ version: 1, listings: [] })) }],
+  });
+  const response = await relay.fetch(new Request("https://relay.test/v1/listings"), env());
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { version: 1, listings: [] });
+  assert.equal(calls.length, 2);
 });

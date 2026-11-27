@@ -105,6 +105,7 @@ func (s *Store) GetMaster(ctx context.Context) (models.Master, error) {
 			return err
 		}
 		if vals, err := tx.GetSettings(ctx); err == nil {
+			m.EducationLayout, _ = vals["resume.education_layout"].(string)
 			if order, ok := vals["resume.section_order"].([]string); ok && len(order) > 0 {
 				m.SectionOrder = order
 			}

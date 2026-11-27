@@ -1,9 +1,11 @@
 package greenhouse
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log/slog"
+	"sort"
 	"sync"
 	"time"
 
@@ -130,6 +132,61 @@ func (c *Cache) putListing(e cachedListing) {
 	}
 }
 
+// BoardsStaleBefore returns previously searched boards whose cached listings are older than cutoff.
+func (c *Cache) BoardsStaleBefore(ctx context.Context, cutoff time.Time) ([]string, error) {
+	stale := make(map[string]time.Time)
+	c.mu.Lock()
+	for board, entry := range c.listings {
+		if !entry.NotFound && entry.FetchedAt.Before(cutoff) {
+			stale[board] = entry.FetchedAt
+		}
+	}
+	c.mu.Unlock()
+	if c.DB != nil {
+		rows, err := c.DB.QueryContext(ctx,
+			`SELECT board, fetched_at FROM greenhouse_listing_cache WHERE not_found = 0 AND fetched_at < ?`,
+			cutoff.UTC().Format(timeFormat))
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var board, fetched string
+			if err := rows.Scan(&board, &fetched); err != nil {
+				return nil, err
+			}
+			at, err := time.Parse(timeFormat, fetched)
+			if err != nil {
+				return nil, err
+			}
+			stale[board] = at
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	type boardTime struct {
+		board string
+		at    time.Time
+	}
+	ordered := make([]boardTime, 0, len(stale))
+	for board, at := range stale {
+		ordered = append(ordered, boardTime{board, at})
+	}
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].at.Equal(ordered[j].at) {
+			return ordered[i].board < ordered[j].board
+		}
+		return ordered[i].at.Before(ordered[j].at)
+	})
+	out := make([]string, len(ordered))
+	for i, entry := range ordered {
+		out[i] = entry.board
+	}
+	return out, nil
+}
+
 // description returns a cached posting that is under 24 hours old.
 func (c *Cache) description(board, id string) (connectors.Posting, bool) {
 	key := board + "/" + id
@@ -191,6 +248,16 @@ func (c *Cache) putDescription(board, id string, p connectors.Posting) {
 // PurgeOlderThan deletes cached listings and descriptions fetched more than age ago, from the
 // database and from memory, and returns how many database rows it removed.
 func (c *Cache) PurgeOlderThan(age time.Duration) (int64, error) {
+	listings, err := c.PurgeListingsOlderThan(age)
+	if err != nil {
+		return listings, err
+	}
+	descriptions, err := c.PurgeDescriptionsOlderThan(age)
+	return listings + descriptions, err
+}
+
+// PurgeListingsOlderThan removes listing snapshots older than age.
+func (c *Cache) PurgeListingsOlderThan(age time.Duration) (int64, error) {
 	cutoff := c.now().Add(-age)
 	c.mu.Lock()
 	for board, e := range c.listings {
@@ -198,6 +265,22 @@ func (c *Cache) PurgeOlderThan(age time.Duration) (int64, error) {
 			delete(c.listings, board)
 		}
 	}
+	c.mu.Unlock()
+	if c.DB == nil {
+		return 0, nil
+	}
+	res, err := c.DB.Exec(`DELETE FROM greenhouse_listing_cache WHERE fetched_at < ?`, cutoff.Format(timeFormat))
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
+// PurgeDescriptionsOlderThan removes cached job descriptions older than age.
+func (c *Cache) PurgeDescriptionsOlderThan(age time.Duration) (int64, error) {
+	cutoff := c.now().Add(-age)
+	c.mu.Lock()
 	for key, d := range c.details {
 		if d.at.Before(cutoff) {
 			delete(c.details, key)
@@ -207,16 +290,12 @@ func (c *Cache) PurgeOlderThan(age time.Duration) (int64, error) {
 	if c.DB == nil {
 		return 0, nil
 	}
-	var total int64
-	for _, table := range []string{"greenhouse_listing_cache", "greenhouse_description_cache"} {
-		res, err := c.DB.Exec(`DELETE FROM `+table+` WHERE fetched_at < ?`, cutoff.Format(timeFormat))
-		if err != nil {
-			return total, err
-		}
-		n, _ := res.RowsAffected()
-		total += n
+	res, err := c.DB.Exec(`DELETE FROM greenhouse_description_cache WHERE fetched_at < ?`, cutoff.Format(timeFormat))
+	if err != nil {
+		return 0, err
 	}
-	return total, nil
+	n, _ := res.RowsAffected()
+	return n, nil
 }
 
 // Clear removes every cached listing and description. Storage cleanup calls it.

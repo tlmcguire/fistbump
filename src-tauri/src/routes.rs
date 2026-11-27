@@ -410,7 +410,10 @@ pub fn route_for_channel(
                     merged.insert("q".into(), Value::String(q.to_string()));
                 }
             }
-            let qs = build_query(Some(&Value::Object(merged)), &["q", "archived", "trashed"]);
+            let qs = build_query(
+                Some(&Value::Object(merged)),
+                &["q", "archived", "trashed", "limit", "offset"],
+            );
             Ok((Method::GET, format!("/v1/jobs{qs}"), None))
         }
         "jobs:get" => match as_id(a0) {
@@ -550,6 +553,10 @@ pub fn route_for_channel(
             }
         }
 
+        "connectors:location-radius" => match as_object(a0) {
+            Some(body) => Ok((Method::POST, "/v1/connectors/location-radius".into(), Some(body.clone()))),
+            None => Err(bad("Invalid location radius request")),
+        },
         "connectors:categories" => Ok((
             Method::GET,
             "/v1/connectors/greenhouse/categories".into(),
@@ -682,6 +689,10 @@ mod tests {
         assert!(matches!(
             route_for_channel("jobs:get", &[json!("42/../other")]),
             Some(Err(_))
+        ));
+        assert!(matches!(
+            route_for_channel("jobs:list", &[json!(""), json!({"limit": "50", "offset": "50"})]),
+            Some(Ok((Method::GET, path, None))) if path == "/v1/jobs?limit=50&offset=50"
         ));
         assert_eq!(
             build_query(

@@ -29,6 +29,7 @@ func fakeLlamaServer() {
 	host := fs.String("host", "", "")
 	port := fs.Int("port", 0, "")
 	fs.Int("ctx-size", 0, "")
+	fs.Bool("no-webui", false, "")
 	fs.Parse(os.Args[1:])
 	ready := time.Now().Add(300 * time.Millisecond)
 
@@ -41,6 +42,11 @@ func fakeLlamaServer() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 	mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
+		key := os.Getenv("LLAMA_API_KEY")
+		if key == "" || r.Header.Get("Authorization") != "Bearer "+key {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		json.NewEncoder(w).Encode(map[string]any{
 			"choices": []any{map[string]any{"message": map[string]string{"role": "assistant", "content": "pong from " + *model}}},
 		})

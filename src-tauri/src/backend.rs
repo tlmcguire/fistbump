@@ -78,10 +78,11 @@ impl BackendManager {
     pub fn new(bin_dir: PathBuf, data_dir: PathBuf) -> Arc<Self> {
         let http = reqwest::Client::builder()
             .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
             .tcp_nodelay(true)
             .pool_max_idle_per_host(8)
             .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+            .expect("could not initialize the loopback HTTP client");
         Arc::new(Self {
             bin_dir,
             data_dir,

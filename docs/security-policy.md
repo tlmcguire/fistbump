@@ -1,6 +1,13 @@
-# Community Data & Automation Security Policy
+# Fistbump Security Policy
 
-This document describes how Fistbump validates community-submitted job boards, community-submitted job listings, and automated public ATS dataset refreshes before any data enters the repository or reaches desktop clients.
+## Desktop trust boundaries
+
+- The Go API binds to IPv4 loopback and requires a random per-launch bearer. The Tauri bridge disables HTTP proxies and redirects for that connection. Bundled `llama-server` uses a separate per-process key and disables its built-in web UI.
+- The desktop webviews allow the packaged app origins. External HTTPS links open in the system browser. The content security policy limits renderer network access, and PDF.js runs with evaluation disabled.
+- The OS keychain binds a remote AI key to the provider origin. Older credentials without an origin require one-time re-entry. Private calendar addresses also stay in the keychain. Calendar fetches stream at most 4 MiB and follow up to three same-origin HTTPS redirects.
+- Application CSV exports escape formula-like fields as text. Calendar exports escape all newline forms, and native calendar handoff uses a private temporary file.
+
+## Community data and automation
 
 ## Core Principles
 
@@ -16,7 +23,7 @@ This document describes how Fistbump validates community-submitted job boards, c
 All community submissions enter through the Cloudflare Worker relay (`POST /v1/boards` and `POST /v1/listings`).
 
 ### Rate Limiting & PII / Injection Scrubbing
-- **Per-IP rate limiting**: Uses an hourly salted SHA-256 hash of `cf-connecting-ip` (forgotten within ~61 minutes; raw IPs are never stored). Limits: `30/hr` for boards, `20/hr` for listings, `6/hr` for bug reports.
+- **Per-IP rate limiting**: Uses a secret-salted SHA-256 hash scoped to the hour. Cloudflare KV provides best-effort counters with a 3,700-second TTL. The relay caps POST bodies at 192 KiB. Limits: `30/hr` for boards, `20/hr` for listings, `6/hr` for bug reports.
 - **Text sanitization (`scrub`)**: Every string field strips ASCII control characters, zero-width spaces, bidirectional override characters (`U+202A–U+202E`), invisible format characters (`U+2060–U+206F`, `U+FEFF`), and Unicode Tag characters (`U+E0000–U+E007F`, commonly used for hidden prompt injection). It also redacts email addresses, phone numbers, and local home directory paths (`/Users/...`, `/home/...`, `C:\Users\...`).
 
 ### Board Validation (`POST /v1/boards`)
@@ -40,9 +47,9 @@ All community submissions enter through the Cloudflare Worker relay (`POST /v1/b
 ## Layer 2: Automated Fetchers & Domain-Takeover Defense
 
 - **Public ATS dataset updater (`scripts/update-ats-boards.js`)**:
-  - Only contacts an institutional host allowlist (`datasets-server.huggingface.co` and `index.commoncrawl.org`). Small third-party domains are excluded from automated crawling.
-  - Uses `redirect: "manual"` and inspects every redirect hop (max 3 hops), requiring HTTPS and an allowlisted host on every hop.
-  - Rejects `text/html` responses (catching parked or hijacked domains returning HTML instead of JSON/NDJSON), enforces a `5 MiB` response byte cap, strips invisible characters, blocks reserved slugs, and aborts if a single run attempts to add more than `5,000` new boards (anomaly guardrail).
+  - Contacts only the configured Hugging Face, Common Crawl, and GitHub raw hosts for StoreSignal, CDX, and Open-Apply inputs.
+  - Uses `redirect: "manual"` and inspects every redirect hop (max 3 hops), requiring HTTPS and the original allowlisted origin on every hop.
+  - Rejects `text/html` responses (catching parked or hijacked domains returning HTML instead of JSON/NDJSON), enforces a `5 MiB` response byte cap, strips invisible characters, blocks reserved slugs, and verifies at most 180 new candidates against official ATS APIs per run. Only successful probes enter the proposed catalog.
 - **Cost & pay reference updater (`scripts/update-cost-data.js`)**:
   - Uses `redirect: "manual"` (max 3 hops) and enforces HTTPS-only plus same `baseDomain` on every redirect hop. If a reference domain is sold and redirects to a different domain, verification fails immediately.
 - **Listing pruner (`scripts/prune-community-listings.js`)**:
@@ -54,7 +61,7 @@ All community submissions enter through the Cloudflare Worker relay (`POST /v1/b
 
 Every Pull Request touching `data/community-boards.json`, `data/community-listings.json`, or `backend/internal/connectors/public_boards.json` triggers a `pull_request_target` workflow defined by the base revision. It runs the validator from that trusted revision against the checked-out PR data, without executing PR code, with minimal permissions (`contents: read`, `persist-credentials: false`, `timeout-minutes: 5`).
 
-The audit fails the PR if it detects any of the following:
+The validator reads bounded regular JSON files and rejects symlinks in catalog paths. It checks for the following:
 - Unsupported ATS name, invalid/reserved token, or duplicate token.
 - Edit-distance-1 typosquat in `community-boards.json` against the curated Greenhouse, Lever, or Ashby catalogs.
 - Invisible, bidirectional override, or Unicode Tag characters in any text field.
@@ -79,10 +86,12 @@ The weekly `Prune Outdated Community Listings` workflow (`.github/workflows/prun
 
 ---
 
+Listings past their expiration or closing date are hidden from users even if a live ATS check keeps the record for review. The relay retains queued submissions when GitHub rejects a write or PR creation.
+
 ## Layer 5: Desktop Client Validation (`fistbump-core`)
 
 When the desktop app refreshes cached datasets in the background (`backend/internal/connectors/public_boards.go` and `backend/internal/cost/updater.go`):
-- Only `https://` feed URLs are accepted.
+- The updater uses the feed bundled with the app. Downloaded and cached data cannot change the next refresh URL. Only HTTPS URLs without credentials are accepted.
 - Redirects are restricted to HTTPS and the exact same host (max 3 hops).
 - Response bodies are size-capped (`4 MiB` for public boards, `256 KiB` for cost sources).
-- Every loaded board token is re-validated against `^[a-z0-9_-]{1,64}$` before entering memory or `<dataDir>/public-ats-boards.json`.
+- Every loaded board token is re-validated against `^[a-z0-9][a-z0-9_-]{0,63}$` before entering memory or `<dataDir>/public-ats-boards.json`.

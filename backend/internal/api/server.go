@@ -106,6 +106,7 @@ func (s *Server) routes() []route {
 		{"GET /v1/health", s.health},
 		{"GET /v1/connectors", s.connectorList},
 		{"POST /v1/connectors/greenhouse/fetch", s.greenhouseFetch},
+		{"POST /v1/connectors/location-radius", s.locationRadius},
 		{"GET /v1/connectors/greenhouse/categories", s.categoryList},
 		{"GET /v1/connectors/greenhouse/logo", s.companyLogo},
 		{"GET /v1/storage", s.storage},

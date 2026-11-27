@@ -1,6 +1,6 @@
 # FistBump Architecture
 
-FistBump is a local-first desktop app. It stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
+FistBump is a local-first desktop app. It stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. SQLite stores resumes and application records locally. Optional integrations send data to the configured provider, calendar service, or community relay as described in the [user guide](user-guide.md).
 
 ## Goals and constraints
 
@@ -212,7 +212,7 @@ flowchart LR
 - **Keywords.** Request keywords, else `profile.target_positions`, else the title of the most recent experience. Titles are matched by words, not phrases: seniority words are ignored, common synonyms are folded (developer and engineer, front end and frontend), and an exact phrase ranks higher.
 - **Filters.** Location terms match the posting location; remote postings pass a location filter unless the user wants on-site. Remote must be stated in the posting; hybrid and on-site pass when the posting does not say.
 - **Rank.** Descriptions are fetched for the 40 best title matches (5 s per request, 8 s for the stage) and scored by overlap with resume skills. Postings near `profile.home_location` rank higher, postings in other countries lower. No company fills more than 3 of the top slots. Ranking is deterministic and does not call AI.
-- **Cache.** Listings are cached in memory and in the `greenhouse_listing_cache` table for 6 hours, descriptions in memory and in `greenhouse_description_cache` for 24 hours. At launch, rows older than a day are deleted. Storage cleanup of `cache` clears both tables. A board that returns 404 is remembered and reported in `errors`.
+- **Cache.** Listings are cached in memory and in the `greenhouse_listing_cache` table for 6 hours, descriptions in memory and in `greenhouse_description_cache` for 24 hours. Listing snapshots are retained for up to 7 days and refreshed daily for previously searched boards; descriptions older than 24 hours are purged. Storage cleanup of `cache` clears both tables. A board that returns 404 is remembered and reported in `errors`.
 - **Persistence.** Search results are not written to the database. Saving a posting fetches its description if needed and stores it with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. Saving again refreshes `searched_at`.
 - **Network.** Requests carry only public board tokens and job ids. Keywords, filters and the resume stay on the computer, because filtering and ranking are local. See the network policy above.
 
@@ -416,12 +416,14 @@ Each Go source file `foo.go` has an adjacent `foo_test.go`.
 
 ## API keys and secrets
 
-The app handles three kinds of secret. None of them is stored in SQLite, written to logs, or readable by the renderer.
+The desktop app keeps these secrets out of SQLite and excludes their values from renderer responses.
 
 | Secret | Who needs it | Where it lives |
 |--------|--------------|----------------|
 | Backend bearer token | Tauri host and Go | Generated at launch, memory only, never persisted |
-| Remote AI API key (user supplied) | Go `remote.go` | Stored in OS keychain via `keyring`, plaintext only in Go memory |
+| Remote AI API key | Tauri host and Go | OS keychain, bound to the provider origin. Go retains it in memory for inference. |
+| Local inference bearer | Go and bundled `llama-server` | Random per server process, passed in its environment. |
+| Private calendar feed addresses | Tauri host | OS keychain. The renderer receives calendar contents for local parsing. |
 | Hugging Face token (optional, gated models) | Go `download.go` | Same as the remote AI key |
 
 Greenhouse's public board API needs no key. A future connector that does (USAJOBS, for example) would use the same path as the Hugging Face token.
@@ -438,8 +440,8 @@ sequenceDiagram
     Note over R,A: Entering the key
     R->>P: api.ai.setRemote(remote)
     P->>M: invoke ipc_call (ai:setRemote)
-    M->>D: keyring::Entry::set_password(key)
     M->>G: PUT /v1/ai/remote (base_url, model, api_key)
+    M->>D: Store key with provider origin
     G->>G: hold key in memory only
     M-->>R: ok (no key returned)
 
@@ -447,7 +449,7 @@ sequenceDiagram
     M->>G: spawn with FISTBUMP_TOKEN env
     G-->>M: PORT=n on stdout
     M->>D: keyring::Entry::get_password()
-    M->>G: PUT /v1/ai/remote (api_key)
+    M->>G: Restore key if provider origin matches
 
     Note over G,A: Using the key
     G->>A: HTTPS request with key in header
@@ -458,8 +460,8 @@ Handling:
 - **Entry.** The settings view passes the key through the bridge method `ai.setRemote`. No method returns it. The renderer sees only `has_key` from `GET /v1/ai/status`.
 - **Storage.** `secrets.rs` stores the key in the OS keychain via `keyring` (`com.fistbump.desktop`: macOS Keychain, Windows Credential Manager, Linux Secret Service). If no keyring is available, the key is kept for the session only and never written in plaintext.
 - **Hand-off.** The Tauri host reads the key from the OS keychain and sends it to `PUT /v1/ai/remote`. Go holds it in memory and never writes it to disk. `backend.rs` re-sends it after every restart.
-- **Backend token.** The Tauri host generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time.
-- **Outbound.** Go sends the key only to the configured `base_url`. HTTPS is required unless the host is loopback (local Ollama). Cross-host redirects are not followed.
+- **Backend token.** The Tauri host generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time and removes the token from its environment before it launches children.
+- **Outbound.** Go sends the key only to the configured `base_url`. HTTPS is required unless the host is loopback (local Ollama). Redirects must stay on the same scheme, host and port.
 - **Logging.** Middleware redacts `Authorization` and skips bodies on `/v1/ai/remote` and `/v1/models/token`. Remote error messages are trimmed before reaching the UI.
 - **Removal.** Clearing the key removes the entry from the OS keychain and calls `DELETE /v1/ai/remote`.
 - **Limits.** Malware running as the same OS user can read process memory or query the keystore. The design protects against other apps, other users, backups, and the renderer, not a compromised account.

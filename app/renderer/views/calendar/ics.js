@@ -6,7 +6,7 @@
 window.ICS = (() => {
   const pad = n => String(n).padStart(2, "0");
   const utcStamp = date => `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
-  const escape = text => String(text || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  const escape = text => String(text || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n|\r|\n/g, "\\n");
   //lines over 75 octets are folded, as the format asks
   const fold = line => {
     const out = [];
@@ -148,5 +148,5 @@ window.ICS = (() => {
     ];
   };
 
-  return {file, vevent, googleLink, outlookLink, busy, clashes, summaryOf, readTime};
+  return {file, vevent, googleLink, outlookLink, busy, clashes, summaryOf, readTime, escapeText: escape};
 })();

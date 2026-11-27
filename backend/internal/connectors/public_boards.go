@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tlmcguire/fistbump/backend/internal/catalogfeed"
 )
 
 //go:embed public_boards.json
@@ -35,19 +36,20 @@ type PublicBoardSource struct {
 
 // PublicBoardCatalog is the schema of public_boards.json and the cached <dataDir>/public-ats-boards.json.
 type PublicBoardCatalog struct {
-	Version     int                   `json:"version"`
-	UpdatedAt   string                `json:"updated_at"`
-	RefreshDays int                   `json:"refresh_days"`
-	FeedURL     string                `json:"feed_url"`
-	Sources     []PublicBoardSource   `json:"sources"`
+	Version     int                      `json:"version"`
+	UpdatedAt   string                   `json:"updated_at"`
+	RefreshDays int                      `json:"refresh_days"`
+	FeedURL     string                   `json:"feed_url"`
+	Sources     []PublicBoardSource      `json:"sources"`
 	Boards      map[string][]PublicBoard `json:"boards"`
 }
 
 var (
-	publicBoardsMu    sync.RWMutex
-	activePublicCat   PublicBoardCatalog
-	publicCompanyIdx  = map[string]map[string]string{}
-	publicTokenRe     = regexp.MustCompile(`^[a-z0-9_-]{1,64}$`)
+	publicBoardsMu      sync.RWMutex
+	activePublicCat     PublicBoardCatalog
+	publicCompanyIdx    = map[string]map[string]string{}
+	publicTokenRe       = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+	bundledBoardFeedURL string
 )
 
 func init() {
@@ -55,10 +57,11 @@ func init() {
 	if err := json.Unmarshal(bundledPublicBoardsJSON, &cat); err != nil {
 		panic("connectors public_boards.json: " + err.Error())
 	}
+	bundledBoardFeedURL = cat.FeedURL
 	setPublicCatalog(cat)
 }
 
-func setPublicCatalog(cat PublicBoardCatalog) {
+func setPublicCatalog(cat PublicBoardCatalog) bool {
 	if cat.RefreshDays <= 0 {
 		cat.RefreshDays = 30
 	}
@@ -86,9 +89,13 @@ func setPublicCatalog(cat PublicBoardCatalog) {
 	}
 	cat.Boards = clean
 	publicBoardsMu.Lock()
+	defer publicBoardsMu.Unlock()
+	if activePublicCat.UpdatedAt != "" && cat.UpdatedAt < activePublicCat.UpdatedAt {
+		return false
+	}
 	activePublicCat = cat
 	publicCompanyIdx = idx
-	publicBoardsMu.Unlock()
+	return true
 }
 
 // PublicBoards returns the active public-dataset boards for the given ATS ("greenhouse", "lever", "ashby").
@@ -144,8 +151,10 @@ func LoadCachedPublicBoards(dataDir string) bool {
 	if err := json.Unmarshal(raw, &cat); err != nil || cat.Version != 1 {
 		return false
 	}
-	setPublicCatalog(cat)
-	return true
+	if _, err := time.Parse(time.DateOnly, cat.UpdatedAt); err != nil {
+		return false
+	}
+	return setPublicCatalog(cat)
 }
 
 // ApplyPublicBoardsJSON validates raw JSON, activates it in memory, and caches it to dataDir.
@@ -154,7 +163,9 @@ func ApplyPublicBoardsJSON(dataDir string, raw []byte) bool {
 	if err := json.Unmarshal(raw, &cat); err != nil || cat.Version != 1 {
 		return false
 	}
-	setPublicCatalog(cat)
+	if _, err := time.Parse(time.DateOnly, cat.UpdatedAt); err != nil || !setPublicCatalog(cat) {
+		return false
+	}
 	if dataDir != "" {
 		_ = os.MkdirAll(dataDir, 0o700)
 		_ = os.WriteFile(filepath.Join(dataDir, "public-ats-boards.json"), raw, 0o600)
@@ -166,44 +177,16 @@ func ApplyPublicBoardsJSON(dataDir string, raw []byte) bool {
 // activates it in memory, and caches it to <dataDir>/public-ats-boards.json.
 func RefreshPublicBoardsNow(ctx context.Context, dataDir, feedURL string, client *http.Client) bool {
 	if feedURL == "" {
-		feedURL = CurrentPublicBoardCatalog().FeedURL
+		feedURL = bundledBoardFeedURL
 	}
 	if feedURL == "" {
 		return false
 	}
-	if !strings.HasPrefix(feedURL, "https://") {
-		return false
-	}
-	if client == nil {
-		client = &http.Client{
-			Timeout: 15 * time.Second,
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 3 || req.URL.Scheme != "https" || !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
-					return http.ErrUseLastResponse
-				}
-				return nil
-			},
-		}
-	}
 	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, feedURL, nil)
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Accept", "application/vnd.github.raw+json")
-	req.Header.Set("User-Agent", "Fistbump")
-	resp, err := client.Do(req)
+	body, err := catalogfeed.Get(reqCtx, client, feedURL, 4<<20)
 	if err != nil {
 		slog.Debug("public ATS boards refresh skipped", "error", err)
-		return false
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
 		return false
 	}
 	if !ApplyPublicBoardsJSON(dataDir, body) {

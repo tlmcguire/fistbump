@@ -27,6 +27,16 @@ window.Community = (() => {
     try { localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(0, 30))); } catch {}
   };
 
+  function currentListings(entries) {
+    if (!Array.isArray(entries)) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    return entries.filter(entry => {
+      const expires = entry?.expires_at;
+      return typeof expires === "string" && /^\d{4}-\d{2}-\d{2}$/.test(expires)
+        && expires >= today && (!entry.closes_at || entry.closes_at >= today);
+    });
+  }
+
   let cachedListings = null;
   let cachedBoards = null;
 
@@ -94,10 +104,10 @@ window.Community = (() => {
     if (listingsFile?.listings) cachedListings = listingsFile.listings;
     if (boardsFile?.boards) cachedBoards = boardsFile.boards;
 
-    const published = Array.isArray(cachedListings) ? cachedListings : [];
+    const published = currentListings(cachedListings);
     const pubIds = new Set(published.map(x => x.id));
     // Drop local pending items once they appear in the published community list
-    const pending = readPending().filter(x => !pubIds.has(x.id));
+    const pending = currentListings(readPending()).filter(x => !pubIds.has(x.id));
     writePending(pending);
 
     return {

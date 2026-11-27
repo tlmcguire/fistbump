@@ -25,8 +25,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Pull updated Greenhouse, Lever, and Ashby boards from allowlisted public datasets
-        run: node scripts/update-ats-boards.js
+      - name: Pull updated Greenhouse, Lever, and Ashby boards from StoreSignal and Common Crawl
+        run: node scripts/update-ats-boards.js --skip-openapply
 
       - name: Run security and schema audit on updated board catalog
         run: node scripts/verify-community-data.js

@@ -149,7 +149,8 @@ function evaluateListing(listing, todayIso, atsStatus = 'skip') {
   const added = parseIsoDate(listing?.added) ? String(listing.added).trim() : '';
   const explicitClose = parseIsoDate(listing?.closes_at)
     ? String(listing.closes_at).trim()
-    : extractCloseDate(listing?.raw_text);
+    : '';
+  const closeDate = [explicitClose, extractCloseDate(listing?.raw_text)].filter(Boolean).sort()[0] || '';
   const explicitExpires = parseIsoDate(listing?.expires_at) ? String(listing.expires_at).trim() : '';
 
   // 1. No listing can escape pruning by omitting a valid timeframe.
@@ -163,7 +164,7 @@ function evaluateListing(listing, todayIso, atsStatus = 'skip') {
   }
 
   // 2. Explicit close/deadline date elapsed.
-  if (explicitClose && daysBetween(explicitClose, todayIso) > 0) {
+  if (closeDate && daysBetween(closeDate, todayIso) > 0) {
     return { keep: false, reason: 'close_date_elapsed' };
   }
 
@@ -180,7 +181,7 @@ function evaluateListing(listing, todayIso, atsStatus = 'skip') {
   const evergreen = isLongRunning(listing);
   const defaultTtl = evergreen ? EVERGREEN_TTL_DAYS : STANDARD_TTL_DAYS;
   const ttlExpiry = addDays(added, defaultTtl);
-  const computedExpiry = explicitClose && explicitClose < ttlExpiry ? explicitClose : ttlExpiry;
+  const computedExpiry = closeDate && closeDate < ttlExpiry ? closeDate : ttlExpiry;
   const effectiveExpiry = explicitExpires && explicitExpires < computedExpiry
     ? explicitExpires
     : computedExpiry;
@@ -188,7 +189,7 @@ function evaluateListing(listing, todayIso, atsStatus = 'skip') {
     ...listing,
     expires_at: effectiveExpiry,
   };
-  if (explicitClose) updated.closes_at = explicitClose;
+  if (closeDate) updated.closes_at = closeDate;
   else delete updated.closes_at;
   if (evergreen) updated.evergreen = true;
   else delete updated.evergreen;
