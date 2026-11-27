@@ -598,6 +598,31 @@ test('boards added to the watchlist are shared only when sharing is on', async (
   await window.locator('#pref-community-share').uncheck();
 });
 
+test('weekly calendar columns stay aligned when the hours scroll', async ({ window }) => {
+  await window.evaluate(() => window.Prefs.set('calendarView', 'week'));
+  await window.locator('#nav-calendar').click();
+  const week = window.locator('.cal3-week');
+  await expect(week.locator('.cal3-col')).toHaveCount(7);
+  const geometry = await week.evaluate(grid => {
+    const columns = selector => Array.from(grid.querySelectorAll(selector), cell => {
+      const {left, right} = cell.getBoundingClientRect();
+      return [left, right];
+    });
+    const header = grid.querySelector('.cal3-week-head');
+    const topBefore = header.getBoundingClientRect().top;
+    const scrollBefore = grid.scrollTop;
+    grid.scrollTop += 104;
+    return {
+      days: columns('.cal3-day'), allDay: columns('.cal3-allday-cell'), hours: columns('.cal3-col'),
+      topBefore, topAfter: header.getBoundingClientRect().top, scrolled: grid.scrollTop > scrollBefore,
+    };
+  });
+  expect(geometry.scrolled).toBe(true);
+  expect(geometry.days).toEqual(geometry.hours);
+  expect(geometry.allDay).toEqual(geometry.hours);
+  expect(geometry.topAfter).toBeCloseTo(geometry.topBefore);
+});
+
 test('the calendar plans an interview, flags a clash with a busy time, and adds it to a calendar app', async ({ window }) => {
   await window.evaluate(async () => {
     const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };

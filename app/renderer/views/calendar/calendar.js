@@ -329,9 +329,11 @@ window.CalendarView = (() => {
       });
       const body = el("div", {class: "cal3-week-body"}, gutter, cols);
       body.style.setProperty("--row", `${rowH}px`);
-      fill(sheet, el("div", {class: "cal3-week"}, head, allDay, el("div", {class: "cal3-scrollbox"}, body)));
+      const header = el("div", {class: "cal3-week-header"}, head, allDay);
+      const box = el("div", {class: "cal3-week cal3-scrollbox"}, header, body);
+      fill(sheet, box);
+      box.style.scrollPaddingBlockStart = `${header.offsetHeight}px`;
       //open at the first plan of the week, or at 8 am, so the morning is never scrolled past
-      const box = sheet.querySelector(".cal3-scrollbox");
       const first = Math.min(8, ...plans.filter(p => new Date(p.starts_at) >= from).map(p => new Date(p.starts_at).getHours()));
       box.scrollTop = Math.max(0, (first - HOURS[0]) * rowH - 8);
     }

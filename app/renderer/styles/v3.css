@@ -2052,7 +2052,8 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3 .cal3-sheet { padding: 0; overflow: hidden; }
 
 /* Week */
-:root .v3 .cal3-week { --gutter: 64px; display: flex; flex-direction: column; }
+:root .v3 .cal3-week { --gutter: 64px; }
+:root .v3 .cal3-week-header { position: sticky; top: 0; z-index: 4; background: var(--paper); }
 :root .v3 .cal3-week-head, :root .v3 .cal3-allday, :root .v3 .cal3-week-body { display: grid; grid-template-columns: var(--gutter) repeat(7, minmax(0, 1fr)); }
 :root .v3 .cal3-week-head { padding: 12px 0 6px; border-bottom: 1.5px dashed var(--rule); }
 :root .v3 .cal3-day { display: flex; align-items: baseline; justify-content: center; gap: 6px; color: var(--ink-2); }
@@ -2065,8 +2066,8 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root .v3 .cal3-follow { display: block; width: 100%; height: auto; min-height: 0; padding: 3px 7px; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--mark) 22%, var(--paper)); color: var(--mark-ink); font-size: 12px; font-weight: 650; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :root .v3 .cal3-follow:hover:not(:disabled) { background: color-mix(in srgb, var(--mark) 34%, var(--paper)); color: var(--ink); }
 :root .v3 .cal3-busy-day { padding: 2px 7px; border-radius: 7px; background: repeating-linear-gradient(135deg, var(--paper-2) 0 5px, transparent 5px 10px); color: var(--ink-2); font-size: 11.5px; font-weight: 650; }
-:root .v3 .cal3-scrollbox { max-height: calc(100vh - 330px); min-height: 320px; overflow-y: auto; }
-:root .v3 .cal3-week-body { position: relative; }
+:root .v3 .cal3-scrollbox { max-height: calc(100vh - 250px); min-height: 400px; overflow-y: auto; }
+:root .v3 .cal3-week-body { position: relative; isolation: isolate; }
 :root .v3 .cal3-gutter { display: grid; grid-auto-rows: var(--row); }
 :root .v3 .cal3-gutter span { padding: 0 10px 0 0; transform: translateY(-0.6em); text-align: right; color: var(--ink-2); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 :root .v3 .cal3-gutter span:first-child { visibility: hidden; }
