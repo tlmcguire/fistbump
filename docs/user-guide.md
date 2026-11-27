@@ -56,10 +56,10 @@ Home shows what needs you today, your next seven days (follow-ups, interviews an
 1. Click **Resume** in the bottom bar. The **Ready to tailor?** panel lists what is still missing; click **Add** beside an item to go straight to its field.
 2. Fill in your details: name, email, phone, where you live, the kind of work you are looking for.
 3. Add each job you have had, with what you did and what came of it.
-4. Add your education.
+4. Add your education. Under **Degree layout**, choose **One line per group** (the default) or **Separate lines**. Only degrees from the same known institution with compatible graduation dates and GPAs can share a line.
 5. Click **Save as version** if you want a copy to come back to. You can also start from a resume you already have: click **Import file** and choose a `.pdf`, `.docx`, `.odt`, `.md`, or `.txt` file, or click **Paste text** and paste the text of a resume.
 
-Your master resume is the starting point for every tailored version.
+Your master resume is the starting point for every tailored version. Education follows work experience by default. If you previously changed the order, choose **Restore default order** under **Custom sections & section order**.
 
 ### 2. Find a job, or paste one
 
@@ -70,7 +70,13 @@ Everything starts in the search box at the bottom of the window:
 - **Paste or drop the text of a posting** from any site, and it opens in **Paste a job**, ready to preview and save.
 
 In the search results, The **Filters** button opens company, ATS source, industry, work mode, date posted, pay, fit with your resume, and skills you are missing. Untick **Match with my resume** to search without your resume.
-Saved jobs are listed under **Jobs**: what needs you comes first, and the tabs filter by stage (Saved, Tailored, Applied, Interview, Offer, and Closed for archived, trashed and rejected jobs). Select several jobs to move them to a stage, archive them or move them to the Trash.
+Saved jobs are listed under **Jobs**. The list shows up to 25 jobs per page and puts jobs that need your attention first. The tabs filter by stage (Saved, Tailored, Applied, Interview, Offer, and Closed for archived, trashed and rejected jobs). Select several jobs to move them to a stage, archive them or move them to the Trash.
+
+Use **Filters → Location & timing → Distance radius** to find postings within a chosen number of miles. The **Location** field sets the center. Leave it blank to use the location in your resume profile. Enter a U.S. city and state, such as Charleston, SC. Distance is straight-line between Census place points. Postings with no recognized location are excluded while the filter is on.
+
+After a successful search, use the small bookmark inside the keyword field to save it. Select any entry in **Saved searches** under the search bar to run it again. The bar shows five saved searches by default. Use **Show all** to see the rest. **History** shows recent searches.
+
+**Paste a job** can fetch a direct Greenhouse, Lever, or Ashby job link. You can also paste your own copy of the posting text alongside the link. For other sites, paste the posting text and review or enter the job title, company, location, work mode, employment type, deadline, pay, and company website. Preview before saving or sharing. Use **Back to Search** or **Esc** to leave and return to your draft later.
 
 ### 3. Read the skill gap
 
@@ -78,7 +84,7 @@ Open a saved job from **Jobs** and its page shows where it stands, the one next 
 
 This analysis is done with plain rules on your computer. It never uses AI, so it is instant and it never invents anything.
 
-The comparison is deliberately forgiving, because a resume is not a list of every skill you have. A skill you have under another name still counts: a resume that shows REST also covers API, and a resume that shows Google Analytics covers Analytics. A soft skill your resume does not name — "attention to detail" is the usual one — is listed as **Not mentioned** instead of missing, because resumes rarely list them and they are no evidence against you. The percentage counts the technical skills only.
+The comparison is deliberately forgiving, because a resume is not a list of every skill you have. A skill you have under another name still counts: a resume that shows REST also covers API, and a resume that shows Google Analytics covers Analytics. A soft skill your resume does not name ("attention to detail" is the usual one) is listed as **Not mentioned** instead of missing, because resumes rarely list them and they are no evidence against you. The percentage counts the technical skills only.
 
 ### 4. Tailor the resume
 
@@ -125,9 +131,9 @@ This is optional and off until you set it up. In **Settings**, under **Remote pr
 
 What it sends: when you ask for suggestions, Fistbump sends the text of your resume and the text of the job posting to that address, so the provider can write the suggestions. Nothing else is sent, and nothing is sent until you ask for suggestions.
 
-The key is kept on your computer, encrypted with the system's key store. Fistbump never reads it back for display. If your computer cannot store the key safely, it is kept for the session only and you enter it again after a restart. Ollama or another provider running on your own computer needs no key at all.
+The app saves the key in your system keychain, bound to the provider’s scheme, host, and port. When upgrading from 0.5.x, re-enter your remote key once under **Settings → Remote provider**. Fistbump never reads it back for display. If your computer cannot store the key safely, it is kept for the session only and you enter it again after a restart. Ollama or another provider running on your own computer needs no key at all.
 
-Three things ever leave your computer, and each one starts because you asked for it: the remote provider you configured, model downloads from Hugging Face, and job searches, which ask the public job boards for listings.
+Fistbump contacts public job boards for searches and background refreshes of previously searched boards. Model downloads, remote AI requests, private calendar lookups, bug reports, and community submissions also make network requests when you use those features. The [network call inventory](periodic-external-calls.md) covers scheduled checks.
 
 ## Where your data lives
 
@@ -146,7 +152,7 @@ In the app, **Settings**, then **Storage**, shows the folder path and a button t
 1. Quit Fistbump, so nothing is written while you copy.
 2. Copy the whole data folder somewhere safe, such as an external drive or a cloud folder.
 
-Copying the folder back into the same place restores everything: your resume, your saved jobs, your applications and your settings.
+Copy the folder back into the same place to restore your resume, saved jobs, applications, and settings. Remote AI keys and private calendar addresses live separately in the system keychain.
 
 ### Uninstalling completely
 
@@ -158,7 +164,7 @@ Copying the folder back into the same place restores everything: your resume, yo
 
 ## Themes & accessibility
 
-In **Settings**, under **Appearance & accessibility**, you can choose from 11 style themes, 12 monthly seasonal themes with custom offline SVG artwork, or **Auto — Current Month** so the app automatically matches the current month. The rest mixes with any theme:
+In **Settings**, under **Appearance & accessibility**, you can choose from 11 style themes, 12 monthly seasonal themes with custom offline SVG artwork, or **Auto (Current Month)** so the app automatically matches the current month. The rest mixes with any theme:
 
 - **Day or night**: every theme comes in Night, Darker (the panels turn to dark paper with light ink, for dark rooms) and Day. **Match system** follows your computer's light and dark appearance as it changes.
 - **Accent color**: the theme's own, or one of six for every theme.
@@ -175,24 +181,28 @@ On a Mac the menu bar follows the usual layout. **File** starts a new search (�
 
 ## Calendar
 
-**Calendar** in the bar (⌘6) shows your plans by week or month: interviews, calls and follow-ups, plus each tracker follow-up date on its day. Click an empty hour, or **Plan an interview** (also on a job's page, under More actions), to add one: the job, the day and time, how long, where, and notes. If it runs into another plan, or into something on your own calendar, the form says so before you save, and the plan is marked **Overlaps** after.
+**Calendar** in the bar (⌘6) shows your interviews, calls, and follow-ups by week or month. Click an empty hour or choose **Plan an interview** to add one. Set the date and time under **Starts** and **Ends**. New plans start with a one-hour span, and you can set an end up to one week later. The form flags overlaps with other plans or your connected calendar before you save.
 
 Everything stays in Fistbump until you choose otherwise, in **Settings → Calendar**:
 
 - **Add plans to**: the calendar app on this computer (Apple Calendar or Outlook, through an .ics file), Google Calendar, Outlook.com, or ask each time. Open any plan to add it there, or turn on **Add new plans to my calendar**.
-- **Check for clashes with my calendar**: paste your calendar's private iCal address (Google Calendar: your calendar's settings, "Secret address in iCal format"; Outlook: Publish calendar; iCloud: Public calendar). Fistbump reads only when you are busy, never what your events are, keeps the address in your system keychain, and checks again about every 15 minutes while the calendar is open. **Forget my calendars** removes it.
+- **Check for clashes with my calendar**: paste your calendar's private iCal address (Google Calendar: your calendar's settings, "Secret address in iCal format"; Outlook: Publish calendar; iCloud: Public calendar). Fistbump downloads the feed and uses its event times to detect clashes. It stores the address in your system keychain and checks again about every 15 minutes while the calendar is open. Feed URLs must use HTTPS or webcal, and redirects must stay on the same origin. **Forget my calendars** removes it.
 - **Export .ics** on the calendar saves every plan from today on as one file to import anywhere.
 
 ## Report an issue
 
 **Help → Report an Issue…** (or **Settings → About**) sends a problem, an idea or a question to the people who make Fistbump. You do not need an account. As you type, reports that look the same are shown; **That's mine** adds your note to one instead of filing another. **What will be sent** shows exactly what goes: no name, email, resume or jobs, and email addresses and phone numbers are removed. If the service cannot be reached, you can copy the report or open it on GitHub.
 
-## Shared job boards
+Search by company to include the expanded public Greenhouse catalog. Broad Greenhouse searches use the curated boards and your watchlist, plus shared boards if enabled.
+
+## Shared job boards and listings
 
 Two switches in **Settings → Job search**, both off until you turn them on:
 
 - **Use boards other people found** adds job boards other Fistbump users shared, and that were checked, to your searches. The list is fetched about once a day.
 - **Share the boards I add** sends the name of each board you add to your watchlist (like `lever:netflix`), nothing else. Each one is checked and reviewed before it reaches everyone.
+
+To contribute a posting, open **Paste a job**, preview it, and select **Share with the Fistbump community**. You can also save it to Your jobs. Sharing is optional for each posting.
 
 ## Known limits
 

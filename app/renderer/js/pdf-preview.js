@@ -67,7 +67,7 @@ window.PdfPreview = {
       try {
       const pdfjs = await loadPdfJs();
       if (!pdfjs?.getDocument || mine !== token) return false;
-      const loadingTask = pdfjs.getDocument({data: bytes.slice()});
+      const loadingTask = pdfjs.getDocument({data: bytes.slice(), isEvalSupported: false});
       const pdf = await loadingTask.promise;
       if (mine !== token) {
         pdf.destroy?.();

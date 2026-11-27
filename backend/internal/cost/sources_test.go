@@ -75,7 +75,7 @@ func TestRefreshNowUpdatesInMemoryAndPersistsCache(t *testing.T) {
 			{Category: "cost_of_living", Name: "BEA RPP 2027", URL: "https://www.bea.gov/data/prices-inflation/regional-price-parities-state-and-metro-area", Description: "Updated index", UpdatedAt: "2027-01-01"},
 		},
 	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(payload)
 	}))
@@ -110,7 +110,7 @@ func TestRefreshNowGracefullyIgnoresErrorsAndInvalidJSON(t *testing.T) {
 	ResetCatalogForTest()
 	defer ResetCatalogForTest()
 
-	badSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	badSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer badSrv.Close()
@@ -119,7 +119,7 @@ func TestRefreshNowGracefullyIgnoresErrorsAndInvalidJSON(t *testing.T) {
 		t.Errorf("expected RefreshNow to return false on 500")
 	}
 
-	malformedSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	malformedSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"updated_at": "", "sources": []}`))
 	}))
 	defer malformedSrv.Close()

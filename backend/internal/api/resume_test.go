@@ -176,6 +176,26 @@ func TestEducationFlow(t *testing.T) {
 	}
 }
 
+func TestResumePreviewDefaultAndCustomSectionOrder(t *testing.T) {
+	s := newResumeServer(t)
+	putProfile(t, s)
+	expect(t, call(t, s, "POST", "/v1/resume/experiences", `{"company_name":"Acme","job_title":"Analyst"}`), 201)
+	expect(t, call(t, s, "POST", "/v1/resume/education", `{"institution":"College of Charleston"}`), 201)
+	assertOrder := func(first, second string) {
+		t.Helper()
+		md := expect(t, call(t, s, "GET", "/v1/resume/preview", ""), 200)["markdown"].(string)
+		before, after := strings.Index(md, first), strings.Index(md, second)
+		if before < 0 || after <= before {
+			t.Errorf("expected %s before %s in preview:\n%s", first, second, md)
+		}
+	}
+	assertOrder("## Experience", "## Education")
+	expect(t, call(t, s, "PUT", "/v1/settings", `{"resume.section_order":["summary","education","experience","skills","custom"]}`), 200)
+	assertOrder("## Education", "## Experience")
+	expect(t, call(t, s, "PUT", "/v1/settings", `{"resume.section_order":["summary","experience","education","skills","custom"]}`), 200)
+	assertOrder("## Experience", "## Education")
+}
+
 func TestSavedResumes(t *testing.T) {
 	s := newResumeServer(t)
 	if rec := call(t, s, "POST", "/v1/resumes", `{"version_label":"v1","content":"x"}`); rec.Code != 409 {

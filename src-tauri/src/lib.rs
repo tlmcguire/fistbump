@@ -48,12 +48,37 @@ pub struct AppState {
     pub error_screen_shown: AtomicBool,
 }
 
-fn is_internal_url(url: &tauri::Url) -> bool {
-    matches!(url.scheme(), "tauri" | "about" | "blob" | "data" | "asset")
-        || matches!(
-            (url.scheme(), url.host_str()),
-            ("http" | "https", Some("tauri.localhost" | "localhost" | "127.0.0.1"))
-        )
+fn configured_dev_url(app: &AppHandle) -> Option<tauri::Url> {
+    if tauri::is_dev() {
+        app.config().build.dev_url.clone()
+    } else {
+        None
+    }
+}
+
+fn is_internal_url(url: &tauri::Url, dev_url: Option<&tauri::Url>) -> bool {
+    if !url.username().is_empty() || url.password().is_some() {
+        return false;
+    }
+    if matches!(
+        (url.scheme(), url.host_str(), url.port()),
+        ("tauri", Some("localhost"), None) | ("http" | "https", Some("tauri.localhost"), None)
+    ) {
+        return true;
+    }
+    // Tauri's built-in development server sets devUrl at launch, including its chosen port.
+    // Only allow its configured loopback origin in dev mode.
+    dev_url.is_some_and(|dev| {
+        matches!(dev.scheme(), "http" | "https")
+            && dev.host_str().is_some_and(|host| {
+                host == "localhost"
+                    || host
+                        .trim_matches(['[', ']'])
+                        .parse::<std::net::IpAddr>()
+                        .is_ok_and(|ip| ip.is_loopback())
+            })
+            && url.origin() == dev.origin()
+    })
 }
 
 fn open_https_externally(app: &AppHandle, url: &tauri::Url) {
@@ -72,6 +97,7 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
 
     let nav_app = app.clone();
     let popup_app = app.clone();
+    let dev_url = configured_dev_url(app);
 
     let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("Fistbump")
@@ -82,7 +108,7 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
         .disable_drag_drop_handler()
         .zoom_hotkeys_enabled(false)
         .on_navigation(move |url| {
-            if is_internal_url(url) {
+            if is_internal_url(url, dev_url.as_ref()) {
                 true
             } else {
                 open_https_externally(&nav_app, url);
@@ -138,11 +164,14 @@ pub fn show_error_screen(app: &AppHandle, quit_on_close: bool) {
         }
     }
 
+    let dev_url = configured_dev_url(app);
     let builder = WebviewWindowBuilder::new(app, "error", WebviewUrl::App("error.html".into()))
         .title("Fistbump could not start")
         .inner_size(720.0, 600.0)
         .theme(Some(Theme::Dark))
         .background_color(Color(11, 36, 87, 255))
+        .on_navigation(move |url| is_internal_url(url, dev_url.as_ref()))
+        .on_new_window(|_, _| NewWindowResponse::Deny)
         .visible(true);
 
     if let Ok(win) = builder.build() {
@@ -330,32 +359,49 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::is_internal_url;
-    use std::net::Ipv4Addr;
 
     #[test]
     fn internal_url_guard_allows_app_origins_and_blocks_external_https() {
-        let loopback = format!("http://{}:8080/index.html", Ipv4Addr::LOCALHOST);
         for allowed in [
             "tauri://localhost/index.html",
             "http://tauri.localhost/index.html",
             "https://tauri.localhost/index.html",
-            "http://localhost:1420/",
-            loopback.as_str(),
-            "about:blank",
-            "blob:tauri://localhost/preview-id",
-            "data:image/png;base64,AAAA",
         ] {
             let url = tauri::Url::parse(allowed).expect("valid test url");
-            assert!(is_internal_url(&url), "expected internal URL to be allowed: {allowed}");
+            assert!(is_internal_url(&url, None), "expected internal URL to be allowed: {allowed}");
         }
 
         for blocked in [
             "https://github.com/tlmcguire/fistbump",
             "https://boards.greenhouse.io/acme",
             "http://example.com/",
+            "https://tauri.localhost:8443/",
+            "http://localhost:1420/",
+            "http://127.0.0.1:8080/index.html",
+            "about:blank",
+            "blob:tauri://localhost/preview-id",
+            "data:image/png;base64,AAAA",
         ] {
             let url = tauri::Url::parse(blocked).expect("valid test url");
-            assert!(!is_internal_url(&url), "expected external URL to be blocked: {blocked}");
+            assert!(!is_internal_url(&url, None), "expected external URL to be blocked: {blocked}");
         }
     }
+
+    #[test]
+    fn development_renderer_and_error_page_use_only_the_configured_loopback_origin() {
+        for address in ["http://127.0.0.1:1437", "http://localhost:1437", "http://[::1]:1437"] {
+            let dev = tauri::Url::parse(address).unwrap();
+            for page in ["index.html", "error.html"] {
+                let url = dev.join(page).unwrap();
+                assert!(is_internal_url(&url, Some(&dev)));
+                assert!(!is_internal_url(&url, None));
+                let mut wrong_port = url;
+                wrong_port.set_port(Some(1438)).unwrap();
+                assert!(!is_internal_url(&wrong_port, Some(&dev)));
+            }
+        }
+        let external = tauri::Url::parse("https://example.com/index.html").unwrap();
+        assert!(!is_internal_url(&external, Some(&external)));
+    }
+
 }

@@ -10,6 +10,7 @@ use std::time::Duration;
 use serde_json::{json, Value};
 
 /// The relay's address. A build can point elsewhere with FISTBUMP_RELAY_URL (at build time or when it runs).
+const MAX_RESPONSE_BYTES: usize = 4 * 1024 * 1024;
 const DEFAULT_RELAY: &str = "https://fistbump-relay.tymcg.workers.dev";
 
 fn base() -> String {
@@ -29,6 +30,7 @@ fn fail(code: &str, message: impl Into<String>) -> Value {
 pub async fn call(channel: &str, a0: Option<&Value>) -> Value {
     let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::none())
         .user_agent(concat!("Fistbump/", env!("CARGO_PKG_VERSION")))
         .build()
     {
@@ -38,12 +40,24 @@ pub async fn call(channel: &str, a0: Option<&Value>) -> Value {
     let root = base();
     let request = match channel {
         "relay:similar" => {
-            let words = a0.and_then(Value::as_str).unwrap_or("").chars().take(200).collect::<String>();
-            client.get(format!("{root}/v1/reports/similar")).query(&[("q", words)])
+            let words = a0
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .chars()
+                .take(200)
+                .collect::<String>();
+            client
+                .get(format!("{root}/v1/reports/similar"))
+                .query(&[("q", words)])
         }
         "relay:report" => match a0 {
             Some(body) if body.is_object() => client.post(format!("{root}/v1/reports")).json(body),
-            _ => return fail("validation_failed", "A report needs a title and what happened."),
+            _ => {
+                return fail(
+                    "validation_failed",
+                    "A report needs a title and what happened.",
+                )
+            }
         },
         "relay:share-boards" => match a0 {
             Some(body) if body.is_object() => client.post(format!("{root}/v1/boards")).json(body),
@@ -57,21 +71,56 @@ pub async fn call(channel: &str, a0: Option<&Value>) -> Value {
         "relay:listings" => client.get(format!("{root}/v1/listings")),
         _ => return fail("validation_failed", format!("Unknown channel: {channel}")),
     };
-    let response = match request.send().await {
+    let mut response = match request.send().await {
         Ok(r) => r,
-        Err(err) if err.is_timeout() => return fail("unavailable", "The Fistbump community service did not answer in time. Try again later."),
-        Err(_) => return fail("unavailable", "Could not reach the Fistbump community service. Check your connection and try again."),
+        Err(err) if err.is_timeout() => {
+            return fail(
+                "unavailable",
+                "The Fistbump community service did not answer in time. Try again later.",
+            )
+        }
+        Err(_) => return fail(
+            "unavailable",
+            "Could not reach the Fistbump community service. Check your connection and try again.",
+        ),
     };
     let status = response.status();
-    let body: Value = response.json().await.unwrap_or(Value::Null);
+    let mut bytes = Vec::new();
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) if chunk.len() <= MAX_RESPONSE_BYTES - bytes.len() => {
+                bytes.extend_from_slice(&chunk);
+            }
+            Ok(Some(_)) => return fail("unavailable", "The community response was too large."),
+            Ok(None) => break,
+            Err(_) => {
+                return fail(
+                    "unavailable",
+                    "The community response ended before it was complete.",
+                )
+            }
+        }
+    }
+    let body: Value = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
     if status.is_success() {
-        return body;
+        return if body.is_object() {
+            body
+        } else {
+            fail(
+                "unavailable",
+                "The community service returned invalid data.",
+            )
+        };
     }
     let message = body
         .pointer("/error/message")
         .and_then(Value::as_str)
         .map(str::to_string)
         .unwrap_or_else(|| format!("The community service answered {status}."));
-    let code = if status.as_u16() == 429 { "rate_limited" } else { "unavailable" };
+    let code = if status.as_u16() == 429 {
+        "rate_limited"
+    } else {
+        "unavailable"
+    };
     fail(code, message)
 }

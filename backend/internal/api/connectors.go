@@ -123,8 +123,17 @@ func (s *Server) categoryList(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	for _, src := range []string{"greenhouse", "lever", "ashby"} {
+		for _, b := range connectors.PublicBoards(src) {
+			if b.Company != "" && !seenCo[b.Company] {
+				seenCo[b.Company] = true
+				companies = append(companies, b.Company)
+			}
+		}
+	}
 	sort.Strings(companies)
-	total := len(greenhouse.Tokens()) + len(lever.Tokens()) + len(ashby.Tokens())
+	total := len(greenhouse.Tokens()) + len(lever.Tokens()) + len(ashby.Tokens()) +
+		len(connectors.PublicBoards("greenhouse")) + len(connectors.PublicBoards("lever")) + len(connectors.PublicBoards("ashby"))
 	writeJSON(w, http.StatusOK, struct {
 		Categories []category `json:"categories"`
 		Companies  []string   `json:"companies"`
@@ -141,23 +150,11 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	if s.search == nil {
 		return notImplemented() // no searcher configured yet
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxFetchBody)
-
 	var body struct {
 		Query connectors.Query `json:"query"`
 	}
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&body); err != nil {
-		return bodyError(err)
-	}
-	// Require exactly one JSON value: after it, only whitespace may remain.
-	var extra any
-	if err := dec.Decode(&extra); err != io.EOF {
-		if err == nil {
-			return badRequest("Request must contain a single JSON value")
-		}
-		return bodyError(err)
+	if err := decodeJSONLimit(w, r, &body, maxFetchBody); err != nil {
+		return err
 	}
 
 	q := body.Query
@@ -170,7 +167,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 	}
 	q.Keywords = keywords
 	// With nothing to search by, fall back to the user's target positions, then their latest job title.
-	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
+	if len(q.Keywords) == 0 && q.RadiusMiles == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
 		q.Keywords = s.defaultKeywords(r.Context())
 	}
 	exclude := make([]string, 0, len(q.Exclude))
@@ -191,7 +188,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		return validationFailed(err.Error())
 	}
 	// Keywords are optional when the search is narrowed some other way: a place, an industry, ATS source or boards.
-	if len(q.Keywords) == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
+	if len(q.Keywords) == 0 && q.RadiusMiles == 0 && strings.TrimSpace(q.Location) == "" && len(q.Categories) == 0 && len(q.Boards) == 0 && strings.TrimSpace(q.Company) == "" && q.Source == "" {
 		return validationFailed("Enter keywords, a location or an industry to search")
 	}
 	if len(q.Keywords) > maxKeywords {
@@ -222,19 +219,13 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	boards := s.chooseBoardsWithCustom(r.Context(), q)
-	named := strings.TrimSpace(q.Company) != "" && len(q.Boards) == 0 // the search is for one company
-	guessed := false
-	if len(boards) == 0 && named {
-		// The curated list has no such company. Greenhouse board tokens are usually the company name,
-		// so try that; one listing request tells us whether the board exists.
-		boards, guessed = guessBoards(q.Company), true
-	}
-	if len(boards) == 0 {
-		if named {
-			return writeNoCompany(w, q)
+	if q.RadiusMiles != 0 {
+		match, err := s.radiusMatcher(r.Context(), q.Location, q.RadiusMiles)
+		if err != nil {
+			return err
 		}
-		return validationFailed("No boards match this search")
+		q.WithinRadius = match
+		q.Location = "" // the entered location is the radius center in this mode
 	}
 
 	// The user can turn the resume off: the postings are then neither rated against it nor
@@ -271,6 +262,21 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, http.StatusOK, result)
 		return nil
 	}
+	boards := s.chooseBoardsWithCustom(r.Context(), q)
+	named := strings.TrimSpace(q.Company) != "" && len(q.Boards) == 0 // the search is for one company
+	guessed := false
+	if len(boards) == 0 && named {
+		// The curated list has no such company. Greenhouse board tokens are usually the company name,
+		// so try that; one listing request tells us whether the board exists.
+		boards, guessed = guessBoards(q.Company), true
+	}
+	if len(boards) == 0 {
+		if named {
+			return writeNoCompany(w, q)
+		}
+		return validationFailed("No boards match this search")
+	}
+
 	result, err := s.search.Search(r.Context(), q, boards)
 	ghMissed := guessed && (err != nil || result.BoardsSearched == 0)
 	if !ghMissed && err != nil {
@@ -309,6 +315,7 @@ func (s *Server) greenhouseFetch(w http.ResponseWriter, r *http.Request) error {
 			if extra.BoardsTotal > 0 {
 				result.BoardsTotal += extra.BoardsTotal
 				result.BoardsSearched += extra.BoardsSearched
+				result.BoardsCached += extra.BoardsCached
 				result.PostingsScanned += extra.PostingsScanned
 				result.Matched += extra.Matched
 				result.Errors = append(result.Errors, extra.Errors...)
@@ -375,79 +382,95 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 	addTarget := func(token string, watchlisted bool) {
 		token = strings.TrimSpace(token)
 		key := strings.ToLower(token)
-		if token == "" || seen[key] {
+		if !boardPattern.MatchString(token) || seen[key] {
 			return
 		}
 		seen[key] = true
 		targets = append(targets, boardTarget{token: token, watchlisted: watchlisted})
 	}
 
-	// 1. User-watchlisted boards for this ATS.
-	if vals, err := s.store.GetSettings(ctx); err == nil {
-		if custom, ok := vals["connectors.custom_boards"].([]string); ok {
-			for _, entry := range custom {
-				src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
-				if !ok || strings.TrimSpace(src) != source {
-					continue
+	if len(q.Boards) > 0 {
+		for _, token := range q.Boards {
+			addTarget(token, true)
+		}
+	} else {
+		// 1. User-watchlisted boards for this ATS.
+		if vals, err := s.store.GetSettings(ctx); err == nil {
+			if custom, ok := vals["connectors.custom_boards"].([]string); ok {
+				for _, entry := range custom {
+					src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
+					if !ok || strings.TrimSpace(src) != source {
+						continue
+					}
+					if wantCompany != "" && !strings.Contains(token, wantCompany) {
+						continue
+					}
+					addTarget(token, true)
 				}
-				if wantCompany != "" && !strings.Contains(token, wantCompany) {
-					continue
+			}
+			// 1b. Boards other Fistbump users shared (connectors.community_boards), searched like the built-in list.
+			if shared, ok := vals["connectors.community_boards"].([]string); ok {
+				for _, entry := range shared {
+					src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
+					if !ok || strings.TrimSpace(src) != source {
+						continue
+					}
+					if wantCompany != "" && !strings.Contains(token, wantCompany) {
+						continue
+					}
+					addTarget(token, false)
 				}
-				addTarget(token, true)
 			}
 		}
-		// 1b. Boards other Fistbump users shared (connectors.community_boards), searched like the built-in list.
-		if shared, ok := vals["connectors.community_boards"].([]string); ok {
-			for _, entry := range shared {
-				src, token, ok := strings.Cut(strings.ToLower(strings.TrimSpace(entry)), ":")
-				if !ok || strings.TrimSpace(src) != source {
-					continue
-				}
-				if wantCompany != "" && !strings.Contains(token, wantCompany) {
-					continue
-				}
-				addTarget(token, false)
-			}
-		}
-	}
 
-	// 2. Curated boards for this ATS (narrowed by q.Categories and/or q.Company).
-	if source == "lever" {
-		var curated []lever.Board
-		if len(q.Categories) > 0 {
-			curated = lever.BoardsFor(q.Categories)
-		} else {
-			for _, tok := range lever.Tokens() {
-				curated = append(curated, lever.Board{Token: tok, Company: lever.CompanyFor(tok)})
+		// 2. Curated boards for this ATS (narrowed by q.Categories and/or q.Company).
+		if source == "lever" {
+			var curated []lever.Board
+			if len(q.Categories) > 0 {
+				curated = lever.BoardsFor(q.Categories)
+			} else {
+				for _, tok := range lever.Tokens() {
+					curated = append(curated, lever.Board{Token: tok, Company: lever.CompanyFor(tok)})
+				}
+			}
+			for _, b := range curated {
+				if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+					continue
+				}
+				addTarget(b.Token, false)
+			}
+		} else if source == "ashby" {
+			var curated []ashby.Board
+			if len(q.Categories) > 0 {
+				curated = ashby.BoardsFor(q.Categories)
+			} else {
+				for _, tok := range ashby.Tokens() {
+					curated = append(curated, ashby.Board{Token: tok, Company: ashby.CompanyFor(tok)})
+				}
+			}
+			for _, b := range curated {
+				if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+					continue
+				}
+				addTarget(b.Token, false)
 			}
 		}
-		for _, b := range curated {
-			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
-				continue
-			}
-			addTarget(b.Token, false)
-		}
-	} else if source == "ashby" {
-		var curated []ashby.Board
-		if len(q.Categories) > 0 {
-			curated = ashby.BoardsFor(q.Categories)
-		} else {
-			for _, tok := range ashby.Tokens() {
-				curated = append(curated, ashby.Board{Token: tok, Company: ashby.CompanyFor(tok)})
-			}
-		}
-		for _, b := range curated {
-			if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
-				continue
-			}
-			addTarget(b.Token, false)
-		}
-	}
 
-	// 3. If searching a specific company not in our curated list, try guessing the slug.
-	if len(targets) == 0 && wantCompany != "" {
-		for _, g := range guessBoards(q.Company) {
-			addTarget(g, false)
+		// 2b. Public-dataset boards for this ATS (when not narrowed to a specific curated category).
+		if len(q.Categories) == 0 {
+			for _, b := range connectors.PublicBoards(source) {
+				if wantCompany != "" && !strings.Contains(strings.ToLower(b.Company), wantCompany) && !strings.Contains(strings.ToLower(b.Token), wantCompany) {
+					continue
+				}
+				addTarget(b.Token, false)
+			}
+		}
+
+		// 3. If searching a specific company not in our curated list, try guessing the slug.
+		if len(targets) == 0 && wantCompany != "" {
+			for _, g := range guessBoards(q.Company) {
+				addTarget(g, false)
+			}
 		}
 	}
 
@@ -458,6 +481,9 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 
 	type boardLister interface {
 		ListBoard(ctx context.Context, board string) ([]connectors.Posting, error)
+	}
+	type cachedBoardLister interface {
+		CachedBoard(board string) ([]connectors.Posting, error, bool)
 	}
 	var lister boardLister
 	if source == "lever" {
@@ -474,6 +500,9 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 		}
 	}
 
+	ctx, stop := context.WithTimeout(ctx, 20*time.Second)
+	defer stop()
+	cache, _ := lister.(cachedBoardLister)
 	oldest := time.Now().UTC().AddDate(0, 0, -q.PostedWithin)
 	locNeedle := strings.ToLower(strings.TrimSpace(q.Location))
 
@@ -493,9 +522,22 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 			case <-ctx.Done():
 				return
 			}
-			bctx, cancel := context.WithTimeout(ctx, 6*time.Second)
-			list, err := lister.ListBoard(bctx, tgt.token)
-			cancel()
+			var list []connectors.Posting
+			var err error
+			if q.CachedOnly {
+				if cache == nil {
+					return
+				}
+				var found bool
+				list, err, found = cache.CachedBoard(tgt.token)
+				if !found {
+					return
+				}
+			} else {
+				bctx, cancel := context.WithTimeout(ctx, 6*time.Second)
+				list, err = lister.ListBoard(bctx, tgt.token)
+				cancel()
+			}
 			if err != nil {
 				// Silently skip 404s on curated/guessed boards so stale slugs do not clutter search errors.
 				if !tgt.watchlisted && (errors.Is(err, lever.ErrorNotFound) || errors.Is(err, ashby.ErrorNotFound)) {
@@ -532,6 +574,9 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 			}
 			mu.Lock()
 			result.BoardsSearched++
+			if q.CachedOnly {
+				result.BoardsCached++
+			}
 			result.PostingsScanned += len(list)
 			if wantCompany != "" && len(result.Companies) < 10 {
 				name := tgt.token
@@ -540,6 +585,9 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 						name = n
 					}
 				} else if n := ashby.CompanyFor(tgt.token); n != "" {
+					name = n
+				}
+				if n := connectors.PublicCompanyFor(source, tgt.token); name == tgt.token && n != "" {
 					name = n
 				}
 				result.Companies = append(result.Companies, name)
@@ -580,6 +628,9 @@ func (s *Server) searchCustomATS(ctx context.Context, q connectors.Query, source
 }
 
 func customPostingMatches(p connectors.Posting, q connectors.Query, locNeedle string, oldest time.Time) bool {
+	if q.WithinRadius != nil && !q.WithinRadius(p.Location) {
+		return false
+	}
 	titleLower := strings.ToLower(p.PositionTitle)
 	if q.WorkMode != "" && q.WorkMode != connectors.WorkModeAny && !strings.EqualFold(p.WorkMode, q.WorkMode) {
 		return false
@@ -738,6 +789,8 @@ func companyNames(boards []string) []string {
 		}
 		if name := greenhouse.CompanyFor(token); name != "" {
 			names = append(names, name)
+		} else if name := connectors.PublicCompanyFor("greenhouse", token); name != "" {
+			names = append(names, name)
 		} else {
 			names = append(names, token)
 		}
@@ -791,16 +844,10 @@ func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query)
 	if len(q.Boards) > 0 || len(q.Categories) > 0 {
 		return boards
 	}
-	vals, err := s.store.GetSettings(ctx)
-	if err != nil {
-		return boards
-	}
+	vals, _ := s.store.GetSettings(ctx)
 	custom, _ := vals["connectors.custom_boards"].([]string)
-	shared, _ := vals["connectors.community_boards"].([]string) //boards other users shared, after your own
+	shared, _ := vals["connectors.community_boards"].([]string)
 	custom = append(append([]string{}, custom...), shared...)
-	if len(custom) == 0 {
-		return boards
-	}
 	want := strings.ToLower(strings.TrimSpace(q.Company))
 	seen := make(map[string]bool, len(boards)+len(custom))
 	for _, b := range boards {
@@ -819,6 +866,19 @@ func (s *Server) chooseBoardsWithCustom(ctx context.Context, q connectors.Query)
 		}
 		seen[token] = true
 		boards = append(boards, token)
+	}
+	if want == "" {
+		return boards
+	}
+	for _, b := range connectors.PublicBoards("greenhouse") {
+		if seen[b.Token] {
+			continue
+		}
+		if !strings.Contains(strings.ToLower(b.Company), want) && !strings.Contains(b.Token, want) {
+			continue
+		}
+		seen[b.Token] = true
+		boards = append(boards, b.Token)
 	}
 	return boards
 }

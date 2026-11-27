@@ -290,3 +290,27 @@ func TestImportApplyRejectsBadBodies(t *testing.T) {
 	expectField(t, call(t, s, "POST", "/v1/resume/import/apply", `{"draft":{},"save_copy":{"version_label":"x","content":" "}}`), "save_copy.content")
 	expectField(t, call(t, s, "POST", "/v1/resume/import/apply", `{"draft":{},"extra":1}`), "extra")
 }
+
+func TestImportApplyDoesNotAppendEquivalentDegrees(t *testing.T) {
+	s := newResumeServer(t)
+	req := `{"draft":{"profile":{"full_name":"Ada Lovelace"},"education":[
+		{"institution":"College of Charleston","degree_level":"B.S.","discipline":"Computer Science; B.S. Software Engineering","honors":"Honors College"},
+		{"institution":"College of Charleston","degree_level":"BS","discipline":"Computer Science"},
+		{"institution":"College of Charleston","degree_level":"B.S.","discipline":"Software Engineering","details":"Minor in Spanish"}
+	]}}`
+	for range 2 {
+		result := expect(t, call(t, s, "POST", "/v1/resume/import/apply", req), 200)
+		if rows := result["education"].([]any); len(rows) != 2 {
+			t.Fatalf("expected two degrees after import, got %v", rows)
+		}
+	}
+	out := expect(t, call(t, s, "GET", "/v1/resume/preview", ""), 200)["markdown"].(string)
+	if strings.Count(out, "### ") != 1 {
+		t.Fatalf("expected consolidated education by default, got %q", out)
+	}
+	expect(t, call(t, s, "PUT", "/v1/settings", `{"resume.education_layout":"split"}`), 200)
+	out = expect(t, call(t, s, "GET", "/v1/resume/preview", ""), 200)["markdown"].(string)
+	if strings.Count(out, "### ") != 2 {
+		t.Fatalf("expected separate lines after changing the setting, got %q", out)
+	}
+}

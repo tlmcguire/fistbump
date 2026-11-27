@@ -148,3 +148,43 @@ func TestApplyFallsBackToALineThenAnyText(t *testing.T) {
 		t.Errorf("with nothing better the first occurrence is used: %q", got)
 	}
 }
+
+func TestEducationLayoutsDeduplicateLegacyDualDegrees(t *testing.T) {
+	m := models.Master{Education: []models.Education{
+		{Institution: "College of Charleston", DegreeLevel: ptr("B.S."), Discipline: ptr("Computer Science; B.S. Software Engineering"), Honors: ptr("Honors College")},
+		{Institution: "College of Charleston", DegreeLevel: ptr("BS"), Discipline: ptr("Computer Science"), Honors: ptr("Honors College")},
+		{Institution: "College of Charleston", DegreeLevel: ptr("B.S."), Discipline: ptr("Software Engineering"), Honors: ptr("Honors College"), Details: ptr("Minors in Data Science, Spanish")},
+		{Institution: "College of Charleston", DegreeLevel: ptr("B.A."), Discipline: ptr("Spanish")},
+	}}
+	for _, layout := range []string{"", models.EducationLayoutSplit} {
+		m.EducationLayout = layout
+		output := Master(m)
+		expected := 1
+		if layout == models.EducationLayoutSplit {
+			expected = 3
+		}
+		if strings.Count(output, "### ") != expected {
+			t.Errorf("%q layout: expected %d headings, got\n%s", layout, expected, output)
+		}
+		for _, text := range []string{"Computer Science", "Software Engineering", "B.A. in Spanish", "Honors College", "Minors in Data Science, Spanish"} {
+			if strings.Count(output, text) != 1 {
+				t.Errorf("%q layout: expected one %q, got\n%s", layout, text, output)
+			}
+		}
+	}
+}
+
+func TestConsolidatedEducationRequiresSameKnownInstitution(t *testing.T) {
+	m := models.Master{Education: []models.Education{
+		{Institution: "College of Charleston", DegreeLevel: ptr("BS"), Discipline: ptr("Computer Science")},
+		{Institution: "Clemson University", DegreeLevel: ptr("BS"), Discipline: ptr("Computer Science")},
+		{Institution: "College of Charleston", DegreeLevel: ptr("BA"), Discipline: ptr("Spanish")},
+		{Institution: models.UnknownInstitution, DegreeLevel: ptr("MA"), Discipline: ptr("Art")},
+		{Institution: " unknown  institution ", DegreeLevel: ptr("BA"), Discipline: ptr("History")},
+	}}
+	got := Master(m)
+	if strings.Count(got, "### ") != 4 || !strings.Contains(got, "BS in Computer Science; BA in Spanish, College of Charleston") ||
+		!strings.Contains(got, "BS in Computer Science, Clemson University") || strings.Count(got, ";") != 1 {
+		t.Errorf("expected only the Charleston degrees to share a heading:\n%s", got)
+	}
+}

@@ -9,7 +9,7 @@ SQLite, accessed from Go through `modernc.org/sqlite` (pure Go, no cgo). The aut
 - **Timestamps** are UTC ISO 8601 text, `YYYY-MM-DDTHH:MM:SSZ`, set by SQLite defaults. Columns named `*_date` hold user-entered dates as text, and the backend validates their format.
 - **JSON columns** are `TEXT` holding a JSON array, guarded by `CHECK (json_valid(...))` and defaulting to `'[]'`. Used for values read and written with the row and never queried individually.
 - **Enums** are `TEXT` with a `CHECK (... IN (...))` constraint.
-- **No secrets.** API keys and tokens never touch the database. See "API keys and secrets" in [architecture.md](architecture.md).
+- **No secrets.** API keys, private calendar addresses, and per-launch bearer tokens stay outside the database. See "API keys and secrets" in [architecture.md](architecture.md).
 - **Single user.** One `profile` row in practice. Tables reference `profile_id` so multiple profiles need no schema change.
 
 ## Relationships

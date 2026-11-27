@@ -131,6 +131,7 @@
       } else if (field.type === "select") {
         input = el("select", {id}, field.options.map(([value, label]) => el("option", {value, text: label})));
         input.value = values[field.name] || "";
+        if (input.selectedIndex < 0) input.value = "";
       } else if (field.type === "list") {
         input = el("input", {id, type: "text", placeholder: field.placeholder, value: listToText(values[field.name])});
         const preview = el("div", {class: "chip-row"});
@@ -253,7 +254,7 @@
     {name: "links", label: "Links", type: "list", wide: true, placeholder: "e.g. github.com/ada, linkedin.com/in/ada", hint: "Separate links with commas."},
     {name: "target_positions", label: "Target positions", type: "list", placeholder: "e.g. Data Analyst, Business Analyst"},
     {name: "preferred_mode", label: "Preferred work mode", type: "select",
-      options: [["", "No preference"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"], ["Any", "Any"]]},
+      options: [["", "No preference"], ["Remote", "Remote"], ["Hybrid", "Hybrid"], ["On-site", "On-site"]]},
     {name: "summary", label: "Summary", type: "textarea", wide: true, rows: 4},
     {name: "skills", label: "General skills", type: "list", wide: true, placeholder: "e.g. sql, excel, python", hint: "Separate skills with commas."},
   ];
@@ -739,6 +740,24 @@
         k.skills(entry).length ? chips(k.skills(entry)) : null);
     }
  
+    const degreeLayout = el("select", {"aria-label": "Degree layout"},
+      el("option", {value: "consolidate", text: "One line per group"}),
+      el("option", {value: "split", text: "Separate lines"}));
+    const degreeLayoutControl = el("label", {class: "form-row"},
+      el("span", {text: "Degree layout"}), degreeLayout);
+    degreeLayout.addEventListener("change", async () => {
+      degreeLayout.disabled = true;
+      try {
+        await window.FistBumpAPI.request(() => window.api.settings.put({"resume.education_layout": degreeLayout.value}));
+        refreshPreview();
+      } catch (err) {
+        degreeLayout.value = degreeLayout.value === "split" ? "consolidate" : "split";
+        say(err.message, true);
+      } finally {
+        degreeLayout.disabled = false;
+      }
+    });
+
     function renderEntries() {
       for (const kind of Object.keys(KINDS)) {
         const k = KINDS[kind];
@@ -753,6 +772,7 @@
           editing?.kind === kind && editing.id === entry.id ? entryForm(kind, entry) : entryCard(kind, entry, i, list.length));
         fill(k.section,
           el("div", {class: "section-head"}, el("h2", {id: k.headingId, text: k.heading}), addButton),
+          kind === "education" ? degreeLayoutControl : null,
           !master.profile ? el("p", {class: "hint", text: "Save your profile first."}) : null,
           master.profile && list.length === 0 && !adding ? el("p", {class: "empty", text: `No ${k.heading.toLowerCase()} entries yet.`}) : null,
           items,
@@ -1104,23 +1124,39 @@
     let customSections = [];
 
     const saveCustomSettings = async (patch, msg) => {
-      if (!window.api?.settings?.put) return;
+      if (!window.api?.settings?.put) return false;
       try {
         await window.FistBumpAPI.request(() => window.api.settings.put(patch));
         say(msg);
         refreshPreview();
+        return true;
       } catch (err) {
         say(err.message, true);
+        return false;
       }
     };
 
     function renderCustomSections() {
+      const isDefaultOrder = () => sectionOrder.length === DEFAULT_ORDER.length &&
+        DEFAULT_ORDER.every((section, index) => section === sectionOrder[index]);
+      const resetOrder = el("button", {type: "button", hidden: isDefaultOrder(), onclick: async () => {
+        resetOrder.disabled = true;
+        if (await saveCustomSettings({"resume.section_order": DEFAULT_ORDER}, "Default section order restored.")) {
+          sectionOrder = [...DEFAULT_ORDER];
+          const hadFocus = document.activeElement === resetOrder;
+          renderCustomSections();
+          if (hadFocus) customSectionsPanel.querySelector(".sortlist-row")?.focus({preventScroll: true});
+        } else {
+          resetOrder.disabled = false;
+        }
+      }}, "Restore default order");
       //drag a row, press its arrows, or Alt+Up / Alt+Down on a focused row
       const orderList = window.Sortable.list(sectionOrder, {
         name: "Section order",
         label: key => ORDER_LABELS[key] || key,
         onChange: async next => {
           sectionOrder = [...next];
+          resetOrder.hidden = isDefaultOrder();
           await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
         },
       });
@@ -1156,8 +1192,9 @@
 
       fill(customSectionsPanel,
         el("h2", {id: "resume-custom-h", text: "Custom sections & section order"}),
-        el("p", {class: "hint", text: "Reorder how sections appear in your preview, PDF, and DOCX exports."}),
+        el("p", {class: "hint", text: "Education follows work experience by default. Reorder sections for your preview, PDF, and DOCX exports."}),
         orderList,
+        resetOrder,
         cards,
         el("div", {class: "entry-form"},
           el("div", {class: "form-grid"},
@@ -1175,6 +1212,7 @@
       if (window.api?.settings?.get) {
         try {
           const st = await window.FistBumpAPI.request(() => window.api.settings.get());
+          degreeLayout.value = st?.["resume.education_layout"] === "split" ? "split" : "consolidate";
           if (Array.isArray(st?.["resume.section_order"]) && st["resume.section_order"].length) sectionOrder = [...st["resume.section_order"]];
           if (typeof st?.["resume.custom_sections"] === "string") {
             const parsed = JSON.parse(st["resume.custom_sections"] || "[]");
@@ -1281,4 +1319,3 @@
 
   window.ResumeBuilder = {skillMatch, mount, forms, el, fill, chips, makeForm, exportFile, savedNote};
 })();
- 

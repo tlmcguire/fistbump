@@ -180,7 +180,14 @@ pub async fn ipc_call(
 ) -> Result<Value, String> {
     if let Some(route_result) = route_for_channel(&channel, &args) {
         return Ok(match route_result {
-            Ok((method, path, body)) => state.backend.call(method, &path, body).await,
+            Ok((method, path, body)) => {
+                let _guard = if channel == "settings:put" {
+                    Some(state.secrets.remote_change.lock().await)
+                } else {
+                    None
+                };
+                state.backend.call(method, &path, body).await
+            }
             Err(err_val) => err_val,
         });
     }
@@ -488,13 +495,14 @@ pub async fn ipc_call(
                     if !key.is_empty() {
                         body["api_key"] = Value::String(key.to_string());
                     }
+                    let _guard = state.secrets.remote_change.lock().await;
                     let mut res = state
                         .backend
                         .call(Method::PUT, "/v1/ai/remote", Some(body))
                         .await;
                     if res.get("error").is_none() {
                         let remembered = if !key.is_empty() {
-                            state.secrets.set(key)
+                            state.secrets.set(base_url, key)
                         } else {
                             false
                         };
@@ -531,6 +539,7 @@ pub async fn ipc_call(
         },
 
         "ai:clearRemote" => {
+            let _guard = state.secrets.remote_change.lock().await;
             let res = state
                 .backend
                 .call(Method::DELETE, "/v1/ai/remote", None)

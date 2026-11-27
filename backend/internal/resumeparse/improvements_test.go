@@ -67,3 +67,76 @@ GPA: 3.92 / 4.0 · 2018 - 2022
 		t.Errorf("GPA = %v, want 3.92", d.Education[0].GPA)
 	}
 }
+
+func TestParseInlineSingleDatesMultiDegreeAndShortYearSeason(t *testing.T) {
+	resume := `Tyler McGuire
+Charleston, SC · work@mcguire.one
+
+Education
+College of Charleston Honors, Charleston, SC  |  Expected Spring 2027
+B.S. Computer Science; B.S. Software Engineering — Minors in Data Science, Spanish — GPA: 3.84
+
+Research & Projects
+AISAI: Automated Identification of Software Supply Chain Vulnerability  |  Spring '26
+• Built a vulnerability detection tool combining static analysis and LLMs.
+
+Extracurricular
+Cybersecurity Club — College of Charleston, Charleston, SC  |  August 2023 – Present
+• Defense team member.
+
+International Collegiate Programming Competition — College of Charleston  |  November 2025
+• Placed 2nd.
+
+Skills
+Go, Python, AWS (EKS)
+`
+	d := Parse(resume)
+	if len(d.Education) != 2 {
+		t.Fatalf("expected 2 education entries for dual degree, got %d: %+v", len(d.Education), d.Education)
+	}
+	if d.Education[0].Discipline == nil || *d.Education[0].Discipline != "Computer Science" {
+		t.Errorf("edu[0].Discipline = %v, want Computer Science", d.Education[0].Discipline)
+	}
+	if d.Education[1].Discipline == nil || *d.Education[1].Discipline != "Software Engineering" {
+		t.Errorf("edu[1].Discipline = %v, want Software Engineering", d.Education[1].Discipline)
+	}
+	if d.Education[1].Details == nil || !strings.Contains(*d.Education[1].Details, "Minors in Data Science, Spanish") {
+		t.Errorf("expected minors preserved in Details, got %v", d.Education[1].Details)
+	}
+	if len(d.Experiences) != 3 {
+		t.Fatalf("expected 3 activity/project experiences, got %d: %+v", len(d.Experiences), d.Experiences)
+	}
+	aisai := d.Experiences[0]
+	if aisai.StartDate == nil || *aisai.StartDate != "2026-03-01" || aisai.EndDate == nil || *aisai.EndDate != "2026-05-01" {
+		t.Errorf("AISAI dates = %v to %v, want 2026-03-01 to 2026-05-01", aisai.StartDate, aisai.EndDate)
+	}
+	icpc := d.Experiences[2]
+	if !strings.Contains(icpc.JobTitle, "International Collegiate Programming Competition") {
+		t.Errorf("expected ICPC as separate experience, got %+v", icpc)
+	}
+	if icpc.StartDate == nil || *icpc.StartDate != "2025-11-01" {
+		t.Errorf("ICPC StartDate = %v, want 2025-11-01", icpc.StartDate)
+	}
+}
+
+func TestParseRepeatedCombinedAndIndividualDegrees(t *testing.T) {
+	d := Parse(`Jane Doe
+
+EDUCATION
+B.S. in Computer Science; B.S. Software Engineering, College of Charleston
+Honors College
+B.S. in Computer Science, College of Charleston
+Honors College
+B.S. in Software Engineering, College of Charleston
+Honors College
+Minors in Data Science, Spanish
+`)
+	if len(d.Education) != 2 {
+		t.Fatalf("expected two degrees, got %+v", d.Education)
+	}
+	if d.Education[0].Discipline == nil || *d.Education[0].Discipline != "Computer Science" ||
+		d.Education[1].Discipline == nil || *d.Education[1].Discipline != "Software Engineering" ||
+		d.Education[1].Details == nil || *d.Education[1].Details != "Minors in Data Science, Spanish" {
+		t.Fatalf("incorrect parsed degrees: %+v", d.Education)
+	}
+}

@@ -78,3 +78,17 @@ func TestApplicationsCSVICSAndStats(t *testing.T) {
 		t.Fatalf("unexpected stats: %+v", stats)
 	}
 }
+
+func TestExportTreatsUntrustedFieldsAsText(t *testing.T) {
+	for _, input := range []string{"=1+1", "  +SUM(1)", "@SUM(1)", "\ttext", "\rtext", "  ＠test", "\ufeff-1"} {
+		if got := safeCSVCell(input); got != "'"+input {
+			t.Errorf("safeCSVCell(%q) = %q", input, got)
+		}
+	}
+	if got := safeCSVCell("Acme - Inc."); got != "Acme - Inc." {
+		t.Errorf("ordinary text changed: %q", got)
+	}
+	if got := escapeICS("one\rtwo\r\nthree\nfour"); got != `one\ntwo\nthree\nfour` {
+		t.Errorf("calendar line breaks were not escaped: %q", got)
+	}
+}

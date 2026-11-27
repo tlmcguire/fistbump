@@ -387,6 +387,91 @@ func TestGreenhouseFetchSuccess(t *testing.T) {
 	}
 }
 
+func TestChooseBoardsWithCustomDoesNotFanOutToPublicCatalogWithoutCompanyFilter(t *testing.T) {
+	s := newSearchServer(t, &fakeSearcher{})
+	custom := "local-only-board"
+	for _, token := range greenhouse.Tokens() {
+		if token == custom {
+			t.Fatalf("test custom board %q unexpectedly appears in curated catalog", custom)
+		}
+	}
+	if err := s.store.PutSettings(context.Background(), map[string]json.RawMessage{
+		"connectors.custom_boards": json.RawMessage(`["` + custom + `"]`),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := s.chooseBoardsWithCustom(context.Background(), connectors.Query{Keywords: []string{"engineer"}})
+	if want := len(greenhouse.Tokens()) + 1; len(got) != want {
+		t.Fatalf("unfiltered board count = %d, want curated + custom count %d", len(got), want)
+	}
+
+}
+
+func TestCompanySearchIncludesPublicGreenhouseBoardsWithoutWatchlist(t *testing.T) {
+	s := newSearchServer(t, &fakeSearcher{})
+	public := connectors.PublicBoards("greenhouse")
+	if len(public) == 0 {
+		t.Fatal("expected public Greenhouse catalog entries")
+	}
+	filtered := s.chooseBoardsWithCustom(context.Background(), connectors.Query{Company: public[0].Company})
+	found := false
+	for _, token := range filtered {
+		if token == public[0].Token {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("company-filtered results omitted public board %q", public[0].Token)
+	}
+}
+
+type testCachedATS struct {
+	tests  *testing.T
+	live   int
+	cached int
+}
+
+func (c *testCachedATS) FetchJob(context.Context, string, string) (connectors.Posting, error) {
+	c.tests.Fatal("unexpected posting lookup")
+	return connectors.Posting{}, nil
+}
+
+func (c *testCachedATS) ListBoard(_ context.Context, board string) ([]connectors.Posting, error) {
+	if board != "one-board" {
+		c.tests.Errorf("unexpected live board lookup: %q", board)
+	}
+	c.live++
+	return nil, nil
+}
+
+func (c *testCachedATS) CachedBoard(board string) ([]connectors.Posting, error, bool) {
+	if board != "one-board" {
+		c.tests.Errorf("unexpected cached board lookup: %q", board)
+	}
+	c.cached++
+	return nil, nil, true
+}
+
+func TestLeverSearchUsesOnlyRequestedBoardAndRespectsCachedOnly(t *testing.T) {
+	s := newSearchServer(t, &fakeSearcher{})
+	client := &testCachedATS{tests: t}
+	s.lever = client
+	rec := postFetch(t, s, `{"query":{"source":"lever","boards":["one-board"],"cached_only":true}}`)
+	var result connectors.SearchResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || client.live != 0 || client.cached != 1 || result.BoardsCached != 1 {
+		t.Fatalf("cache-only status %d, live calls %d, cached calls %d, response %s", rec.Code, client.live, client.cached, rec.Body)
+	}
+	rec = postFetch(t, s, `{"query":{"source":"lever","boards":["one-board"]}}`)
+	if rec.Code != http.StatusOK || client.live != 1 || client.cached != 1 {
+		t.Fatalf("live status %d, live calls %d, cached calls %d", rec.Code, client.live, client.cached)
+	}
+}
+
 func TestGreenhouseFetchRejectsBadRequests(t *testing.T) {
 	kw := `"keywords":["go"]`
 	for _, tc := range []struct {

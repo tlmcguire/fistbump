@@ -1,6 +1,6 @@
 [package]
 name = "fistbump"
-version = "0.5.1"
+version = "0.6.0"
 description = "A local-first job application assistant"
 authors = ["tlmcguire"]
 edition = "2021"
@@ -27,6 +27,7 @@ rand = "0.8"
 hex = "0.4"
 base64 = "0.22"
 urlencoding = "2"
+tempfile = "3"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

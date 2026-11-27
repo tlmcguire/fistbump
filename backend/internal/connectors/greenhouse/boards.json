@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "verified_at": "2026-11-23",
+  "verified_at": "2026-11-26",
   "categories": [
     {
       "id": "technical",
@@ -297,6 +297,256 @@
         {
           "token": "c3iot",
           "company": "C3 AI"
+        },
+        {
+          "token": "cohere",
+          "company": "Cohere",
+          "website": "https://cohere.com/"
+        },
+        {
+          "token": "weightsandbiases",
+          "company": "Weights & Biases",
+          "website": "https://wandb.ai/"
+        },
+        {
+          "token": "huggingface",
+          "company": "Hugging Face",
+          "website": "https://huggingface.co/"
+        },
+        {
+          "token": "datarobot",
+          "company": "DataRobot",
+          "website": "https://www.datarobot.com/"
+        },
+        {
+          "token": "h2oai",
+          "company": "H2O.ai",
+          "website": "https://h2o.ai/"
+        },
+        {
+          "token": "domino",
+          "company": "Domino Data Lab",
+          "website": "https://domino.ai/"
+        },
+        {
+          "token": "gretelai",
+          "company": "Gretel",
+          "website": "https://gretel.ai/"
+        },
+        {
+          "token": "cleanlab",
+          "company": "Cleanlab",
+          "website": "https://cleanlab.ai/"
+        },
+        {
+          "token": "adept",
+          "company": "Adept",
+          "website": "https://www.adept.ai/"
+        },
+        {
+          "token": "characterai",
+          "company": "Character.AI",
+          "website": "https://character.ai/"
+        },
+        {
+          "token": "runwayml",
+          "company": "Runway",
+          "website": "https://runwayml.com/"
+        },
+        {
+          "token": "jasperai",
+          "company": "Jasper",
+          "website": "https://www.jasper.ai/"
+        },
+        {
+          "token": "writer",
+          "company": "Writer",
+          "website": "https://writer.com/"
+        },
+        {
+          "token": "typeface",
+          "company": "Typeface",
+          "website": "https://www.typeface.ai/"
+        },
+        {
+          "token": "synthesia",
+          "company": "Synthesia",
+          "website": "https://www.synthesia.io/"
+        },
+        {
+          "token": "deepgram",
+          "company": "Deepgram",
+          "website": "https://deepgram.com/"
+        },
+        {
+          "token": "elevenlabs",
+          "company": "ElevenLabs",
+          "website": "https://elevenlabs.io/"
+        },
+        {
+          "token": "pinecone",
+          "company": "Pinecone",
+          "website": "https://www.pinecone.io/"
+        },
+        {
+          "token": "weaviate",
+          "company": "Weaviate",
+          "website": "https://weaviate.io/"
+        },
+        {
+          "token": "zilliz",
+          "company": "Zilliz",
+          "website": "https://zilliz.com/"
+        },
+        {
+          "token": "qdrant",
+          "company": "Qdrant",
+          "website": "https://qdrant.tech/"
+        },
+        {
+          "token": "anyscale",
+          "company": "Anyscale",
+          "website": "https://www.anyscale.com/"
+        },
+        {
+          "token": "modular",
+          "company": "Modular",
+          "website": "https://www.modular.com/"
+        },
+        {
+          "token": "cerebras",
+          "company": "Cerebras Systems",
+          "website": "https://www.cerebras.net/"
+        },
+        {
+          "token": "groq",
+          "company": "Groq",
+          "website": "https://groq.com/"
+        },
+        {
+          "token": "dmatrix",
+          "company": "d-Matrix",
+          "website": "https://www.d-matrix.ai/"
+        },
+        {
+          "token": "fireworksai",
+          "company": "Fireworks AI",
+          "website": "https://fireworks.ai/"
+        },
+        {
+          "token": "baseten",
+          "company": "Baseten",
+          "website": "https://www.baseten.co/"
+        },
+        {
+          "token": "replicate",
+          "company": "Replicate",
+          "website": "https://replicate.com/"
+        },
+        {
+          "token": "octoai",
+          "company": "OctoAI",
+          "website": "https://octo.ai/"
+        },
+        {
+          "token": "predibase",
+          "company": "Predibase",
+          "website": "https://predibase.com/"
+        },
+        {
+          "token": "fiddlerai",
+          "company": "Fiddler AI",
+          "website": "https://www.fiddler.ai/"
+        },
+        {
+          "token": "whylabs",
+          "company": "WhyLabs",
+          "website": "https://whylabs.ai/"
+        },
+        {
+          "token": "galileo",
+          "company": "Galileo",
+          "website": "https://www.rungalileo.io/"
+        },
+        {
+          "token": "patronusai",
+          "company": "Patronus AI",
+          "website": "https://www.patronus.ai/"
+        },
+        {
+          "token": "robustintelligence",
+          "company": "Robust Intelligence",
+          "website": "https://www.robustintelligence.com/"
+        },
+        {
+          "token": "hiddenlayer",
+          "company": "HiddenLayer",
+          "website": "https://hiddenlayer.com/"
+        },
+        {
+          "token": "protectai",
+          "company": "Protect AI",
+          "website": "https://protectai.com/"
+        },
+        {
+          "token": "cognition",
+          "company": "Cognition",
+          "website": "https://cognition.ai/"
+        },
+        {
+          "token": "magic",
+          "company": "Magic",
+          "website": "https://magic.dev/"
+        },
+        {
+          "token": "poolside",
+          "company": "Poolside",
+          "website": "https://poolside.ai/"
+        },
+        {
+          "token": "augmentcode",
+          "company": "Augment Code",
+          "website": "https://www.augmentcode.com/"
+        },
+        {
+          "token": "tabnine",
+          "company": "Tabnine",
+          "website": "https://www.tabnine.com/"
+        },
+        {
+          "token": "codeium",
+          "company": "Windsurf (Codeium)",
+          "website": "https://codeium.com/"
+        },
+        {
+          "token": "replit",
+          "company": "Replit",
+          "website": "https://replit.com/"
+        },
+        {
+          "token": "hebbia",
+          "company": "Hebbia",
+          "website": "https://www.hebbia.ai/"
+        },
+        {
+          "token": "harvey",
+          "company": "Harvey",
+          "website": "https://www.harvey.ai/"
+        },
+        {
+          "token": "sierra",
+          "company": "Sierra",
+          "website": "https://sierra.ai/"
+        },
+        {
+          "token": "decagon",
+          "company": "Decagon",
+          "website": "https://decagon.ai/"
+        },
+        {
+          "token": "forethought",
+          "company": "Forethought",
+          "website": "https://forethought.ai/"
         }
       ]
     },
@@ -397,6 +647,206 @@
         {
           "token": "imply",
           "company": "Imply"
+        },
+        {
+          "token": "snowflake",
+          "company": "Snowflake",
+          "website": "https://www.snowflake.com/"
+        },
+        {
+          "token": "confluent",
+          "company": "Confluent",
+          "website": "https://www.confluent.io/"
+        },
+        {
+          "token": "airbyte",
+          "company": "Airbyte",
+          "website": "https://airbyte.com/"
+        },
+        {
+          "token": "dbtlabs",
+          "company": "dbt Labs",
+          "website": "https://www.getdbt.com/"
+        },
+        {
+          "token": "dagster",
+          "company": "Dagster Labs",
+          "website": "https://dagster.io/"
+        },
+        {
+          "token": "prefect",
+          "company": "Prefect",
+          "website": "https://www.prefect.io/"
+        },
+        {
+          "token": "astronomer",
+          "company": "Astronomer",
+          "website": "https://www.astronomer.io/"
+        },
+        {
+          "token": "clickhouse",
+          "company": "ClickHouse",
+          "website": "https://clickhouse.com/"
+        },
+        {
+          "token": "motherduck",
+          "company": "MotherDuck",
+          "website": "https://motherduck.com/"
+        },
+        {
+          "token": "duckdblabs",
+          "company": "DuckDB Labs",
+          "website": "https://duckdblabs.com/"
+        },
+        {
+          "token": "timescale",
+          "company": "Timescale",
+          "website": "https://www.timescale.com/"
+        },
+        {
+          "token": "influxdata",
+          "company": "InfluxData",
+          "website": "https://www.influxdata.com/"
+        },
+        {
+          "token": "questdb",
+          "company": "QuestDB",
+          "website": "https://questdb.io/"
+        },
+        {
+          "token": "scylladb",
+          "company": "ScyllaDB",
+          "website": "https://www.scylladb.com/"
+        },
+        {
+          "token": "aerospike",
+          "company": "Aerospike",
+          "website": "https://aerospike.com/"
+        },
+        {
+          "token": "redis",
+          "company": "Redis",
+          "website": "https://redis.io/"
+        },
+        {
+          "token": "supabase",
+          "company": "Supabase",
+          "website": "https://supabase.com/"
+        },
+        {
+          "token": "neon",
+          "company": "Neon",
+          "website": "https://neon.tech/"
+        },
+        {
+          "token": "turso",
+          "company": "Turso",
+          "website": "https://turso.tech/"
+        },
+        {
+          "token": "upstash",
+          "company": "Upstash",
+          "website": "https://upstash.com/"
+        },
+        {
+          "token": "tinybird",
+          "company": "Tinybird",
+          "website": "https://www.tinybird.co/"
+        },
+        {
+          "token": "materialise",
+          "company": "Materialize",
+          "website": "https://materialize.com/"
+        },
+        {
+          "token": "redpanda",
+          "company": "Redpanda",
+          "website": "https://redpanda.com/"
+        },
+        {
+          "token": "streamnative",
+          "company": "StreamNative",
+          "website": "https://streamnative.io/"
+        },
+        {
+          "token": "hightouch",
+          "company": "Hightouch",
+          "website": "https://hightouch.com/"
+        },
+        {
+          "token": "census",
+          "company": "Census",
+          "website": "https://www.getcensus.com/"
+        },
+        {
+          "token": "rudderstack",
+          "company": "RudderStack",
+          "website": "https://www.rudderstack.com/"
+        },
+        {
+          "token": "snowplow",
+          "company": "Snowplow",
+          "website": "https://snowplow.io/"
+        },
+        {
+          "token": "atlan",
+          "company": "Atlan",
+          "website": "https://atlan.com/"
+        },
+        {
+          "token": "alation",
+          "company": "Alation",
+          "website": "https://www.alation.com/"
+        },
+        {
+          "token": "montecarlodata",
+          "company": "Monte Carlo",
+          "website": "https://www.montecarlodata.com/"
+        },
+        {
+          "token": "soda",
+          "company": "Soda",
+          "website": "https://www.soda.io/"
+        },
+        {
+          "token": "hex",
+          "company": "Hex",
+          "website": "https://hex.tech/"
+        },
+        {
+          "token": "preset",
+          "company": "Preset",
+          "website": "https://preset.io/"
+        },
+        {
+          "token": "metabase",
+          "company": "Metabase",
+          "website": "https://www.metabase.com/"
+        },
+        {
+          "token": "omni",
+          "company": "Omni",
+          "website": "https://omni.co/"
+        },
+        {
+          "token": "thoughtspot",
+          "company": "ThoughtSpot",
+          "website": "https://www.thoughtspot.com/"
+        },
+        {
+          "token": "domo",
+          "company": "Domo",
+          "website": "https://www.domo.com/"
+        },
+        {
+          "token": "matillion",
+          "company": "Matillion",
+          "website": "https://www.matillion.com/"
+        },
+        {
+          "token": "hevodata",
+          "company": "Hevo Data",
+          "website": "https://hevodata.com/"
         }
       ]
     },
@@ -566,6 +1016,256 @@
         {
           "token": "akuity",
           "company": "Akuity"
+        },
+        {
+          "token": "github",
+          "company": "GitHub",
+          "website": "https://github.com/"
+        },
+        {
+          "token": "hashicorp",
+          "company": "HashiCorp",
+          "website": "https://www.hashicorp.com/"
+        },
+        {
+          "token": "docker",
+          "company": "Docker",
+          "website": "https://www.docker.com/"
+        },
+        {
+          "token": "sentry",
+          "company": "Sentry",
+          "website": "https://sentry.io/"
+        },
+        {
+          "token": "postman",
+          "company": "Postman",
+          "website": "https://www.postman.com/"
+        },
+        {
+          "token": "kong",
+          "company": "Kong",
+          "website": "https://konghq.com/"
+        },
+        {
+          "token": "apollodata",
+          "company": "Apollo GraphQL",
+          "website": "https://www.apollographql.com/"
+        },
+        {
+          "token": "hasura",
+          "company": "Hasura",
+          "website": "https://hasura.io/"
+        },
+        {
+          "token": "prisma",
+          "company": "Prisma",
+          "website": "https://www.prisma.io/"
+        },
+        {
+          "token": "temporal",
+          "company": "Temporal",
+          "website": "https://temporal.io/"
+        },
+        {
+          "token": "pulumi",
+          "company": "Pulumi",
+          "website": "https://www.pulumi.com/"
+        },
+        {
+          "token": "spacelift",
+          "company": "Spacelift",
+          "website": "https://spacelift.io/"
+        },
+        {
+          "token": "env0",
+          "company": "env0",
+          "website": "https://www.env0.com/"
+        },
+        {
+          "token": "dagger",
+          "company": "Dagger",
+          "website": "https://dagger.io/"
+        },
+        {
+          "token": "earthly",
+          "company": "Earthly",
+          "website": "https://earthly.dev/"
+        },
+        {
+          "token": "depot",
+          "company": "Depot",
+          "website": "https://depot.dev/"
+        },
+        {
+          "token": "flyio",
+          "company": "Fly.io",
+          "website": "https://fly.io/"
+        },
+        {
+          "token": "render",
+          "company": "Render",
+          "website": "https://render.com/"
+        },
+        {
+          "token": "railway",
+          "company": "Railway",
+          "website": "https://railway.app/"
+        },
+        {
+          "token": "heroku",
+          "company": "Heroku",
+          "website": "https://www.heroku.com/"
+        },
+        {
+          "token": "planetscale",
+          "company": "PlanetScale",
+          "website": "https://planetscale.com/"
+        },
+        {
+          "token": "clerk",
+          "company": "Clerk",
+          "website": "https://clerk.com/"
+        },
+        {
+          "token": "workos",
+          "company": "WorkOS",
+          "website": "https://workos.com/"
+        },
+        {
+          "token": "stytch",
+          "company": "Stytch",
+          "website": "https://stytch.com/"
+        },
+        {
+          "token": "auth0",
+          "company": "Auth0",
+          "website": "https://auth0.com/"
+        },
+        {
+          "token": "resend",
+          "company": "Resend",
+          "website": "https://resend.com/"
+        },
+        {
+          "token": "posthog",
+          "company": "PostHog",
+          "website": "https://posthog.com/"
+        },
+        {
+          "token": "statsig",
+          "company": "Statsig",
+          "website": "https://www.statsig.com/"
+        },
+        {
+          "token": "eppo",
+          "company": "Eppo",
+          "website": "https://www.geteppo.com/"
+        },
+        {
+          "token": "split",
+          "company": "Split",
+          "website": "https://www.split.io/"
+        },
+        {
+          "token": "chromatic",
+          "company": "Chromatic",
+          "website": "https://www.chromatic.com/"
+        },
+        {
+          "token": "cypress",
+          "company": "Cypress",
+          "website": "https://www.cypress.io/"
+        },
+        {
+          "token": "browserstack",
+          "company": "BrowserStack",
+          "website": "https://www.browserstack.com/"
+        },
+        {
+          "token": "saucelabs",
+          "company": "Sauce Labs",
+          "website": "https://saucelabs.com/"
+        },
+        {
+          "token": "lambdatest",
+          "company": "LambdaTest",
+          "website": "https://www.lambdatest.com/"
+        },
+        {
+          "token": "checkly",
+          "company": "Checkly",
+          "website": "https://www.checklyhq.com/"
+        },
+        {
+          "token": "chronosphere",
+          "company": "Chronosphere",
+          "website": "https://chronosphere.io/"
+        },
+        {
+          "token": "coralogix",
+          "company": "Coralogix",
+          "website": "https://coralogix.com/"
+        },
+        {
+          "token": "mezmo",
+          "company": "Mezmo",
+          "website": "https://www.mezmo.com/"
+        },
+        {
+          "token": "logrocket",
+          "company": "LogRocket",
+          "website": "https://logrocket.com/"
+        },
+        {
+          "token": "fullstory",
+          "company": "FullStory",
+          "website": "https://www.fullstory.com/"
+        },
+        {
+          "token": "heap",
+          "company": "Heap",
+          "website": "https://www.heap.io/"
+        },
+        {
+          "token": "amplitude",
+          "company": "Amplitude",
+          "website": "https://amplitude.com/"
+        },
+        {
+          "token": "segment",
+          "company": "Segment",
+          "website": "https://segment.com/"
+        },
+        {
+          "token": "linear",
+          "company": "Linear",
+          "website": "https://linear.app/"
+        },
+        {
+          "token": "raycast",
+          "company": "Raycast",
+          "website": "https://www.raycast.com/"
+        },
+        {
+          "token": "zed",
+          "company": "Zed",
+          "website": "https://zed.dev/"
+        },
+        {
+          "token": "mintlify",
+          "company": "Mintlify",
+          "website": "https://mintlify.com/"
+        },
+        {
+          "token": "readme",
+          "company": "ReadMe",
+          "website": "https://readme.com/"
+        },
+        {
+          "token": "fern",
+          "company": "Fern",
+          "website": "https://buildwithfern.com/"
         }
       ]
     },
@@ -1148,6 +1848,256 @@
           "token": "skillsoft",
           "company": "Skillsoft",
           "website": "https://www.skillsoft.com/"
+        },
+        {
+          "token": "hubspot",
+          "company": "HubSpot",
+          "website": "https://www.hubspot.com/"
+        },
+        {
+          "token": "zendesk",
+          "company": "Zendesk",
+          "website": "https://www.zendesk.com/"
+        },
+        {
+          "token": "servicenow",
+          "company": "ServiceNow",
+          "website": "https://www.servicenow.com/"
+        },
+        {
+          "token": "workday",
+          "company": "Workday",
+          "website": "https://www.workday.com/"
+        },
+        {
+          "token": "atlassian",
+          "company": "Atlassian",
+          "website": "https://www.atlassian.com/"
+        },
+        {
+          "token": "monday",
+          "company": "monday.com",
+          "website": "https://monday.com/"
+        },
+        {
+          "token": "clickup",
+          "company": "ClickUp",
+          "website": "https://clickup.com/"
+        },
+        {
+          "token": "notion",
+          "company": "Notion",
+          "website": "https://www.notion.so/"
+        },
+        {
+          "token": "coda",
+          "company": "Coda",
+          "website": "https://coda.io/"
+        },
+        {
+          "token": "miro",
+          "company": "Miro",
+          "website": "https://miro.com/"
+        },
+        {
+          "token": "loom",
+          "company": "Loom",
+          "website": "https://www.loom.com/"
+        },
+        {
+          "token": "zapier",
+          "company": "Zapier",
+          "website": "https://zapier.com/"
+        },
+        {
+          "token": "make",
+          "company": "Make",
+          "website": "https://www.make.com/"
+        },
+        {
+          "token": "tray",
+          "company": "Tray.ai",
+          "website": "https://tray.ai/"
+        },
+        {
+          "token": "mulesoft",
+          "company": "MuleSoft",
+          "website": "https://www.mulesoft.com/"
+        },
+        {
+          "token": "docusign",
+          "company": "DocuSign",
+          "website": "https://www.docusign.com/"
+        },
+        {
+          "token": "ironclad",
+          "company": "Ironclad",
+          "website": "https://ironcladapp.com/"
+        },
+        {
+          "token": "icertis",
+          "company": "Icertis",
+          "website": "https://www.icertis.com/"
+        },
+        {
+          "token": "coupa",
+          "company": "Coupa",
+          "website": "https://www.coupa.com/"
+        },
+        {
+          "token": "jaggaer",
+          "company": "JAGGAER",
+          "website": "https://www.jaggaer.com/"
+        },
+        {
+          "token": "ziphq",
+          "company": "Zip",
+          "website": "https://ziphq.com/"
+        },
+        {
+          "token": "vanta",
+          "company": "Vanta",
+          "website": "https://www.vanta.com/"
+        },
+        {
+          "token": "drata",
+          "company": "Drata",
+          "website": "https://drata.com/"
+        },
+        {
+          "token": "secureframe",
+          "company": "Secureframe",
+          "website": "https://secureframe.com/"
+        },
+        {
+          "token": "rippling",
+          "company": "Rippling",
+          "website": "https://www.rippling.com/"
+        },
+        {
+          "token": "deel",
+          "company": "Deel",
+          "website": "https://www.deel.com/"
+        },
+        {
+          "token": "oysterhr",
+          "company": "Oyster",
+          "website": "https://www.oysterhr.com/"
+        },
+        {
+          "token": "hibob",
+          "company": "HiBob",
+          "website": "https://www.hibob.com/"
+        },
+        {
+          "token": "personio",
+          "company": "Personio",
+          "website": "https://www.personio.com/"
+        },
+        {
+          "token": "paylocity",
+          "company": "Paylocity",
+          "website": "https://www.paylocity.com/"
+        },
+        {
+          "token": "paycor",
+          "company": "Paycor",
+          "website": "https://www.paycor.com/"
+        },
+        {
+          "token": "ukg",
+          "company": "UKG",
+          "website": "https://www.ukg.com/"
+        },
+        {
+          "token": "outreach",
+          "company": "Outreach",
+          "website": "https://www.outreach.io/"
+        },
+        {
+          "token": "highspot",
+          "company": "Highspot",
+          "website": "https://www.highspot.com/"
+        },
+        {
+          "token": "seismic",
+          "company": "Seismic",
+          "website": "https://seismic.com/"
+        },
+        {
+          "token": "clari",
+          "company": "Clari",
+          "website": "https://www.clari.com/"
+        },
+        {
+          "token": "gainsight",
+          "company": "Gainsight",
+          "website": "https://www.gainsight.com/"
+        },
+        {
+          "token": "iterable",
+          "company": "Iterable",
+          "website": "https://iterable.com/"
+        },
+        {
+          "token": "marketo",
+          "company": "Marketo",
+          "website": "https://business.adobe.com/"
+        },
+        {
+          "token": "drift",
+          "company": "Drift",
+          "website": "https://www.drift.com/"
+        },
+        {
+          "token": "freshworks",
+          "company": "Freshworks",
+          "website": "https://www.freshworks.com/"
+        },
+        {
+          "token": "zoho",
+          "company": "Zoho",
+          "website": "https://www.zoho.com/"
+        },
+        {
+          "token": "pipedrive",
+          "company": "Pipedrive",
+          "website": "https://www.pipedrive.com/"
+        },
+        {
+          "token": "copper",
+          "company": "Copper",
+          "website": "https://www.copper.com/"
+        },
+        {
+          "token": "procore",
+          "company": "Procore",
+          "website": "https://www.procore.com/"
+        },
+        {
+          "token": "autodesk",
+          "company": "Autodesk",
+          "website": "https://www.autodesk.com/"
+        },
+        {
+          "token": "bentley",
+          "company": "Bentley Systems",
+          "website": "https://www.bentley.com/"
+        },
+        {
+          "token": "trimble",
+          "company": "Trimble",
+          "website": "https://www.trimble.com/"
+        },
+        {
+          "token": "veeva",
+          "company": "Veeva Systems",
+          "website": "https://www.veeva.com/"
+        },
+        {
+          "token": "toasttab",
+          "company": "Toast",
+          "website": "https://pos.toasttab.com/"
         }
       ]
     },
@@ -1260,6 +2210,106 @@
         {
           "token": "calm",
           "company": "Calm.com"
+        },
+        {
+          "token": "doordash",
+          "company": "DoorDash",
+          "website": "https://www.doordash.com/"
+        },
+        {
+          "token": "uber",
+          "company": "Uber",
+          "website": "https://www.uber.com/"
+        },
+        {
+          "token": "etsy",
+          "company": "Etsy",
+          "website": "https://www.etsy.com/"
+        },
+        {
+          "token": "yelp",
+          "company": "Yelp",
+          "website": "https://www.yelp.com/"
+        },
+        {
+          "token": "thumbtack",
+          "company": "Thumbtack",
+          "website": "https://www.thumbtack.com/"
+        },
+        {
+          "token": "rover",
+          "company": "Rover",
+          "website": "https://www.rover.com/"
+        },
+        {
+          "token": "eventbrite",
+          "company": "Eventbrite",
+          "website": "https://www.eventbrite.com/"
+        },
+        {
+          "token": "meetup",
+          "company": "Meetup",
+          "website": "https://www.meetup.com/"
+        },
+        {
+          "token": "bumble",
+          "company": "Bumble",
+          "website": "https://bumble.com/"
+        },
+        {
+          "token": "hinge",
+          "company": "Hinge",
+          "website": "https://hinge.co/"
+        },
+        {
+          "token": "matchgroup",
+          "company": "Match Group",
+          "website": "https://mtch.com/"
+        },
+        {
+          "token": "strava",
+          "company": "Strava",
+          "website": "https://www.strava.com/"
+        },
+        {
+          "token": "alltrails",
+          "company": "AllTrails",
+          "website": "https://www.alltrails.com/"
+        },
+        {
+          "token": "komoot",
+          "company": "komoot",
+          "website": "https://www.komoot.com/"
+        },
+        {
+          "token": "goodreads",
+          "company": "Goodreads",
+          "website": "https://www.goodreads.com/"
+        },
+        {
+          "token": "quora",
+          "company": "Quora",
+          "website": "https://www.quora.com/"
+        },
+        {
+          "token": "patreon",
+          "company": "Patreon",
+          "website": "https://www.patreon.com/"
+        },
+        {
+          "token": "substack",
+          "company": "Substack",
+          "website": "https://substack.com/"
+        },
+        {
+          "token": "whatnot",
+          "company": "Whatnot",
+          "website": "https://www.whatnot.com/"
+        },
+        {
+          "token": "poshmark",
+          "company": "Poshmark",
+          "website": "https://poshmark.com/"
         }
       ]
     },
@@ -1413,6 +2463,46 @@
           "token": "sqc",
           "company": "Silicon Quantum Computing",
           "website": "https://sqc.com.au/"
+        },
+        {
+          "token": "rigetti",
+          "company": "Rigetti Computing",
+          "website": "https://www.rigetti.com/"
+        },
+        {
+          "token": "quantinuum",
+          "company": "Quantinuum",
+          "website": "https://www.quantinuum.com/"
+        },
+        {
+          "token": "quera",
+          "company": "QuEra Computing",
+          "website": "https://www.quera.com/"
+        },
+        {
+          "token": "pasqal",
+          "company": "Pasqal",
+          "website": "https://www.pasqal.com/"
+        },
+        {
+          "token": "xanadu",
+          "company": "Xanadu",
+          "website": "https://www.xanadu.ai/"
+        },
+        {
+          "token": "dwave",
+          "company": "D-Wave",
+          "website": "https://www.dwavesys.com/"
+        },
+        {
+          "token": "iqm",
+          "company": "IQM Quantum Computers",
+          "website": "https://www.meetiqm.com/"
+        },
+        {
+          "token": "atomcomputing",
+          "company": "Atom Computing",
+          "website": "https://atom-computing.com/"
         }
       ]
     },
@@ -1765,6 +2855,206 @@
           "token": "exiger",
           "company": "Exiger",
           "website": "https://www.exiger.com/"
+        },
+        {
+          "token": "crowdstrike",
+          "company": "CrowdStrike",
+          "website": "https://www.crowdstrike.com/"
+        },
+        {
+          "token": "sentinelone",
+          "company": "SentinelOne",
+          "website": "https://www.sentinelone.com/"
+        },
+        {
+          "token": "paloaltonetworks",
+          "company": "Palo Alto Networks",
+          "website": "https://www.paloaltonetworks.com/"
+        },
+        {
+          "token": "fortinet",
+          "company": "Fortinet",
+          "website": "https://www.fortinet.com/"
+        },
+        {
+          "token": "rapid7",
+          "company": "Rapid7",
+          "website": "https://www.rapid7.com/"
+        },
+        {
+          "token": "qualys",
+          "company": "Qualys",
+          "website": "https://www.qualys.com/"
+        },
+        {
+          "token": "cyberark",
+          "company": "CyberArk",
+          "website": "https://www.cyberark.com/"
+        },
+        {
+          "token": "sailpoint",
+          "company": "SailPoint",
+          "website": "https://www.sailpoint.com/"
+        },
+        {
+          "token": "saviynt",
+          "company": "Saviynt",
+          "website": "https://saviynt.com/"
+        },
+        {
+          "token": "delinea",
+          "company": "Delinea",
+          "website": "https://delinea.com/"
+        },
+        {
+          "token": "1password",
+          "company": "1Password",
+          "website": "https://1password.com/"
+        },
+        {
+          "token": "snyk",
+          "company": "Snyk",
+          "website": "https://snyk.io/"
+        },
+        {
+          "token": "semgrep",
+          "company": "Semgrep",
+          "website": "https://semgrep.dev/"
+        },
+        {
+          "token": "checkmarx",
+          "company": "Checkmarx",
+          "website": "https://checkmarx.com/"
+        },
+        {
+          "token": "sonarsource",
+          "company": "Sonar",
+          "website": "https://www.sonarsource.com/"
+        },
+        {
+          "token": "mend",
+          "company": "Mend.io",
+          "website": "https://www.mend.io/"
+        },
+        {
+          "token": "lacework",
+          "company": "Lacework",
+          "website": "https://www.lacework.com/"
+        },
+        {
+          "token": "sysdig",
+          "company": "Sysdig",
+          "website": "https://sysdig.com/"
+        },
+        {
+          "token": "aquasec",
+          "company": "Aqua Security",
+          "website": "https://www.aquasec.com/"
+        },
+        {
+          "token": "upwind",
+          "company": "Upwind",
+          "website": "https://www.upwind.io/"
+        },
+        {
+          "token": "cyera",
+          "company": "Cyera",
+          "website": "https://www.cyera.io/"
+        },
+        {
+          "token": "veza",
+          "company": "Veza",
+          "website": "https://veza.com/"
+        },
+        {
+          "token": "dazz",
+          "company": "Dazz",
+          "website": "https://www.dazz.io/"
+        },
+        {
+          "token": "armis",
+          "company": "Armis",
+          "website": "https://www.armis.com/"
+        },
+        {
+          "token": "claroty",
+          "company": "Claroty",
+          "website": "https://claroty.com/"
+        },
+        {
+          "token": "nozomi",
+          "company": "Nozomi Networks",
+          "website": "https://www.nozominetworks.com/"
+        },
+        {
+          "token": "arcticwolf",
+          "company": "Arctic Wolf",
+          "website": "https://arcticwolf.com/"
+        },
+        {
+          "token": "redcanary",
+          "company": "Red Canary",
+          "website": "https://redcanary.com/"
+        },
+        {
+          "token": "panther",
+          "company": "Panther",
+          "website": "https://panther.com/"
+        },
+        {
+          "token": "exabeam",
+          "company": "Exabeam",
+          "website": "https://www.exabeam.com/"
+        },
+        {
+          "token": "devo",
+          "company": "Devo",
+          "website": "https://www.devo.com/"
+        },
+        {
+          "token": "vectra",
+          "company": "Vectra AI",
+          "website": "https://www.vectra.ai/"
+        },
+        {
+          "token": "darktrace",
+          "company": "Darktrace",
+          "website": "https://darktrace.com/"
+        },
+        {
+          "token": "proofpoint",
+          "company": "Proofpoint",
+          "website": "https://www.proofpoint.com/"
+        },
+        {
+          "token": "mimecast",
+          "company": "Mimecast",
+          "website": "https://www.mimecast.com/"
+        },
+        {
+          "token": "sublime",
+          "company": "Sublime Security",
+          "website": "https://sublime.security/"
+        },
+        {
+          "token": "materialsecurity",
+          "company": "Material Security",
+          "website": "https://material.security/"
+        },
+        {
+          "token": "hackerone",
+          "company": "HackerOne",
+          "website": "https://www.hackerone.com/"
+        },
+        {
+          "token": "cobalt",
+          "company": "Cobalt",
+          "website": "https://www.cobalt.io/"
+        },
+        {
+          "token": "vanta",
+          "company": "Vanta",
+          "website": "https://www.vanta.com/"
         }
       ]
     },
@@ -2198,6 +3488,181 @@
           "token": "axogen",
           "company": "Axogen",
           "website": "https://www.axogeninc.com/"
+        },
+        {
+          "token": "tempus",
+          "company": "Tempus",
+          "website": "https://www.tempus.com/"
+        },
+        {
+          "token": "guardanthealth",
+          "company": "Guardant Health",
+          "website": "https://guardanthealth.com/"
+        },
+        {
+          "token": "exactsciences",
+          "company": "Exact Sciences",
+          "website": "https://www.exactsciences.com/"
+        },
+        {
+          "token": "grail",
+          "company": "GRAIL",
+          "website": "https://grail.com/"
+        },
+        {
+          "token": "colorhealth",
+          "company": "Color Health",
+          "website": "https://www.color.com/"
+        },
+        {
+          "token": "ro",
+          "company": "Ro",
+          "website": "https://ro.co/"
+        },
+        {
+          "token": "hims",
+          "company": "Hims & Hers",
+          "website": "https://www.hims.com/"
+        },
+        {
+          "token": "noom",
+          "company": "Noom",
+          "website": "https://www.noom.com/"
+        },
+        {
+          "token": "hingehealth",
+          "company": "Hinge Health",
+          "website": "https://www.hingehealth.com/"
+        },
+        {
+          "token": "virtahealth",
+          "company": "Virta Health",
+          "website": "https://www.virtahealth.com/"
+        },
+        {
+          "token": "lyrahealth",
+          "company": "Lyra Health",
+          "website": "https://www.lyrahealth.com/"
+        },
+        {
+          "token": "springhealth",
+          "company": "Spring Health",
+          "website": "https://www.springhealth.com/"
+        },
+        {
+          "token": "headway",
+          "company": "Headway",
+          "website": "https://headway.co/"
+        },
+        {
+          "token": "alma",
+          "company": "Alma",
+          "website": "https://helloalma.com/"
+        },
+        {
+          "token": "growtherapy",
+          "company": "Grow Therapy",
+          "website": "https://growtherapy.com/"
+        },
+        {
+          "token": "rula",
+          "company": "Rula",
+          "website": "https://www.rula.com/"
+        },
+        {
+          "token": "cerebral",
+          "company": "Cerebral",
+          "website": "https://cerebral.com/"
+        },
+        {
+          "token": "teladoc",
+          "company": "Teladoc Health",
+          "website": "https://www.teladochealth.com/"
+        },
+        {
+          "token": "carbonhealth",
+          "company": "Carbon Health",
+          "website": "https://carbonhealth.com/"
+        },
+        {
+          "token": "cityblock",
+          "company": "Cityblock Health",
+          "website": "https://www.cityblock.com/"
+        },
+        {
+          "token": "oakstreethealth",
+          "company": "Oak Street Health",
+          "website": "https://www.oakstreethealth.com/"
+        },
+        {
+          "token": "villageMD",
+          "company": "VillageMD",
+          "website": "https://www.villagemd.com/"
+        },
+        {
+          "token": "devotedhealth",
+          "company": "Devoted Health",
+          "website": "https://www.devoted.com/"
+        },
+        {
+          "token": "alignmenthealth",
+          "company": "Alignment Health",
+          "website": "https://www.alignmenthealth.com/"
+        },
+        {
+          "token": "includedhealth",
+          "company": "Included Health",
+          "website": "https://includedhealth.com/"
+        },
+        {
+          "token": "accolade",
+          "company": "Accolade",
+          "website": "https://www.accolade.com/"
+        },
+        {
+          "token": "transcarent",
+          "company": "Transcarent",
+          "website": "https://transcarent.com/"
+        },
+        {
+          "token": "rightway",
+          "company": "Rightway",
+          "website": "https://www.rightwayhealthcare.com/"
+        },
+        {
+          "token": "goodrx",
+          "company": "GoodRx",
+          "website": "https://www.goodrx.com/"
+        },
+        {
+          "token": "capsule",
+          "company": "Capsule",
+          "website": "https://www.capsule.com/"
+        },
+        {
+          "token": "alto",
+          "company": "Alto Pharmacy",
+          "website": "https://www.alto.com/"
+        },
+        {
+          "token": "abridge",
+          "company": "Abridge",
+          "website": "https://www.abridge.com/"
+        },
+        {
+          "token": "nabla",
+          "company": "Nabla",
+          "website": "https://www.nabla.com/"
+        },
+        {
+          "token": "commure",
+          "company": "Commure",
+          "website": "https://www.commure.com/"
+        },
+        {
+          "token": "athenahealth",
+          "company": "athenahealth",
+          "website": "https://www.athenahealth.com/"
         }
       ]
     },
@@ -2939,6 +4404,106 @@
         {
           "token": "capellaspace",
           "company": "Capella Space"
+        },
+        {
+          "token": "shieldai",
+          "company": "Shield AI",
+          "website": "https://shield.ai/"
+        },
+        {
+          "token": "skydio",
+          "company": "Skydio",
+          "website": "https://www.skydio.com/"
+        },
+        {
+          "token": "saronic",
+          "company": "Saronic",
+          "website": "https://www.saronic.com/"
+        },
+        {
+          "token": "herondrone",
+          "company": "Hermeus",
+          "website": "https://www.hermeus.com/"
+        },
+        {
+          "token": "boom",
+          "company": "Boom Supersonic",
+          "website": "https://boomsupersonic.com/"
+        },
+        {
+          "token": "joby",
+          "company": "Joby Aviation",
+          "website": "https://www.jobyaviation.com/"
+        },
+        {
+          "token": "beta",
+          "company": "BETA Technologies",
+          "website": "https://www.beta.team/"
+        },
+        {
+          "token": "wisk",
+          "company": "Wisk Aero",
+          "website": "https://wisk.aero/"
+        },
+        {
+          "token": "firefly",
+          "company": "Firefly Aerospace",
+          "website": "https://fireflyspace.com/"
+        },
+        {
+          "token": "stokespace",
+          "company": "Stoke Space",
+          "website": "https://www.stokespace.com/"
+        },
+        {
+          "token": "impulse",
+          "company": "Impulse Space",
+          "website": "https://www.impulsespace.com/"
+        },
+        {
+          "token": "varda",
+          "company": "Varda Space Industries",
+          "website": "https://www.varda.com/"
+        },
+        {
+          "token": "k2space",
+          "company": "K2 Space",
+          "website": "https://www.k2space.com/"
+        },
+        {
+          "token": "apexspace",
+          "company": "Apex Space",
+          "website": "https://www.apexspace.com/"
+        },
+        {
+          "token": "muonspace",
+          "company": "Muon Space",
+          "website": "https://www.muonspace.com/"
+        },
+        {
+          "token": "castelion",
+          "company": "Castelion",
+          "website": "https://www.castelion.com/"
+        },
+        {
+          "token": "rebelliondefense",
+          "company": "Rebellion Defense",
+          "website": "https://rebelliondefense.com/"
+        },
+        {
+          "token": "secondfront",
+          "company": "Second Front Systems",
+          "website": "https://www.secondfront.com/"
+        },
+        {
+          "token": "hadrian",
+          "company": "Hadrian",
+          "website": "https://www.hadrian.co/"
+        },
+        {
+          "token": "nominal",
+          "company": "Nominal",
+          "website": "https://nominal.io/"
         }
       ]
     },
@@ -3390,6 +4955,256 @@
         {
           "token": "wise",
           "company": "Wise Worksite Field Sales "
+        },
+        {
+          "token": "plaid",
+          "company": "Plaid",
+          "website": "https://plaid.com/"
+        },
+        {
+          "token": "marqeta",
+          "company": "Marqeta",
+          "website": "https://www.marqeta.com/"
+        },
+        {
+          "token": "klarna",
+          "company": "Klarna",
+          "website": "https://www.klarna.com/"
+        },
+        {
+          "token": "revolut",
+          "company": "Revolut",
+          "website": "https://www.revolut.com/"
+        },
+        {
+          "token": "nu",
+          "company": "Nubank",
+          "website": "https://nubank.com.br/"
+        },
+        {
+          "token": "starlingbank",
+          "company": "Starling Bank",
+          "website": "https://www.starlingbank.com/"
+        },
+        {
+          "token": "checkout",
+          "company": "Checkout.com",
+          "website": "https://www.checkout.com/"
+        },
+        {
+          "token": "mollie",
+          "company": "Mollie",
+          "website": "https://www.mollie.com/"
+        },
+        {
+          "token": "airwallex",
+          "company": "Airwallex",
+          "website": "https://www.airwallex.com/"
+        },
+        {
+          "token": "rapyd",
+          "company": "Rapyd",
+          "website": "https://www.rapyd.net/"
+        },
+        {
+          "token": "dlocal",
+          "company": "dLocal",
+          "website": "https://dlocal.com/"
+        },
+        {
+          "token": "flywire",
+          "company": "Flywire",
+          "website": "https://www.flywire.com/"
+        },
+        {
+          "token": "remitly",
+          "company": "Remitly",
+          "website": "https://www.remitly.com/"
+        },
+        {
+          "token": "worldremit",
+          "company": "WorldRemit",
+          "website": "https://www.worldremit.com/"
+        },
+        {
+          "token": "payoneer",
+          "company": "Payoneer",
+          "website": "https://www.payoneer.com/"
+        },
+        {
+          "token": "tipalti",
+          "company": "Tipalti",
+          "website": "https://tipalti.com/"
+        },
+        {
+          "token": "navan",
+          "company": "Navan",
+          "website": "https://navan.com/"
+        },
+        {
+          "token": "expensify",
+          "company": "Expensify",
+          "website": "https://www.expensify.com/"
+        },
+        {
+          "token": "airbase",
+          "company": "Airbase",
+          "website": "https://www.airbase.com/"
+        },
+        {
+          "token": "pleo",
+          "company": "Pleo",
+          "website": "https://www.pleo.io/"
+        },
+        {
+          "token": "spendesk",
+          "company": "Spendesk",
+          "website": "https://www.spendesk.com/"
+        },
+        {
+          "token": "qonto",
+          "company": "Qonto",
+          "website": "https://qonto.com/"
+        },
+        {
+          "token": "wealthfront",
+          "company": "Wealthfront",
+          "website": "https://www.wealthfront.com/"
+        },
+        {
+          "token": "public",
+          "company": "Public.com",
+          "website": "https://public.com/"
+        },
+        {
+          "token": "webull",
+          "company": "Webull",
+          "website": "https://www.webull.com/"
+        },
+        {
+          "token": "acorns",
+          "company": "Acorns",
+          "website": "https://www.acorns.com/"
+        },
+        {
+          "token": "creditkarma",
+          "company": "Credit Karma",
+          "website": "https://www.creditkarma.com/"
+        },
+        {
+          "token": "nerdwallet",
+          "company": "NerdWallet",
+          "website": "https://www.nerdwallet.com/"
+        },
+        {
+          "token": "dave",
+          "company": "Dave",
+          "website": "https://dave.com/"
+        },
+        {
+          "token": "moneylion",
+          "company": "MoneyLion",
+          "website": "https://www.moneylion.com/"
+        },
+        {
+          "token": "brigit",
+          "company": "Brigit",
+          "website": "https://www.hellobrigit.com/"
+        },
+        {
+          "token": "bamboopayment",
+          "company": "Bamboo",
+          "website": "https://www.bamboopayment.com/"
+        },
+        {
+          "token": "unit",
+          "company": "Unit",
+          "website": "https://www.unit.co/"
+        },
+        {
+          "token": "treasuryprime",
+          "company": "Treasury Prime",
+          "website": "https://www.treasuryprime.com/"
+        },
+        {
+          "token": "moderntreasury",
+          "company": "Modern Treasury",
+          "website": "https://www.moderntreasury.com/"
+        },
+        {
+          "token": "column",
+          "company": "Column",
+          "website": "https://column.com/"
+        },
+        {
+          "token": "moov",
+          "company": "Moov",
+          "website": "https://moov.io/"
+        },
+        {
+          "token": "sardine",
+          "company": "Sardine",
+          "website": "https://www.sardine.ai/"
+        },
+        {
+          "token": "persona",
+          "company": "Persona",
+          "website": "https://withpersona.com/"
+        },
+        {
+          "token": "socure",
+          "company": "Socure",
+          "website": "https://www.socure.com/"
+        },
+        {
+          "token": "citadel",
+          "company": "Citadel",
+          "website": "https://www.citadel.com/"
+        },
+        {
+          "token": "twosigma",
+          "company": "Two Sigma",
+          "website": "https://www.twosigma.com/"
+        },
+        {
+          "token": "hudsonrivertrading",
+          "company": "Hudson River Trading",
+          "website": "https://www.hudsonrivertrading.com/"
+        },
+        {
+          "token": "optiver",
+          "company": "Optiver",
+          "website": "https://optiver.com/"
+        },
+        {
+          "token": "susquehanna",
+          "company": "Susquehanna (SIG)",
+          "website": "https://sig.com/"
+        },
+        {
+          "token": "deshaw",
+          "company": "D. E. Shaw",
+          "website": "https://www.deshaw.com/"
+        },
+        {
+          "token": "millennium",
+          "company": "Millennium",
+          "website": "https://www.mlp.com/"
+        },
+        {
+          "token": "balyasny",
+          "company": "Balyasny Asset Management",
+          "website": "https://www.bamfunds.com/"
+        },
+        {
+          "token": "pitchbook",
+          "company": "PitchBook",
+          "website": "https://pitchbook.com/"
+        },
+        {
+          "token": "morningstar",
+          "company": "Morningstar",
+          "website": "https://www.morningstar.com/"
         }
       ]
     },
@@ -3562,6 +5377,131 @@
         {
           "token": "watershed",
           "company": "Watershed Informatics"
+        },
+        {
+          "token": "formenergy",
+          "company": "Form Energy",
+          "website": "https://formenergy.com/"
+        },
+        {
+          "token": "commonwealthfusion",
+          "company": "Commonwealth Fusion Systems",
+          "website": "https://cfs.energy/"
+        },
+        {
+          "token": "helion",
+          "company": "Helion Energy",
+          "website": "https://www.helionenergy.com/"
+        },
+        {
+          "token": "zapenergy",
+          "company": "Zap Energy",
+          "website": "https://www.zapenergy.com/"
+        },
+        {
+          "token": "tae",
+          "company": "TAE Technologies",
+          "website": "https://tae.com/"
+        },
+        {
+          "token": "terrapower",
+          "company": "TerraPower",
+          "website": "https://www.terrapower.com/"
+        },
+        {
+          "token": "xenergy",
+          "company": "X-energy",
+          "website": "https://x-energy.com/"
+        },
+        {
+          "token": "radiantnuclear",
+          "company": "Radiant",
+          "website": "https://www.radiantnuclear.com/"
+        },
+        {
+          "token": "crusoe",
+          "company": "Crusoe",
+          "website": "https://www.crusoe.ai/"
+        },
+        {
+          "token": "lancium",
+          "company": "Lancium",
+          "website": "https://lancium.com/"
+        },
+        {
+          "token": "span",
+          "company": "SPAN",
+          "website": "https://www.span.io/"
+        },
+        {
+          "token": "lunar",
+          "company": "Lunar Energy",
+          "website": "https://www.lunarenergy.com/"
+        },
+        {
+          "token": "basepower",
+          "company": "Base Power",
+          "website": "https://www.basepowercompany.com/"
+        },
+        {
+          "token": "arcadia",
+          "company": "Arcadia",
+          "website": "https://www.arcadia.com/"
+        },
+        {
+          "token": "palmetto",
+          "company": "Palmetto",
+          "website": "https://palmetto.com/"
+        },
+        {
+          "token": "aurora",
+          "company": "Aurora Solar",
+          "website": "https://aurorasolar.com/"
+        },
+        {
+          "token": "sunrun",
+          "company": "Sunrun",
+          "website": "https://www.sunrun.com/"
+        },
+        {
+          "token": "enphase",
+          "company": "Enphase Energy",
+          "website": "https://enphase.com/"
+        },
+        {
+          "token": "fluencesenergy",
+          "company": "Fluence",
+          "website": "https://fluenceenergy.com/"
+        },
+        {
+          "token": "climeworks",
+          "company": "Climeworks",
+          "website": "https://climeworks.com/"
+        },
+        {
+          "token": "heirloom",
+          "company": "Heirloom",
+          "website": "https://www.heirloomcarbon.com/"
+        },
+        {
+          "token": "charmindustrial",
+          "company": "Charm Industrial",
+          "website": "https://charmindustrial.com/"
+        },
+        {
+          "token": "twelve",
+          "company": "Twelve",
+          "website": "https://www.twelve.co/"
+        },
+        {
+          "token": "solugen",
+          "company": "Solugen",
+          "website": "https://www.solugen.com/"
+        },
+        {
+          "token": "sublimelime",
+          "company": "Sublime Systems",
+          "website": "https://sublime-systems.com/"
         }
       ]
     },
@@ -3688,6 +5628,81 @@
         {
           "token": "clever",
           "company": "Clever"
+        },
+        {
+          "token": "chegg",
+          "company": "Chegg",
+          "website": "https://www.chegg.com/"
+        },
+        {
+          "token": "quizlet",
+          "company": "Quizlet",
+          "website": "https://quizlet.com/"
+        },
+        {
+          "token": "kahoot",
+          "company": "Kahoot!",
+          "website": "https://kahoot.com/"
+        },
+        {
+          "token": "instructure",
+          "company": "Instructure",
+          "website": "https://www.instructure.com/"
+        },
+        {
+          "token": "powerschool",
+          "company": "PowerSchool",
+          "website": "https://www.powerschool.com/"
+        },
+        {
+          "token": "classdojo",
+          "company": "ClassDojo",
+          "website": "https://www.classdojo.com/"
+        },
+        {
+          "token": "remind",
+          "company": "Remind",
+          "website": "https://www.remind.com/"
+        },
+        {
+          "token": "brilliant",
+          "company": "Brilliant",
+          "website": "https://brilliant.org/"
+        },
+        {
+          "token": "codecademy",
+          "company": "Codecademy",
+          "website": "https://www.codecademy.com/"
+        },
+        {
+          "token": "pluralsight",
+          "company": "Pluralsight",
+          "website": "https://www.pluralsight.com/"
+        },
+        {
+          "token": "multiverse",
+          "company": "Multiverse",
+          "website": "https://www.multiverse.io/"
+        },
+        {
+          "token": "outshool",
+          "company": "Outschool",
+          "website": "https://outschool.com/"
+        },
+        {
+          "token": "preply",
+          "company": "Preply",
+          "website": "https://preply.com/"
+        },
+        {
+          "token": "cambly",
+          "company": "Cambly",
+          "website": "https://www.cambly.com/"
+        },
+        {
+          "token": "cheggskills",
+          "company": "Thinkful",
+          "website": "https://www.thinkful.com/"
         }
       ]
     },
@@ -4276,6 +6291,81 @@
         {
           "token": "flipp",
           "company": "Flipp"
+        },
+        {
+          "token": "shopify",
+          "company": "Shopify",
+          "website": "https://www.shopify.com/"
+        },
+        {
+          "token": "bigcommerce",
+          "company": "BigCommerce",
+          "website": "https://www.bigcommerce.com/"
+        },
+        {
+          "token": "chewy",
+          "company": "Chewy",
+          "website": "https://www.chewy.com/"
+        },
+        {
+          "token": "wayfair",
+          "company": "Wayfair",
+          "website": "https://www.wayfair.com/"
+        },
+        {
+          "token": "warbyparker",
+          "company": "Warby Parker",
+          "website": "https://www.warbyparker.com/"
+        },
+        {
+          "token": "allbirds",
+          "company": "Allbirds",
+          "website": "https://www.allbirds.com/"
+        },
+        {
+          "token": "brooklinen",
+          "company": "Brooklinen",
+          "website": "https://www.brooklinen.com/"
+        },
+        {
+          "token": "away",
+          "company": "Away",
+          "website": "https://www.awaytravel.com/"
+        },
+        {
+          "token": "vuori",
+          "company": "Vuori",
+          "website": "https://vuoriclothing.com/"
+        },
+        {
+          "token": "onrunning",
+          "company": "On",
+          "website": "https://www.on.com/"
+        },
+        {
+          "token": "cotopaxi",
+          "company": "Cotopaxi",
+          "website": "https://www.cotopaxi.com/"
+        },
+        {
+          "token": "patagonia",
+          "company": "Patagonia",
+          "website": "https://www.patagonia.com/"
+        },
+        {
+          "token": "thredup",
+          "company": "thredUP",
+          "website": "https://www.thredup.com/"
+        },
+        {
+          "token": "therealreal",
+          "company": "The RealReal",
+          "website": "https://www.therealreal.com/"
+        },
+        {
+          "token": "depop",
+          "company": "Depop",
+          "website": "https://www.depop.com/"
         }
       ]
     },
@@ -4560,6 +6650,56 @@
           "token": "cordellcordell",
           "company": "Cordell & Cordell",
           "website": "https://cordellcordell.com/"
+        },
+        {
+          "token": "clio",
+          "company": "Clio",
+          "website": "https://www.clio.com/"
+        },
+        {
+          "token": "relativitylegal",
+          "company": "Relativity",
+          "website": "https://www.relativity.com/"
+        },
+        {
+          "token": "evenup",
+          "company": "EvenUp",
+          "website": "https://www.evenuplaw.com/"
+        },
+        {
+          "token": "spellbook",
+          "company": "Spellbook",
+          "website": "https://www.spellbook.legal/"
+        },
+        {
+          "token": "linksquares",
+          "company": "LinkSquares",
+          "website": "https://linksquares.com/"
+        },
+        {
+          "token": "filevine",
+          "company": "Filevine",
+          "website": "https://www.filevine.com/"
+        },
+        {
+          "token": "smokeball",
+          "company": "Smokeball",
+          "website": "https://www.smokeball.com/"
+        },
+        {
+          "token": "legalzoom",
+          "company": "LegalZoom",
+          "website": "https://www.legalzoom.com/"
+        },
+        {
+          "token": "casetext",
+          "company": "Casetext",
+          "website": "https://casetext.com/"
+        },
+        {
+          "token": "normai",
+          "company": "Norm AI",
+          "website": "https://www.norm.ai/"
         }
       ]
     },
@@ -4797,6 +6937,66 @@
           "token": "armada",
           "company": "Armada",
           "website": "https://www.armada.ai/"
+        },
+        {
+          "token": "sifive",
+          "company": "SiFive",
+          "website": "https://www.sifive.com/"
+        },
+        {
+          "token": "rivos",
+          "company": "Rivos",
+          "website": "https://www.rivosinc.com/"
+        },
+        {
+          "token": "ventanamicro",
+          "company": "Ventana Micro Systems",
+          "website": "https://www.ventanamicro.com/"
+        },
+        {
+          "token": "mythic",
+          "company": "Mythic",
+          "website": "https://mythic.ai/"
+        },
+        {
+          "token": "hailo",
+          "company": "Hailo",
+          "website": "https://hailo.ai/"
+        },
+        {
+          "token": "axelera",
+          "company": "Axelera AI",
+          "website": "https://www.axelera.ai/"
+        },
+        {
+          "token": "rainai",
+          "company": "Rain AI",
+          "website": "https://rain.ai/"
+        },
+        {
+          "token": "ayarlabs",
+          "company": "Ayar Labs",
+          "website": "https://ayarlabs.com/"
+        },
+        {
+          "token": "celestialai",
+          "company": "Celestial AI",
+          "website": "https://www.celestial.ai/"
+        },
+        {
+          "token": "eliya",
+          "company": "Enfabrica",
+          "website": "https://www.enfabrica.net/"
+        },
+        {
+          "token": "oxidecomputer",
+          "company": "Oxide Computer",
+          "website": "https://oxide.computer/"
+        },
+        {
+          "token": "framework",
+          "company": "Framework",
+          "website": "https://frame.work/"
         }
       ]
     },
@@ -5052,6 +7252,66 @@
           "token": "pathrobotics",
           "company": "Path Robotics",
           "website": "https://pathrobotics.com/"
+        },
+        {
+          "token": "bostondynamics",
+          "company": "Boston Dynamics",
+          "website": "https://bostondynamics.com/"
+        },
+        {
+          "token": "1x",
+          "company": "1X Technologies",
+          "website": "https://www.1x.tech/"
+        },
+        {
+          "token": "physicalintelligence",
+          "company": "Physical Intelligence",
+          "website": "https://www.physicalintelligence.company/"
+        },
+        {
+          "token": "covariant",
+          "company": "Covariant",
+          "website": "https://covariant.ai/"
+        },
+        {
+          "token": "symbotic",
+          "company": "Symbotic",
+          "website": "https://www.symbotic.com/"
+        },
+        {
+          "token": "dexterity",
+          "company": "Dexterity",
+          "website": "https://www.dexterity.ai/"
+        },
+        {
+          "token": "brightmachines",
+          "company": "Bright Machines",
+          "website": "https://www.brightmachines.com/"
+        },
+        {
+          "token": "bearrobotics",
+          "company": "Bear Robotics",
+          "website": "https://www.bearrobotics.ai/"
+        },
+        {
+          "token": "starship",
+          "company": "Starship Technologies",
+          "website": "https://www.starship.xyz/"
+        },
+        {
+          "token": "serve",
+          "company": "Serve Robotics",
+          "website": "https://www.serverobotics.com/"
+        },
+        {
+          "token": "sanctuaryai",
+          "company": "Sanctuary AI",
+          "website": "https://sanctuary.ai/"
+        },
+        {
+          "token": "robustai",
+          "company": "Robust.AI",
+          "website": "https://www.robust.ai/"
         }
       ]
     },

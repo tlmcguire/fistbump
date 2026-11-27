@@ -1,7 +1,7 @@
 // The relay against a pretend GitHub and pretend job boards: nothing leaves the test.
 import test from "node:test";
 import assert from "node:assert/strict";
-import relay, { scrub, words, likeness, readReport, readBoards, issueBody } from "../src/index.js";
+import relay, { scrub, words, likeness, readReport, readBoards, readListing, issueBody, publishListings, safeHttpsUrl, siteFromUrl, isLikelyTyposquat } from "../src/index.js";
 
 //a KV namespace in memory
 const kv = () => {
@@ -100,15 +100,139 @@ test("too many reports from one place in an hour are turned away", async () => {
 
 test("shared boards are checked against the board itself and queued once", async () => {
   fakeFetch({
-    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, { content: btoa(JSON.stringify({ version: 1, boards: [{ ats: "greenhouse", token: "known" }] })), sha: "x" }],
+    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, { content: btoa(JSON.stringify({ version: 1, boards: [{ ats: "greenhouse", token: "knownco" }] })), sha: "x" }],
+    "GET boards-api.greenhouse.io/v1/boards/stripe/jobs": () => [200, { jobs: [{ id: 101 }] }],
     "GET boards-api.greenhouse.io/v1/boards/stripe": () => [200, { name: "Stripe" }],
+    "GET boards-api.greenhouse.io/v1/boards/ghostco/jobs": () => [200, { jobs: [] }],
+    "GET boards-api.greenhouse.io/v1/boards/ghostco": () => [200, { name: "Ghost Co" }],
     "GET boards-api.greenhouse.io/v1/boards/nosuch": () => [404, {}],
   });
   assert.deepEqual(readBoards({ boards: ["greenhouse:Stripe", "bad entry", "workday:x", "greenhouse:stripe"] }), [{ ats: "greenhouse", token: "stripe" }]);
   const e = env();
-  const res = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe", "greenhouse:known", "greenhouse:nosuch"] }), e);
-  assert.deepEqual(await res.json(), { queued: ["greenhouse:stripe"], known: ["greenhouse:known"], not_found: ["greenhouse:nosuch"] });
+  const res = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe", "greenhouse:knownco", "greenhouse:knownc0", "greenhouse:ghostco", "greenhouse:nosuch"] }), e);
+  assert.deepEqual(await res.json(), {
+    queued: ["greenhouse:stripe"],
+    known: ["greenhouse:knownco"],
+    not_found: ["greenhouse:knownc0", "greenhouse:ghostco", "greenhouse:nosuch"],
+  });
   assert.equal(JSON.parse(e.RELAY.m.get("board:greenhouse:stripe")).company, "Stripe");
   const again = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe"] }), e);
   assert.deepEqual((await again.json()).known, ["greenhouse:stripe"]);
+});
+
+test("shared listings cannot claim evergreen and auto-discover an active ATS board", async () => {
+  fakeFetch({
+    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, {
+      content: btoa(JSON.stringify({ version: 1, boards: [] })),
+      sha: "boards",
+    }],
+    "GET boards-api.greenhouse.io/v1/boards/newco/jobs": () => [200, { jobs: [{ id: 101 }] }],
+    "GET boards-api.greenhouse.io/v1/boards/newco": () => [200, { name: "New Co" }],
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () => [200, {
+      content: btoa(JSON.stringify({ version: 1, listings: [] })),
+      sha: "listings",
+    }],
+  });
+  const e = env();
+  const response = await relay.fetch(post("/v1/listings", {
+    company_name: "New Co",
+    position_title: "Backend Engineer",
+    listing_url: "https://boards.greenhouse.io/newco/jobs/101",
+    raw_text: "A standard backend engineering role with responsibilities and qualifications.",
+    closes_at: (() => {
+      const future = new Date();
+      future.setUTCDate(future.getUTCDate() + 150);
+      return future.toISOString().slice(0, 10);
+    })(),
+    evergreen: true,
+  }), e);
+
+  assert.equal(response.status, 201);
+  const result = await response.json();
+  assert.equal(result.discovered_board, "greenhouse:newco");
+  assert.equal(result.listing.evergreen, undefined);
+  const expectedExpiry = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  expectedExpiry.setUTCDate(expectedExpiry.getUTCDate() + 45);
+  assert.equal(result.listing.expires_at, expectedExpiry.toISOString().slice(0, 10));
+  assert.equal(JSON.parse(e.RELAY.m.get("board:greenhouse:newco")).company, "New Co");
+});
+
+test("an elapsed explicit close date rejects shared listings", async () => {
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const closesAt = yesterday.toISOString().slice(0, 10);
+  const response = await relay.fetch(post("/v1/listings", {
+    company_name: "Example Co",
+    position_title: "Backend Engineer",
+    raw_text: "A standard backend engineering role with responsibilities and qualifications.",
+    closes_at: closesAt,
+  }), env());
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.code, "listing_expired");
+});
+
+test("listing deadline survives scrubbing and takes precedence over a later supplied date", () => {
+  const listing = readListing({ raw_text: "Application deadline: 2026-12-03", closes_at: "2026-12-19" });
+  assert.equal(listing.closes_at, "2026-12-03");
+  assert.equal(safeHttpsUrl("https://bit.ly./abc", 100), "");
+  assert.deepEqual(readBoards({ boards: ["greenhouse:login", "lever:token:extra"] }), []);
+});
+
+test("oversized relay submissions are rejected before calling GitHub", async () => {
+  const calls = fakeFetch({});
+  const response = await relay.fetch(post("/v1/listings", { raw_text: "x".repeat(200 * 1024) }), env());
+  assert.equal(response.status, 400);
+  assert.equal(calls.length, 0);
+});
+
+test("publication retries rejected writes and PR creation without losing or duplicating entries", async () => {
+  const e = env();
+  const id = "test-id";
+  const raw_text = "é".repeat(20_000);
+  for (const key of [id, "second", "third", "fourth"]) {
+    e.RELAY.m.set(`listing:${key}`, JSON.stringify({ id: key, company_name: "Example", raw_text }));
+  }
+  let stored;
+  let rejectWrite = true;
+  let rejectPr = true;
+  const calls = fakeFetch({
+    "GET api.github.com/repos/owner/app/git/ref/heads/community-listings": () => [200, {}],
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () => stored ? [200, stored] : [404, {}],
+    "PUT api.github.com/repos/owner/app/contents/data/community-listings.json": (_url, init) => {
+      if (rejectWrite) return [422, {}];
+      stored = { content: JSON.parse(init.body).content, sha: "updated" };
+      return [200, stored];
+    },
+    "GET api.github.com/repos/owner/app/pulls": () => [200, []],
+    "GET api.github.com/repos/owner/app/compare": () => [200, { ahead_by: 1 }],
+    "POST api.github.com/repos/owner/app/pulls": () => [rejectPr ? 422 : 201, {}],
+    "GET api.github.com/repos/owner/app": () => [200, { default_branch: "main" }],
+  });
+
+  await assert.rejects(publishListings(e), /422/);
+  assert.equal(e.RELAY.m.size, 4);
+  rejectWrite = false;
+  await assert.rejects(publishListings(e), /422/);
+  assert.equal(e.RELAY.m.size, 4);
+  rejectPr = false;
+  await publishListings(e);
+  assert.equal(e.RELAY.m.size, 0);
+  assert.equal(calls.filter(call => call.key.startsWith("PUT ")).length, 2);
+  const file = JSON.parse(Buffer.from(stored.content, "base64").toString("utf8"));
+  assert.equal(file.listings.length, 4);
+  assert.equal(file.listings[0].raw_text, raw_text);
+});
+
+test("a community catalog over the inline response limit is read by blob SHA", async () => {
+  const calls = fakeFetch({
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () =>
+      [200, { type: "file", sha: "catalog-sha", encoding: "none", content: "" }],
+    "GET api.github.com/repos/owner/app/git/blobs/catalog-sha": () =>
+      [200, { encoding: "base64", content: btoa(JSON.stringify({ version: 1, listings: [] })) }],
+  });
+  const response = await relay.fetch(new Request("https://relay.test/v1/listings"), env());
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { version: 1, listings: [] });
+  assert.equal(calls.length, 2);
 });

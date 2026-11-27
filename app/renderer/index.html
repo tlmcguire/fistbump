@@ -97,25 +97,20 @@
                     <form id="search-form" class="toolbar-form" autocomplete="off">
                         <div class="field grow">
                             <input id="search-keywords" type="search" aria-label="Keywords or job link" placeholder="Job title, keywords, or paste a job link">
+                            <button type="button" id="pin-search" class="search-pin" aria-label="Save search" title="Save search" hidden><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
                         </div>
                         <div class="field">
                             <input id="search-location" type="search" aria-label="Location" placeholder="Location">
                         </div>
                         <button type="submit" class="primary">Search</button>
-                        <button type="button" id="pin-search" title="Save this search in History and highlight new postings next time you run it">Save search</button>
                         <button type="button" id="filters-toggle" aria-expanded="false" aria-controls="filters">Filters<span id="filters-count" class="badge" hidden></span></button>
                         <div class="history-menu">
                             <button type="button" id="history-toggle" aria-haspopup="dialog" aria-expanded="false" disabled title="No recent searches yet">History</button>
-                            <section id="history" class="history paper paper-adapt" role="dialog" aria-label="Saved and recent searches" hidden>
+                            <section id="history" class="history paper paper-adapt" role="dialog" aria-label="Recent searches" hidden>
                                 <div class="history-head">
-                                    <h2>Saved &amp; recent searches</h2>
+                                    <h2>Recent searches</h2>
                                     <button type="button" id="history-close" class="history-close">Close</button>
                                 </div>
-                                <div id="saved-searches-section" hidden>
-                                    <p class="history-hint">Pinned searches</p>
-                                    <ul id="saved-searches-list" class="history-list"></ul>
-                                </div>
-                                <p class="history-hint">Choose a search to run it again.</p>
                                 <ul id="history-list" class="history-list"></ul>
                                 <div class="history-foot">
                                     <button type="button" id="clear-history">Clear all history</button>
@@ -123,7 +118,13 @@
                             </section>
                         </div>
                         <button type="button" id="open-paste" title="Paste a job posting to save it to your jobs">Paste job</button>
-                        <button type="button" id="submit-listing" title="Submit a job listing from LinkedIn, Indeed, Workday, or another site for the Fistbump community">Submit listing</button>
+
+                        <p id="save-search-status" class="visually-hidden" role="status"></p>
+                        <section id="saved-searches-section" class="saved-search-strip" aria-labelledby="saved-searches-heading" hidden>
+                            <h2 id="saved-searches-heading">Saved searches</h2>
+                            <ul id="saved-searches-list"></ul>
+                            <button type="button" id="saved-searches-more" aria-expanded="false" aria-controls="saved-searches-list" hidden></button>
+                        </section>
 
                         <!--Filters: a row under the toolbar, shown with the Filters button. Part of the same form.-->
                         <div id="filters" class="filters paper paper-adapt" hidden>
@@ -147,6 +148,20 @@
                                             <option value="">Any industry</option>
                                         </select>
                                     </label>
+                                    <label class="wide">Leave out titles with
+                                        <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
+                                    </label>
+                                    <label class="check wide"><input id="search-include-community" type="checkbox"> Include community listings</label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="filter-group">
+                                <legend>Location &amp; timing</legend>
+                                <div class="filter-grid">
+                                    <label>Distance radius (miles)
+                                        <span class="field"><input id="search-radius" type="number" min="1" max="5000" step="1" placeholder="Any distance" aria-describedby="search-radius-hint"></span>
+                                        <small id="search-radius-hint">From Location above, or your resume location if left blank.</small>
+                                    </label>
                                     <label>Work mode
                                         <select id="search-work-mode">
                                             <option value="Any">Any</option>
@@ -164,17 +179,13 @@
                                             <option value="90">Last 90 days</option>
                                         </select>
                                     </label>
-                                    <label class="wide">Leave out titles with
-                                        <input id="search-exclude" type="text" placeholder="e.g. sales, contract">
-                                    </label>
-                                    <label class="check wide"><input id="search-include-community" type="checkbox"> Include community listings (LinkedIn, Indeed, Workday, etc.)</label>
                                 </div>
                             </fieldset>
 
                             <fieldset class="filter-group">
                                 <legend>Pay</legend>
                                 <div class="filter-grid">
-                                    <label>Yearly pay (USD)
+                                    <label class="wide">Yearly pay (USD)
                                         <span class="pair">
                                             <input id="search-pay-min" type="text" inputmode="numeric" aria-label="Minimum yearly pay" placeholder="Min, e.g. 90k">
                                             <input id="search-pay-max" type="text" inputmode="numeric" aria-label="Maximum yearly pay" placeholder="Max">
@@ -209,9 +220,9 @@
                                 </div>
                             </fieldset>
 
-                            <fieldset class="filter-group">
+                            <fieldset class="filter-group ratings-group">
                                 <legend>Pay, benefits and cost of living</legend>
-                                <div class="filter-grid three">
+                                <div class="filter-grid">
                                     <label class="check"><input id="search-use-ratings" type="checkbox" checked> Rate each posting</label>
                                     <label>Minimum pay rating
                                         <select id="search-min-pay-rating">
@@ -261,7 +272,10 @@
                     </form>
 
 
-                    <div id="paste-title" class="toolbar-title" hidden><h1>Paste a job</h1></div>
+                    <div id="paste-title" class="toolbar-title" hidden>
+                        <h1>Paste a job</h1>
+                        <button type="button" id="paste-back">← Back to Search</button>
+                    </div>
 
                     <form id="saved-form" class="toolbar-form" hidden>
                         <div class="field grow">
@@ -448,17 +462,10 @@
                                 </div>
                                 <div class="setting">
                                     <div class="setting-text">
-                                        <label for="pref-community-share">Share the boards and listings I add</label>
-                                        <p>Shares board names you add to your watchlist and pre-checks sharing when you submit external listings (LinkedIn, Indeed, etc.). Nothing personal goes with them.</p>
+                                        <label for="pref-community-share">Share the boards I add</label>
+                                        <p>Shares board names you add to your watchlist. Choose whether to share each job posting in Paste a job.</p>
                                     </div>
                                     <input id="pref-community-share" type="checkbox" class="switch" role="switch">
-                                </div>
-                                <div class="setting">
-                                    <div class="setting-text">
-                                        <span class="setting-label">Submit a job listing</span>
-                                        <p>Contribute a listing from LinkedIn, Indeed, Workday, or another site that Fistbump cannot fetch automatically.</p>
-                                    </div>
-                                    <button type="button" id="settings-submit-listing">Submit a listing</button>
                                 </div>
                                 <p id="community-status" class="setting-status" role="status"></p>
                             </div>
@@ -719,14 +726,21 @@
                 </section>
 
                 <section id="paste-pane" class="pane paste-pane paper paper-adapt" aria-label="Paste a job" hidden>
-                    <p id="paste-hint" class="paste-hint">Submit a job listing from LinkedIn, Indeed, Workday, or any other site. Add the link if you have it, then paste the job content below.</p>
-                    <div class="paste-url-row">
-                        <label for="paste-url">Listing link <span class="hint">(optional — LinkedIn, Indeed, Workday, company careers page, etc.)</span></label>
-                        <input id="paste-url" type="url" placeholder="https://www.linkedin.com/jobs/view/..." autocomplete="off">
+                    <p id="paste-hint" class="paste-hint">Paste the posting to preview its details before saving.</p>
+                    <div class="paste-field">
+                        <label for="paste-url">Listing link <span class="hint">(optional)</span></label>
+                        <input id="paste-url" type="url" placeholder="https://…" autocomplete="off">
                     </div>
-                    <textarea id="paste-text" rows="14" placeholder="Paste the full job posting content here"></textarea>
+                    <div class="paste-field">
+                        <label for="paste-text">Job posting</label>
+                        <textarea id="paste-text" rows="8" placeholder="Paste the job description, responsibilities, and qualifications"></textarea>
+                    </div>
+                    <fieldset id="paste-manual" class="paste-details">
+                        <legend>Listing details</legend>
+                    </fieldset>
                     <div class="job-actions">
-                        <button id="paste-preview" type="button" class="primary">Preview</button>
+                        <span id="paste-preview-status" class="visually-hidden" role="status"></span>
+                        <button id="paste-preview" type="button" class="primary" aria-controls="paste-result">Preview job</button>
                     </div>
                     <div id="paste-result"></div>
                 </section>
@@ -899,7 +913,6 @@
         <script src="js/omnibox.js" defer></script>
         <script src="js/report.js" defer></script>
         <script src="js/community.js" defer></script>
-        <script src="js/submit-listing.js" defer></script>
         <script src="views/settings/settings.js" defer></script>
         <script src="js/app.js" defer></script>
         <script src="js/desktop.js" defer></script>

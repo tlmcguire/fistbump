@@ -281,7 +281,7 @@ func suggestWith(ctx context.Context, engine string, chat chatFunc, req Request)
 			}
 			failures++
 			lastErr = err
-			slog.Warn("model call failed", "engine", engine, "target", t.Label, "error", err)
+			slog.Warn("model call failed", "engine", engine)
 			continue
 		}
 		proposed, why, ok := ParseReplyWithReason(reply)

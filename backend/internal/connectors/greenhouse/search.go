@@ -108,6 +108,9 @@ func (c *Client) Search(ctx context.Context, q connectors.Query, boards []string
 			for _, l := range jobs {
 				p := listingPosting(board, l)
 				p.WorkMode = WorkMode(p.Location, p.PositionTitle)
+				if q.WithinRadius != nil && !q.WithinRadius(p.Location) {
+					continue
+				}
 				if !ModeOK(p.WorkMode, q.WorkMode) || !LocationOK(p.Location, p.WorkMode, terms, q.WorkMode) {
 					continue
 				}

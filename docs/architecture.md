@@ -1,6 +1,6 @@
 # FistBump Architecture
 
-FistBump is a local-first desktop app. It stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. Data stays on the user's machine unless a remote AI provider is configured.
+FistBump is a local-first desktop app. It stores a master resume, parses job postings, shows skill gaps, and generates resume revisions that the user reviews before exporting a PDF. SQLite stores resumes and application records locally. Optional integrations send data to the configured provider, calendar service, or community relay as described in the [user guide](user-guide.md).
 
 ## Goals and constraints
 
@@ -37,7 +37,7 @@ flowchart TB
     M -->|"HTTP 127.0.0.1:port<br/>Bearer token"| API
     Local -->|child process| LS["llama-server<br/>GGUF model"]
     Remote -.->|opt-in| RA["Remote OpenAI-compatible API"]
-    Conn -.->|user-initiated| GH["Greenhouse"]
+    Conn -.->|user-initiated| GH["Greenhouse, Lever, Ashby"]
 ```
 
 ## App lifecycle
@@ -178,24 +178,20 @@ Routes: `/v1/resume`, `/v1/jobs`, `/v1/revisions`, `/v1/tailored-resumes`, `/v1/
 
 ## Job board support
 
-Pasting text works for every board. Connectors are an optional import path.
+Pasting text works for every board. Connectors are built in for Greenhouse, Lever, and Ashby.
 
 ```mermaid
 flowchart LR
     Paste["Pasted text<br/>(any board)"] --> Parser[parser]
-    GH["Greenhouse connector<br/>(v1)"] --> Norm["Posting<br/>(normalized)"]
-    Next["Lever, Ashby, USAJOBS<br/>(possible later)"] -.-> Norm
+    ATS["Greenhouse, Lever, Ashby<br/>connectors"] --> Norm["Posting<br/>(normalized)"]
     Norm --> Parser
     Parser --> Store[("jobs")]
 ```
 
-### Planned
-
 - **Interface:** each connector implements `FetchPostings(query) ([]Posting, error)` and returns a normalized `Posting`. Downstream code treats imported and pasted postings the same.
-- **Greenhouse (iteration 1):** public job board API, no login. Iteration 1 proves one round trip: fetch a board, filter locally, import a posting, run skill-gap analysis. Saved responses in `testdata/api/` keep tests offline.
+- **Supported ATS connectors:** Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co`), and Ashby (`api.ashbyhq.com`) all use public unauthenticated APIs.
 - **Re-import:** a known posting (matched by `source` and `external_id`) gets a new `searched_at`. Postings not seen again are removed by GC.
-- **Network policy:** job search is always available and has no on/off setting, but it never runs on its own. Requests happen only when the user presses Search, opens a listing, or saves a posting, never when job search opens.
-- **Later candidates:** Lever, Ashby, and USAJOBS (official API, free key). Not committed for the course timeline.
+- **Network policy:** job search runs only when the user presses Search, opens a listing, or saves a posting. Background reference updaters (`cost.StartUpdater` and `connectors.StartBoardUpdater`) check every 24 hours whether 30 days have elapsed since the last refresh; see [periodic-external-calls.md](periodic-external-calls.md).
 
 ### Searching Greenhouse
 
@@ -216,20 +212,20 @@ flowchart LR
 - **Keywords.** Request keywords, else `profile.target_positions`, else the title of the most recent experience. Titles are matched by words, not phrases: seniority words are ignored, common synonyms are folded (developer and engineer, front end and frontend), and an exact phrase ranks higher.
 - **Filters.** Location terms match the posting location; remote postings pass a location filter unless the user wants on-site. Remote must be stated in the posting; hybrid and on-site pass when the posting does not say.
 - **Rank.** Descriptions are fetched for the 40 best title matches (5 s per request, 8 s for the stage) and scored by overlap with resume skills. Postings near `profile.home_location` rank higher, postings in other countries lower. No company fills more than 3 of the top slots. Ranking is deterministic and does not call AI.
-- **Cache.** Listings are cached in memory and in the `greenhouse_listing_cache` table for 6 hours, descriptions in memory and in `greenhouse_description_cache` for 24 hours. At launch, rows older than a day are deleted. Storage cleanup of `cache` clears both tables. A board that returns 404 is remembered and reported in `errors`.
+- **Cache.** Listings are cached in memory and in the `greenhouse_listing_cache` table for 6 hours, descriptions in memory and in `greenhouse_description_cache` for 24 hours. Listing snapshots are retained for up to 7 days and refreshed daily for previously searched boards; descriptions older than 24 hours are purged. Storage cleanup of `cache` clears both tables. A board that returns 404 is remembered and reported in `errors`.
 - **Persistence.** Search results are not written to the database. Saving a posting fetches its description if needed and stores it with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. Saving again refreshes `searched_at`.
 - **Network.** Requests carry only public board tokens and job ids. Keywords, filters and the resume stay on the computer, because filtering and ranking are local. See the network policy above.
 
-### Curated board lists
+### Curated and public board lists
 
-Bundled lists of company boards, grouped by industry, give users a starting point without hand-entering tokens.
+Bundled lists of company boards, grouped by industry, give users a starting point without hand-entering tokens, supplemented by a 30-day public dataset catalog and community-shared boards.
 
-- **Source.** `backend/internal/connectors/greenhouse/boards.json`, embedded with `go:embed`, in the same manner as `ai/catalog.json`.
-- **Categories.** 32 categories, 8 of them subsets of `technical`.
-  - Top level: `technical`, `cybersecurity`, `medical`, `labs`, `pharma_biotech`, `manufacturing`, `aerospace_defense`, `finance`, `insurance`, `energy_climate`, `education`, `media_entertainment`, `government_civic`, `nonprofit`, `food_agriculture`, `retail_ecommerce`, `travel_hospitality`, `transportation_logistics`, `real_estate`, `legal_tech`, `construction_infrastructure`, `consulting_services`, `semiconductors_hardware`, `telecom`.
-  - Subsets of `technical`: `ai_ml`, `data_infrastructure`, `developer_tools`, `enterprise_software`, `consumer_internet`, `gaming`, `autonomous_vehicles`, `quantum_computing`.
+- **Curated sources.** `backend/internal/connectors/greenhouse/boards.json` (1,440 unique boards), `backend/internal/connectors/lever/boards.go` (405 unique boards), and `backend/internal/connectors/ashby/boards.go` (412 unique boards), all embedded in the Go binary.
+- **Categories.** 58 categories total (40 top-level industries and 18 subsets of `technical`).
 - **Subsets.** A category with a `parent` is a subset. Enabling a parent searches its own boards plus every subset's boards. Enabling a subset searches only that subset. Subsets are one level deep. A board listed in a subset is not repeated in the parent.
-- **Current size.** 947 unique boards in 34 categories. Every token returned open postings from the Greenhouse API on the `verified_at` date in the file. Category sizes range from 7 (`legal_tech`) to 92 (`finance`). Small categories reflect how few employers in that field publish on Greenhouse.
+- **Current curated size.** 2,257 unique boards across Greenhouse, Lever, and Ashby in 58 categories.
+- **30-day public dataset catalog.** `backend/internal/connectors/public_boards.json` (loaded and refreshed via `public_boards.go`) merges additional Greenhouse, Lever, and Ashby tokens pulled monthly from allowlisted public datasets (Hugging Face Datasets Server and Common Crawl CDX). See [periodic-external-calls.md](periodic-external-calls.md) and [security-policy.md](security-policy.md).
+- **Community relay.** Users can opt in to share discovered boards and external listings via the Cloudflare Worker in `relay/`. Every submission is validated, scrubbed, and queued into a Pull Request for maintainer review.
 - **Format.**
 
 ```json
@@ -399,27 +395,35 @@ fistbump/
 │   │   ├── analyze/
 │   │   ├── diff/
 │   │   ├── ai/          provider, local, remote, fallback, models, download, catalog.json
-│   │   ├── connectors/  connector.go, greenhouse/
+│   │   ├── connectors/  connector.go, public_boards.go, public_boards.json, greenhouse/, lever/, ashby/
+│   │   ├── cost/        sources.json, updater.go
 │   │   └── pdf/
 │   └── testdata/        seed.sql, postings/, api/
+├── relay/               Cloudflare Worker community relay (src/index.js, test/relay.test.js, wrangler.toml)
+├── data/                community-boards.json, community-listings.json
 ├── e2e/                 harness.js, fixtures.js, smoke.spec.js
 ├── bin/                 Go build output + llama-server per OS/arch (gitignored)
 ├── build/               installer artwork (icon.icns/ico/png, background.tiff, installerSidebar.bmp)
-├── scripts/             build-go.js, fetch-llama-server.js, stage-resources.js, sync-pdfjs.js, screenshots.js
-├── docs/                architecture.md, schema.md, api.md, user-guide.md, release-checklist.md
-└── .github/workflows/   app.yml, build.yml, e2e.yml, go.yml
+├── scripts/             build-go.js, fetch-llama-server.js, stage-resources.js, sync-pdfjs.js, screenshots.js,
+│                        update-ats-boards.js, update-cost-data.js, prune-community-listings.js, verify-community-data.js
+├── docs/                architecture.md, schema.md, api.md, user-guide.md, release-checklist.md,
+│                        security-policy.md, periodic-external-calls.md
+└── .github/workflows/   app.yml, build.yml, e2e.yml, go.yml, update-ats-boards.yml,
+                         update-cost-data.yml, prune-community-listings.yml, verify-community-pr.yml
 ```
 
 Each Go source file `foo.go` has an adjacent `foo_test.go`.
 
 ## API keys and secrets
 
-The app handles three kinds of secret. None of them is stored in SQLite, written to logs, or readable by the renderer.
+The desktop app keeps these secrets out of SQLite and excludes their values from renderer responses.
 
 | Secret | Who needs it | Where it lives |
 |--------|--------------|----------------|
 | Backend bearer token | Tauri host and Go | Generated at launch, memory only, never persisted |
-| Remote AI API key (user supplied) | Go `remote.go` | Stored in OS keychain via `keyring`, plaintext only in Go memory |
+| Remote AI API key | Tauri host and Go | OS keychain, bound to the provider origin. Go retains it in memory for inference. |
+| Local inference bearer | Go and bundled `llama-server` | Random per server process, passed in its environment. |
+| Private calendar feed addresses | Tauri host | OS keychain. The renderer receives calendar contents for local parsing. |
 | Hugging Face token (optional, gated models) | Go `download.go` | Same as the remote AI key |
 
 Greenhouse's public board API needs no key. A future connector that does (USAJOBS, for example) would use the same path as the Hugging Face token.
@@ -436,8 +440,8 @@ sequenceDiagram
     Note over R,A: Entering the key
     R->>P: api.ai.setRemote(remote)
     P->>M: invoke ipc_call (ai:setRemote)
-    M->>D: keyring::Entry::set_password(key)
     M->>G: PUT /v1/ai/remote (base_url, model, api_key)
+    M->>D: Store key with provider origin
     G->>G: hold key in memory only
     M-->>R: ok (no key returned)
 
@@ -445,7 +449,7 @@ sequenceDiagram
     M->>G: spawn with FISTBUMP_TOKEN env
     G-->>M: PORT=n on stdout
     M->>D: keyring::Entry::get_password()
-    M->>G: PUT /v1/ai/remote (api_key)
+    M->>G: Restore key if provider origin matches
 
     Note over G,A: Using the key
     G->>A: HTTPS request with key in header
@@ -456,8 +460,8 @@ Handling:
 - **Entry.** The settings view passes the key through the bridge method `ai.setRemote`. No method returns it. The renderer sees only `has_key` from `GET /v1/ai/status`.
 - **Storage.** `secrets.rs` stores the key in the OS keychain via `keyring` (`com.fistbump.desktop`: macOS Keychain, Windows Credential Manager, Linux Secret Service). If no keyring is available, the key is kept for the session only and never written in plaintext.
 - **Hand-off.** The Tauri host reads the key from the OS keychain and sends it to `PUT /v1/ai/remote`. Go holds it in memory and never writes it to disk. `backend.rs` re-sends it after every restart.
-- **Backend token.** The Tauri host generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time.
-- **Outbound.** Go sends the key only to the configured `base_url`. HTTPS is required unless the host is loopback (local Ollama). Cross-host redirects are not followed.
+- **Backend token.** The Tauri host generates 32 random bytes per launch and passes them in `FISTBUMP_TOKEN`, not a command-line flag, so the token is absent from process listings. Go compares in constant time and removes the token from its environment before it launches children.
+- **Outbound.** Go sends the key only to the configured `base_url`. HTTPS is required unless the host is loopback (local Ollama). Redirects must stay on the same scheme, host and port.
 - **Logging.** Middleware redacts `Authorization` and skips bodies on `/v1/ai/remote` and `/v1/models/token`. Remote error messages are trimmed before reaching the UI.
 - **Removal.** Clearing the key removes the entry from the OS keychain and calls `DELETE /v1/ai/remote`.
 - **Limits.** Malware running as the same OS user can read process memory or query the keystore. The design protects against other apps, other users, backups, and the renderer, not a compromised account.
@@ -467,8 +471,8 @@ Handling:
 - Renderer runs inside the OS WebView with no direct filesystem or process access; only the Tauri bridge surface (`window.api`) is reachable.
 - The backend is bound to loopback and gated by a per-launch bearer token.
 - Secrets are handled as described in "API keys and secrets" above: stored in the OS keychain via `keyring`, memory only in Go, never in SQLite or logs.
-- No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search, opens a listing, or saves a posting.
-- Connectors and the remote provider are the only outbound paths.
+- User-initiated actions drive remote AI, model downloads, and job search. Background 30-day dataset refreshes (`cost.StartUpdater`, `connectors.StartBoardUpdater`) enforce HTTPS-only, same-host redirects, and size caps; see [periodic-external-calls.md](periodic-external-calls.md).
+- Community boards, community listings, and public ATS datasets pass multi-layer validation (relay edge checks, fetcher host allowlists, PR CI security gate, and weekly expiration pruning); see [security-policy.md](security-policy.md).
 
 ## Build and packaging
 
@@ -543,6 +547,8 @@ No em dashes. Plain wording.
 
 ## Related docs
 
+- [security-policy.md](security-policy.md): validation, domain-takeover controls, and listing expiration rules
+- [periodic-external-calls.md](periodic-external-calls.md): inventory of all scheduled external network calls
 - [api.md](api.md): every route, request/response shape, error shape, and the stdout rule
 - [schema.md](schema.md): tables and relationships
 - [roadmap.md](roadmap.md): phases to the MVP, with one plan per phase (`phase01.md` to `phase09.md`)

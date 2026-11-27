@@ -598,6 +598,65 @@ test('boards added to the watchlist are shared only when sharing is on', async (
   await window.locator('#pref-community-share').uncheck();
 });
 
+test('weekly calendar columns stay aligned when the hours scroll', async ({ window }) => {
+  await window.evaluate(() => window.Prefs.set('calendarView', 'week'));
+  await window.locator('#nav-calendar').click();
+  const week = window.locator('.cal3-week');
+  await expect(week.locator('.cal3-col')).toHaveCount(7);
+  const geometry = await week.evaluate(grid => {
+    const columns = selector => Array.from(grid.querySelectorAll(selector), cell => {
+      const {left, right} = cell.getBoundingClientRect();
+      return [left, right];
+    });
+    const header = grid.querySelector('.cal3-week-head');
+    const topBefore = header.getBoundingClientRect().top;
+    const scrollBefore = grid.scrollTop;
+    grid.scrollTop += 104;
+    return {
+      days: columns('.cal3-day'), allDay: columns('.cal3-allday-cell'), hours: columns('.cal3-col'),
+      topBefore, topAfter: header.getBoundingClientRect().top, scrolled: grid.scrollTop > scrollBefore,
+    };
+  });
+  expect(geometry.scrolled).toBe(true);
+  expect(geometry.days).toEqual(geometry.hours);
+  expect(geometry.allDay).toEqual(geometry.hours);
+  expect(geometry.topAfter).toBeCloseTo(geometry.topBefore);
+});
+
+test('calendar plans can end at a custom time the following day', async ({ window }) => {
+  const [first, second] = await window.evaluate(() => {
+    window.Prefs.set('calendarView', 'week');
+    const date = new Date();
+    const start = window.Prefs.get('weekStart') === 'sunday' ? 0 : 1;
+    date.setDate(date.getDate() - ((date.getDay() - start + 7) % 7));
+    return [0, 1].map(offset => {
+      const day = new Date(date);
+      day.setDate(day.getDate() + offset);
+      return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    });
+  });
+  await window.locator('#nav-calendar').click();
+  await window.getByRole('button', { name: 'Plan an interview' }).click();
+  const dialog = window.locator('dialog.plan-dialog');
+  await dialog.locator('#plan-title').fill('Overnight plan');
+  await dialog.locator('#plan-date').fill(first);
+  await dialog.locator('#plan-time').fill('21:13');
+  await expect(dialog.locator('#plan-end-date')).toHaveValue(first);
+  await expect(dialog.locator('#plan-end-time')).toHaveValue('22:13');
+  await dialog.locator('#plan-end-time').fill('08:17');
+  await dialog.getByRole('button', { name: 'Add to your calendar' }).click();
+  await expect(dialog.getByText('The end must be after the start.')).toBeVisible();
+  await dialog.locator('#plan-end-date').fill(second);
+  await dialog.getByRole('button', { name: 'Add to your calendar' }).click();
+  await expect(dialog).toBeHidden();
+  const chips = window.locator('.cal3-plan').filter({ hasText: 'Overnight plan' });
+  await expect(chips).toHaveCount(2);
+  await chips.last().click();
+  await expect(dialog.locator('#plan-time')).toHaveValue('21:13');
+  await expect(dialog.locator('#plan-end-date')).toHaveValue(second);
+  await expect(dialog.locator('#plan-end-time')).toHaveValue('08:17');
+});
+
 test('the calendar plans an interview, flags a clash with a busy time, and adds it to a calendar app', async ({ window }) => {
   await window.evaluate(async () => {
     const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };
@@ -642,4 +701,78 @@ test('an available update is offered once, and can be put off or skipped', async
   expect(await window.evaluate(() => window.Prefs.get('skippedUpdate'))).toBe('9.9.9');
   await window.evaluate(() => window.Settings.promptUpdate());
   await expect(window.locator('dialog.update-notice')).toHaveCount(0);
+});
+
+test('search filters stay readable and a completed search can be bookmarked inline', async ({ window }) => {
+  await window.locator('#nav-search').click();
+  await window.locator('#filters-toggle').click();
+  for (const width of [760, 1440]) {
+    await window.setViewportSize({ width, height: 850 });
+    expect(await window.locator('#filters').evaluate(panel => panel.scrollWidth <= panel.clientWidth)).toBe(true);
+    const community = await window.locator('#search-include-community').locator('..').boundingBox();
+    const company = await window.locator('#search-company').boundingBox();
+    expect(community.y).toBeGreaterThanOrEqual(company.y + company.height);
+  }
+  await expect(window.locator('#pin-search')).toBeHidden();
+  await window.evaluate(() => {
+    window.api.connectors.search = async query => {
+      if ('radius_miles' in query) throw new Error('Request has an invalid field');
+      return { postings: [], matched: 0, errors: [], companies: [], boards_total: 0, boards_searched: 0, postings_scanned: 0 };
+    };
+  });
+  await window.locator('#search-keywords').fill('Local engineering');
+  await window.locator('#search-form button[type=submit]').click();
+  await expect(window.locator('#pin-search')).toBeVisible();
+  await window.locator('#pin-search').click();
+  await expect(window.locator('#saved-searches-section').getByRole('button', { name: 'Local engineering', exact: true })).toBeVisible();
+  const saved = await window.evaluate(() => window.api.savedSearches.list());
+  expect(saved).toEqual([expect.objectContaining({ name: 'Local engineering' })]);
+  expect(JSON.parse(saved[0].query_json)['search-keywords']).toBe('Local engineering');
+  await expect(window.locator('#history')).toBeHidden();
+});
+
+test('Paste a job can be left and resumed, with sharing unchecked after preview', async ({ window }) => {
+  await window.locator('#nav-search').click();
+  await window.locator('#open-paste').click();
+  const link = window.locator('#paste-url');
+  await link.fill('https://jobs.lever.co/acme/abcd-1234');
+  await expect(window.locator('#paste-manual')).toBeHidden();
+  await link.fill('https://www.linkedin.com/jobs/view/123456');
+  await expect(window.locator('#paste-manual')).toBeVisible();
+  const company = window.locator('#paste-manual input[id$="-company_name"]');
+  await company.fill('My corrected company');
+  await window.locator('#paste-manual input[id$="-position_title"]').fill('My corrected title');
+  const text = 'Software Engineer at Acme. Build and maintain Go applications and support our customers.';
+  await window.locator('#paste-text').fill(text);
+  await window.getByRole('button', { name: /Back to Search/ }).click();
+  await expect(window.locator('#search-form')).toBeVisible();
+  await window.locator('#open-paste').click();
+  await expect(window.locator('#paste-text')).toHaveValue(text);
+  await window.locator('#paste-preview').click();
+  await expect(window.getByRole('heading', { name: 'Review posting' })).toBeVisible();
+  await expect(company).toHaveValue('My corrected company');
+  await expect(window.getByLabel('Save to my jobs')).toBeChecked();
+  await expect(window.getByLabel('Share with the Fistbump community')).not.toBeChecked();
+  await window.getByRole('button', { name: 'Save job', exact: true }).click();
+  await expect(window.getByText('Saved to your jobs.', { exact: true })).toBeVisible();
+  const jobs = await window.evaluate(() => window.api.jobs.list('My corrected title'));
+  expect(jobs[0].company_name).toBe('My corrected company');
+  await window.keyboard.press('Escape');
+  await expect(window.locator('#search-form')).toBeVisible();
+});
+
+test('the Jobs list shows no more than 25 jobs per page', async ({ window }) => {
+  await window.evaluate(async () => {
+    for (let i = 1; i <= 51; i++) {
+      await window.api.jobs.create({ source: 'pasted', position_title: `Engineer ${i}`, company_name: 'Acme',
+        raw_text: `Engineer ${i}\nAcme\n\nRequirements:\n- Experience with Go` });
+    }
+  });
+  await window.locator('#nav-jobs').click();
+  await expect(window.locator('.jl3-row')).toHaveCount(25);
+  const next = window.getByRole('navigation', { name: 'Job pages' }).getByRole('button', { name: 'Next' });
+  await next.click();
+  await expect(window.locator('.jl3-row')).toHaveCount(25);
+  await next.click();
+  await expect(window.locator('.jl3-row')).toHaveCount(1);
 });

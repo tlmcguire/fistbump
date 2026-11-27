@@ -10,7 +10,7 @@ window.CalendarView = (() => {
   const api = () => window.FistBumpAPI;
   const HOURS = [7, 22]; //the part of the day the week shows; earlier and later plans are pinned to its edges
   const KINDS = [["interview", "Interview"], ["call", "Call"], ["follow_up", "Follow-up"], ["other", "Other"]];
-  const LENGTHS = [15, 30, 45, 60, 90, 120, 180];
+  const MAX_PLAN_MS = 7 * 24 * 60 * 60 * 1000;
   const BUSY_TTL = 15 * 60 * 1000;
   let busyCache = {at: 0, calendars: [], failed: 0, feeds: 0};
   let pending = null; //a plan to open once the view is ready (from another view)
@@ -20,6 +20,7 @@ window.CalendarView = (() => {
   const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const spansDay = (plan, day, nextDay) => new Date(plan.starts_at) < nextDay && new Date(plan.ends_at) > day;
   //an RFC 3339 time with this computer's offset, as the backend keeps it
   const localIso = d => {
     const off = -d.getTimezoneOffset();
@@ -89,7 +90,8 @@ window.CalendarView = (() => {
       else { d.setHours(d.getHours() + 1, 0, 0, 0); }
       return d;
     })();
-    const minutes = saved ? Math.round((new Date(saved.ends_at) - start) / 60000) : 60;
+    const end = saved ? new Date(saved.ends_at) : new Date(start.getTime() + 60 * 60 * 1000);
+    const originalDuration = end - start;
     let kind = saved?.kind || prefill.kind || "interview";
 
     const jobs = await api().jobs.list("").catch(() => []);
@@ -98,10 +100,13 @@ window.CalendarView = (() => {
     jobSelect.value = String(saved?.job_id || prefill.job_id || "");
     const title = el("input", {id: "plan-title", type: "text", maxlength: "200", placeholder: "Left empty, it is named after the job", value: saved?.title || ""});
     title.value = saved?.title || "";
+    const clockValue = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const date = el("input", {id: "plan-date", type: "date", value: isoDay(start)});
-    const at = el("input", {id: "plan-time", type: "time", step: "300", value: `${pad(start.getHours())}:${pad(start.getMinutes())}`});
-    const length = el("select", {id: "plan-length"}, LENGTHS.map(m => el("option", {value: String(m), text: m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`})));
-    length.value = String(LENGTHS.includes(minutes) ? minutes : 60);
+    const at = el("input", {id: "plan-time", type: "time", value: clockValue(start)});
+    const endDate = el("input", {id: "plan-end-date", type: "date", value: isoDay(end)});
+    const endAt = el("input", {id: "plan-end-time", type: "time", value: clockValue(end)});
+    const enteredTime = (day, clock) => new Date(`${day.value}T${clock.value}`);
+    let endEdited = false;
     const where = el("input", {id: "plan-where", type: "text", maxlength: "300", placeholder: "An address, or the video link", value: saved?.location || ""});
     where.value = saved?.location || "";
     const notes = el("textarea", {id: "plan-notes", rows: "3", maxlength: "4000", placeholder: "Who you are meeting, what to bring"});
@@ -112,9 +117,7 @@ window.CalendarView = (() => {
     const kindButtons = KINDS.map(([value, label]) => el("button", {type: "button", role: "radio", "data-kind": value, "aria-checked": String(value === kind),
       onclick: () => { kind = value; kindButtons.forEach(b => b.setAttribute("aria-checked", String(b.dataset.kind === kind))); }}, label));
 
-    const read = () => {
-      const s = new Date(`${date.value}T${at.value || "09:00"}`);
-      const e = new Date(s.getTime() + Number(length.value) * 60000);
+    const read = (s, e) => {
       const job = jobs.find(j => String(j.id) === jobSelect.value);
       return {
         id: saved?.id, kind, job_id: job ? job.id : null,
@@ -125,10 +128,11 @@ window.CalendarView = (() => {
     };
     //what the plan would run into, said as it is being chosen
     const check = () => {
-      const p = read();
-      if (Number.isNaN(new Date(p.starts_at).getTime())) { clash.replaceChildren(); return; }
-      const s = new Date(p.starts_at);
-      const hits = window.ICS.clashes(p, plans, busyIn(addDays(dayStart(s), -1), addDays(dayStart(s), 2)));
+      const s = enteredTime(date, at);
+      const e = enteredTime(endDate, endAt);
+      const elapsed = e - s;
+      const hits = elapsed > 0 && elapsed <= MAX_PLAN_MS
+        ? window.ICS.clashes(read(s, e), plans, busyIn(dayStart(s), addDays(dayStart(e), 1))) : [];
       clash.replaceChildren(...hits.slice(0, 3).map(h => el("p", {class: "plan-clash-line"},
         el("b", {text: "Overlaps "}),
         h.kind === "plan"
@@ -136,14 +140,33 @@ window.CalendarView = (() => {
           : `something on your calendar, ${time(new Date(h.busy.start))} to ${time(new Date(h.busy.end))}`)));
       clash.classList.toggle("has", hits.length > 0);
     };
-    for (const input of [date, at, length]) input.addEventListener("input", check);
+    for (const input of [date, at]) input.addEventListener("input", () => {
+      const s = enteredTime(date, at);
+      if (!endEdited && Number.isFinite(s.getTime())) {
+        const nextEnd = new Date(s.getTime() + originalDuration);
+        endDate.value = isoDay(nextEnd);
+        endAt.value = clockValue(nextEnd);
+      }
+      status.textContent = "";
+      check();
+    });
+    for (const input of [endDate, endAt]) input.addEventListener("input", () => {
+      endEdited = true;
+      status.textContent = "";
+      check();
+    });
 
     const dialog = el("dialog", {class: "ask plan-dialog", "aria-labelledby": "plan-heading"});
     const close = () => { dialog.close(); dialog.remove(); };
     const save = el("button", {type: "button", class: "primary"}, saved ? "Save changes" : "Add to your calendar");
     save.addEventListener("click", async () => {
-      const p = read();
-      if (!date.value || !at.value) { status.textContent = "Choose a day and a time."; return; }
+      const s = enteredTime(date, at);
+      const e = enteredTime(endDate, endAt);
+      const elapsed = e - s;
+      if (!Number.isFinite(elapsed)) { status.textContent = "Choose a day and time for both the start and end."; return; }
+      if (elapsed <= 0) { status.textContent = "The end must be after the start."; return; }
+      if (elapsed > MAX_PLAN_MS) { status.textContent = "A plan can last a week at most."; return; }
+      const p = read(s, e);
       save.disabled = true;
       try {
         const body = {kind: p.kind, job_id: p.job_id, title: p.title, starts_at: p.starts_at, ends_at: p.ends_at, location: p.location, notes: p.notes};
@@ -163,20 +186,21 @@ window.CalendarView = (() => {
     }}, "Delete") : null;
 
     const field = (id, label, input, cls = "") => el("label", {class: `plan-field ${cls}`.trim(), for: id}, el("span", {text: label}), input);
+    const timeFields = (label, day, clock) => el("fieldset", {class: "plan-times"},
+      el("legend", {text: label}), field(day.id, "Day", day), field(clock.id, "Time", clock));
     dialog.append(...[
       el("h2", {id: "plan-heading", text: saved ? "Change this plan" : "Plan something"}),
       el("div", {class: "st3-seg plan-kinds", role: "radiogroup", "aria-label": "Kind of plan"}, kindButtons),
       el("div", {class: "plan-grid"},
         field("plan-job", "Job", jobSelect, "wide"),
-        field("plan-date", "Day", date),
-        field("plan-time", "Starts", at),
-        field("plan-length", "Length", length),
+        timeFields("Starts", date, at),
+        timeFields("Ends", endDate, endAt),
         field("plan-title", "Title", title, "wide"),
         field("plan-where", "Where", where, "wide"),
         field("plan-notes", "Notes", notes, "wide")),
       clash,
       status,
-      saved ? el("div", {class: "plan-add"}, el("span", {text: "Add to"}), addButtons({...saved, ...read()}, el)) : null,
+      saved ? el("div", {class: "plan-add"}, el("span", {text: "Add to"}), addButtons(saved, el)) : null,
       el("div", {class: "ask-actions"}, remove, el("span", {class: "plan-gap"}), el("button", {type: "button", onclick: close}, "Cancel"), save),
     ].filter(Boolean));
     window.UI.wireDialogClose(dialog, close);
@@ -262,13 +286,14 @@ window.CalendarView = (() => {
 
     const planChip = (p, extra = {}) => {
       const s = new Date(p.starts_at);
+      const variant = String(extra.class || "");
       const hits = window.ICS.clashes(p, plans, busyIn(range().from, range().to));
       return el("button", {type: "button", class: `cal3-plan kind-${p.kind}${hits.length ? " clash" : ""}`, ...extra,
         title: hits.length ? "Overlaps something else" : null,
         "aria-label": `${window.ICS.summaryOf(p)}, ${fmt(s, {weekday: "long"})} ${time(s)} to ${time(new Date(p.ends_at))}${hits.length ? ", overlaps something else" : ""}`,
         onclick: () => openPlan(p, {plans, onSaved: load})},
         el("b", {translate: "no", text: window.ICS.summaryOf(p)}),
-        el("span", {class: "num", text: String(extra.class || "").includes("mini") ? time(s) : `${time(s)} – ${time(new Date(p.ends_at))}`}),
+        el("span", {class: "num", text: variant.includes("continues") ? "Continues" : variant.includes("mini") ? time(s) : `${time(s)} – ${time(new Date(p.ends_at))}`}),
         hits.length ? el("span", {class: "cal3-clash-tag", text: "Overlaps"}) : null);
     };
     const followChip = a => el("button", {type: "button", class: "cal3-follow", onclick: () => window.JobPage.open(a.job_id)},
@@ -289,6 +314,7 @@ window.CalendarView = (() => {
       const gutter = el("div", {class: "cal3-gutter", "aria-hidden": "true"},
         [...Array(HOURS[1] - HOURS[0])].map((_, i) => el("span", {text: time(new Date(2000, 0, 1, HOURS[0] + i))})));
       const cols = days.map(d => {
+        const nextDay = addDays(d, 1);
         const col = el("div", {class: sameDay(d, today) ? "cal3-col today" : "cal3-col"});
         col.style.setProperty("--rows", String(HOURS[1] - HOURS[0]));
         for (let h = HOURS[0]; h < HOURS[1]; h++) {
@@ -296,20 +322,22 @@ window.CalendarView = (() => {
             onclick: () => openPlan({date: isoDay(d), hour: h}, {plans, onSaved: load})}));
         }
         const place = (s, e) => {
-          const startMin = Math.max(0, (s.getHours() - HOURS[0]) * 60 + s.getMinutes());
-          const endMin = Math.min((HOURS[1] - HOURS[0]) * 60, (e.getHours() - HOURS[0]) * 60 + e.getMinutes() + (sameDay(s, e) ? 0 : 24 * 60));
-          return {top: startMin / 60 * rowH, height: Math.max(22, (endMin - startMin) / 60 * rowH - 3)};
+          const totalHeight = (HOURS[1] - HOURS[0]) * rowH;
+          const position = time => ((time.getHours() - HOURS[0]) * 60 + time.getMinutes()) / 60 * rowH;
+          const top = s < d ? 0 : Math.min(totalHeight - 22, Math.max(0, position(s)));
+          const bottom = e >= nextDay ? totalHeight : Math.min(totalHeight, position(e));
+          return {top, height: Math.max(22, bottom - top - 3)};
         };
-        for (const b of busy.filter(b => !b.allDay && b.start < addDays(d, 1).getTime() && b.end > d.getTime())) {
-          const s = new Date(Math.max(b.start, d.getTime()));
-          const e = new Date(Math.min(b.end, addDays(d, 1).getTime() - 60000));
+        for (const b of busy.filter(b => !b.allDay && b.start < nextDay.getTime() && b.end > d.getTime())) {
+          const s = new Date(b.start);
+          const e = new Date(b.end);
           const {top, height} = place(s, e);
           const block = el("div", {class: "cal3-busy", "aria-hidden": "true"}, el("span", {text: "Busy"}));
           block.style.setProperty("top", `${top}px`);
           block.style.setProperty("height", `${height}px`);
           col.append(block);
         }
-        for (const p of plans.filter(p => sameDay(new Date(p.starts_at), d))) {
+        for (const p of plans.filter(p => spansDay(p, d, nextDay))) {
           const {top, height} = place(new Date(p.starts_at), new Date(p.ends_at));
           const chip = planChip(p);
           chip.style.setProperty("top", `${top}px`);
@@ -329,9 +357,11 @@ window.CalendarView = (() => {
       });
       const body = el("div", {class: "cal3-week-body"}, gutter, cols);
       body.style.setProperty("--row", `${rowH}px`);
-      fill(sheet, el("div", {class: "cal3-week"}, head, allDay, el("div", {class: "cal3-scrollbox"}, body)));
+      const header = el("div", {class: "cal3-week-header"}, head, allDay);
+      const box = el("div", {class: "cal3-week cal3-scrollbox"}, header, body);
+      fill(sheet, box);
+      box.style.scrollPaddingBlockStart = `${header.offsetHeight}px`;
       //open at the first plan of the week, or at 8 am, so the morning is never scrolled past
-      const box = sheet.querySelector(".cal3-scrollbox");
       const first = Math.min(8, ...plans.filter(p => new Date(p.starts_at) >= from).map(p => new Date(p.starts_at).getHours()));
       box.scrollTop = Math.max(0, (first - HOURS[0]) * rowH - 8);
     }
@@ -344,7 +374,8 @@ window.CalendarView = (() => {
       const head = el("div", {class: "cal3-month-head"}, [...Array(7)].map((_, i) => el("span", {text: fmt(addDays(from, i), {weekday: "short"})})));
       const cells = [...Array(42)].map((_, i) => {
         const d = addDays(from, i);
-        const dayPlans = plans.filter(p => sameDay(new Date(p.starts_at), d));
+        const nextDay = addDays(d, 1);
+        const dayPlans = plans.filter(p => spansDay(p, d, nextDay));
         const follows = followUps.filter(a => a.next_step_date === isoDay(d));
         const busyHours = busy.filter(b => !b.allDay && b.start < addDays(d, 1).getTime() && b.end > d.getTime()).length;
         return el("div", {class: ["cal3-mday", d.getMonth() !== month ? "out" : "", sameDay(d, today) ? "today" : ""].join(" ").trim()},
@@ -352,7 +383,7 @@ window.CalendarView = (() => {
             onclick: () => { anchor = d; window.Prefs.set("calendarView", "week"); }},
             sameDay(d, today) ? el("span", {class: "circled"}, String(d.getDate()), ink("circle")) : String(d.getDate())),
           el("div", {class: "cal3-mday-list"},
-            dayPlans.slice(0, 3).map(p => planChip(p, {class: `cal3-plan kind-${p.kind} mini`})),
+            dayPlans.slice(0, 3).map(p => planChip(p, {class: `cal3-plan kind-${p.kind} mini${sameDay(new Date(p.starts_at), d) ? "" : " continues"}`})),
             follows.slice(0, 2).map(followChip),
             dayPlans.length > 3 ? el("span", {class: "cal3-more", text: `${dayPlans.length - 3} more`}) : null,
             busyHours ? el("span", {class: "cal3-busy-note", text: busyHours === 1 ? "1 busy time" : `${busyHours} busy times`}) : null));

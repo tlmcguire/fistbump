@@ -23,22 +23,22 @@ The five visual concepts explore bold improvements to Fistbump's layout and craf
 | **Global Search vs. View Search:** Floating `⌘K` command bar on Home vs. per-view search inputs | **Global `⌘K` Quick Jump palette (modal overlay) + lightweight view-local filter input.** | Lets power users jump to any job, application, resume version, or paste a URL from *any* screen without duplicating search bars in the header. |
 
 ### 1.2 Brand Identity & Asset Guardrails
-- **Logo (Unchanged):** Retain the existing Fistbump fist-bump logo mark across the sidebar header, macOS/Windows/Linux app icons, DMG background, and release graphics—never replace or redraw it.
+- **Logo (Unchanged):** Retain the existing Fistbump fist-bump logo mark across the sidebar header, macOS/Windows/Linux app icons, DMG background, and release graphics; never replace or redraw it.
 - **Pico Mascot (Unchanged):** Retain all existing Pico mascot assets verbatim (`intro/meet-pico.png`, `monthly/01..12.png`, `fun-screen/*`, `animations/thinking-anim.png`, `05-searching-wide.png`, `08-no-results.png`, `10-cant-connect.png`, `14-writing.png`, `17-tailoring-in-progress.png`, `20-pdf-exported.png`, `28-cleaning-up.png`, `29-something-went-wrong.png`, `33-empty-tracker.png`, `34-no-changes.png`). Containers holding Pico must match `--bg` cleanly with no drop-shadow frame around the illustration itself.
 
 ### 1.3 Unified Visual Grammar
 - **Typography:** Keep self-hosted **Bricolage Grotesque** for display/section headings and native system UI font (`-apple-system` / `Segoe UI` / `Ubuntu`) for dense body copy, tables, and inputs; monospace strictly for Markdown source editing.
 - **Elevation Hierarchy (3 Tiers Only):**
-  1. **Canvas (`--bg`)** — Base window background.
-  2. **Surface (`--panel`)** — Cards, tables, drawers with a 1px `--panel-line` border and subtle `--lit` top-edge highlight.
-  3. **Raised (`--raised`)** — Active sliding pill thumbs, popovers, dropdowns, and confirmation dialogs.
+  1. **Canvas (`--bg`)**: Base window background.
+  2. **Surface (`--panel`)**: Cards, tables, drawers with a 1px `--panel-line` border and subtle `--lit` top-edge highlight.
+  3. **Raised (`--raised`)**: Active sliding pill thumbs, popovers, dropdowns, and confirmation dialogs.
 - **Unified Controls:** Every mutually exclusive mode switch uses the single sliding-pill segmented component (`.segmented` / `.tabs` driven by `segments.js`).
 
 ---
 
 ## 2. Feature Parity & Better Visual Communication
 
-The overhaul must preserve **100% of existing Fistbump functionality**—nothing gets dropped or buried. Below is the parity map showing how every existing feature survives and becomes clearer.
+The overhaul must preserve **100% of existing Fistbump functionality**; nothing gets dropped or buried. Below is the parity map showing how every existing feature survives and becomes clearer.
 
 ### 2.1 Home
 | Existing Feature | Overhaul Treatment & Visual Communication |
@@ -53,7 +53,7 @@ The overhaul must preserve **100% of existing Fistbump functionality**—nothing
 ### 2.2 Jobs (`Discover | Saved | Paste`)
 | Existing Feature | Overhaul Treatment & Visual Communication |
 | :--- | :--- |
-| Search bar + direct job URL detection (Greenhouse, Lever, Ashby) | Unified pill search bar with an inline badge when a pasted URL is recognized (`Link detected — press Enter to import`). |
+| Search bar + direct job URL detection (Greenhouse, Lever, Ashby) | Unified pill search bar with an inline badge when a pasted URL is recognized (`Link detected: press Enter to import`). |
 | Multi-ATS filters, card display toggles, pinned searches | Compact inline quick-filter chips (`Greenhouse`, `Lever`, `Ashby`, `Remote`, `Min Fit`) plus an expandable **All Filters** popover that auto-closes on outside click or `Esc`. |
 | Search history & Saved searches | Slide-down popover from the search bar with 1-click re-run and pin/unpin. |
 | Cost-of-living, salary, & benefits analysis | Replaced dense text blocks with a **Visual Pay & Living Gauge** (horizontal bar showing Market Verdict + Monthly Take-Home + Leftover) while keeping expandable source citations. |
@@ -110,7 +110,7 @@ Accessibility is a first-class invariant, not a post-hoc pass. Every new compone
    - **Global shortcuts:** `⌘/Ctrl+1..5` for primary views, `⌘/Ctrl+,` for Settings, `⌘/Ctrl+K` for Quick Jump, `/` for view search, `⌘/Ctrl+\` to toggle sidebar collapse, `Esc` to close the topmost drawer/modal/popover.
    - **Roving tabindex (`ArrowLeft` / `ArrowRight`)** on every `.segmented` / `.tabs` control and Kanban column navigation.
    - **Focus management:** Opening any slide-over drawer or dialog traps focus cleanly and restores focus to the triggering button on close.
-   - **Live announcements:** AI elapsed timers, auto-save status (`Saved v2`), and stall errors use polite `role="status"` / assertive `role="alert"` regions (throttled so screen readers aren't spammed every second—announce on start, at the 20s stall warning, and on completion/error).
+   - **Live announcements:** AI elapsed timers, auto-save status (`Saved v2`), and stall errors use polite `role="status"` / assertive `role="alert"` regions (throttled so screen readers aren't spammed every second; announce on start, at the 20s stall warning, and on completion/error).
 
 ---
 
@@ -165,7 +165,7 @@ Fistbump currently ships **23 themes** (`classic`, 10 style themes: `bubblegum`,
 - `finish.css` and `views.css` still contain scattered hardcoded colors (e.g., `rgba(255, 255, 255, 0.06)`, `#153678` on overlays, stark white `--field` on dark themes), causing inconsistent contrast between dark themes (`midnight-gold`, `dracula`, `ocean-abyss`, `cyber`) and light themes (`classic` light overrides, `matcha`, `bubblegum`, spring/summer seasonal themes).
 
 ### 6.2 Semantic Token Contract (`themes.css`)
-Migrate every theme to define a **single, small set of base palette tokens**—and let `base.css` / `finish.css` derive all component surfaces automatically via CSS `color-mix()`:
+Migrate every theme to define a **single, small set of base palette tokens**, and let `base.css` / `finish.css` derive all component surfaces automatically via CSS `color-mix()`:
 
 | Token | Role | Derived / Theme-Owned |
 | :--- | :--- | :--- |
@@ -192,13 +192,13 @@ Migrate every theme to define a **single, small set of base palette tokens**—a
 
 Each phase ships independently with full test parity so `main` stays releasable at all times:
 
-1. **Phase 1 — Token Contract & Theme Migration (`themes.css`, `base.css`, `finish.css`)**
+1. **Phase 1: Token Contract & Theme Migration (`themes.css`, `base.css`, `finish.css`)**
    - Introduce `data-color-scheme`, semantic `--field-surface` / `--pill-track` / `--panel-line` tokens, purge hardcoded surface colors, and run the 23-theme contrast audit.
-2. **Phase 2 — Navigation Shell, Collapsible Rail & `⌘K` Quick Jump (`index.html`, `app.js`, `sidebar.js`)**
+2. **Phase 2: Navigation Shell, Collapsible Rail & `⌘K` Quick Jump (`index.html`, `app.js`, `sidebar.js`)**
    - Move `Settings` to its own top-level rail item, unify `Jobs` into `Discover | Saved | Paste`, add collapsible rail (`⌘\`), and build the `⌘K` Quick Jump overlay.
-3. **Phase 3 — Reusable Slide-Over Drawer & Tracker Pipeline (`drawer.js`, `tracker.js`)**
+3. **Phase 3: Reusable Slide-Over Drawer & Tracker Pipeline (`drawer.js`, `tracker.js`)**
    - Convert Tracker's **Interview Prep Sheet** and **Offer Comparison** into frosted slide-over drawers, add the proportional **Pipeline Funnel Bar**, and add the `Board | Table` Kanban switcher.
-4. **Phase 4 — Tailor Studio & Master Resume Live Studio (`diff-view.js`, `resume-builder.js`)**
+4. **Phase 4: Tailor Studio & Master Resume Live Studio (`diff-view.js`, `resume-builder.js`)**
    - Unify Tailor into the single top segmented bar (`Suggestions | Diff | Edit | PDF | Kit`), add dark/theme-integrated editors, and upgrade Master Resume with the persistent **1-Page Fit Meter** and floating paper PDF canvas.
-5. **Phase 5 — Jobs Discovery Polish, Accessibility & Visual QA (`job-parser.js`, Playwright tests)**
+5. **Phase 5: Jobs Discovery Polish, Accessibility & Visual QA (`job-parser.js`, Playwright tests)**
    - Add the visual **Pay & Cost of Living Gauge**, **Skill Match Matrix**, full keyboard/screen-reader sweep, i18n updates (`es`/`fr`/`de`), and updated screenshots + docs.

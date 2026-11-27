@@ -168,15 +168,16 @@ const (
 
 // Query is a job search request. The API layer fills the defaults before calling Validate.
 type Query struct {
-	Source     string   `json:"source,omitempty"` // "greenhouse", "lever", "ashby", or empty for any
-	Keywords   []string `json:"keywords"`
-	Location   string   `json:"location"`
-	WorkMode   string   `json:"work_mode"`
-	Categories []string `json:"categories"`
-	Boards     []string `json:"boards"`
-	Company    string   `json:"company"`
-	Limit      int      `json:"limit"`
-	Offset     int      `json:"offset"` // where in the ranked list this page starts; 0 for the first page
+	Source      string   `json:"source,omitempty"` // "greenhouse", "lever", "ashby", or empty for any
+	Keywords    []string `json:"keywords"`
+	Location    string   `json:"location"`
+	RadiusMiles int      `json:"radius_miles,omitempty"`
+	WorkMode    string   `json:"work_mode"`
+	Categories  []string `json:"categories"`
+	Boards      []string `json:"boards"`
+	Company     string   `json:"company"`
+	Limit       int      `json:"limit"`
+	Offset      int      `json:"offset"` // where in the ranked list this page starts; 0 for the first page
 
 	// Preferences. The zero value of each means no preference.
 	Sort         string   `json:"sort"`          // "relevance" (default) or "newest"
@@ -211,6 +212,8 @@ type Query struct {
 	// RateOf rates a posting whose description is loaded. The API layer sets it, since the rating needs the
 	// user's home location and minimum pay.
 	RateOf func(p Posting) *Ratings `json:"-"`
+	// WithinRadius is resolved by the API from a local place index. Nil means no radius filter.
+	WithinRadius func(location string) bool `json:"-"`
 }
 
 // MatchesRatings reports whether the search rates pay, benefits and cost of living. A request that does not say means yes.

@@ -272,12 +272,12 @@ func renderLines(lines []*line) string {
 		end := math.Inf(-1)
 		for _, t := range l.parts {
 			gap := t.X - end
-			if sb.Len() > 0 && gap > math.Max(1, t.FontSize*0.15) && !strings.HasSuffix(sb.String(), " ") && !strings.HasPrefix(t.S, " ") {
-				if gap > t.FontSize*3 {
+			if sb.Len() > 0 && gap > t.FontSize*3 && strings.TrimSpace(t.S) != "" {
+				if !strings.HasSuffix(sb.String(), " | ") {
 					sb.WriteString("  |  ") // a wide gap separates columns, such as a title and a right-aligned date
-				} else {
-					sb.WriteString(" ")
 				}
+			} else if sb.Len() > 0 && gap > math.Max(1, t.FontSize*0.15) && !strings.HasSuffix(sb.String(), " ") && !strings.HasPrefix(t.S, " ") {
+				sb.WriteString(" ")
 			}
 			sb.WriteString(t.S)
 			end = t.X + t.W

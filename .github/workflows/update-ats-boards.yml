@@ -1,0 +1,53 @@
+name: Refresh Public ATS Board Datasets
+
+on:
+  schedule:
+    # Runs on the 1st of every month (every ~30 days) at 07:00 UTC.
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-ats-boards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Pull updated Greenhouse, Lever, and Ashby boards from StoreSignal and Common Crawl
+        run: node scripts/update-ats-boards.js --skip-openapply
+
+      - name: Run security and schema audit on updated board catalog
+        run: node scripts/verify-community-data.js
+
+      - name: Open or update Pull Request if public boards changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git diff --quiet backend/internal/connectors/public_boards.json; then
+            BRANCH="chore/refresh-public-ats-boards"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -B "$BRANCH"
+            git add backend/internal/connectors/public_boards.json
+            git commit -m "chore(connectors): refresh 30-day public ATS board datasets"
+            git push --force origin "$BRANCH"
+            if ! gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+              gh pr create \
+                --title "Refresh 30-day public ATS board datasets" \
+                --body "Automated 30-day refresh from allowlisted public ATS sources (Hugging Face Datasets Server and Common Crawl CDX). Review the diff before merging." \
+                --head "$BRANCH" \
+                --base main
+            fi
+          fi

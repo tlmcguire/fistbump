@@ -3,6 +3,8 @@ package ai
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -25,7 +27,7 @@ type LocalSettings func() (modelID string, idle time.Duration)
 
 // Local runs llama-server as a child process while it is needed: it starts on the first request,
 // stops after the idle time with no request, when the model changes or is deleted, and at shutdown.
-// It talks to the server with the Remote client, which needs no key on loopback.
+// Inference requests authenticate with a per-process key on loopback.
 type Local struct {
 	DataDir  string
 	Binary   string // path to llama-server; FindLlamaServer by default
@@ -178,12 +180,18 @@ func (l *Local) startLocked(ctx context.Context, m Model) error {
 	if err != nil {
 		return err
 	}
+	var keyBytes [32]byte
+	if _, err := rand.Read(keyBytes[:]); err != nil {
+		return fmt.Errorf("generating llama-server key: %w", err)
+	}
+	key := hex.EncodeToString(keyBytes[:])
 	cmd := exec.Command(l.Binary,
 		"--model", m.Path(l.DataDir),
 		"--host", "127.0.0.1",
 		"--port", strconv.Itoa(port),
+		"--no-webui",
 		"--ctx-size", "4096")
-	cmd.Env = append(os.Environ(), l.Env...)
+	cmd.Env = append(append(os.Environ(), l.Env...), "LLAMA_API_KEY="+key)
 	// exec copies the output into the pipe; Wait returns once that copy is done.
 	pr, pw := io.Pipe()
 	cmd.Stdout, cmd.Stderr = pw, pw
@@ -201,7 +209,7 @@ func (l *Local) startLocked(ctx context.Context, m Model) error {
 	}
 	client := NewRemote()
 	client.Label = EngineLocal
-	if err := client.Configure(base+"/v1", m.ID, ""); err != nil {
+	if err := client.Configure(base+"/v1", m.ID, key); err != nil {
 		stopProcess(cmd, exited, l.StopTimeout)
 		return err
 	}
@@ -282,7 +290,12 @@ func freePort() (int, error) {
 func waitHealthy(ctx context.Context, url string, exited <-chan struct{}, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	client := &http.Client{Timeout: 2 * time.Second}
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	tick := time.NewTicker(200 * time.Millisecond)
 	defer tick.Stop()
 	for {

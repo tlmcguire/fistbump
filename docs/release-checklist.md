@@ -6,9 +6,9 @@ Fill in the numbers on the size line and put the checklist in the release notes.
 
 ## Before you start
 
-- [ ] The version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` is bumped to the release version (for example `0.5.0`).
-- [ ] The backend reports the same version. The build passes it with `-ldflags "-X main.version=<version>"`, so `GET /v1/health` answers `"version": "0.5.0"` and not `"dev"`. The default in `backend/cmd/fistbump-core/main.go` stays `"dev"`; only the build sets it.
-- [ ] The tag `v0.5.0` is pushed.
+- [ ] The version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and both lockfiles match the release version.
+- [ ] The backend reports the same version. The build passes it with `-ldflags "-X main.version=<version>"`, so `GET /v1/health` answers with the release version. The default in `backend/cmd/fistbump-core/main.go` stays `"dev"`; only the build sets it.
+- [ ] The matching version tag is pushed after the release PR merges.
 - [ ] CI has finished and the draft release exists on the [releases page](https://github.com/tlmcguire/fistbump/releases), with a Windows `.exe`, a macOS `.dmg` for Apple silicon, a macOS `.dmg` for Intel and a Linux `.AppImage`.
 
 ## On each platform
@@ -73,6 +73,13 @@ Record the same numbers for each platform.
 
 - [ ] The app uninstalls: Windows through **Installed apps**, macOS by moving the app to the **Trash**, Linux by deleting the `.AppImage`.
 - [ ] The data folder is gone after the uninstall: `~/Library/Application Support/fistbump` on macOS, `%APPDATA%\fistbump` on Windows, `~/.config/fistbump` on Linux.
+
+## 0.6.0 upgrade checks
+
+- [ ] Upgrade from 0.5.x with a saved remote key. Re-enter the key once, restart, and verify it restores for that provider. Switch to a different origin with a blank key and verify a restart does not restore the previous provider’s key.
+- [ ] Open a Tracker CSV containing a formula-like title in a spreadsheet and confirm it displays as text.
+- [ ] Import a private HTTPS calendar feed and open an exported event in the OS calendar.
+- [ ] Run the community-data verifier and relay tests. Deploy the Worker separately to ship relay changes.
 
 ## After every platform has passed
 
