@@ -4,6 +4,7 @@
 
 - **More reliable resume imports.** Education follows work experience by default. Previews and exports consolidate only degrees from the same known institution with compatible dates and GPAs. You can also choose separate lines.
 - **Faster search and posting workflows.** Filter by distance from your resume location or another U.S. city, run saved searches from the search bar, and browse saved jobs 25 at a time. Paste a job can fetch supported listings from a link and offers editable details for other sites before you save or optionally share.
+- **Flexible calendar times.** Set a start and end date and time for any plan, including overnight plans. New plans default to one hour. Week-view headings stay aligned with the hourly columns as you scroll.
 - **Safer credentials and exports.** Remote AI keys are bound to their provider. The bundled local model server requires a per-launch key. Tracker CSV exports open formula-like fields as text, and calendar exports handle embedded line breaks safely.
 - **Safer community publishing.** Expired listings are hidden, catalog fetches enforce origin and size limits, and the relay retries failed GitHub writes before removing submissions from its queue.
 

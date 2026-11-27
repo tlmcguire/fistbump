@@ -2113,7 +2113,9 @@ html[data-vt]::view-transition-group(navbar), html[data-vt]::view-transition-gro
 :root dialog.plan-dialog .plan-kinds { margin: 4px 0 14px; display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--paper-2); }
 :root dialog.plan-dialog .plan-kinds button { height: 32px; min-height: 0; padding: 0 14px; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; }
 :root dialog.plan-dialog .plan-kinds button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
-:root dialog.plan-dialog .plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+:root dialog.plan-dialog .plan-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+:root dialog.plan-dialog .plan-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+:root dialog.plan-dialog .plan-times legend { padding: 0; margin-bottom: 5px; font-weight: 700; }
 :root dialog.plan-dialog .plan-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 :root dialog.plan-dialog .plan-field.wide { grid-column: 1 / -1; }
 :root dialog.plan-dialog .plan-field > span { font-weight: 700; font-size: 13px; color: var(--ink); }

@@ -623,6 +623,40 @@ test('weekly calendar columns stay aligned when the hours scroll', async ({ wind
   expect(geometry.topAfter).toBeCloseTo(geometry.topBefore);
 });
 
+test('calendar plans can end at a custom time the following day', async ({ window }) => {
+  const [first, second] = await window.evaluate(() => {
+    window.Prefs.set('calendarView', 'week');
+    const date = new Date();
+    const start = window.Prefs.get('weekStart') === 'sunday' ? 0 : 1;
+    date.setDate(date.getDate() - ((date.getDay() - start + 7) % 7));
+    return [0, 1].map(offset => {
+      const day = new Date(date);
+      day.setDate(day.getDate() + offset);
+      return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    });
+  });
+  await window.locator('#nav-calendar').click();
+  await window.getByRole('button', { name: 'Plan an interview' }).click();
+  const dialog = window.locator('dialog.plan-dialog');
+  await dialog.locator('#plan-title').fill('Overnight plan');
+  await dialog.locator('#plan-date').fill(first);
+  await dialog.locator('#plan-time').fill('21:13');
+  await expect(dialog.locator('#plan-end-date')).toHaveValue(first);
+  await expect(dialog.locator('#plan-end-time')).toHaveValue('22:13');
+  await dialog.locator('#plan-end-time').fill('08:17');
+  await dialog.getByRole('button', { name: 'Add to your calendar' }).click();
+  await expect(dialog.getByText('The end must be after the start.')).toBeVisible();
+  await dialog.locator('#plan-end-date').fill(second);
+  await dialog.getByRole('button', { name: 'Add to your calendar' }).click();
+  await expect(dialog).toBeHidden();
+  const chips = window.locator('.cal3-plan').filter({ hasText: 'Overnight plan' });
+  await expect(chips).toHaveCount(2);
+  await chips.last().click();
+  await expect(dialog.locator('#plan-time')).toHaveValue('21:13');
+  await expect(dialog.locator('#plan-end-date')).toHaveValue(second);
+  await expect(dialog.locator('#plan-end-time')).toHaveValue('08:17');
+});
+
 test('the calendar plans an interview, flags a clash with a busy time, and adds it to a calendar app', async ({ window }) => {
   await window.evaluate(async () => {
     const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };

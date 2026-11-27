@@ -181,7 +181,7 @@ On a Mac the menu bar follows the usual layout. **File** starts a new search (�
 
 ## Calendar
 
-**Calendar** in the bar (⌘6) shows your plans by week or month: interviews, calls and follow-ups, plus each tracker follow-up date on its day. Click an empty hour, or **Plan an interview** (also on a job's page, under More actions), to add one: the job, the day and time, how long, where, and notes. If it runs into another plan, or into something on your own calendar, the form says so before you save, and the plan is marked **Overlaps** after.
+**Calendar** in the bar (⌘6) shows your interviews, calls, and follow-ups by week or month. Click an empty hour or choose **Plan an interview** to add one. Set the date and time under **Starts** and **Ends**. New plans start with a one-hour span, and you can set an end up to one week later. The form flags overlaps with other plans or your connected calendar before you save.
 
 Everything stays in Fistbump until you choose otherwise, in **Settings → Calendar**:
 
