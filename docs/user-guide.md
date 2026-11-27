@@ -56,10 +56,10 @@ Home shows what needs you today, your next seven days (follow-ups, interviews an
 1. Click **Resume** in the bottom bar. The **Ready to tailor?** panel lists what is still missing; click **Add** beside an item to go straight to its field.
 2. Fill in your details: name, email, phone, where you live, the kind of work you are looking for.
 3. Add each job you have had, with what you did and what came of it.
-4. Add your education. Under **Degree layout**, choose **One line per group** (the default) or **Separate lines**. Degrees from the same school with compatible graduation dates and GPAs share their metadata.
+4. Add your education. Under **Degree layout**, choose **One line per group** (the default) or **Separate lines**. Only degrees from the same known institution with compatible graduation dates and GPAs can share a line.
 5. Click **Save as version** if you want a copy to come back to. You can also start from a resume you already have: click **Import file** and choose a `.pdf`, `.docx`, `.odt`, `.md`, or `.txt` file, or click **Paste text** and paste the text of a resume.
 
-Your master resume is the starting point for every tailored version.
+Your master resume is the starting point for every tailored version. Education follows work experience by default. If you previously changed the order, choose **Restore default order** under **Custom sections & section order**.
 
 ### 2. Find a job, or paste one
 

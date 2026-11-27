@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-const EducationLayoutSplit = "split"
+const (
+	EducationLayoutSplit = "split"
+	UnknownInstitution   = "Unknown institution"
+)
 
 var educationDegree = regexp.MustCompile(`(?i)\b(Ph\.?\s?D\.?|Doctor(?:ate)?(?: of [A-Z][a-z]+)?|J\.?D\.?|M\.?D\.?|M\.?B\.?A\.?|Master(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|M\.?S\.?c?\.?|M\.?A\.?|M\.?Eng\.?|Bachelor(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|B\.?S\.?c?\.?|B\.?A\.?|B\.?Eng\.?|Associate(?:'s)?(?: of [A-Z][a-z]+(?: [A-Z][a-z]+)?)?|A\.?A\.?S?\.?|A\.?S\.?|High School Diploma|Certificate)(?:\s|,|$)`)
 
@@ -74,10 +77,11 @@ func educationLevelKey(level *string) string {
 	return strings.NewReplacer(".", "", " ", "").Replace(educationWords(educationText(level)))
 }
 
-// SameEducationTerm groups rows at the same school when the recorded date and GPA agree
+// SameEducationTerm groups rows at the same known school when the recorded date and GPA agree
 // or one entry omits them. Conflicting dates or GPAs stay attached to their own rows.
 func SameEducationTerm(a, b Education) bool {
-	if educationWords(a.Institution) != educationWords(b.Institution) {
+	school := educationWords(a.Institution)
+	if school == "" || school == educationWords(UnknownInstitution) || school != educationWords(b.Institution) {
 		return false
 	}
 	dateA, dateB := educationText(a.GraduationDate), educationText(b.GraduationDate)

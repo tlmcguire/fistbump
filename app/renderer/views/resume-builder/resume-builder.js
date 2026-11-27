@@ -1124,23 +1124,39 @@
     let customSections = [];
 
     const saveCustomSettings = async (patch, msg) => {
-      if (!window.api?.settings?.put) return;
+      if (!window.api?.settings?.put) return false;
       try {
         await window.FistBumpAPI.request(() => window.api.settings.put(patch));
         say(msg);
         refreshPreview();
+        return true;
       } catch (err) {
         say(err.message, true);
+        return false;
       }
     };
 
     function renderCustomSections() {
+      const isDefaultOrder = () => sectionOrder.length === DEFAULT_ORDER.length &&
+        DEFAULT_ORDER.every((section, index) => section === sectionOrder[index]);
+      const resetOrder = el("button", {type: "button", hidden: isDefaultOrder(), onclick: async () => {
+        resetOrder.disabled = true;
+        if (await saveCustomSettings({"resume.section_order": DEFAULT_ORDER}, "Default section order restored.")) {
+          sectionOrder = [...DEFAULT_ORDER];
+          const hadFocus = document.activeElement === resetOrder;
+          renderCustomSections();
+          if (hadFocus) customSectionsPanel.querySelector(".sortlist-row")?.focus({preventScroll: true});
+        } else {
+          resetOrder.disabled = false;
+        }
+      }}, "Restore default order");
       //drag a row, press its arrows, or Alt+Up / Alt+Down on a focused row
       const orderList = window.Sortable.list(sectionOrder, {
         name: "Section order",
         label: key => ORDER_LABELS[key] || key,
         onChange: async next => {
           sectionOrder = [...next];
+          resetOrder.hidden = isDefaultOrder();
           await saveCustomSettings({"resume.section_order": sectionOrder}, "Section order updated.");
         },
       });
@@ -1176,8 +1192,9 @@
 
       fill(customSectionsPanel,
         el("h2", {id: "resume-custom-h", text: "Custom sections & section order"}),
-        el("p", {class: "hint", text: "Reorder how sections appear in your preview, PDF, and DOCX exports."}),
+        el("p", {class: "hint", text: "Education follows work experience by default. Reorder sections for your preview, PDF, and DOCX exports."}),
         orderList,
+        resetOrder,
         cards,
         el("div", {class: "entry-form"},
           el("div", {class: "form-grid"},
@@ -1302,4 +1319,3 @@
 
   window.ResumeBuilder = {skillMatch, mount, forms, el, fill, chips, makeForm, exportFile, savedNote};
 })();
- 

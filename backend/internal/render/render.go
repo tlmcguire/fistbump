@@ -30,20 +30,16 @@ func Master(m models.Master) string {
 			blocks = append(blocks, strings.Join(contact, " · "))
 		}
 	}
-	order := m.SectionOrder
-	if len(order) == 0 {
-		order = []string{"summary", "experience", "education", "skills", "custom"}
-	}
 	seenSec := map[string]bool{}
 	var finalOrder []string
-	for _, k := range order {
+	for _, k := range m.SectionOrder {
 		k = strings.ToLower(strings.TrimSpace(k))
 		if k != "" && !seenSec[k] {
 			seenSec[k] = true
 			finalOrder = append(finalOrder, k)
 		}
 	}
-	for _, def := range []string{"summary", "experience", "education", "skills", "custom"} {
+	for _, def := range models.DefaultResumeSectionOrder() {
 		if !seenSec[def] {
 			finalOrder = append(finalOrder, def)
 		}

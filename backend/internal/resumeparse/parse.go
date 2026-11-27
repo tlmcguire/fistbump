@@ -781,7 +781,7 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 		if cur != nil {
 			cur.Details = strPtr(strings.Join(details, "\n"))
 			cur.SortOrder = int64(len(out))
-			if cur.Institution == "Unknown institution" {
+			if cur.Institution == models.UnknownInstitution {
 				*warnings = append(*warnings, "Could not read the institution for an education entry")
 			}
 			out = append(out, *cur)
@@ -829,7 +829,7 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 		deg := models.FindEducationDegree(body)
 		// A new school line starts a new entry. A second degree under the same school becomes its own row
 		// that shares the school, date, GPA and honors.
-		if school && (cur == nil || cur.Institution != "" && cur.Institution != "Unknown institution") {
+		if school && (cur == nil || cur.Institution != "" && cur.Institution != models.UnknownInstitution) {
 			flush()
 		} else if deg != nil && cur != nil && cur.DegreeLevel != nil && !school {
 			prev := *cur
@@ -837,10 +837,10 @@ func parseEducation(lines []string, warnings *[]string) []models.Education {
 			cur = &models.Education{Institution: prev.Institution, GraduationDate: prev.GraduationDate, GPA: prev.GPA, Honors: prev.Honors}
 		}
 		if cur == nil {
-			cur = &models.Education{Institution: "Unknown institution"}
+			cur = &models.Education{Institution: models.UnknownInstitution}
 		}
 		used := false
-		if school && (cur.Institution == "Unknown institution") {
+		if school && cur.Institution == models.UnknownInstitution {
 			name := body
 			for _, p := range schoolSep.Split(body, -1) {
 				if schoolRe.MatchString(p) {

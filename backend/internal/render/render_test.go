@@ -173,3 +173,18 @@ func TestEducationLayoutsDeduplicateLegacyDualDegrees(t *testing.T) {
 		}
 	}
 }
+
+func TestConsolidatedEducationRequiresSameKnownInstitution(t *testing.T) {
+	m := models.Master{Education: []models.Education{
+		{Institution: "College of Charleston", DegreeLevel: ptr("BS"), Discipline: ptr("Computer Science")},
+		{Institution: "Clemson University", DegreeLevel: ptr("BS"), Discipline: ptr("Computer Science")},
+		{Institution: "College of Charleston", DegreeLevel: ptr("BA"), Discipline: ptr("Spanish")},
+		{Institution: models.UnknownInstitution, DegreeLevel: ptr("MA"), Discipline: ptr("Art")},
+		{Institution: " unknown  institution ", DegreeLevel: ptr("BA"), Discipline: ptr("History")},
+	}}
+	got := Master(m)
+	if strings.Count(got, "### ") != 4 || !strings.Contains(got, "BS in Computer Science; BA in Spanish, College of Charleston") ||
+		!strings.Contains(got, "BS in Computer Science, Clemson University") || strings.Count(got, ";") != 1 {
+		t.Errorf("expected only the Charleston degrees to share a heading:\n%s", got)
+	}
+}

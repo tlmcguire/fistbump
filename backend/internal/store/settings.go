@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/tlmcguire/fistbump/backend/internal/models"
 )
 
 type settingKind int
@@ -39,7 +41,7 @@ var knownSettings = map[string]settingDef{
 	"connectors.custom_boards":         {kind: kindStrings, def: []string{}},
 	"connectors.community_boards":      {kind: kindStrings, def: []string{}},
 	"resume.education_layout":          {kind: kindString, def: "consolidate", allowed: []string{"consolidate", "split"}},
-	"resume.section_order":             {kind: kindStrings, def: []string{"summary", "experience", "education", "skills", "custom"}},
+	"resume.section_order":             {kind: kindStrings, def: models.DefaultResumeSectionOrder()},
 	"resume.custom_sections":           {kind: kindString, def: "[]"},
 }
 

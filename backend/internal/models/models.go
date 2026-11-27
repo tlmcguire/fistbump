@@ -81,6 +81,11 @@ type Master struct {
 	CustomSections  []CustomSection
 }
 
+// DefaultResumeSectionOrder lists sections in the order used for a new resume.
+func DefaultResumeSectionOrder() []string {
+	return []string{"summary", "experience", "education", "skills", "custom"}
+}
+
 // Skills returns the de-duplicated union of the profile's skills and every experience's skills,
 // in first-seen order. Duplicates are matched case-insensitively.
 func (m Master) Skills() []string {
