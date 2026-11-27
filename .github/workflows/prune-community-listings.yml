@@ -1,0 +1,53 @@
+name: Prune Outdated Community Listings
+
+on:
+  schedule:
+    # Runs every Monday at 07:00 UTC to remove expired, closed, or dateless listings.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prune-listings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prune expired, closed, and dateless community listings
+        run: node scripts/prune-community-listings.js
+
+      - name: Run security and timeframe audit on community datasets
+        run: node scripts/verify-community-data.js
+
+      - name: Open or update Pull Request if listings were pruned
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git diff --quiet data/community-listings.json; then
+            BRANCH="chore/prune-community-listings"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -B "$BRANCH"
+            git add data/community-listings.json
+            git commit -m "chore(data): prune outdated community job listings"
+            git push --force origin "$BRANCH"
+            if ! gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+              gh pr create \
+                --title "Prune outdated community job listings" \
+                --body "Automated weekly cleanup removing listings whose close date elapsed, ATS posting closed, or timeframe expired. Review the diff before merging." \
+                --head "$BRANCH" \
+                --base main
+            fi
+          fi

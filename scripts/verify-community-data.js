@@ -3,8 +3,23 @@
 // Runs in CI on PRs touching data/community-*.json or backend/internal/connectors/public_boards.json.
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  addDays,
+  daysBetween,
+  extractCloseDate,
+  isLongRunning,
+  parseIsoDate,
+} = require('./prune-community-listings.js');
 
-const ROOT = path.join(__dirname, '..');
+const REPO_ROOT = path.join(__dirname, '..');
+const args = process.argv.slice(2);
+let ROOT = REPO_ROOT;
+for (let i = 0; i < args.length; i++) {
+  if (args[i] !== '--root' || !args[i + 1] || args[i + 1].startsWith('--')) {
+    throw new Error(`Invalid argument: ${args[i]}`);
+  }
+  ROOT = path.resolve(args[++i]);
+}
 const TOKEN_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const ATS_SET = new Set(['greenhouse', 'lever', 'ashby']);
 const INVISIBLE_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]|[\u{E0000}-\u{E007F}]/u;
@@ -53,10 +68,10 @@ function checkHttpsUrl(raw, label) {
   if (SHORTENERS.has(host.replace(/^www\./, ''))) errors.push(`${label}: URL shortener not allowed (${host})`);
 }
 
-function loadCuratedTokens() {
+function loadCuratedTokens(root) {
   const curated = { greenhouse: new Set(), lever: new Set(), ashby: new Set() };
   try {
-    const gh = JSON.parse(fs.readFileSync(path.join(ROOT, 'backend', 'internal', 'connectors', 'greenhouse', 'boards.json'), 'utf8'));
+    const gh = JSON.parse(fs.readFileSync(path.join(root, 'backend', 'internal', 'connectors', 'greenhouse', 'boards.json'), 'utf8'));
     for (const c of gh.categories || []) for (const b of c.boards || []) curated.greenhouse.add(b.token.toLowerCase());
   } catch {}
   for (const [ats, rel] of [
@@ -64,14 +79,14 @@ function loadCuratedTokens() {
     ['ashby', 'backend/internal/connectors/ashby/boards.go'],
   ]) {
     try {
-      const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      const src = fs.readFileSync(path.join(root, rel), 'utf8');
       for (const m of src.matchAll(/\{"([^"]+)",\s*"([^"]+)"\}/g)) curated[ats].add(m[1].toLowerCase());
     } catch {}
   }
   return curated;
 }
 
-const curated = loadCuratedTokens();
+const curated = loadCuratedTokens(REPO_ROOT);
 
 // 1. Audit data/community-boards.json
 const boardsFile = path.join(ROOT, 'data', 'community-boards.json');
@@ -102,6 +117,7 @@ if (fs.existsSync(boardsFile)) {
 const listingsFile = path.join(ROOT, 'data', 'community-listings.json');
 if (fs.existsSync(listingsFile)) {
   const data = JSON.parse(fs.readFileSync(listingsFile, 'utf8'));
+  const today = new Date().toISOString().slice(0, 10);
   for (const l of data.listings || []) {
     const label = `community-listings/${l.id || l.company_name || 'unknown'}`;
     for (const field of ['company_name', 'position_title', 'location', 'raw_text']) {
@@ -111,6 +127,38 @@ if (fs.existsSync(listingsFile)) {
     }
     checkHttpsUrl(l.listing_url, `${label}.listing_url`);
     checkHttpsUrl(l.company_url, `${label}.company_url`);
+    const added = parseIsoDate(l.added) ? String(l.added).trim() : '';
+    const expires = parseIsoDate(l.expires_at) ? String(l.expires_at).trim() : '';
+    if (!added) {
+      errors.push(`${label}: missing or invalid YYYY-MM-DD added date`);
+    }
+    if (!expires) {
+      errors.push(`${label}: missing or invalid YYYY-MM-DD expires_at timeframe`);
+    }
+    const explicitClose = parseIsoDate(l.closes_at) ? String(l.closes_at).trim() : '';
+    if (l.closes_at) {
+      if (!explicitClose) {
+        errors.push(`${label}: invalid YYYY-MM-DD closes_at date (${l.closes_at})`);
+      }
+    }
+    const closeDate = explicitClose || extractCloseDate(l.raw_text);
+    if (closeDate && closeDate < today) {
+      errors.push(`${label}: closes_at (${closeDate}) has already elapsed`);
+    }
+
+    if (l.evergreen === true && !isLongRunning(l)) {
+      errors.push(`${label}: evergreen flag is not supported by the listing content`);
+    }
+
+    if (added && expires) {
+      const evergreen = isLongRunning(l);
+      const ttlExpiry = addDays(added, evergreen ? 120 : 45);
+      const policyExpiry = closeDate && closeDate < ttlExpiry ? closeDate : ttlExpiry;
+      const spanDays = daysBetween(added, expires);
+      if (spanDays < 0 || (policyExpiry && expires > policyExpiry)) {
+        errors.push(`${label}: expires_at (${expires}) exceeds the allowed timeframe from added (${added})`);
+      }
+    }
   }
 }
 

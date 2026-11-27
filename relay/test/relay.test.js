@@ -119,3 +119,55 @@ test("shared boards are checked against the board itself and queued once", async
   const again = await relay.fetch(post("/v1/boards", { boards: ["greenhouse:stripe"] }), e);
   assert.deepEqual((await again.json()).known, ["greenhouse:stripe"]);
 });
+
+test("shared listings cannot claim evergreen and auto-discover an active ATS board", async () => {
+  fakeFetch({
+    "GET api.github.com/repos/owner/app/contents/data/community-boards.json": () => [200, {
+      content: btoa(JSON.stringify({ version: 1, boards: [] })),
+      sha: "boards",
+    }],
+    "GET boards-api.greenhouse.io/v1/boards/newco/jobs": () => [200, { jobs: [{ id: 101 }] }],
+    "GET boards-api.greenhouse.io/v1/boards/newco": () => [200, { name: "New Co" }],
+    "GET api.github.com/repos/owner/app/contents/data/community-listings.json": () => [200, {
+      content: btoa(JSON.stringify({ version: 1, listings: [] })),
+      sha: "listings",
+    }],
+  });
+  const e = env();
+  const response = await relay.fetch(post("/v1/listings", {
+    company_name: "New Co",
+    position_title: "Backend Engineer",
+    listing_url: "https://boards.greenhouse.io/newco/jobs/101",
+    raw_text: "A standard backend engineering role with responsibilities and qualifications.",
+    closes_at: (() => {
+      const future = new Date();
+      future.setUTCDate(future.getUTCDate() + 150);
+      return future.toISOString().slice(0, 10);
+    })(),
+    evergreen: true,
+  }), e);
+
+  assert.equal(response.status, 201);
+  const result = await response.json();
+  assert.equal(result.discovered_board, "greenhouse:newco");
+  assert.equal(result.listing.evergreen, undefined);
+  const expectedExpiry = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  expectedExpiry.setUTCDate(expectedExpiry.getUTCDate() + 45);
+  assert.equal(result.listing.expires_at, expectedExpiry.toISOString().slice(0, 10));
+  assert.equal(JSON.parse(e.RELAY.m.get("board:greenhouse:newco")).company, "New Co");
+});
+
+test("an elapsed explicit close date rejects shared listings", async () => {
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const closesAt = yesterday.toISOString().slice(0, 10);
+  const response = await relay.fetch(post("/v1/listings", {
+    company_name: "Example Co",
+    position_title: "Backend Engineer",
+    raw_text: "A standard backend engineering role with responsibilities and qualifications.",
+    closes_at: closesAt,
+  }), env());
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.code, "listing_expired");
+});

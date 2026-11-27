@@ -37,7 +37,7 @@ flowchart TB
     M -->|"HTTP 127.0.0.1:port<br/>Bearer token"| API
     Local -->|child process| LS["llama-server<br/>GGUF model"]
     Remote -.->|opt-in| RA["Remote OpenAI-compatible API"]
-    Conn -.->|user-initiated| GH["Greenhouse"]
+    Conn -.->|user-initiated| GH["Greenhouse, Lever, Ashby"]
 ```
 
 ## App lifecycle
@@ -178,24 +178,20 @@ Routes: `/v1/resume`, `/v1/jobs`, `/v1/revisions`, `/v1/tailored-resumes`, `/v1/
 
 ## Job board support
 
-Pasting text works for every board. Connectors are an optional import path.
+Pasting text works for every board. Connectors are built in for Greenhouse, Lever, and Ashby.
 
 ```mermaid
 flowchart LR
     Paste["Pasted text<br/>(any board)"] --> Parser[parser]
-    GH["Greenhouse connector<br/>(v1)"] --> Norm["Posting<br/>(normalized)"]
-    Next["Lever, Ashby, USAJOBS<br/>(possible later)"] -.-> Norm
+    ATS["Greenhouse, Lever, Ashby<br/>connectors"] --> Norm["Posting<br/>(normalized)"]
     Norm --> Parser
     Parser --> Store[("jobs")]
 ```
 
-### Planned
-
 - **Interface:** each connector implements `FetchPostings(query) ([]Posting, error)` and returns a normalized `Posting`. Downstream code treats imported and pasted postings the same.
-- **Greenhouse (iteration 1):** public job board API, no login. Iteration 1 proves one round trip: fetch a board, filter locally, import a posting, run skill-gap analysis. Saved responses in `testdata/api/` keep tests offline.
+- **Supported ATS connectors:** Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co`), and Ashby (`api.ashbyhq.com`) all use public unauthenticated APIs.
 - **Re-import:** a known posting (matched by `source` and `external_id`) gets a new `searched_at`. Postings not seen again are removed by GC.
-- **Network policy:** job search is always available and has no on/off setting, but it never runs on its own. Requests happen only when the user presses Search, opens a listing, or saves a posting, never when job search opens.
-- **Later candidates:** Lever, Ashby, and USAJOBS (official API, free key). Not committed for the course timeline.
+- **Network policy:** job search runs only when the user presses Search, opens a listing, or saves a posting. Background reference updaters (`cost.StartUpdater` and `connectors.StartBoardUpdater`) check every 24 hours whether 30 days have elapsed since the last refresh; see [periodic-external-calls.md](periodic-external-calls.md).
 
 ### Searching Greenhouse
 
@@ -220,16 +216,16 @@ flowchart LR
 - **Persistence.** Search results are not written to the database. Saving a posting fetches its description if needed and stores it with `source = 'greenhouse'` and `external_id` set to the Greenhouse job id. Saving again refreshes `searched_at`.
 - **Network.** Requests carry only public board tokens and job ids. Keywords, filters and the resume stay on the computer, because filtering and ranking are local. See the network policy above.
 
-### Curated board lists
+### Curated and public board lists
 
-Bundled lists of company boards, grouped by industry, give users a starting point without hand-entering tokens.
+Bundled lists of company boards, grouped by industry, give users a starting point without hand-entering tokens, supplemented by a 30-day public dataset catalog and community-shared boards.
 
-- **Source.** `backend/internal/connectors/greenhouse/boards.json`, embedded with `go:embed`, in the same manner as `ai/catalog.json`.
-- **Categories.** 32 categories, 8 of them subsets of `technical`.
-  - Top level: `technical`, `cybersecurity`, `medical`, `labs`, `pharma_biotech`, `manufacturing`, `aerospace_defense`, `finance`, `insurance`, `energy_climate`, `education`, `media_entertainment`, `government_civic`, `nonprofit`, `food_agriculture`, `retail_ecommerce`, `travel_hospitality`, `transportation_logistics`, `real_estate`, `legal_tech`, `construction_infrastructure`, `consulting_services`, `semiconductors_hardware`, `telecom`.
-  - Subsets of `technical`: `ai_ml`, `data_infrastructure`, `developer_tools`, `enterprise_software`, `consumer_internet`, `gaming`, `autonomous_vehicles`, `quantum_computing`.
+- **Curated sources.** `backend/internal/connectors/greenhouse/boards.json` (1,440 unique boards), `backend/internal/connectors/lever/boards.go` (405 unique boards), and `backend/internal/connectors/ashby/boards.go` (412 unique boards), all embedded in the Go binary.
+- **Categories.** 58 categories total (40 top-level industries and 18 subsets of `technical`).
 - **Subsets.** A category with a `parent` is a subset. Enabling a parent searches its own boards plus every subset's boards. Enabling a subset searches only that subset. Subsets are one level deep. A board listed in a subset is not repeated in the parent.
-- **Current size.** 947 unique boards in 34 categories. Every token returned open postings from the Greenhouse API on the `verified_at` date in the file. Category sizes range from 7 (`legal_tech`) to 92 (`finance`). Small categories reflect how few employers in that field publish on Greenhouse.
+- **Current curated size.** 2,257 unique boards across Greenhouse, Lever, and Ashby in 58 categories.
+- **30-day public dataset catalog.** `backend/internal/connectors/public_boards.json` (loaded and refreshed via `public_boards.go`) merges additional Greenhouse, Lever, and Ashby tokens pulled monthly from allowlisted public datasets (Hugging Face Datasets Server and Common Crawl CDX). See [periodic-external-calls.md](periodic-external-calls.md) and [security-policy.md](security-policy.md).
+- **Community relay.** Users can opt in to share discovered boards and external listings via the Cloudflare Worker in `relay/`. Every submission is validated, scrubbed, and queued into a Pull Request for maintainer review.
 - **Format.**
 
 ```json
@@ -399,15 +395,21 @@ fistbump/
 │   │   ├── analyze/
 │   │   ├── diff/
 │   │   ├── ai/          provider, local, remote, fallback, models, download, catalog.json
-│   │   ├── connectors/  connector.go, greenhouse/
+│   │   ├── connectors/  connector.go, public_boards.go, public_boards.json, greenhouse/, lever/, ashby/
+│   │   ├── cost/        sources.json, updater.go
 │   │   └── pdf/
 │   └── testdata/        seed.sql, postings/, api/
+├── relay/               Cloudflare Worker community relay (src/index.js, test/relay.test.js, wrangler.toml)
+├── data/                community-boards.json, community-listings.json
 ├── e2e/                 harness.js, fixtures.js, smoke.spec.js
 ├── bin/                 Go build output + llama-server per OS/arch (gitignored)
 ├── build/               installer artwork (icon.icns/ico/png, background.tiff, installerSidebar.bmp)
-├── scripts/             build-go.js, fetch-llama-server.js, stage-resources.js, sync-pdfjs.js, screenshots.js
-├── docs/                architecture.md, schema.md, api.md, user-guide.md, release-checklist.md
-└── .github/workflows/   app.yml, build.yml, e2e.yml, go.yml
+├── scripts/             build-go.js, fetch-llama-server.js, stage-resources.js, sync-pdfjs.js, screenshots.js,
+│                        update-ats-boards.js, update-cost-data.js, prune-community-listings.js, verify-community-data.js
+├── docs/                architecture.md, schema.md, api.md, user-guide.md, release-checklist.md,
+│                        security-policy.md, periodic-external-calls.md
+└── .github/workflows/   app.yml, build.yml, e2e.yml, go.yml, update-ats-boards.yml,
+                         update-cost-data.yml, prune-community-listings.yml, verify-community-pr.yml
 ```
 
 Each Go source file `foo.go` has an adjacent `foo_test.go`.
@@ -467,8 +469,8 @@ Handling:
 - Renderer runs inside the OS WebView with no direct filesystem or process access; only the Tauri bridge surface (`window.api`) is reachable.
 - The backend is bound to loopback and gated by a per-launch bearer token.
 - Secrets are handled as described in "API keys and secrets" above: stored in the OS keychain via `keyring`, memory only in Go, never in SQLite or logs.
-- No network calls happen without a user action: remote AI and model downloads are opt-in, and job search runs only when the user presses Search, opens a listing, or saves a posting.
-- Connectors and the remote provider are the only outbound paths.
+- User-initiated actions drive remote AI, model downloads, and job search. Background 30-day dataset refreshes (`cost.StartUpdater`, `connectors.StartBoardUpdater`) enforce HTTPS-only, same-host redirects, and size caps; see [periodic-external-calls.md](periodic-external-calls.md).
+- Community boards, community listings, and public ATS datasets pass multi-layer validation (relay edge checks, fetcher host allowlists, PR CI security gate, and weekly expiration pruning); see [security-policy.md](security-policy.md).
 
 ## Build and packaging
 
@@ -543,6 +545,8 @@ No em dashes. Plain wording.
 
 ## Related docs
 
+- [security-policy.md](security-policy.md): validation, domain-takeover controls, and listing expiration rules
+- [periodic-external-calls.md](periodic-external-calls.md): inventory of all scheduled external network calls
 - [api.md](api.md): every route, request/response shape, error shape, and the stdout rule
 - [schema.md](schema.md): tables and relationships
 - [roadmap.md](roadmap.md): phases to the MVP, with one plan per phase (`phase01.md` to `phase09.md`)

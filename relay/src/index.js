@@ -387,6 +387,86 @@ export function siteFromUrl(value) {
   }
 }
 
+const RESERVED_SLUGS = new Set([
+  "embed", "jobs", "apply", "api", "v1", "v0", "assets", "static", "favicon",
+  "robots", "sitemap", "login", "signup", "auth", "cdn", "public", "app", "www", "boards", "careers",
+]);
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const EVERGREEN_RE = /\b(evergreen|rolling\s+basis|rolling\s+applications?|accepted\s+on\s+a\s+rolling|continuous\s+recruitment|ongoing\s+recruitment|open\s+until\s+filled|always\s+hiring|general\s+application|talent\s+pool|pipeline\s+role)\b/i;
+const MONTHS = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+function parseIsoDate(s) {
+  if (!ISO_DATE_RE.test(String(s || "").trim())) return null;
+  const [y, m, d] = String(s).trim().split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return dt;
+}
+
+function addDaysIso(isoDate, days) {
+  const dt = parseIsoDate(isoDate);
+  if (!dt) return "";
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+// Extracts { ats, token } when a submitted listing URL belongs to a supported ATS board.
+export function extractAtsBoard(rawUrl) {
+  if (!rawUrl) return null;
+  try {
+    const u = new URL(rawUrl);
+    if (u.protocol !== "https:") return null;
+    const host = u.hostname.toLowerCase();
+    const parts = u.pathname.split("/").filter(Boolean);
+    let ats = "";
+    let token = "";
+    if (host === "boards.greenhouse.io" || host === "job-boards.greenhouse.io" || host === "boards.eu.greenhouse.io" || host === "job-boards.eu.greenhouse.io") {
+      ats = "greenhouse";
+      token = (parts[0] === "embed" ? u.searchParams.get("for") : parts[0]) || "";
+    } else if (host === "jobs.lever.co" || host === "jobs.eu.lever.co") {
+      ats = "lever";
+      token = parts[0] || "";
+    } else if (host === "jobs.ashbyhq.com") {
+      ats = "ashby";
+      token = parts[0] || "";
+    }
+    token = token.toLowerCase().trim();
+    if (!ats || !TOKEN.test(token) || RESERVED_SLUGS.has(token)) return null;
+    return { ats, token };
+  } catch {
+    return null;
+  }
+}
+
+export function extractCloseDate(text) {
+  const src = String(text || "");
+  const cue = "(?:application\\s+deadline|apply\\s+by|closes?(?:\\s+on)?|closing\\s+date|deadline|accepting\\s+applications\\s+(?:through|until)|applications?\\s+close(?:\\s+on)?)";
+  const iso = src.match(new RegExp(`${cue}[^\\n]{0,24}?(\\d{4}-\\d{2}-\\d{2})`, "i"));
+  if (iso && parseIsoDate(iso[1])) return iso[1];
+  const slash = src.match(new RegExp(`${cue}[^\\n]{0,24}?(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})`, "i"));
+  if (slash) {
+    const norm = `${slash[3]}-${String(slash[1]).padStart(2, "0")}-${String(slash[2]).padStart(2, "0")}`;
+    if (parseIsoDate(norm)) return norm;
+  }
+  const word = src.match(new RegExp(`${cue}[^\\n]{0,24}?([A-Za-z]{3,9})\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})`, "i"));
+  if (word) {
+    const m = MONTHS[word[1].toLowerCase()];
+    if (m) {
+      const norm = `${word[3]}-${String(m).padStart(2, "0")}-${String(word[2]).padStart(2, "0")}`;
+      if (parseIsoDate(norm)) return norm;
+    }
+  }
+  return "";
+}
+
+export function isLongRunningListing(title, text) {
+  return EVERGREEN_RE.test(`${title || ""}\n${text || ""}`);
+}
+
 export function readListing(body) {
   const company_name = scrub(body?.company_name, 120);
   const position_title = scrub(body?.position_title, 160);
@@ -396,7 +476,9 @@ export function readListing(body) {
   const company_url = safeHttpsUrl(body?.company_url, 300);
   const raw_text = scrub(body?.raw_text, 25000);
   const source = siteFromUrl(listing_url) || scrub(body?.source, 40) || "Community";
-  return { source, company_name, position_title, location, work_mode, listing_url, company_url, raw_text };
+  const closes_at = parseIsoDate(body?.closes_at) ? String(body.closes_at).trim() : extractCloseDate(raw_text);
+  const evergreen = isLongRunningListing(position_title, raw_text);
+  return { source, company_name, position_title, location, work_mode, listing_url, company_url, raw_text, ...(closes_at ? { closes_at } : {}), ...(evergreen ? { evergreen: true } : {}) };
 }
 
 async function readSharedListings(env) {
@@ -414,22 +496,46 @@ async function cachedSharedListings(env) {
   return file;
 }
 
+// If a submitted listing comes from an unknown supported ATS board, validate and queue that board too.
+async function maybeQueueDiscoveredBoard(env, listing) {
+  const candidate = extractAtsBoard(listing.listing_url) || extractAtsBoard(listing.company_url);
+  if (!candidate) return "";
+  const key = `${candidate.ats}:${candidate.token}`;
+  const sharedBoards = (await cachedShared(env)).boards || [];
+  const known = new Set(sharedBoards.map(b => `${b.ats}:${b.token}`));
+  if (known.has(key) || (env.RELAY && await env.RELAY.get(`board:${key}`))) return "";
+  const knownForAts = sharedBoards.filter(b => b.ats === candidate.ats).map(b => b.token);
+  if (isLikelyTyposquat(candidate.token, knownForAts)) return "";
+  const real = await checkBoard(candidate);
+  if (!real) return "";
+  await env.RELAY?.put(`board:${key}`, JSON.stringify({ ...real, added: new Date().toISOString().slice(0, 10) }));
+  return key;
+}
+
 async function shareListing(env, request) {
   if (await limited(env, request, "listings", 20)) return problem(429, "rate_limited", "Too many listings shared in one hour. Please try again later.");
   const l = readListing(await request.json().catch(() => null));
   if (l.company_name.length < 2 || l.position_title.length < 2) return problem(400, "validation_failed", "A shared listing needs a company name and position title.");
   if (l.raw_text.length < 40) return problem(400, "validation_failed", "Include the job listing content so others can read and match against it.");
+  const today = new Date().toISOString().slice(0, 10);
+  if (l.closes_at && l.closes_at < today) {
+    return problem(400, "listing_expired", "This job listing's closing date has already passed.");
+  }
+  const maxExpiry = addDaysIso(today, l.evergreen ? 120 : 45);
+  const expires_at = l.closes_at && l.closes_at < maxExpiry ? l.closes_at : maxExpiry;
+
   const identity = l.listing_url
     ? l.listing_url.toLowerCase()
     : `${l.company_name.toLowerCase()}|${l.position_title.toLowerCase()}|${l.location.toLowerCase()}`;
   const id = (await sha256(identity)).slice(0, 16);
   const known = new Set(((await cachedSharedListings(env)).listings || []).map(x => x.id));
+  const discovered_board = await maybeQueueDiscoveredBoard(env, l);
   if (known.has(id) || (env.RELAY && await env.RELAY.get(`listing:${id}`))) {
-    return json({ status: "known", id });
+    return json({ status: "known", id, ...(discovered_board ? { discovered_board } : {}) });
   }
-  const entry = { id, ...l, added: new Date().toISOString().slice(0, 10) };
+  const entry = { id, ...l, added: today, expires_at };
   await env.RELAY?.put(`listing:${id}`, JSON.stringify(entry));
-  return json({ status: "queued", id, listing: entry }, 201);
+  return json({ status: "queued", id, listing: entry, ...(discovered_board ? { discovered_board } : {}) }, 201);
 }
 
 export async function publishListings(env) {

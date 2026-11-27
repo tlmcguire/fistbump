@@ -21,14 +21,14 @@ Stack: Tauri v2 (Rust host + vanilla JS frontend), Go backend, SQLite storage.
 
 ### Themes
 
-Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto — Current Month**). Every theme comes in **Night**, **Day** and **Darker** (dark paper, light ink), or follows your system. See every theme in the [v0.5.0 release notes](docs/release-notes.md).
+Choose from 11 style themes (**Classic**, **Bubblegum**, **Cyber**, **Techno**, **Retro**, **Vaporwave**, **Midnight Violet**, **Matcha Latte**, **Art Deco Gold**, **Ocean Abyss**, **8-Bit Arcade**) and 12 monthly seasonal themes with custom offline SVG art (plus **Auto (Current Month)**). Every theme comes in **Night**, **Day** and **Darker** (dark paper, light ink), or follows your system. See every theme in the [v0.5.0 release notes](docs/release-notes.md).
 
 | | |
 |---|---|
 | ![Home by day](docs/images/home-day.png) | ![Home in Darker](docs/images/home-darker.png) |
 | **Day.** Each theme's light version, made from its own colors. | **Darker.** Dark paper with light ink, for dark rooms. |
 | ![Bubblegum theme](docs/images/themes/bubblegum.png) | ![Cyber theme by day](docs/images/themes/day/cyber.png) |
-| ![Retro theme](docs/images/themes/retro.png) | ![December — Holiday Evergreen by day](docs/images/themes/day/december.png) |
+| ![Retro theme](docs/images/themes/retro.png) | ![December: Holiday Evergreen by day](docs/images/themes/day/december.png) |
 
 ## Install
 
@@ -49,7 +49,9 @@ The builds are unsigned, so the first launch asks you to open the app yourself. 
 | [docs/user-guide.md](docs/user-guide.md) | How to install, set up the resume, tailor it to a job, customize themes, and track applications |
 | [docs/release-notes.md](docs/release-notes.md) | Release highlights and full theme gallery for the latest version |
 | [docs/release-checklist.md](docs/release-checklist.md) | The manual check to run on every platform before publishing a release |
-| [docs/architecture.md](docs/architecture.md) | System design, app lifecycle, Greenhouse search strategy, API key handling, file structure, Q&A |
+| [docs/architecture.md](docs/architecture.md) | System design, app lifecycle, ATS board search strategy, API key handling, file structure, Q&A |
+| [docs/security-policy.md](docs/security-policy.md) | How community boards, community listings, and public ATS datasets are validated and pruned |
+| [docs/periodic-external-calls.md](docs/periodic-external-calls.md) | Inventory of all scheduled outbound calls across GitHub Actions, the relay, and the desktop app |
 | [docs/api.md](docs/api.md) | Backend routes, request and response shapes, error format, DB interactions |
 | [docs/schema.md](docs/schema.md) | SQLite tables, relationships, constraints, settings keys |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide |
@@ -74,10 +76,12 @@ The pictures above come from `node scripts/screenshots.js` (main views into `doc
 |------|----------|
 | `src-tauri/` | Tauri v2 Rust host: Go backend supervisor, IPC commands, OS keychain, menus, updater, icons |
 | `app/` | Vanilla JS/HTML/CSS renderer views, Tauri bridge, PDF.js preview, and renderer tests |
-| `backend/` | Go module (`fistbump-core`): API, SQLite store, parser, analysis, AI providers, connectors |
+| `backend/` | Go module (`fistbump-core`): API, SQLite store, parser, analysis, AI providers, Greenhouse/Lever/Ashby connectors |
+| `relay/` | Cloudflare Worker community relay for shared boards, shared listings, and in-app bug reports |
+| `data/` | Community-shared job boards (`community-boards.json`) and external listings (`community-listings.json`) |
 | `e2e/` | Playwright Chromium smoke tests backed by the real `fistbump-core` binary |
-| `scripts/` | Build, resource staging, PDF.js sync, and maintenance scripts |
-| `docs/` | Design documentation |
+| `scripts/` | Build, resource staging, PDF.js sync, board/cost updaters, listing pruner, and security audit scripts |
+| `docs/` | Architecture, API, schema, user guide, security policy, and periodic external calls documentation |
 
 The full tree is in [docs/architecture.md](docs/architecture.md#file-structure).
 
@@ -93,6 +97,10 @@ The full tree is in [docs/architecture.md](docs/architecture.md#file-structure).
 | `npm run dist:mac`, `npm run dist:win`, `npm run dist:linux` | Build installers for one platform |
 | `cd backend && go test ./...` | Run Go backend tests |
 | `npm run test:rust` | Run Rust host tests (`cargo test` in `src-tauri/`) |
-| `npm test` | Run renderer and script tests |
+| `npm test` | Run renderer, script, and security audit tests |
+| `node --test relay/test/relay.test.js` | Run Cloudflare Worker relay unit tests |
 | `npm run test:e2e` | Run Playwright Chromium end-to-end tests against `fistbump-core` |
 | `node scripts/verify-greenhouse-boards.js` | Validate the Greenhouse board lists against the live API (`--offline` checks structure only) |
+| `node scripts/verify-community-data.js` | Run security, typosquat, URL, and timeframe checks on community and public board catalogs |
+| `node scripts/update-ats-boards.js` | Refresh `public_boards.json` from allowlisted Hugging Face and Common Crawl sources (`--offline` validates only) |
+| `node scripts/prune-community-listings.js` | Prune expired, closed, or dateless listings from `data/community-listings.json` (`--offline --dry-run` for local check) |
