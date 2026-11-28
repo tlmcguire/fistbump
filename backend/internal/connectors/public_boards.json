@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-27",
+  "updated_at": "2026-11-28",
   "refresh_days": 30,
   "sources": [
     {
@@ -14,6 +14,12 @@
       "name": "Common Crawl CDX Index (Greenhouse, Lever, Ashby)",
       "updated_at": "2026-11-27",
       "boards_added": 216
+    },
+    {
+      "id": "openapply_board_seeds",
+      "name": "Open-Apply board seeds (Common Crawl-derived)",
+      "updated_at": "2026-11-28",
+      "boards_added": 89
     }
   ],
   "boards": {
@@ -4991,6 +4997,10 @@
         "company": "ENSCO - Transportation Technology Center (TTC)"
       },
       {
+        "token": "ensemble",
+        "company": "Ensemble"
+      },
+      {
         "token": "enshored",
         "company": "Enshored Inc. (External)"
       },
@@ -5851,6 +5861,10 @@
         "company": "Garda Capital Partners"
       },
       {
+        "token": "gatesventures",
+        "company": "Gatesventures"
+      },
+      {
         "token": "gatikaiinc",
         "company": "Gatik AI"
       },
@@ -6037,6 +6051,10 @@
       {
         "token": "goalhonduras",
         "company": "GOAL Honduras"
+      },
+      {
+        "token": "goalsyria",
+        "company": "Goalsyria"
       },
       {
         "token": "gofasti",
@@ -6797,6 +6815,10 @@
       {
         "token": "horizenlabs",
         "company": "Horizen Labs"
+      },
+      {
+        "token": "horizenlabstalentpool",
+        "company": "Horizenlabstalentpool"
       },
       {
         "token": "horizonindustrieslimited",
@@ -8419,6 +8441,10 @@
         "company": "Linda Werner & Associates"
       },
       {
+        "token": "lindenlab",
+        "company": "Lindenlab"
+      },
+      {
         "token": "lineate",
         "company": "Careers at Lineate"
       },
@@ -9075,6 +9101,10 @@
         "company": "MediSpend"
       },
       {
+        "token": "medistrava",
+        "company": "Medistrava"
+      },
+      {
         "token": "medsien",
         "company": "Medsien"
       },
@@ -9521,6 +9551,10 @@
       {
         "token": "monstro",
         "company": "Monstro"
+      },
+      {
+        "token": "montaihealth",
+        "company": "Montaihealth"
       },
       {
         "token": "monumentalsports",
@@ -10611,6 +10645,10 @@
         "company": "OppFi"
       },
       {
+        "token": "opremote",
+        "company": "Opremote"
+      },
+      {
         "token": "opswat",
         "company": "OPSWAT"
       },
@@ -10797,6 +10835,10 @@
       {
         "token": "overstoryhealth",
         "company": "Overstory Health"
+      },
+      {
+        "token": "ownershift",
+        "company": "Ownershift"
       },
       {
         "token": "ownwell",
@@ -12513,6 +12555,10 @@
       {
         "token": "roadrunner",
         "company": "RoadRunner Recycling Inc."
+      },
+      {
+        "token": "roarkcapitalgroup",
+        "company": "Roarkcapitalgroup"
       },
       {
         "token": "robinsonhospitalforanimals",
@@ -14315,6 +14361,10 @@
         "company": "NISC"
       },
       {
+        "token": "tetra",
+        "company": "Tetra"
+      },
+      {
         "token": "texasairsystems",
         "company": "Texas AirSystems"
       },
@@ -15063,6 +15113,10 @@
         "company": "Two Chairs"
       },
       {
+        "token": "tworoadsconsulting",
+        "company": "Tworoadsconsulting"
+      },
+      {
         "token": "twosixtechnologies",
         "company": "Two Six Technologies"
       },
@@ -15417,6 +15471,10 @@
       {
         "token": "venncity",
         "company": "Venn"
+      },
+      {
+        "token": "ventureglobal",
+        "company": "Ventureglobal"
       },
       {
         "token": "veocorporatecareers",
@@ -15975,6 +16033,10 @@
         "company": "WithMe, Inc."
       },
       {
+        "token": "wizeline",
+        "company": "Wizeline"
+      },
+      {
         "token": "wizixtechnologygroupinc",
         "company": "WiZiX Technology Group, Inc"
       },
@@ -16355,8 +16417,129 @@
         "company": "Zwift"
       }
     ],
-    "lever": [],
+    "lever": [
+      {
+        "token": "ahschc",
+        "company": "Ahschc"
+      },
+      {
+        "token": "archivecom",
+        "company": "Archivecom"
+      },
+      {
+        "token": "brafton",
+        "company": "Brafton"
+      },
+      {
+        "token": "cagents",
+        "company": "Cagents"
+      },
+      {
+        "token": "caseware",
+        "company": "Caseware"
+      },
+      {
+        "token": "cullinanoncology",
+        "company": "Cullinanoncology"
+      },
+      {
+        "token": "distro",
+        "company": "Distro"
+      },
+      {
+        "token": "energyrecovery",
+        "company": "Energyrecovery"
+      },
+      {
+        "token": "finch",
+        "company": "Finch"
+      },
+      {
+        "token": "glsllc",
+        "company": "Glsllc"
+      },
+      {
+        "token": "hatchit",
+        "company": "Hatchit"
+      },
+      {
+        "token": "heetch",
+        "company": "Heetch"
+      },
+      {
+        "token": "hypebeast",
+        "company": "Hypebeast"
+      },
+      {
+        "token": "kixie",
+        "company": "Kixie"
+      },
+      {
+        "token": "momsmeals",
+        "company": "Momsmeals"
+      },
+      {
+        "token": "ninjavan",
+        "company": "Ninjavan"
+      },
+      {
+        "token": "onetogether-solutions",
+        "company": "Onetogether Solutions"
+      },
+      {
+        "token": "ppcentralcoast",
+        "company": "Ppcentralcoast"
+      },
+      {
+        "token": "qualysoft",
+        "company": "Qualysoft"
+      },
+      {
+        "token": "robust-ai",
+        "company": "Robust Ai"
+      },
+      {
+        "token": "rws",
+        "company": "Rws"
+      },
+      {
+        "token": "smart-working-solutions",
+        "company": "Smart Working Solutions"
+      },
+      {
+        "token": "syntronic",
+        "company": "Syntronic"
+      },
+      {
+        "token": "tendo",
+        "company": "Tendo"
+      },
+      {
+        "token": "villa-homes",
+        "company": "Villa Homes"
+      },
+      {
+        "token": "vivacitylabs",
+        "company": "Vivacitylabs"
+      },
+      {
+        "token": "wahi",
+        "company": "Wahi"
+      },
+      {
+        "token": "winamax",
+        "company": "Winamax"
+      },
+      {
+        "token": "wwprosolutions",
+        "company": "Wwprosolutions"
+      }
+    ],
     "ashby": [
+      {
+        "token": "0x",
+        "company": "0x"
+      },
       {
         "token": "1five",
         "company": "1five"
@@ -16406,6 +16589,10 @@
         "company": "Adaptive Innovations"
       },
       {
+        "token": "adclear",
+        "company": "Adclear"
+      },
+      {
         "token": "adjoe",
         "company": "Adjoe"
       },
@@ -16432,6 +16619,10 @@
       {
         "token": "airops",
         "company": "Airops"
+      },
+      {
+        "token": "airwallex",
+        "company": "Airwallex"
       },
       {
         "token": "aiwyn",
@@ -16994,8 +17185,16 @@
         "company": "Clickup"
       },
       {
+        "token": "clipboard",
+        "company": "Clipboard"
+      },
+      {
         "token": "clipbook",
         "company": "Clipbook"
+      },
+      {
+        "token": "clover-sonoma",
+        "company": "Clover Sonoma"
       },
       {
         "token": "cluely",
@@ -17036,6 +17235,10 @@
       {
         "token": "colonist",
         "company": "Colonist"
+      },
+      {
+        "token": "comind",
+        "company": "Comind"
       },
       {
         "token": "commure",
@@ -17150,6 +17353,10 @@
         "company": "Cruxclimate"
       },
       {
+        "token": "currentsurgical",
+        "company": "Currentsurgical"
+      },
+      {
         "token": "cybcube",
         "company": "Cybcube"
       },
@@ -17180,6 +17387,10 @@
       {
         "token": "dash0",
         "company": "Dash0"
+      },
+      {
+        "token": "dataleap",
+        "company": "Dataleap"
       },
       {
         "token": "datatonic",
@@ -17220,6 +17431,158 @@
       {
         "token": "demandbase",
         "company": "Demandbase"
+      },
+      {
+        "token": "distributed-spectrum",
+        "company": "Distributed Spectrum"
+      },
+      {
+        "token": "edge-node-ventures",
+        "company": "Edge Node Ventures"
+      },
+      {
+        "token": "equip",
+        "company": "Equip"
+      },
+      {
+        "token": "ftmo",
+        "company": "Ftmo"
+      },
+      {
+        "token": "furo",
+        "company": "Furo"
+      },
+      {
+        "token": "grepr",
+        "company": "Grepr"
+      },
+      {
+        "token": "hadrian-automation",
+        "company": "Hadrian Automation"
+      },
+      {
+        "token": "hauler-hero",
+        "company": "Hauler Hero"
+      },
+      {
+        "token": "hazel",
+        "company": "Hazel"
+      },
+      {
+        "token": "inference",
+        "company": "Inference"
+      },
+      {
+        "token": "join9am",
+        "company": "Join9am"
+      },
+      {
+        "token": "joinbetter",
+        "company": "Joinbetter"
+      },
+      {
+        "token": "kantoko",
+        "company": "Kantoko"
+      },
+      {
+        "token": "krew",
+        "company": "Krew"
+      },
+      {
+        "token": "meadow",
+        "company": "Meadow"
+      },
+      {
+        "token": "mend-io",
+        "company": "Mend Io"
+      },
+      {
+        "token": "montecarlodata",
+        "company": "Montecarlodata"
+      },
+      {
+        "token": "motorway",
+        "company": "Motorway"
+      },
+      {
+        "token": "noon-design",
+        "company": "Noon Design"
+      },
+      {
+        "token": "onoshealth",
+        "company": "Onoshealth"
+      },
+      {
+        "token": "oplabs",
+        "company": "Oplabs"
+      },
+      {
+        "token": "partyhat",
+        "company": "Partyhat"
+      },
+      {
+        "token": "pearlyplan",
+        "company": "Pearlyplan"
+      },
+      {
+        "token": "plancraft",
+        "company": "Plancraft"
+      },
+      {
+        "token": "polarsteps",
+        "company": "Polarsteps"
+      },
+      {
+        "token": "prevail-fund",
+        "company": "Prevail Fund"
+      },
+      {
+        "token": "protegrity",
+        "company": "Protegrity"
+      },
+      {
+        "token": "redmetals",
+        "company": "Redmetals"
+      },
+      {
+        "token": "smith-engineering",
+        "company": "Smith Engineering"
+      },
+      {
+        "token": "spotlight",
+        "company": "Spotlight"
+      },
+      {
+        "token": "stable",
+        "company": "Stable"
+      },
+      {
+        "token": "subtotal",
+        "company": "Subtotal"
+      },
+      {
+        "token": "swap",
+        "company": "Swap"
+      },
+      {
+        "token": "tasman",
+        "company": "Tasman"
+      },
+      {
+        "token": "treefera",
+        "company": "Treefera"
+      },
+      {
+        "token": "trovehq",
+        "company": "Trovehq"
+      },
+      {
+        "token": "tuesday-labs",
+        "company": "Tuesday Labs"
+      },
+      {
+        "token": "verticalsemi",
+        "company": "Verticalsemi"
       }
     ]
   }
